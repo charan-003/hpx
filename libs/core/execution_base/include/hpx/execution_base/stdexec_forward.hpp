@@ -51,6 +51,7 @@
 #include <exec/ensure_started.hpp>
 #include <exec/env.hpp>
 #include <exec/execute.hpp>
+#include <exec/sender_for.hpp>
 #include <exec/split.hpp>
 #include <exec/start_detached.hpp>
 #include <stdexec/execution.hpp>

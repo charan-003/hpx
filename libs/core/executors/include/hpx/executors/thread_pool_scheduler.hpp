@@ -32,7 +32,7 @@
 // Forward declaration
 namespace hpx::execution::experimental::detail {
     template <typename Policy, typename Sender, typename Shape, typename F,
-        bool IsChunked>
+        bool IsChunked, bool IsParallel>
     class thread_pool_bulk_sender;
 }
 
@@ -68,9 +68,9 @@ namespace hpx::execution::experimental {
     // Concept to match bulk sender types
     template <typename Sender>
     concept bulk_chunked_or_unchunked_sender =
-        hpx::execution::experimental::stdexec_internal::sender_expr_for<Sender,
+        stdexec::__sender_for<Sender,
             hpx::execution::experimental::bulk_chunked_t> ||
-        hpx::execution::experimental::stdexec_internal::sender_expr_for<Sender,
+        stdexec::__sender_for<Sender,
             hpx::execution::experimental::bulk_unchunked_t>;
 
 #if defined(HPX_HAVE_STDEXEC)
@@ -79,7 +79,8 @@ namespace hpx::execution::experimental {
     inline constexpr bool is_sequenced_policy_v = false;
 
     template <>
-    inline constexpr bool is_sequenced_policy_v<stdexec::sequenced_policy> = true;
+    inline constexpr bool is_sequenced_policy_v<stdexec::sequenced_policy> =
+        true;
 #endif
 
     // Domain customization for stdexec bulk operations
@@ -100,16 +101,20 @@ namespace hpx::execution::experimental {
             hpx::execution::experimental::set_value_t, Sender&& sndr,
             Env const& env) const noexcept
         {
-            static_assert(
-                hpx::execution::experimental::stdexec_internal::__completes_on<
-                    Sender, thread_pool_policy_scheduler<Policy>, Env> ||
-                    hpx::execution::experimental::stdexec_internal::__starts_on<
-                        Sender, thread_pool_policy_scheduler<Policy>, Env>,
-                "No thread_pool_policy_scheduler instance can be found in the "
-                "sender's attributes or receiver's environment "
-                "on which to schedule bulk work.");
-
-            auto sched = hpx::execution::experimental::get_scheduler(env);
+            auto sched = [&]() {
+                if constexpr (stdexec::__completes_on<Sender,
+                                  thread_pool_policy_scheduler<Policy>, Env>)
+                {
+                    return hpx::execution::experimental::
+                        get_completion_scheduler<
+                            hpx::execution::experimental::set_value_t>(
+                            hpx::execution::experimental::get_env(sndr));
+                }
+                else
+                {
+                    return hpx::execution::experimental::get_scheduler(env);
+                }
+            }();
 
             // Extract bulk parameters using structured binding
             auto&& [tag, data, child] = sndr;
@@ -118,25 +123,20 @@ namespace hpx::execution::experimental {
             auto iota_shape =
                 hpx::util::counting_shape(decltype(shape){0}, shape);
 
-            // bulk_t and bulk_unchunked_t use unchunked mode (f(index, ...values))
-            // bulk_chunked_t uses chunked mode (f(begin, end, ...values))
-            constexpr bool is_chunked =
-                hpx::execution::experimental::stdexec_internal::sender_expr_for<
-                    Sender, hpx::execution::experimental::bulk_chunked_t>;
+            // bulk_unchunked_t: f(index, ...); bulk_chunked_t: f(begin, end, ...)
+            constexpr bool is_chunked = stdexec::__sender_for<Sender,
+                hpx::execution::experimental::bulk_chunked_t>;
 
-            // Check if policy is sequential
-            bool is_seq = is_sequenced_policy_v<std::decay_t<decltype(pol)>>;
+            // Determine parallelism at compile time from policy type
+            constexpr bool is_parallel =
+                !is_sequenced_policy_v<std::decay_t<decltype(pol)>>;
 
-            auto bulk_snd = hpx::execution::experimental::detail::
+            return hpx::execution::experimental::detail::
                 thread_pool_bulk_sender<Policy, std::decay_t<decltype(child)>,
                     std::decay_t<decltype(iota_shape)>,
-                    std::decay_t<decltype(f)>, is_chunked>(HPX_MOVE(sched),
-                    HPX_FORWARD(decltype(child), child), HPX_MOVE(iota_shape),
-                    HPX_FORWARD(decltype(f), f));
-
-            // Store the policy in the bulk sender for sequential execution handling
-            bulk_snd.set_sequential(is_seq);
-            return bulk_snd;
+                    std::decay_t<decltype(f)>, is_chunked, is_parallel>{
+                    HPX_MOVE(sched), HPX_FORWARD(decltype(child), child),
+                    HPX_MOVE(iota_shape), HPX_FORWARD(decltype(f), f)};
         }
     };
 
@@ -399,8 +399,8 @@ namespace hpx::execution::experimental {
             {
 #if defined(HPX_HAVE_STDEXEC)
                 // Check stop token before scheduling work
-                auto stop_token = stdexec::get_stop_token(
-                    stdexec::get_env(os.receiver));
+                auto stop_token =
+                    stdexec::get_stop_token(stdexec::get_env(os.receiver));
                 if (stop_token.stop_requested())
                 {
                     stdexec::set_stopped(HPX_MOVE(os.receiver));
