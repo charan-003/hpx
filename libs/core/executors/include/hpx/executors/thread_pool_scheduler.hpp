@@ -73,15 +73,18 @@ namespace hpx::execution::experimental {
         stdexec::__sender_for<Sender,
             hpx::execution::experimental::bulk_unchunked_t>;
 
-#if defined(HPX_HAVE_STDEXEC)
-    // Helper to check if a policy is sequential
+    // Helper to check if a policy is sequential (single-threaded)
+    // seq runs elements sequentially; unseq runs vectorised but still single-threaded
     template <typename Policy>
     inline constexpr bool is_sequenced_policy_v = false;
 
     template <>
     inline constexpr bool is_sequenced_policy_v<stdexec::sequenced_policy> =
         true;
-#endif
+
+    template <>
+    inline constexpr bool is_sequenced_policy_v<stdexec::unsequenced_policy> =
+        true;
 
     // Domain customization for stdexec bulk operations
     // Only the env-based transform_sender is provided. The early (no-env)
@@ -127,9 +130,11 @@ namespace hpx::execution::experimental {
             constexpr bool is_chunked = stdexec::__sender_for<Sender,
                 hpx::execution::experimental::bulk_chunked_t>;
 
-            // Determine parallelism at compile time from policy type
+            // Determine parallelism at compile time from policy type.
+            // pol is __policy_wrapper<_Pol>; unwrap with __get() to get the
+            // actual policy type before checking is_sequenced_policy_v.
             constexpr bool is_parallel =
-                !is_sequenced_policy_v<std::decay_t<decltype(pol)>>;
+                !is_sequenced_policy_v<std::decay_t<decltype(pol.__get())>>;
 
             return hpx::execution::experimental::detail::
                 thread_pool_bulk_sender<Policy, std::decay_t<decltype(child)>,
@@ -400,10 +405,10 @@ namespace hpx::execution::experimental {
 #if defined(HPX_HAVE_STDEXEC)
                 // Check stop token before scheduling work
                 auto stop_token =
-                    stdexec::get_stop_token(stdexec::get_env(os.receiver));
+                    stdexec::get_stop_token(stdexec::get_env(receiver));
                 if (stop_token.stop_requested())
                 {
-                    stdexec::set_stopped(HPX_MOVE(os.receiver));
+                    stdexec::set_stopped(HPX_MOVE(receiver));
                     return;
                 }
 #endif
@@ -415,7 +420,6 @@ namespace hpx::execution::experimental {
                         });
                     },
                     [&](std::exception_ptr ep) {
-                        // FIXME: set_error is called on a moved-from object
                         hpx::execution::experimental::set_error(
                             HPX_MOVE(receiver), HPX_MOVE(ep));
                     });
