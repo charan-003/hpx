@@ -85,7 +85,7 @@ namespace hpx::execution::experimental::detail {
     {
         if (num_threads == 0)
             return static_cast<std::uint32_t>(n);
-        // ceiling division: ceil(n / num_threads) → one chunk per worker thread
+        // ceiling division: ceil(n / num_threads) -> one chunk per worker thread
         return static_cast<std::uint32_t>(
             (n + static_cast<std::size_t>(num_threads) - 1) / num_threads);
     }
@@ -182,7 +182,8 @@ namespace hpx::execution::experimental::detail {
             auto const i_begin =
                 static_cast<std::size_t>(index) * op_state->chunk_size;
             auto const i_end =
-                (std::min) (i_begin + op_state->chunk_size, static_cast<std::size_t>(op_state->size));
+                (std::min) (i_begin + op_state->chunk_size,
+                    static_cast<std::size_t>(op_state->size));
 
             if constexpr (OperationState::is_chunked)
             {
@@ -679,8 +680,8 @@ namespace hpx::execution::experimental::detail {
             // Handle the queue for the local thread.
             if (main_thread_ok)
             {
-                do_work_local(task_function<OperationState>{this->op_state,
-                    local_worker_thread});
+                do_work_local(task_function<OperationState>{
+                    this->op_state, local_worker_thread});
             }
         }
 
