@@ -70,6 +70,8 @@ namespace hpx::execution::experimental {
     template <typename Sender>
     concept bulk_chunked_or_unchunked_sender =
         stdexec::__sender_for<Sender,
+            hpx::execution::experimental::bulk_t> ||
+        stdexec::__sender_for<Sender,
             hpx::execution::experimental::bulk_chunked_t> ||
         stdexec::__sender_for<Sender,
             hpx::execution::experimental::bulk_unchunked_t>;
@@ -104,34 +106,26 @@ namespace hpx::execution::experimental {
     // Only the env-based transform_sender is provided. The early (no-env)
     // transform falls through to default_domain, and the late transform
     // handles both completes_on and starts_on patterns at connection time.
-    template <typename Policy>
-    struct thread_pool_domain : hpx::execution::experimental::default_domain
+    // Note: This is NOT a template to ensure compile-time domain comparison works
+    // correctly in P3826R5 (domains must have unique type IDs).
+    struct thread_pool_domain : stdexec::default_domain
     {
         // transform_sender for bulk operations
         // (following stdexec system_context.hpp pattern env-based only)
-        template <bulk_chunked_or_unchunked_sender Sender, typename Env>
-            requires std::same_as<
-                std::decay_t<decltype(hpx::execution::experimental::
-                        get_scheduler(std::declval<Env const&>()))>,
-                thread_pool_policy_scheduler<Policy>>
+        template <bulk_chunked_or_unchunked_sender Sender, typename Env,
+            typename Sched = std::decay_t<decltype(hpx::execution::
+                    experimental::get_scheduler(std::declval<Env const&>()))>>
+            requires requires {
+                typename Sched::
+                    policy_type;    // Only match thread_pool_policy_scheduler
+            }
         constexpr auto transform_sender(
             hpx::execution::experimental::set_value_t, Sender&& sndr,
             Env const& env) const noexcept
         {
-            auto sched = [&]() {
-                if constexpr (stdexec::__completes_on<Sender,
-                                  thread_pool_policy_scheduler<Policy>, Env>)
-                {
-                    return hpx::execution::experimental::
-                        get_completion_scheduler<
-                            hpx::execution::experimental::set_value_t>(
-                            hpx::execution::experimental::get_env(sndr));
-                }
-                else
-                {
-                    return hpx::execution::experimental::get_scheduler(env);
-                }
-            }();
+            // Get the scheduler from env (works for both completes_on and starts_on)
+            auto sched = hpx::execution::experimental::get_scheduler(env);
+            using Policy = typename std::decay_t<decltype(sched)>::policy_type;
 
             // Extract bulk parameters using structured binding
             auto&& [tag, data, child] = sndr;
@@ -173,6 +167,9 @@ namespace hpx::execution::experimental {
     HPX_CXX_CORE_EXPORT template <typename Policy>
     struct thread_pool_policy_scheduler
     {
+        // Expose the policy type for domain customization
+        using policy_type = Policy;
+
         // Associate the parallel_execution_tag tag type as a default with this
         // scheduler, except if the given launch policy is sync.
         using execution_category =
@@ -597,8 +594,7 @@ namespace hpx::execution::experimental {
 
         /// Returns the execution domain of this scheduler (following system_context.hpp pattern).
         [[nodiscard]]
-        auto query(hpx::execution::experimental::get_domain_t) const noexcept
-            -> thread_pool_domain<Policy>
+        auto query(stdexec::get_domain_t) const noexcept -> thread_pool_domain
         {
             return {};
         }
@@ -609,7 +605,7 @@ namespace hpx::execution::experimental {
         template <typename CPO>
         [[nodiscard]]
         auto query(stdexec::get_completion_domain_t<CPO>) const noexcept
-            -> thread_pool_domain<Policy>
+            -> thread_pool_domain
         {
             return {};
         }
@@ -702,7 +698,7 @@ namespace hpx::execution::experimental {
     constexpr auto tag_invoke(hpx::execution::experimental::get_domain_t,
         thread_pool_policy_scheduler<Policy> const&) noexcept
     {
-        return thread_pool_domain<Policy>{};
+        return thread_pool_domain{};
     }
 
     // Add stdexec-specific schedule customization
