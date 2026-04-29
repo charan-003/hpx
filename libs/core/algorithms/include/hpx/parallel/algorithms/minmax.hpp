@@ -389,7 +389,7 @@ namespace hpx {
 
 namespace hpx::parallel {
 
-    template <typename T>
+    HPX_CXX_CORE_EXPORT template <typename T>
     using minmax_element_result = hpx::parallel::util::min_max_result<T>;
 
     ///////////////////////////////////////////////////////////////////////////
@@ -397,7 +397,7 @@ namespace hpx::parallel {
     namespace detail {
 
         /// \cond NOINTERNAL
-        template <typename ExPolicy, typename FwdIter, typename F,
+        HPX_CXX_CORE_EXPORT template <typename ExPolicy, typename FwdIter, typename F,
             typename Proj>
         constexpr FwdIter sequential_min_element(ExPolicy&&, FwdIter it,
             std::size_t count, F const& f, Proj const& proj)
@@ -426,7 +426,7 @@ namespace hpx::parallel {
         }
 
         ///////////////////////////////////////////////////////////////////////
-        template <typename Iter>
+        HPX_CXX_CORE_EXPORT template <typename Iter>
         struct min_element : public algorithm<min_element<Iter>, Iter>
         {
             // this has to be a member of the algorithm type as we access this
@@ -552,7 +552,7 @@ namespace hpx::parallel {
     namespace detail {
 
         /// \cond NOINTERNAL
-        template <typename ExPolicy, typename FwdIter, typename F,
+        HPX_CXX_CORE_EXPORT template <typename ExPolicy, typename FwdIter, typename F,
             typename Proj>
         constexpr FwdIter sequential_max_element(ExPolicy&&, FwdIter it,
             std::size_t count, F const& f, Proj const& proj)
@@ -581,7 +581,7 @@ namespace hpx::parallel {
         }
 
         ///////////////////////////////////////////////////////////////////////
-        template <typename Iter>
+        HPX_CXX_CORE_EXPORT template <typename Iter>
         struct max_element : public algorithm<max_element<Iter>, Iter>
         {
             // this has to be a member of the algorithm type as we access this
@@ -707,7 +707,7 @@ namespace hpx::parallel {
     namespace detail {
 
         /// \cond NOINTERNAL
-        template <typename ExPolicy, typename FwdIter, typename F,
+        HPX_CXX_CORE_EXPORT template <typename ExPolicy, typename FwdIter, typename F,
             typename Proj>
         minmax_element_result<FwdIter> sequential_minmax_element(ExPolicy&&,
             FwdIter it, std::size_t count, F const& f, Proj const& proj)
@@ -742,7 +742,7 @@ namespace hpx::parallel {
             return result;
         }
 
-        template <typename Iter>
+        HPX_CXX_CORE_EXPORT template <typename Iter>
         struct minmax_element
           : public algorithm<minmax_element<Iter>, minmax_element_result<Iter>>
         {
@@ -892,7 +892,7 @@ namespace hpx::parallel {
 
 namespace hpx {
 
-    template <typename T>
+    HPX_CXX_CORE_EXPORT template <typename T>
     using minmax_element_result = hpx::parallel::util::min_max_result<T>;
 
     ///////////////////////////////////////////////////////////////////////////
