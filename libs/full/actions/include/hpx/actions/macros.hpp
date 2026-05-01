@@ -7,6 +7,7 @@
 #pragma once
 
 #include <hpx/config.hpp>
+#include <hpx/actions_base/macros.hpp>
 #include <hpx/modules/preprocessor.hpp>
 
 #if defined(HPX_HAVE_NETWORKING)

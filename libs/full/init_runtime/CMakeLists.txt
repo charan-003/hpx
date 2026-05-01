@@ -46,8 +46,9 @@ include(HPX_AddModule)
 add_hpx_module(
   full init_runtime
   GLOBAL_HEADER_MODULE_GEN ON
-  ADD_TO_GLOBAL_HEADER hpx/init_runtime/detail/init_logging.hpp hpx/init_runtime/detail/run_or_start.hpp
-  GLOBAL_HEADER_GEN OFF
+  ADD_TO_GLOBAL_HEADER hpx/init_runtime/detail/init_logging.hpp
+                       hpx/init_runtime/detail/run_or_start.hpp
+  GLOBAL_HEADER_GEN ON
   HEADERS ${init_runtime_headers}
   SOURCES ${init_runtime_sources}
   DEPENDENCIES hpx_core
