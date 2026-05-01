@@ -434,8 +434,8 @@ namespace hpx::execution::experimental {
     /// \note This calls params.mark_begin_execution(exec) if it exists;
     ///       otherwise it does nothing.
     ///
-    HPX_CXX_CORE_EXPORT inline constexpr struct collect_execution_parameters_t
-        final
+    HPX_CXX_CORE_EXPORT inline constexpr struct
+        collect_execution_parameters_t final
       : hpx::functional::detail::tag_priority<collect_execution_parameters_t>
     {
     private:

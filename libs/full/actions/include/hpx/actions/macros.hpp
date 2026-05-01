@@ -12,7 +12,6 @@
 
 #if defined(HPX_HAVE_NETWORKING)
 
-
 // Helper macro for action serialization; each of the defined actions needs to
 // be registered with the serialization library.
 

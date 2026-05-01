@@ -67,7 +67,11 @@ add_hpx_module(
   full agas_base
   GLOBAL_HEADER_GEN ON
   GLOBAL_HEADER_MODULE_GEN ON
-  ADD_TO_GLOBAL_HEADER hpx/agas_base/detail/bootstrap_component_namespace.hpp hpx/agas_base/detail/bootstrap_locality_namespace.hpp hpx/agas_base/detail/hosted_component_namespace.hpp hpx/agas_base/detail/hosted_locality_namespace.hpp
+  ADD_TO_GLOBAL_HEADER
+    hpx/agas_base/detail/bootstrap_component_namespace.hpp
+    hpx/agas_base/detail/bootstrap_locality_namespace.hpp
+    hpx/agas_base/detail/hosted_component_namespace.hpp
+    hpx/agas_base/detail/hosted_locality_namespace.hpp
   SOURCES ${agas_base_sources}
   HEADERS ${agas_base_headers}
   COMPAT_HEADERS ${agas_base_compat_headers}

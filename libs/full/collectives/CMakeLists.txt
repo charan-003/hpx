@@ -72,7 +72,9 @@ include(HPX_AddModule)
 add_hpx_module(
   full collectives
   GLOBAL_HEADER_MODULE_GEN ON
-  ADD_TO_GLOBAL_HEADER hpx/collectives/detail/channel_communicator.hpp hpx/collectives/detail/communicator.hpp hpx/collectives/detail/latch.hpp
+  ADD_TO_GLOBAL_HEADER
+    hpx/collectives/detail/channel_communicator.hpp
+    hpx/collectives/detail/communicator.hpp hpx/collectives/detail/latch.hpp
   SOURCES ${collectives_sources}
   HEADERS ${collectives_headers}
   COMPAT_HEADERS ${collectives_compat_headers}
