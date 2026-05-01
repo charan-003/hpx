@@ -12,8 +12,6 @@
 
 #if defined(HPX_HAVE_NETWORKING)
 
-#include <hpx/actions/transfer_action.hpp>
-#include <hpx/actions/transfer_continuation_action.hpp>
 
 // Helper macro for action serialization; each of the defined actions needs to
 // be registered with the serialization library.
