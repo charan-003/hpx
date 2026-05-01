@@ -74,7 +74,7 @@ namespace hpx { namespace lcos {
 #else
 
 #include <hpx/config.hpp>
-#include <hpx/actions/transfer_action.hpp>
+#include <hpx/modules/actions.hpp>
 #include <hpx/assert.hpp>
 #include <hpx/async_colocated/async_colocated.hpp>
 #include <hpx/async_distributed/transfer_continuation_action.hpp>

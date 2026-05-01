@@ -4,7 +4,7 @@
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-#include <hpx/actions/transfer_action.hpp>
+#include <hpx/modules/actions.hpp>
 #include <hpx/assert.hpp>
 #include <hpx/async_distributed/continuation.hpp>
 #include <hpx/async_distributed/transfer_continuation_action.hpp>

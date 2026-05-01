@@ -128,7 +128,7 @@ namespace hpx { namespace lcos {
 
 #include <hpx/config.hpp>
 #if !defined(HPX_COMPUTE_DEVICE_CODE)
-#include <hpx/actions/transfer_action.hpp>
+#include <hpx/modules/actions.hpp>
 #include <hpx/assert.hpp>
 #include <hpx/async_colocated/async_colocated.hpp>
 #include <hpx/async_colocated/post_colocated.hpp>

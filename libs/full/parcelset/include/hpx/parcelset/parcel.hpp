@@ -13,7 +13,7 @@
 #include <hpx/modules/serialization.hpp>
 #include <hpx/modules/threading_base.hpp>
 
-#include <hpx/actions/base_action.hpp>
+#include <hpx/modules/actions.hpp>
 #include <hpx/modules/naming_base.hpp>
 #include <hpx/modules/parcelset_base.hpp>
 

@@ -9,7 +9,7 @@
 #pragma once
 
 #include <hpx/config.hpp>
-#include <hpx/actions/actions_fwd.hpp>
+#include <hpx/modules/actions.hpp>
 #include <hpx/assert.hpp>
 #include <hpx/async_distributed/continuation_fwd.hpp>
 #include <hpx/async_distributed/detail/post_continue_fwd.hpp>

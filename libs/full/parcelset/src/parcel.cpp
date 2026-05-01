@@ -22,7 +22,7 @@
 #include <hpx/modules/threading_base.hpp>
 #include <hpx/modules/timing.hpp>
 
-#include <hpx/actions/transfer_action.hpp>
+#include <hpx/modules/actions.hpp>
 #include <hpx/parcelset/parcel.hpp>
 #include <hpx/parcelset/parcelhandler.hpp>
 

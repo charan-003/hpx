@@ -8,7 +8,7 @@
 #pragma once
 
 #include <hpx/config.hpp>
-#include <hpx/actions/post_helper.hpp>
+#include <hpx/modules/actions.hpp>
 #include <hpx/assert.hpp>
 #include <hpx/async_distributed/continuation.hpp>
 #include <hpx/async_distributed/detail/post_implementations_fwd.hpp>
