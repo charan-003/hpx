@@ -19,9 +19,9 @@
 #include <hpx/modules/runtime_local.hpp>
 #include <hpx/modules/type_support.hpp>
 
-#include <hpx/modules/actions.hpp>
 #include <hpx/async_distributed/put_parcel_fwd.hpp>
 #include <hpx/async_distributed/transfer_continuation_action.hpp>
+#include <hpx/modules/actions.hpp>
 #include <hpx/parcelset/parcel.hpp>
 #include <hpx/parcelset/parcelhandler.hpp>
 #include <hpx/parcelset/parcelset_fwd.hpp>

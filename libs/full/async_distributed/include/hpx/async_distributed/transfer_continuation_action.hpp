@@ -12,9 +12,9 @@
 
 #include <hpx/config.hpp>
 
-#include <hpx/modules/actions.hpp>
 #include <hpx/async_distributed/continuation.hpp>
 #include <hpx/async_distributed/traits/action_trigger_continuation.hpp>
+#include <hpx/modules/actions.hpp>
 #include <hpx/modules/actions_base.hpp>
 
 #if defined(HPX_HAVE_NETWORKING)
