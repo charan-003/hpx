@@ -56,6 +56,8 @@ include(HPX_AddModule)
 add_hpx_module(
   full parcelset
   GLOBAL_HEADER_GEN ON
+  GLOBAL_HEADER_MODULE_GEN ON
+  ADD_TO_GLOBAL_HEADER hpx/parcelset/detail/call_for_each.hpp hpx/parcelset/detail/message_handler_interface_functions.hpp hpx/parcelset/detail/parcel_await.hpp
   SOURCES ${parcelset_sources}
   HEADERS ${parcelset_headers}
   COMPAT_HEADERS ${parcelset_compat_headers}

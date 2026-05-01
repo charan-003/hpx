@@ -48,6 +48,8 @@ include(HPX_AddModule)
 add_hpx_module(
   full async_colocated
   GLOBAL_HEADER_GEN ON
+  GLOBAL_HEADER_MODULE_GEN ON
+  ADD_TO_GLOBAL_HEADER hpx/async_distributed/detail/async_colocated.hpp hpx/async_distributed/detail/async_colocated_callback.hpp hpx/async_distributed/detail/async_colocated_callback_fwd.hpp hpx/async_distributed/detail/async_colocated_fwd.hpp
   SOURCES ${async_colocated_sources}
   HEADERS ${async_colocated_headers}
   COMPAT_HEADERS ${async_colocated_compat_headers}
