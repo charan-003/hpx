@@ -22,16 +22,19 @@ if(HPX_WITH_FETCH_STDEXEC)
   )
 
   include(FetchContent)
+  # We only consume stdexec's headers; HPX wraps them with its own `Stdexec`
+  # INTERFACE target below. SOURCE_SUBDIR points at a non-existent path so
+  # FetchContent_MakeAvailable does not call add_subdirectory on stdexec's own
+  # CMakeLists.txt, which would otherwise pull in stdexec's tests/examples and
+  # competing targets.
   fetchcontent_declare(
     Stdexec
     GIT_REPOSITORY https://github.com/NVIDIA/stdexec.git
     GIT_TAG ${HPX_WITH_STDEXEC_TAG}
+    SOURCE_SUBDIR _hpx_skip_stdexec_cmakelists
   )
 
-  fetchcontent_getproperties(Stdexec)
-  if(NOT Stdexec_POPULATED)
-    fetchcontent_populate(Stdexec)
-  endif()
+  fetchcontent_makeavailable(Stdexec)
   set(Stdexec_ROOT ${stdexec_SOURCE_DIR})
 
   add_library(Stdexec INTERFACE)
