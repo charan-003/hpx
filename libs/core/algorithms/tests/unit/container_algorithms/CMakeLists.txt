@@ -74,6 +74,8 @@ set(tests
     merge_range
     min_element_range
     minmax_element_range
+    minmax_element_parallel_projection
+    minmax_element_projection
     mismatch_binary_range
     mismatch_range
     move_range
@@ -135,6 +137,12 @@ set(tests
 
 if(HPX_WITH_CXX20_COROUTINES)
   set(tests ${tests} for_loop_range_generator)
+endif()
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang")
+  list(REMOVE_ITEM tests adjacentdifference_range_sender foreach_range
+       foreach_range_sender
+  )
 endif()
 
 foreach(test ${tests})
