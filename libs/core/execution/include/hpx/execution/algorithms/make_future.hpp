@@ -44,9 +44,12 @@ namespace hpx::execution::experimental {
         // The parameter is constrained to the concrete `run_loop::scheduler`
         // type (rather than a generic template) because the implementation
         // depends on `.__loop_` being the specific stdexec env layout.
-        // `run_loop::scheduler::schedule()` is documented `noexcept`, so the
-        // unconditional `noexcept` here is sound.
-        constexpr hpx::execution::experimental::run_loop&
+        // `run_loop::scheduler::schedule()` is `noexcept`, so the
+        // unconditional `noexcept` here is sound. The function is not marked
+        // `constexpr` because the `stdexec::schedule` CPO wrapper is not
+        // declared `constexpr` (GCC strict mode rejects calling it from a
+        // constexpr context, even though the underlying member is constexpr).
+        inline hpx::execution::experimental::run_loop&
         get_run_loop_from_scheduler(
             decltype(std::declval<hpx::execution::experimental::run_loop>()
                     .get_scheduler()) const& sched) noexcept
