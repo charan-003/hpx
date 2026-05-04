@@ -117,9 +117,12 @@ namespace hpx::mpi::experimental {
                         {
                             MPI_Request request;
                             // When the return type is non-void, we have to
-                            // forward the value to the receiver
-                            auto&& result =
-                                HPX_INVOKE(f, HPX_FORWARD(Ts, ts)..., &request);
+                            // forward the value to the receiver. Pass `ts...`
+                            // unforwarded into `f` so the same arguments can
+                            // be moved once into the keep-alive callback
+                            // below; this matches the void branch above and
+                            // avoids a double-move when `Ts...` are rvalues.
+                            auto&& result = HPX_INVOKE(f, ts..., &request);
                             set_value_request_callback_non_void(request,
                                 HPX_MOVE(r), HPX_MOVE(result),
                                 HPX_FORWARD(Ts, ts)...);
