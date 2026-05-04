@@ -39,11 +39,17 @@ namespace hpx::execution::experimental {
         // This helper is the single point in HPX that touches that internal
         // detail. If upstream stdexec ever renames/removes `__loop_` (as
         // happened with `stdexec::tags`), only this function needs to change.
-        // See https://github.com/STEllAR-GROUP/hpx for context on this
-        // post-cleanup follow-up of #7123.
-        template <typename Scheduler>
+        // Post-cleanup follow-up of #7123.
+        //
+        // The parameter is constrained to the concrete `run_loop::scheduler`
+        // type (rather than a generic template) because the implementation
+        // depends on `.__loop_` being the specific stdexec env layout.
+        // `run_loop::scheduler::schedule()` is documented `noexcept`, so the
+        // unconditional `noexcept` here is sound.
         constexpr hpx::execution::experimental::run_loop&
-        get_run_loop_from_scheduler(Scheduler const& sched) noexcept
+        get_run_loop_from_scheduler(
+            decltype(std::declval<hpx::execution::experimental::run_loop>()
+                    .get_scheduler()) const& sched) noexcept
         {
             return static_cast<hpx::execution::experimental::run_loop&>(
                 *hpx::execution::experimental::get_env(schedule(sched))
