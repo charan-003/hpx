@@ -12,6 +12,9 @@ set(tracing_module_dependencies hpx_config)
 if(HPX_TRACY_WITH_TRACY)
   list(APPEND tracing_module_dependencies hpx_tracy)
 endif()
+if(HPX_WITH_ITTNOTIFY)
+  list(APPEND tracing_module_dependencies hpx_itt_notify)
+endif()
 
 include(HPX_AddModule)
 add_hpx_module(
