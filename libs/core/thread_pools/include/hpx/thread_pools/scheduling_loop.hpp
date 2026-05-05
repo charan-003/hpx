@@ -18,11 +18,6 @@
 #include <hpx/thread_pools/detail/scheduling_counters.hpp>
 #include <hpx/thread_pools/detail/scheduling_log.hpp>
 
-#if defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0 &&                  \
-    !defined(HPX_HAVE_APEX)
-#include <hpx/modules/itt_notify.hpp>
-#endif
-
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
@@ -87,16 +82,7 @@ namespace hpx::threads::detail {
         scheduling_counters& counters, scheduling_callbacks& params)
     {
         std::atomic<hpx::state>& this_state = scheduler.get_state(num_thread);
-
-#if defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0 &&                  \
-    !defined(HPX_HAVE_APEX)
-        util::itt::stack_context ctx;    // helper for itt support
-        util::itt::thread_domain const thread_domain;
-        util::itt::id threadid(thread_domain, &scheduler);
-        util::itt::string_handle const task_id("task_id");
-        util::itt::string_handle const task_phase("task_phase");
-        // util::itt::frame_context fctx(thread_domain);
-#endif
+        hpx::tracing::itt_loop_context itt_ctx;
 
         std::int64_t& idle_loop_count = counters.idle_loop_count_;
         std::int64_t& busy_loop_count = counters.busy_loop_count_;
@@ -217,18 +203,10 @@ namespace hpx::threads::detail {
                                             is_active = false;
                                         });
 
-#if defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0 &&                  \
-    !defined(HPX_HAVE_APEX)
-                                util::itt::caller_context cctx(
-                                    ctx, !thrdptr->is_stackless());
-                                // util::itt::undo_frame_context undoframe(fctx);
-                                util::itt::task task =
-                                    thrdptr->get_description().get_task_itt(
-                                        thread_domain);
-                                task.add_metadata(task_id, thrdptr);
-                                task.add_metadata(
-                                    task_phase, thrdptr->get_thread_phase());
-#endif
+                                hpx::tracing::itt_task_region itt_task(
+                                    itt_ctx,
+                                    threads::get_thread_region_init_data(
+                                        thrdptr));
                                 hpx::tracing::region rctx(
                                     threads::get_region_init_data(thrdptr),
                                     num_thread);
