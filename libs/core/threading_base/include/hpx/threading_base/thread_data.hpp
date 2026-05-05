@@ -691,7 +691,7 @@ namespace hpx::threads {
     }
 #endif
 
-#if defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0 &&                 \
+#if defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0 &&                  \
     !defined(HPX_HAVE_APEX)
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT tracing::thread_region_init_data
     get_thread_region_init_data(thread_data const* thrdptr);

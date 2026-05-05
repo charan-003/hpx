@@ -203,8 +203,7 @@ namespace hpx::threads::detail {
                                             is_active = false;
                                         });
 
-                                hpx::tracing::itt_task_region itt_task(
-                                    itt_ctx,
+                                hpx::tracing::itt_task_region itt_task(itt_ctx,
                                     threads::get_thread_region_init_data(
                                         thrdptr));
                                 hpx::tracing::region rctx(

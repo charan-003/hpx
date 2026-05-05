@@ -90,7 +90,7 @@ namespace hpx::tracing {
 
 #endif
 
-#if !defined(HPX_HAVE_MODULE_TRACY) && defined(HPX_HAVE_ITTNOTIFY) &&         \
+#if !defined(HPX_HAVE_MODULE_TRACY) && defined(HPX_HAVE_ITTNOTIFY) &&          \
     HPX_HAVE_ITTNOTIFY != 0 && !defined(HPX_HAVE_APEX)
 #include <hpx/modules/itt_notify.hpp>
 
@@ -123,8 +123,7 @@ namespace hpx::tracing {
         util::itt::task task;
 
         static util::itt::task make_task(
-            itt_loop_context::impl& ctx,
-            thread_region_init_data const& data)
+            itt_loop_context::impl& ctx, thread_region_init_data const& data)
         {
             if (data.is_address_type)
             {
@@ -134,9 +133,8 @@ namespace hpx::tracing {
             if (data.itt_string_handle != nullptr)
             {
                 return util::itt::task(ctx.thread_domain,
-                    util::itt::string_handle(
-                        static_cast<___itt_string_handle*>(
-                            data.itt_string_handle)));
+                    util::itt::string_handle(static_cast<___itt_string_handle*>(
+                        data.itt_string_handle)));
             }
             return util::itt::task(
                 ctx.thread_domain, util::itt::string_handle(data.name));
