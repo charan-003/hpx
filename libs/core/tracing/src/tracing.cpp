@@ -8,6 +8,7 @@
 #include <hpx/tracing/tracing.hpp>
 
 #include <cstddef>
+#include <memory>
 
 #if defined(HPX_HAVE_MODULE_TRACY)
 
@@ -84,6 +85,79 @@ namespace hpx::tracing {
     {
         hpx::tracy::set_thread_name(name);
     }
+
+}    // namespace hpx::tracing
+
+#endif
+
+#if !defined(HPX_HAVE_MODULE_TRACY) && defined(HPX_HAVE_ITTNOTIFY) &&         \
+    HPX_HAVE_ITTNOTIFY != 0 && !defined(HPX_HAVE_APEX)
+#include <hpx/modules/itt_notify.hpp>
+
+namespace hpx::tracing {
+
+    struct itt_loop_context::impl
+    {
+        util::itt::stack_context stack_ctx;
+        util::itt::thread_domain thread_domain;
+        util::itt::string_handle task_id;
+        util::itt::string_handle task_phase;
+
+        impl()
+          : task_id("task_id")
+          , task_phase("task_phase")
+        {
+        }
+    };
+
+    itt_loop_context::itt_loop_context()
+      : impl_(std::make_unique<impl>())
+    {
+    }
+
+    itt_loop_context::~itt_loop_context() = default;
+
+    struct itt_task_region::impl
+    {
+        util::itt::caller_context cctx;
+        util::itt::task task;
+
+        static util::itt::task make_task(
+            itt_loop_context::impl& ctx,
+            thread_region_init_data const& data)
+        {
+            if (data.is_address_type)
+            {
+                return util::itt::task(ctx.thread_domain,
+                    util::itt::string_handle("address"), data.address);
+            }
+            if (data.itt_string_handle != nullptr)
+            {
+                return util::itt::task(ctx.thread_domain,
+                    util::itt::string_handle(
+                        static_cast<___itt_string_handle*>(
+                            data.itt_string_handle)));
+            }
+            return util::itt::task(
+                ctx.thread_domain, util::itt::string_handle(data.name));
+        }
+
+        impl(itt_loop_context::impl& ctx, thread_region_init_data const& data)
+          : cctx(ctx.stack_ctx, !data.is_stackless)
+          , task(make_task(ctx, data))
+        {
+            task.add_metadata(ctx.task_id, data.thread_ptr);
+            task.add_metadata(ctx.task_phase, data.thread_phase);
+        }
+    };
+
+    itt_task_region::itt_task_region(
+        itt_loop_context& ctx, thread_region_init_data const& data)
+      : impl_(std::make_unique<impl>(*ctx.impl_, data))
+    {
+    }
+
+    itt_task_region::~itt_task_region() = default;
 
 }    // namespace hpx::tracing
 
