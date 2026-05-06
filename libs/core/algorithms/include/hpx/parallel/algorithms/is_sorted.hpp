@@ -512,8 +512,8 @@ namespace hpx {
                 >
             )
         // clang-format on
-        friend FwdIter tag_fallback_invoke(
-            hpx::is_sorted_until_t, FwdIter first, FwdIter last, Pred pred = Pred())
+        friend FwdIter tag_fallback_invoke(hpx::is_sorted_until_t,
+            FwdIter first, FwdIter last, Pred pred = Pred())
         {
             return hpx::parallel::detail::is_sorted_until<FwdIter, FwdIter>()
                 .call(hpx::execution::seq, first, last, HPX_MOVE(pred),
