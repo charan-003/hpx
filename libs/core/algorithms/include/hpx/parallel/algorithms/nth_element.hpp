@@ -194,8 +194,8 @@ namespace hpx::parallel {
             if (nth == first)
             {
                 RandomIt it = detail::min_element<RandomIt>().call(
-                    hpx::execution::seq, first, end,
-                    wrapped_comp_type(comp, proj), hpx::identity_v);
+                    hpx::execution::seq, first, end, HPX_FORWARD(Compare, comp),
+                    HPX_FORWARD(Proj, proj));
 
                 if (it != first)
                 {
