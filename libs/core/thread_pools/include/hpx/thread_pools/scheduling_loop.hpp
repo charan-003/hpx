@@ -82,7 +82,7 @@ namespace hpx::threads::detail {
         scheduling_counters& counters, scheduling_callbacks& params)
     {
         std::atomic<hpx::state>& this_state = scheduler.get_state(num_thread);
-        hpx::tracing::itt_loop_context itt_ctx;
+        hpx::tracing::loop_context trace_ctx;
 
         std::int64_t& idle_loop_count = counters.idle_loop_count_;
         std::int64_t& busy_loop_count = counters.busy_loop_count_;
@@ -203,10 +203,7 @@ namespace hpx::threads::detail {
                                             is_active = false;
                                         });
 
-                                hpx::tracing::itt_task_region itt_task(itt_ctx,
-                                    threads::get_thread_region_init_data(
-                                        thrdptr));
-                                hpx::tracing::region rctx(
+                                hpx::tracing::region rctx(trace_ctx,
                                     threads::get_region_init_data(thrdptr),
                                     num_thread);
 

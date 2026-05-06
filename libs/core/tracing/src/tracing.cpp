@@ -8,7 +8,6 @@
 #include <hpx/tracing/tracing.hpp>
 
 #include <cstddef>
-#include <memory>
 
 #if defined(HPX_HAVE_MODULE_TRACY)
 
@@ -25,8 +24,8 @@ namespace hpx::tracing {
             data.name, num_thread, data.thread_phase, enabled);
     }
 
-    region::region(
-        region_init_data const& data, std::size_t const num_thread) noexcept
+    region::region(loop_context&, region_init_data const& data,
+        std::size_t const num_thread) noexcept
       : impl(create_tracy_region(data, num_thread))
     {
     }
@@ -88,74 +87,52 @@ namespace hpx::tracing {
 
 }    // namespace hpx::tracing
 
-#endif
-
-#if !defined(HPX_HAVE_MODULE_TRACY) && defined(HPX_HAVE_ITTNOTIFY) &&          \
-    HPX_HAVE_ITTNOTIFY != 0 && !defined(HPX_HAVE_APEX)
-#include <hpx/modules/itt_notify.hpp>
+#elif defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0 &&                \
+    !defined(HPX_HAVE_APEX)
 
 namespace hpx::tracing {
 
-    struct itt_loop_context::impl
-    {
-        util::itt::stack_context stack_ctx;
-        util::itt::thread_domain thread_domain;
-        util::itt::string_handle task_id;
-        util::itt::string_handle task_phase;
+    ////////////////////////////////////////////////////////////////////////////
+    // loop_context
 
-        impl()
-          : task_id("task_id")
-          , task_phase("task_phase")
-        {
-        }
-    };
-
-    itt_loop_context::itt_loop_context()
-      : impl_(std::make_unique<impl>())
+    loop_context::loop_context() noexcept
+      : task_id("task_id")
+      , task_phase("task_phase")
     {
     }
 
-    itt_loop_context::~itt_loop_context() = default;
+    loop_context::~loop_context() = default;
 
-    struct itt_task_region::impl
+    ////////////////////////////////////////////////////////////////////////////
+    // region
+
+    util::itt::task region::make_task(
+        loop_context& ctx, region_init_data const& data)
     {
-        util::itt::caller_context cctx;
-        util::itt::task task;
-
-        static util::itt::task make_task(
-            itt_loop_context::impl& ctx, thread_region_init_data const& data)
+        if (data.is_address_type)
         {
-            if (data.is_address_type)
-            {
-                return util::itt::task(ctx.thread_domain,
-                    util::itt::string_handle("address"), data.address);
-            }
-            if (data.itt_string_handle != nullptr)
-            {
-                return util::itt::task(ctx.thread_domain,
-                    util::itt::string_handle(static_cast<___itt_string_handle*>(
-                        data.itt_string_handle)));
-            }
-            return util::itt::task(
-                ctx.thread_domain, util::itt::string_handle(data.name));
+            return util::itt::task(ctx.thread_domain,
+                util::itt::string_handle("address"), data.address);
         }
-
-        impl(itt_loop_context::impl& ctx, thread_region_init_data const& data)
-          : cctx(ctx.stack_ctx, !data.is_stackless)
-          , task(make_task(ctx, data))
+        if (data.itt_string_handle != nullptr)
         {
-            task.add_metadata(ctx.task_id, data.thread_ptr);
-            task.add_metadata(ctx.task_phase, data.thread_phase);
+            return util::itt::task(ctx.thread_domain,
+                util::itt::string_handle(static_cast<___itt_string_handle*>(
+                    data.itt_string_handle)));
         }
-    };
-
-    itt_task_region::itt_task_region(
-        itt_loop_context& ctx, thread_region_init_data const& data)
-      : impl_(std::make_unique<impl>(*ctx.impl_, data))
-    {
+        return util::itt::task(
+            ctx.thread_domain, util::itt::string_handle(data.name));
     }
 
-    itt_task_region::~itt_task_region() = default;
+    region::region(loop_context& ctx, region_init_data const& data, std::size_t)
+      : cctx(ctx.stack_ctx, !data.is_stackless)
+      , task(make_task(ctx, data))
+    {
+        task.add_metadata(ctx.task_id, data.thread_ptr);
+        task.add_metadata(ctx.task_phase, data.thread_phase);
+    }
+
+    region::~region() = default;
 
 }    // namespace hpx::tracing
 
