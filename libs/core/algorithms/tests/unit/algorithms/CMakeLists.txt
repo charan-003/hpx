@@ -59,6 +59,7 @@ set(tests
     foreachn
     foreachn_exception
     foreachn_bad_alloc
+    for_each_index
     for_loop
     for_loop_exception
     for_loop_induction
@@ -202,6 +203,7 @@ if(HPX_WITH_STDEXEC)
       mismatch_binary_sender
       move_sender
       none_of_sender
+      partial_sort_sender
       reduce_sender
       remove_sender
       remove_if_sender
