@@ -87,8 +87,7 @@ namespace hpx::tracing {
 
 }    // namespace hpx::tracing
 
-#elif defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0 &&                \
-    !defined(HPX_HAVE_APEX)
+#elif defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0
 
 namespace hpx::tracing {
 
