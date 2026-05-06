@@ -73,9 +73,7 @@ namespace hpx::mpi::experimental {
         HPX_CXX_CORE_EXPORT template <typename R, typename F>
         struct transform_mpi_receiver
         {
-#if defined(HPX_HAVE_STDEXEC)
-            using is_receiver = void;
-#endif
+            using receiver_concept = hpx::execution::experimental::receiver_t;
             HPX_NO_UNIQUE_ADDRESS std::decay_t<R> r;
             HPX_NO_UNIQUE_ADDRESS std::decay_t<F> f;
 
@@ -87,27 +85,21 @@ namespace hpx::mpi::experimental {
             }
 
             template <typename E>
-            friend constexpr void tag_invoke(
-                hpx::execution::experimental::set_error_t,
-                transform_mpi_receiver&& r, E&& e) noexcept
+            void set_error(E&& e) && noexcept
             {
                 hpx::execution::experimental::set_error(
-                    HPX_MOVE(r.r), HPX_FORWARD(E, e));
+                    HPX_MOVE(r), HPX_FORWARD(E, e));
             }
 
-            friend constexpr void tag_invoke(
-                hpx::execution::experimental::set_stopped_t,
-                transform_mpi_receiver&& r) noexcept
+            void set_stopped() && noexcept
             {
-                hpx::execution::experimental::set_stopped(HPX_MOVE(r.r));
-            };
+                hpx::execution::experimental::set_stopped(HPX_MOVE(r));
+            }
 
             template <typename... Ts,
                 typename = std::enable_if_t<
                     hpx::is_invocable_v<F, Ts..., MPI_Request*>>>
-            friend constexpr void tag_invoke(
-                hpx::execution::experimental::set_value_t,
-                transform_mpi_receiver&& r, Ts&&... ts) noexcept
+            void set_value(Ts&&... ts) && noexcept
             {
                 hpx::detail::try_catch_exception_ptr(
                     [&]() {
@@ -115,27 +107,30 @@ namespace hpx::mpi::experimental {
                                           Ts..., MPI_Request*>>)
                         {
                             MPI_Request request;
-                            HPX_INVOKE(r.f, ts..., &request);
+                            HPX_INVOKE(f, ts..., &request);
                             // When the return type is void, there is no value
                             // to forward to the receiver
                             set_value_request_callback_void(
-                                request, HPX_MOVE(r.r), HPX_FORWARD(Ts, ts)...);
+                                request, HPX_MOVE(r), HPX_FORWARD(Ts, ts)...);
                         }
                         else
                         {
                             MPI_Request request;
                             // When the return type is non-void, we have to
-                            // forward the value to the receiver
-                            auto&& result = HPX_INVOKE(
-                                r.f, HPX_FORWARD(Ts, ts)..., &request);
+                            // forward the value to the receiver. Pass `ts...`
+                            // unforwarded into `f` so the same arguments can
+                            // be moved once into the keep-alive callback
+                            // below; this matches the void branch above and
+                            // avoids a double-move when `Ts...` are rvalues.
+                            auto&& result = HPX_INVOKE(f, ts..., &request);
                             set_value_request_callback_non_void(request,
-                                HPX_MOVE(r.r), HPX_MOVE(result),
+                                HPX_MOVE(r), HPX_MOVE(result),
                                 HPX_FORWARD(Ts, ts)...);
                         }
                     },
                     [&](std::exception_ptr ep) {
                         hpx::execution::experimental::set_error(
-                            HPX_MOVE(r.r), HPX_MOVE(ep));
+                            HPX_MOVE(r), HPX_MOVE(ep));
                     });
             }
         };
@@ -146,8 +141,8 @@ namespace hpx::mpi::experimental {
             HPX_NO_UNIQUE_ADDRESS std::decay_t<Sender> s;
             HPX_NO_UNIQUE_ADDRESS std::decay_t<F> f;
 
-#if defined(HPX_HAVE_STDEXEC)
             using is_sender = void;
+            using sender_concept = hpx::execution::experimental::sender_t;
 
             template <typename... Args>
             struct invoke_function_transformation_helper
@@ -204,67 +199,20 @@ namespace hpx::mpi::experimental {
                     no_set_stopped_signature
                 >;
             // clang-format on
-#else
-            template <typename Env>
-            struct generate_completion_signatures
-            {
-                template <typename Tuple>
-                struct invoke_result_helper;
-
-                template <template <typename...> class Tuple, typename... Ts>
-                struct invoke_result_helper<Tuple<Ts...>>
-                {
-                    static_assert(hpx::is_invocable_v<F, Ts..., MPI_Request*>,
-                        "F not invocable with the value_types specified.");
-                    using result_type =
-                        hpx::util::invoke_result_t<F, Ts..., MPI_Request*>;
-                    using type =
-                        std::conditional_t<std::is_void<result_type>::value,
-                            Tuple<>, Tuple<result_type>>;
-                };
-
-                template <template <typename...> class Tuple,
-                    template <typename...> class Variant>
-                using value_types =
-                    hpx::util::detail::unique_t<hpx::util::detail::transform_t<
-                        hpx::execution::experimental::value_types_of_t<Sender,
-                            Env, Tuple, Variant>,
-                        invoke_result_helper>>;
-
-                template <template <typename...> class Variant>
-                using error_types =
-                    hpx::util::detail::unique_t<hpx::util::detail::prepend_t<
-                        hpx::execution::experimental::error_types_of_t<Sender,
-                            Env, Variant>,
-                        std::exception_ptr>>;
-
-                static constexpr bool sends_stopped = false;
-            };
-
-            template <typename Env>
-            friend auto tag_invoke(
-                hpx::execution::experimental::get_completion_signatures_t,
-                transform_mpi_sender const&, Env)
-                -> generate_completion_signatures<Env>;
-#endif
 
             template <typename R>
-            friend constexpr auto tag_invoke(
-                hpx::execution::experimental::connect_t,
-                transform_mpi_sender& s, R&& r)
+            constexpr auto connect(R&& r) &
             {
                 return hpx::execution::experimental::connect(
-                    s.s, transform_mpi_receiver<R, F>(HPX_FORWARD(R, r), s.f));
+                    s, transform_mpi_receiver<R, F>(HPX_FORWARD(R, r), f));
             }
 
             template <typename R>
-            friend constexpr auto tag_invoke(
-                hpx::execution::experimental::connect_t,
-                transform_mpi_sender&& s, R&& r)
+            constexpr auto connect(R&& r) &&
             {
-                return hpx::execution::experimental::connect(HPX_MOVE(s.s),
+                return hpx::execution::experimental::connect(HPX_MOVE(s),
                     transform_mpi_receiver<R, F>(
-                        HPX_FORWARD(R, r), HPX_MOVE(s.f)));
+                        HPX_FORWARD(R, r), HPX_MOVE(f)));
             }
         };
     }    // namespace detail
