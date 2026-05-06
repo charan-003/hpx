@@ -1207,6 +1207,14 @@ if(HPX_WITH_APEX AND NOT HPX_WITH_DISTRIBUTED_RUNTIME)
   hpx_error("HPX_WITH_DISTRIBUTED_RUNTIME=OFF requires HPX_WITH_APEX=OFF")
 endif()
 
+if(HPX_WITH_APEX AND HPX_WITH_ITTNOTIFY)
+  hpx_error("HPX_WITH_APEX=ON requires HPX_WITH_ITTNOTIFY=OFF")
+endif()
+
+if(HPX_TRACY_WITH_TRACY AND HPX_WITH_ITTNOTIFY)
+  hpx_error("HPX_TRACY_WITH_TRACY=ON and HPX_WITH_ITTNOTIFY=ON are mutually exclusive. Only one tracing backend can be active.")
+endif()
+
 if(HPX_WITH_NETWORKING)
   hpx_add_config_define(HPX_HAVE_NETWORKING)
 
