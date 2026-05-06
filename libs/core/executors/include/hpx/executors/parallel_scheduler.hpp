@@ -445,28 +445,14 @@ namespace hpx::execution::experimental {
                 auto&& [tag, data, child] = sndr;
                 auto&& [pol, shape, f] = data;
 
-                // Get the parallel_scheduler from the child sender's
-                // completion scheduler (completes_on pattern)
-                auto par_sched = [&]() {
-                    if constexpr (
-                        hpx::is_invocable_v<
-                            hpx::execution::experimental::
-                                get_completion_scheduler_t<
-                                    hpx::execution::experimental::set_value_t>,
-                            decltype(hpx::execution::experimental::get_env(
-                                child))>)
-                    {
-                        return hpx::execution::experimental::
-                            get_completion_scheduler<
-                                hpx::execution::experimental::set_value_t>(
-                                hpx::execution::experimental::get_env(child));
-                    }
-                    else
-                    {
-                        return hpx::execution::experimental::
-                            get_parallel_scheduler();
-                    }
-                }();
+                // Get the parallel_scheduler from the bulk sender's env.
+                // The outer if constexpr(__completes_on<Sender,
+                // parallel_scheduler, Env>) guarantees this query succeeds,
+                // using the same env_of_t<Sender> that __completes_on checks.
+                auto par_sched =
+                    hpx::execution::experimental::get_completion_scheduler<
+                        hpx::execution::experimental::set_value_t>(
+                        hpx::execution::experimental::get_env(sndr));
 
                 // Extract the underlying thread pool scheduler from the
                 // backend. For the default HPX backend this returns the
