@@ -459,49 +459,42 @@ namespace hpx {
       : hpx::detail::tag_parallel_algorithm<is_sorted_t>
     {
     private:
-        template <typename FwdIter, typename Pred = hpx::parallel::detail::less,
-            typename Proj = hpx::identity>
+        template <typename FwdIter, typename Pred = hpx::parallel::detail::less>
         // clang-format off
             requires (
                 std::forward_iterator<FwdIter> &&
-                hpx::parallel::traits::is_projected_v<Proj, FwdIter> &&
-                hpx::parallel::traits::is_indirect_callable_v<
-                    hpx::execution::sequenced_policy, Pred,
-                    hpx::parallel::traits::projected<Proj, FwdIter>,
-                    hpx::parallel::traits::projected<Proj, FwdIter>
+                hpx::is_invocable_v<Pred,
+                    typename std::iterator_traits<FwdIter>::value_type,
+                    typename std::iterator_traits<FwdIter>::value_type
                 >
             )
         // clang-format on
-        friend bool tag_fallback_invoke(hpx::is_sorted_t, FwdIter first,
-            FwdIter last, Pred pred = Pred(), Proj proj = Proj())
+        friend bool tag_fallback_invoke(
+            hpx::is_sorted_t, FwdIter first, FwdIter last, Pred pred = Pred())
         {
             return hpx::parallel::detail::is_sorted<FwdIter, FwdIter>().call(
                 hpx::execution::seq, first, last, HPX_MOVE(pred),
-                HPX_MOVE(proj));
+                hpx::identity_v);
         }
 
         template <typename ExPolicy, typename FwdIter,
-            typename Pred = hpx::parallel::detail::less,
-            typename Proj = hpx::identity>
+            typename Pred = hpx::parallel::detail::less>
         // clang-format off
             requires (
                 hpx::is_execution_policy_v<ExPolicy> &&
                 std::forward_iterator<FwdIter> &&
-                hpx::parallel::traits::is_projected_v<Proj, FwdIter> &&
-                hpx::parallel::traits::is_indirect_callable_v<
-                    hpx::execution::sequenced_policy, Pred,
-                    hpx::parallel::traits::projected<Proj, FwdIter>,
-                    hpx::parallel::traits::projected<Proj, FwdIter>
+                hpx::is_invocable_v<Pred,
+                    typename std::iterator_traits<FwdIter>::value_type,
+                    typename std::iterator_traits<FwdIter>::value_type
                 >
             )
         // clang-format on
         friend decltype(auto) tag_fallback_invoke(hpx::is_sorted_t,
-            ExPolicy&& policy, FwdIter first, FwdIter last, Pred pred = Pred(),
-            Proj proj = Proj())
+            ExPolicy&& policy, FwdIter first, FwdIter last, Pred pred = Pred())
         {
             return hpx::parallel::detail::is_sorted<FwdIter, FwdIter>().call(
                 HPX_FORWARD(ExPolicy, policy), first, last, HPX_MOVE(pred),
-                HPX_MOVE(proj));
+                hpx::identity_v);
         }
     } is_sorted{};
 
@@ -509,49 +502,42 @@ namespace hpx {
       : hpx::detail::tag_parallel_algorithm<is_sorted_until_t>
     {
     private:
-        template <typename FwdIter, typename Pred = hpx::parallel::detail::less,
-            typename Proj = hpx::identity>
+        template <typename FwdIter, typename Pred = hpx::parallel::detail::less>
         // clang-format off
             requires (
                 std::forward_iterator<FwdIter> &&
-                hpx::parallel::traits::is_projected_v<Proj, FwdIter> &&
-                hpx::parallel::traits::is_indirect_callable_v<
-                    hpx::execution::sequenced_policy, Pred,
-                    hpx::parallel::traits::projected<Proj, FwdIter>,
-                    hpx::parallel::traits::projected<Proj, FwdIter>
+                hpx::is_invocable_v<Pred,
+                    typename std::iterator_traits<FwdIter>::value_type,
+                    typename std::iterator_traits<FwdIter>::value_type
                 >
             )
         // clang-format on
-        friend FwdIter tag_fallback_invoke(hpx::is_sorted_until_t,
-            FwdIter first, FwdIter last, Pred pred = Pred(), Proj proj = Proj())
+        friend FwdIter tag_fallback_invoke(
+            hpx::is_sorted_until_t, FwdIter first, FwdIter last, Pred pred = Pred())
         {
             return hpx::parallel::detail::is_sorted_until<FwdIter, FwdIter>()
                 .call(hpx::execution::seq, first, last, HPX_MOVE(pred),
-                    HPX_MOVE(proj));
+                    hpx::identity_v);
         }
 
         template <typename ExPolicy, typename FwdIter,
-            typename Pred = hpx::parallel::detail::less,
-            typename Proj = hpx::identity>
+            typename Pred = hpx::parallel::detail::less>
         // clang-format off
             requires (
                 hpx::is_execution_policy_v<ExPolicy> &&
                 std::forward_iterator<FwdIter> &&
-                hpx::parallel::traits::is_projected_v<Proj, FwdIter> &&
-                hpx::parallel::traits::is_indirect_callable_v<
-                    hpx::execution::sequenced_policy, Pred,
-                    hpx::parallel::traits::projected<Proj, FwdIter>,
-                    hpx::parallel::traits::projected<Proj, FwdIter>
+                hpx::is_invocable_v<Pred,
+                    typename std::iterator_traits<FwdIter>::value_type,
+                    typename std::iterator_traits<FwdIter>::value_type
                 >
             )
         // clang-format on
         friend decltype(auto) tag_fallback_invoke(hpx::is_sorted_until_t,
-            ExPolicy&& policy, FwdIter first, FwdIter last, Pred pred = Pred(),
-            Proj proj = Proj())
+            ExPolicy&& policy, FwdIter first, FwdIter last, Pred pred = Pred())
         {
             return hpx::parallel::detail::is_sorted_until<FwdIter, FwdIter>()
                 .call(HPX_FORWARD(ExPolicy, policy), first, last,
-                    HPX_MOVE(pred), HPX_MOVE(proj));
+                    HPX_MOVE(pred), hpx::identity_v);
         }
     } is_sorted_until{};
 }    // namespace hpx

@@ -155,7 +155,6 @@ set(tests
     uninitialized_value_constructn
     unique
     unique_copy
-    is_sorted_projection
 )
 
 if(HPX_WITH_CXX17_STD_EXECUTION_POLICES)
