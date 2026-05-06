@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <iostream>
 #include <vector>
+#include <shared_mutex>
 
 std::uint64_t num_iterations = 100000;
 std::uint64_t reader_threads = 4;
