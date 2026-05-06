@@ -185,10 +185,12 @@ namespace hpx::execution::experimental {
     HPX_CXX_CORE_EXPORT using stdexec::transfer;
     HPX_CXX_CORE_EXPORT using stdexec::transfer_t;
 
-    // Bulk (HPX provides its own bulk CPO, but still forwards chunked variants
-    // used by the thread pool scheduler domain customization on current master)
-    //    HPX_CXX_CORE_EXPORT using stdexec::bulk;
-    //    HPX_CXX_CORE_EXPORT using stdexec::bulk_t;
+    // Sender for
+    HPX_CXX_CORE_EXPORT using exec::sender_for;
+
+    // Bulk operations
+    // Note: HPX defines its own bulk/bulk_t CPO in execution/algorithms/bulk.hpp,
+    // so we cannot import stdexec::bulk or stdexec::bulk_t here.
     HPX_CXX_CORE_EXPORT using stdexec::bulk_chunked;
     HPX_CXX_CORE_EXPORT using stdexec::bulk_chunked_t;
     HPX_CXX_CORE_EXPORT using stdexec::bulk_unchunked;
