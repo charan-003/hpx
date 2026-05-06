@@ -29,6 +29,36 @@ namespace hpx::execution::experimental {
     // enforce proper formatting
     namespace detail {
 
+        // Recover the parent `run_loop&` from a `run_loop::scheduler`.
+        //
+        // P2300 deliberately does not provide a public API to obtain the
+        // owning `run_loop&` from one of its schedulers. The only way to do
+        // this against the current stdexec implementation is to read the
+        // private `__loop_` member exposed by the scheduler's environment.
+        //
+        // This helper is the single point in HPX that touches that internal
+        // detail. If upstream stdexec ever renames/removes `__loop_` (as
+        // happened with `stdexec::tags`), only this function needs to change.
+        // Post-cleanup follow-up of #7123.
+        //
+        // The parameter is constrained to the concrete `run_loop::scheduler`
+        // type (rather than a generic template) because the implementation
+        // depends on `.__loop_` being the specific stdexec env layout.
+        // `run_loop::scheduler::schedule()` is `noexcept`, so the
+        // unconditional `noexcept` here is sound. The function is not marked
+        // `constexpr` because the `stdexec::schedule` CPO wrapper is not
+        // declared `constexpr` (GCC strict mode rejects calling it from a
+        // constexpr context, even though the underlying member is constexpr).
+        inline hpx::execution::experimental::run_loop&
+        get_run_loop_from_scheduler(
+            decltype(std::declval<hpx::execution::experimental::run_loop>()
+                    .get_scheduler()) const& sched) noexcept
+        {
+            return static_cast<hpx::execution::experimental::run_loop&>(
+                *hpx::execution::experimental::get_env(schedule(sched))
+                    .__loop_);
+        }
+
         template <typename OperationState>
         void start_operation_state(OperationState& op_state) noexcept
         {
@@ -174,12 +204,7 @@ namespace hpx::execution::experimental {
                         .get_scheduler()) const& sched,
                 Sender&& sender)
               : base_type(no_addref, alloc, HPX_FORWARD(Sender, sender))
-              //TODO: Keep an eye on this, it is based on the internal impl of
-              // stdexec, so it is subject to change. This is currently relying
-              // on the env struct to expose __loop_ as a public member.
-              , loop(static_cast<hpx::execution::experimental::run_loop&>(
-                    *hpx::execution::experimental::get_env(schedule(sched))
-                        .__loop_))
+              , loop(get_run_loop_from_scheduler(sched))
             {
                 this->set_on_completed([this]() { loop.finish(); });
             }
