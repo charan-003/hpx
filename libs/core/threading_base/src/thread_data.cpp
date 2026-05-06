@@ -554,12 +554,9 @@ namespace hpx::threads {
         return {thrdptr->get_description().get_description(),
             thrdptr->get_tracy_fiber_name(), thrdptr->is_stackless()};
     }
-#endif
-
-#if defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0 &&                  \
+#elif defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0 &&                \
     !defined(HPX_HAVE_APEX)
-    tracing::thread_region_init_data get_thread_region_init_data(
-        thread_data const* thrdptr)
+    tracing::region_init_data get_region_init_data(thread_data const* thrdptr)
     {
         threads::thread_description const desc = thrdptr->get_description();
         if (desc.kind() == threads::thread_description::data_type::description)
@@ -570,6 +567,12 @@ namespace hpx::threads {
         }
         return {"address", thrdptr->get_thread_phase(), thrdptr,
             thrdptr->is_stackless(), desc.get_address(), true, nullptr};
+    }
+
+    tracing::fiber_region_init_data get_fiber_region_init_data(
+        thread_data const*)
+    {
+        return {};
     }
 #endif
 

@@ -671,7 +671,9 @@ namespace hpx::threads {
         return static_cast<thread_data*>(tid.get());
     }
 
-#if defined(HPX_HAVE_MODULE_TRACY)
+#if defined(HPX_HAVE_MODULE_TRACY) ||                                          \
+    (defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0 &&                 \
+        !defined(HPX_HAVE_APEX))
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT tracing::region_init_data
     get_region_init_data(thread_data const* thrdptr);
 
@@ -686,18 +688,6 @@ namespace hpx::threads {
 
     HPX_CXX_CORE_EXPORT constexpr tracing::fiber_region_init_data
     get_fiber_region_init_data(thread_data const*) noexcept
-    {
-        return {};
-    }
-#endif
-
-#if defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0 &&                  \
-    !defined(HPX_HAVE_APEX)
-    HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT tracing::thread_region_init_data
-    get_thread_region_init_data(thread_data const* thrdptr);
-#else
-    HPX_CXX_CORE_EXPORT constexpr tracing::thread_region_init_data
-    get_thread_region_init_data(thread_data const*) noexcept
     {
         return {};
     }
