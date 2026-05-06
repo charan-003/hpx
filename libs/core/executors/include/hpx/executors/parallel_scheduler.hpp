@@ -366,11 +366,11 @@ namespace hpx::execution::experimental {
             friend auto tag_invoke(
                 hpx::execution::experimental::get_completion_signatures_t,
                 parallel_bulk_dispatch_sender const&, Env const&)
-                -> hpx::execution::experimental::
-                    transform_completion_signatures_of<ChildSender, Env,
-                        hpx::execution::experimental::completion_signatures<
-                            hpx::execution::experimental::set_error_t(
-                                std::exception_ptr)>>;
+                -> stdexec::__transform_completion_signatures_of_t<ChildSender,
+                    Env,
+                    hpx::execution::experimental::completion_signatures<
+                        hpx::execution::experimental::set_error_t(
+                            std::exception_ptr)>>;
 
             // Unified operation state: holds type-erased op via
             // unique_ptr<base_parallel_bulk_op>.
@@ -436,7 +436,7 @@ namespace hpx::execution::experimental {
     {
         template <bulk_chunked_or_unchunked_sender Sender, typename Env>
         auto transform_sender(hpx::execution::experimental::set_value_t,
-            Sender&& sndr, Env const& env) const
+            Sender&& sndr, Env const& /*env*/) const
         {
             if constexpr (hpx::execution::experimental::stdexec_internal::
                               __completes_on<Sender, parallel_scheduler, Env>)
