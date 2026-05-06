@@ -139,7 +139,6 @@ namespace hpx::detail {
             return true;
         }
 
-
         void unlock_shared()
         {
             auto s = state.load(std::memory_order_acquire);
