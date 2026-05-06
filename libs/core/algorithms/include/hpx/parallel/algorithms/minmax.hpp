@@ -397,8 +397,8 @@ namespace hpx::parallel {
     namespace detail {
 
         /// \cond NOINTERNAL
-        HPX_CXX_CORE_EXPORT template <typename ExPolicy, typename FwdIter, typename F,
-            typename Proj>
+        HPX_CXX_CORE_EXPORT template <typename ExPolicy, typename FwdIter,
+            typename F, typename Proj>
         constexpr FwdIter sequential_min_element(ExPolicy&&, FwdIter it,
             std::size_t count, F const& f, Proj const& proj)
         {
@@ -552,8 +552,8 @@ namespace hpx::parallel {
     namespace detail {
 
         /// \cond NOINTERNAL
-        HPX_CXX_CORE_EXPORT template <typename ExPolicy, typename FwdIter, typename F,
-            typename Proj>
+        HPX_CXX_CORE_EXPORT template <typename ExPolicy, typename FwdIter,
+            typename F, typename Proj>
         constexpr FwdIter sequential_max_element(ExPolicy&&, FwdIter it,
             std::size_t count, F const& f, Proj const& proj)
         {
@@ -707,8 +707,8 @@ namespace hpx::parallel {
     namespace detail {
 
         /// \cond NOINTERNAL
-        HPX_CXX_CORE_EXPORT template <typename ExPolicy, typename FwdIter, typename F,
-            typename Proj>
+        HPX_CXX_CORE_EXPORT template <typename ExPolicy, typename FwdIter,
+            typename F, typename Proj>
         minmax_element_result<FwdIter> sequential_minmax_element(ExPolicy&&,
             FwdIter it, std::size_t count, F const& f, Proj const& proj)
         {
