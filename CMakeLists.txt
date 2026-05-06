@@ -1212,7 +1212,9 @@ if(HPX_WITH_APEX AND HPX_WITH_ITTNOTIFY)
 endif()
 
 if(HPX_TRACY_WITH_TRACY AND HPX_WITH_ITTNOTIFY)
-  hpx_error("HPX_TRACY_WITH_TRACY=ON and HPX_WITH_ITTNOTIFY=ON are mutually exclusive. Only one tracing backend can be active.")
+  hpx_error(
+    "HPX_TRACY_WITH_TRACY=ON and HPX_WITH_ITTNOTIFY=ON are mutually exclusive. Only one tracing backend can be active."
+  )
 endif()
 
 if(HPX_WITH_NETWORKING)
