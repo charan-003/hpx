@@ -241,7 +241,7 @@ namespace hpx::parallel {
 namespace hpx::segmented {
 
     ///////////////////////////////////////////////////////////////////////////
-    // segmented copy — tag_invoke overloads
+    // segmented copy - tag_invoke overloads
 
     // no-policy (sequential) overload
     template <typename SegIter, typename OutIter>
