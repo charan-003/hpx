@@ -1207,15 +1207,25 @@ if(HPX_WITH_APEX AND NOT HPX_WITH_DISTRIBUTED_RUNTIME)
   hpx_error("HPX_WITH_DISTRIBUTED_RUNTIME=OFF requires HPX_WITH_APEX=OFF")
 endif()
 
-if(HPX_WITH_APEX AND HPX_WITH_ITTNOTIFY)
-  hpx_error("HPX_WITH_APEX=ON requires HPX_WITH_ITTNOTIFY=OFF")
+set(_hpx_tracing_backends "")
+if(HPX_WITH_APEX)
+  list(APPEND _hpx_tracing_backends "HPX_WITH_APEX")
+endif()
+if(HPX_WITH_ITTNOTIFY)
+  list(APPEND _hpx_tracing_backends "HPX_WITH_ITTNOTIFY")
+endif()
+if(HPX_TRACY_WITH_TRACY)
+  list(APPEND _hpx_tracing_backends "HPX_TRACY_WITH_TRACY")
 endif()
 
-if(HPX_TRACY_WITH_TRACY AND HPX_WITH_ITTNOTIFY)
+list(LENGTH _hpx_tracing_backends _hpx_tracing_backends_count)
+if(_hpx_tracing_backends_count GREATER 1)
   hpx_error(
-    "HPX_TRACY_WITH_TRACY=ON and HPX_WITH_ITTNOTIFY=ON are mutually exclusive. Only one tracing backend can be active."
+    "Only one tracing backend can be active. Disable all but one of: HPX_WITH_APEX, HPX_WITH_ITTNOTIFY, HPX_TRACY_WITH_TRACY."
   )
 endif()
+unset(_hpx_tracing_backends)
+unset(_hpx_tracing_backends_count)
 
 if(HPX_WITH_NETWORKING)
   hpx_add_config_define(HPX_HAVE_NETWORKING)
