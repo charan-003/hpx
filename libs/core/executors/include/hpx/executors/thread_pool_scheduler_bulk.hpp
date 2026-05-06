@@ -396,7 +396,6 @@ namespace hpx::execution::experimental::detail {
         using receiver_concept = hpx::execution::experimental::receiver_t;
         OperationState* op_state;
 
-#if defined(HPX_HAVE_STDEXEC)
         template <typename E>
         void set_error(E&& e) && noexcept
         {
@@ -409,7 +408,6 @@ namespace hpx::execution::experimental::detail {
             hpx::execution::experimental::set_stopped(
                 HPX_MOVE(op_state->receiver));
         }
-#else
         template <typename Receiver, typename E>
             requires std::same_as<std::remove_cvref_t<Receiver>, bulk_receiver>
         friend void tag_invoke(hpx::execution::experimental::set_error_t,
@@ -427,7 +425,6 @@ namespace hpx::execution::experimental::detail {
             hpx::execution::experimental::set_stopped(
                 HPX_MOVE(r.op_state->receiver));
         }
-#endif
 
         // Initialize a queue for a worker thread.
         void init_queue_depth_first(std::size_t const worker_thread,
@@ -713,7 +710,6 @@ namespace hpx::execution::experimental::detail {
             }
         }
 
-#if defined(HPX_HAVE_STDEXEC)
         template <typename... Ts>
             requires((OperationState::is_chunked &&
                          std::invocable<F, range_value_type, range_value_type,
@@ -730,10 +726,15 @@ namespace hpx::execution::experimental::detail {
                         HPX_MOVE(this->op_state->receiver), HPX_MOVE(ep));
                 });
         }
-#else
+
         template <typename Receiver, typename... Ts>
-            requires(std::invocable<F, range_value_type,
-                std::add_lvalue_reference_t<Ts>...>)
+            requires std::same_as<std::remove_cvref_t<Receiver>, bulk_receiver> &&
+                ((OperationState::is_chunked &&
+                     std::invocable<F, range_value_type, range_value_type,
+                         std::add_lvalue_reference_t<Ts>...>) ||
+                    (!OperationState::is_chunked &&
+                        std::invocable<F, range_value_type,
+                            std::add_lvalue_reference_t<Ts>...>))
         friend void tag_invoke(hpx::execution::experimental::set_value_t,
             Receiver&& r, Ts&&... ts) noexcept
         {
@@ -744,18 +745,7 @@ namespace hpx::execution::experimental::detail {
                         HPX_MOVE(r.op_state->receiver), HPX_MOVE(ep));
                 });
         }
-#endif
     };
-
-#if !defined(HPX_HAVE_STDEXEC)
-    // With stdexec, thread_pool_scheduler.hpp forward declares this template
-    // with default arguments; without it, declare here so the definition below
-    // does not repeat default template arguments.
-    template <typename Policy, typename Sender, typename Shape, typename F,
-        bool IsChunked = false, bool IsParallel = true,
-        bool IsUnsequenced = false>
-    class thread_pool_bulk_sender;
-#endif
 
     // This sender represents bulk work that will be performed using the
     // thread_pool_scheduler.
@@ -819,7 +809,6 @@ namespace hpx::execution::experimental::detail {
         thread_pool_bulk_sender& operator=(
             thread_pool_bulk_sender const&) = default;
 
-#if defined(HPX_HAVE_STDEXEC)
         using sender_concept = hpx::execution::experimental::sender_t;
 
         template <typename Env>
@@ -959,7 +948,6 @@ namespace hpx::execution::experimental::detail {
 
             friend void tag_invoke(start_t, operation_state& os) noexcept
             {
-#if defined(HPX_HAVE_STDEXEC)
                 // Check stop token before starting work
                 auto stop_token =
                     stdexec::get_stop_token(stdexec::get_env(os.receiver));
@@ -968,7 +956,6 @@ namespace hpx::execution::experimental::detail {
                     stdexec::set_stopped(HPX_MOVE(os.receiver));
                     return;
                 }
-#endif
                 hpx::execution::experimental::start(os.op_state);
             }
         };

@@ -18,10 +18,8 @@
 #include <hpx/modules/topology.hpp>
 #include <hpx/modules/type_support.hpp>
 
-#if defined(HPX_HAVE_STDEXEC)
 #include <hpx/executors/detail/index_queue_spawning.hpp>
 #include <hpx/executors/parallel_scheduler.hpp>
-#endif
 
 #include <cstddef>
 #include <exception>
@@ -31,7 +29,6 @@
 
 namespace hpx::execution::experimental {
 
-#if defined(HPX_HAVE_STDEXEC)
     namespace detail {
 
         // Trait to detect schedulers that expose a thread pool backend,
@@ -122,7 +119,6 @@ namespace hpx::execution::experimental {
             }
         };
     }    // namespace detail
-#endif
 
     namespace detail {
 
@@ -277,7 +273,6 @@ namespace hpx::execution::experimental {
 
             if constexpr (std::is_void_v<result_type>)
             {
-#if defined(HPX_HAVE_STDEXEC)
                 // Fast path: direct thread pool dispatch
                 if constexpr (detail::has_thread_pool_backend<
                                   std::decay_t<BaseScheduler>>::value)
@@ -346,10 +341,6 @@ namespace hpx::execution::experimental {
                             HPX_INVOKE(f, *it, args...);
                         }));
                 }
-#else
-                return make_future(bulk(schedule(exec.sched_), shape,
-                    hpx::bind_back(HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...)));
-#endif
             }
             else
             {
@@ -404,7 +395,6 @@ namespace hpx::execution::experimental {
             using result_type = hpx::util::detail::invoke_deferred_result_t<F,
                 shape_element, Ts...>;
 
-#if defined(HPX_HAVE_STDEXEC)
             // Fast path: if the scheduler (or its underlying scheduler)
             // is backed by a thread pool, bypass the sender/receiver
             // pipeline and call index_queue_bulk_sync_execute directly.
@@ -488,14 +478,6 @@ namespace hpx::execution::experimental {
                                    HPX_INVOKE(f, *it, args...);
                                }));
             }
-#else
-            return hpx::util::void_guard<result_type>(),
-                   // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-                   *hpx::this_thread::experimental::sync_wait(
-                       bulk(schedule(exec.sched_), shape,
-                           hpx::bind_back(
-                               HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...)));
-#endif
         }
 
         template <typename F, typename S, typename Future, typename... Ts>
@@ -511,7 +493,6 @@ namespace hpx::execution::experimental {
 
             if constexpr (std::is_void_v<result_type>)
             {
-#if defined(HPX_HAVE_STDEXEC)
                 // Fast path: wait on predecessor, then direct dispatch
                 if constexpr (detail::has_thread_pool_backend<
                                   std::decay_t<BaseScheduler>>::value)
@@ -585,7 +566,8 @@ namespace hpx::execution::experimental {
                         using size_type = decltype(hpx::util::size(shape));
                         size_type const n = hpx::util::size(shape);
                         auto loop = bulk(
-                            transfer(HPX_MOVE(pre_req), exec.sched_), par, n,
+                            continues_on(HPX_MOVE(pre_req), exec.sched_), par,
+                            n,
                             [shape, f = HPX_FORWARD(F, f),
                                 ... args = HPX_FORWARD(Ts, ts)](
                                 size_type i, auto&... receiver_args) mutable {
@@ -603,26 +585,17 @@ namespace hpx::execution::experimental {
                         when_all(keep_future(HPX_FORWARD(Future, predecessor)));
                     using size_type = decltype(hpx::util::size(shape));
                     size_type const n = hpx::util::size(shape);
-                    auto loop =
-                        bulk(transfer(HPX_MOVE(pre_req), exec.sched_), par, n,
-                            [shape, f = HPX_FORWARD(F, f),
-                                ... args = HPX_FORWARD(Ts, ts)](
-                                size_type i, auto&... receiver_args) mutable {
-                                auto it = hpx::util::begin(shape);
-                                std::advance(it, i);
-                                HPX_INVOKE(f, *it, args..., receiver_args...);
-                            });
+                    auto loop = bulk(
+                        continues_on(HPX_MOVE(pre_req), exec.sched_), par, n,
+                        [shape, f = HPX_FORWARD(F, f),
+                            ... args = HPX_FORWARD(Ts, ts)](
+                            size_type i, auto&... receiver_args) mutable {
+                            auto it = hpx::util::begin(shape);
+                            std::advance(it, i);
+                            HPX_INVOKE(f, *it, args..., receiver_args...);
+                        });
                     return make_future(HPX_MOVE(loop));
                 }
-#else
-                // the overall return value is future<void>
-                auto pre_req =
-                    when_all(keep_future(HPX_FORWARD(Future, predecessor)));
-                auto loop = bulk(transfer(HPX_MOVE(pre_req), exec.sched_),
-                    shape,
-                    hpx::bind_back(HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...));
-                return make_future(HPX_MOVE(loop));
-#endif
             }
             else
             {
