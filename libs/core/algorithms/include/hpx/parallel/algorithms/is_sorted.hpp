@@ -226,11 +226,11 @@ namespace hpx {
 #else
 
 #include <hpx/config.hpp>
-#include <hpx/modules/coroutines.hpp>
 #include <hpx/modules/executors.hpp>
 #include <hpx/modules/functional.hpp>
 #include <hpx/modules/iterator_support.hpp>
 #include <hpx/parallel/algorithms/detail/dispatch.hpp>
+#include <hpx/parallel/algorithms/detail/distance.hpp>
 #include <hpx/parallel/algorithms/detail/is_sorted.hpp>
 #include <hpx/parallel/util/adapt_placement_mode.hpp>
 #include <hpx/parallel/util/cancellation_token.hpp>
@@ -305,7 +305,7 @@ namespace hpx::parallel {
                     -> intermediate_result_t {
                     FwdIter_ trail = part_begin++;
                     util::const_loop_n<std::decay_t<ExPolicy>>(part_begin,
-                        part_size - 1,
+                        part_size - 1, tok,
                         [&trail, &tok, &pred_projected](
                             FwdIter_ it) mutable -> void {
                             if (hpx::invoke(pred_projected, *it, *trail++))
