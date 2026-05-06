@@ -145,7 +145,7 @@ namespace hpx::parallel {
         };
 
         /// \cond NOINTERNAL
-        template <typename T>
+        HPX_CXX_CORE_EXPORT template <typename T>
         inline bool sequential_is_partitioned(std::vector<T>&& res)
         {
             auto first = res.begin();
@@ -167,7 +167,7 @@ namespace hpx::parallel {
             return true;
         }
 
-        template <typename Iter, typename Sent>
+        HPX_CXX_CORE_EXPORT template <typename Iter, typename Sent>
         struct is_partitioned
           : public algorithm<is_partitioned<Iter, Sent>, bool>
         {
