@@ -13,12 +13,11 @@
 
 namespace hpx::experimental {
 
-// std::is_replaceable is a library trait introduced by P2786R13.
-// Guard its use on the library feature-test macro __cpp_lib_trivially_relocatable
-// rather than the core-language macro __cpp_trivial_relocatability, since the
-// standard library may not ship the trait even when the language keyword is
-// available (or vice versa).
-#if defined(__cpp_lib_trivially_relocatable)
+// P2786R13 specifies a single feature-test macro __cpp_trivial_relocatability
+// that signals availability of both the language facilities and the library
+// trait std::is_replaceable, see
+// https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2786r13.html#language-feature-test-macros
+#if defined(__cpp_trivial_relocatability)
     HPX_CXX_CORE_EXPORT template <typename T>
     struct is_replaceable : std::is_replaceable<T>
     {
