@@ -207,9 +207,6 @@ namespace hpx::execution::experimental {
     HPX_CXX_CORE_EXPORT using exec::ensure_started;
     HPX_CXX_CORE_EXPORT using exec::ensure_started_t;
 
-    HPX_CXX_CORE_EXPORT using exec::execute;
-    HPX_CXX_CORE_EXPORT using exec::execute_t;
-
     // Environment queries
     HPX_CXX_CORE_EXPORT using exec::make_env;
     HPX_CXX_CORE_EXPORT using exec::make_env_t;

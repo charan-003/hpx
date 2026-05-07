@@ -56,6 +56,13 @@ namespace hpx::execution::experimental {
         using base_scheduler_type = std::decay_t<Scheduler>;
         using policy_type = std::decay_t<ExPolicy>;
 
+        scheduler_and_policy(scheduler_and_policy const&) = default;
+        scheduler_and_policy(scheduler_and_policy&&) noexcept = default;
+        scheduler_and_policy& operator=(scheduler_and_policy const&) = default;
+        scheduler_and_policy& operator=(
+            scheduler_and_policy&&) noexcept = default;
+        ~scheduler_and_policy() = default;
+
         template <typename Scheduler_, typename ExPolicy_>
         scheduler_and_policy(Scheduler_&& sched, ExPolicy_&& policy)
           : base_scheduler_type(HPX_FORWARD(Scheduler_, sched))
