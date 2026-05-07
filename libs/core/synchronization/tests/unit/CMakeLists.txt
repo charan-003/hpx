@@ -58,10 +58,6 @@ set(stop_token_PARAMETERS THREADS_PER_LOCALITY 4)
 set(in_place_stop_token_cb2_PARAMETERS THREADS_PER_LOCALITY 4)
 set(in_place_stop_token_PARAMETERS THREADS_PER_LOCALITY 4)
 
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang")
-  list(REMOVE_ITEM tests async_rw_mutex)
-endif()
-
 foreach(test ${tests})
 
   set(sources ${test}.cpp)

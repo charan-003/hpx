@@ -88,8 +88,10 @@ void test_execute()
     hpx::thread::id parent_id = hpx::this_thread::get_id();
 
     ex::run_loop loop;
-    ex::execute(loop.get_scheduler(),
-        [parent_id]() { HPX_TEST_EQ(hpx::this_thread::get_id(), parent_id); });
+    ex::start_detached(
+        ex::schedule(loop.get_scheduler()) | ex::then([parent_id]() {
+            HPX_TEST_EQ(hpx::this_thread::get_id(), parent_id);
+        }));
 
     loop.finish();
     loop.run();
