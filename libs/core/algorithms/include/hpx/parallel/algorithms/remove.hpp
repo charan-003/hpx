@@ -449,7 +449,7 @@ namespace hpx {
             using Type = typename std::iterator_traits<FwdIter>::value_type;
 
             return hpx::remove_if(HPX_FORWARD(ExPolicy, policy), first, last,
-                [value](Type const& a) -> bool { return value == a; });
+                [value](Type const& a) -> bool { return static_cast<Type>(value) == a; });
         }
     } remove{};
 }    // namespace hpx
