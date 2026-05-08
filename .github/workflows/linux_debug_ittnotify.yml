@@ -1,0 +1,65 @@
+# Copyright (c) 2026 The STE||AR Group
+# Copyright (c) 2026 Vansh Dobhal
+#
+# SPDX-License-Identifier: BSL-1.0
+# Distributed under the Boost Software License, Version 1.0. (See accompanying
+# file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+name: Linux CI (ITTNotify, Debug)
+
+on: [pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: stellargroup/build_env:17
+
+    steps:
+    - uses: actions/checkout@v6
+    - name: Install ITTNotify (ittapi)
+      shell: bash
+      run: |
+          git clone https://github.com/intel/ittapi.git
+          cmake -S ittapi -B ittapi/build -GNinja \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_INSTALL_PREFIX=$PWD/ittapi/install
+          cmake --build ittapi/build --target install
+    - name: Configure
+      shell: bash
+      env:
+        AMPLIFIER_ROOT: ${{ github.workspace }}/ittapi/install
+      run: |
+          cmake \
+              . \
+              -Bbuild \
+              -GNinja \
+              -DCMAKE_BUILD_TYPE=Debug \
+              -DHPX_WITH_MALLOC=system \
+              -DHPX_WITH_FETCH_ASIO=ON \
+              -DHPX_WITH_ASIO_TAG=asio-1-34-2 \
+              -DHPX_WITH_EXAMPLES=ON \
+              -DHPX_WITH_TESTS=ON \
+              -DHPX_WITH_TESTS_MAX_THREADS_PER_LOCALITY=2 \
+              -DHPX_WITH_VERIFY_LOCKS=ON \
+              -DHPX_WITH_VERIFY_LOCKS_BACKTRACE=ON \
+              -DHPX_WITH_CHECK_MODULE_DEPENDENCIES=On \
+              -DHPX_WITH_ITTNOTIFY=ON
+    - name: Build
+      shell: bash
+      run: |
+          cmake --build build --target all
+          cmake --build build --target examples
+    - name: Test
+      shell: bash
+      run: |
+          export LD_LIBRARY_PATH="$GITHUB_WORKSPACE/ittapi/install/lib:$GITHUB_WORKSPACE/ittapi/install/lib64:$LD_LIBRARY_PATH"
+          cd build
+          ctest \
+            --output-on-failure \
+            --tests-regex tests.examples \
+            --exclude-regex tests.examples.transpose.transpose_block_numa \
+            --exclude-regex tests.examples.quickstart.1d_wave_equation
