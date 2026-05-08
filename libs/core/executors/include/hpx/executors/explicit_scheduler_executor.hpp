@@ -19,6 +19,7 @@
 
 #include <cstddef>
 #include <iterator>
+#include <memory>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -224,26 +225,19 @@ namespace hpx::execution::experimental {
                 size_type const shape_size = util::size(shape);
 
                 using result_vector_type = std::vector<result_type>;
-                result_vector_type result_vector(shape_size);
+                auto results = std::make_shared<result_vector_type>(shape_size);
 
-                auto f_wrapper = [](size_type const i,
-                                     result_vector_type& result_vector,
-                                     S const& shape, F& f, Ts&... ts) {
-                    auto it = std::begin(shape);
-                    result_vector[i] = HPX_INVOKE(f, *std::next(it, i), ts...);
-                };
-
-                auto get_result = [](result_vector_type&& result_vector,
-                                      S const&, F&&, Ts&&...) {
-                    return HPX_MOVE(result_vector);
-                };
-
-                return continues_on(
-                           just(HPX_MOVE(result_vector), shape,
-                               HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...),
-                           exec.sched_) |
-                    bulk(shape_size, HPX_MOVE(f_wrapper)) |
-                    then(HPX_MOVE(get_result));
+                return then(bulk(schedule(exec.sched_), shape_size,
+                                [results, shape, f = HPX_FORWARD(F, f),
+                                    ... args = HPX_FORWARD(Ts, ts)](
+                                    size_type i) mutable {
+                                    auto it = util::begin(shape);
+                                    std::advance(it, i);
+                                    (*results)[i] = HPX_INVOKE(f, *it, args...);
+                                }),
+                    [results]() mutable -> result_vector_type {
+                        return HPX_MOVE(*results);
+                    });
             }
         }
 
