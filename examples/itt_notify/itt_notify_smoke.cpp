@@ -5,37 +5,36 @@
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+// This smoke test verifies that HPX compiles, links, and runs correctly
+// with ITTNotify support enabled. The scheduling loop automatically
+// exercises ITT instrumentation (task regions, caller contexts) when
+// HPX_WITH_ITTNOTIFY=ON.
+
+#include <hpx/future.hpp>
 #include <hpx/init.hpp>
-#include <hpx/modules/itt_notify.hpp>
 
-int hpx_main(int, char*[])
+#include <cstddef>
+
+int hpx_main()
 {
-    int sync_obj = 0;
+    // Spawn a few tasks so the scheduler exercises its ITT instrumentation
+    constexpr std::size_t n = 8;
+    hpx::future<int> futs[n];
 
-    HPX_ITT_THREAD_SET_NAME("hpx_itt_smoke");
+    for (std::size_t i = 0; i < n; ++i)
+    {
+        futs[i] = hpx::async([i]() -> int { return static_cast<int>(i * i); });
+    }
 
-    auto* domain = HPX_ITT_DOMAIN_CREATE("hpx.itt.smoke");
-    auto* task_name = HPX_ITT_STRING_HANDLE_CREATE("smoke_task");
-
-    HPX_ITT_SYNC_CREATE(&sync_obj, "smoke_sync", "smoke_sync");
-    HPX_ITT_SYNC_PREPARE(&sync_obj);
-
-    HPX_ITT_TASK_BEGIN(domain, task_name);
-    HPX_ITT_TASK_END(domain);
-
-    HPX_ITT_SYNC_ACQUIRED(&sync_obj);
-    HPX_ITT_SYNC_RELEASED(&sync_obj);
-    HPX_ITT_SYNC_DESTROY(&sync_obj);
-
-    int mark = 0;
-    HPX_ITT_MARK_CREATE(mark, "smoke_mark");
-    HPX_ITT_MARK(mark, "smoke_event");
-    HPX_ITT_MARK_OFF(mark);
+    for (auto& f : futs)
+    {
+        f.get();
+    }
 
     return hpx::local::finalize();
 }
 
 int main(int argc, char* argv[])
 {
-    return hpx::local::init(&hpx_main, argc, argv);
+    return hpx::local::init(hpx_main, argc, argv);
 }

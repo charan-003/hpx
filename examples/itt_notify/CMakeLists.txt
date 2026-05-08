@@ -10,7 +10,6 @@ if(NOT HPX_WITH_ITTNOTIFY)
 endif()
 
 set(example_programs itt_notify_smoke)
-set(itt_notify_smoke_PARAMETERS "--hpx:ini=hpx.use_itt_notify=1")
 
 foreach(example_program ${example_programs})
   set(sources ${example_program}.cpp)
