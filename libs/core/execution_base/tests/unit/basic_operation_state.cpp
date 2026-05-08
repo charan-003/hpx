@@ -32,12 +32,12 @@ namespace mylib {
 
     struct state_2
     {
-        friend void tag_invoke(ex::start_t, state_2&) {}
+        void start() & {}
     };
 
     struct state_3
     {
-        friend void tag_invoke(ex::start_t, state_3&) noexcept
+        void start() & noexcept
         {
             start_called = true;
         }
@@ -45,33 +45,31 @@ namespace mylib {
 
     struct state_4
     {
+        void start() & {}
     };
-
-    void tag_invoke(ex::start_t, state_4&) {}
 
     struct state_5
     {
-    };
-
-    void tag_invoke(ex::start_t, state_5&) noexcept
-    {
-        start_called = true;
-    }
+        void start() & noexcept
+        {
+            start_called = true;
+        }
+    };    // Added semicolon here
 
     template <bool Noexcept>
     struct state
     {
-        friend void tag_invoke(ex::start_t, state&&) noexcept(Noexcept)
+        void start() && noexcept(Noexcept)
         {
             HPX_TEST(false);
         }
 
-        friend void tag_invoke(ex::start_t, state&) noexcept(Noexcept)
+        void start() & noexcept(Noexcept)
         {
             started = 1;
         }
 
-        friend void tag_invoke(ex::start_t, state const&) noexcept(Noexcept)
+        void start() const& noexcept(Noexcept)
         {
             started = 2;
         }
@@ -83,7 +81,7 @@ namespace mylib {
         ~indestructible_state() {}
 
     public:
-        friend void tag_invoke(ex::start_t, indestructible_state&) noexcept
+        void start() & noexcept
         {
             started = 3;
         }

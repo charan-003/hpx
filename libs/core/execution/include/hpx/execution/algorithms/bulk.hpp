@@ -54,30 +54,44 @@ namespace hpx::execution::experimental {
             using disable_set_stopped =
                 hpx::execution::experimental::completion_signatures<>;
 
-            template <typename Env>
-#if defined(HPX_CLANG_VERSION)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#endif
-            friend auto tag_invoke(get_completion_signatures_t,
-                bulk_sender const&, Env) noexcept -> hpx::execution::
-                experimental::transform_completion_signatures<
-                    hpx::execution::experimental::completion_signatures_of_t<
-                        Sender, Env>,
-                    hpx::execution::experimental::completion_signatures<
-                        hpx::execution::experimental::set_error_t(
-                            std::exception_ptr)>,
-                    default_set_value, default_set_error, disable_set_stopped>;
-#if defined(HPX_CLANG_VERSION)
-#pragma clang diagnostic pop
-#endif
-
-            friend constexpr auto tag_invoke(
-                hpx::execution::experimental::get_env_t,
-                bulk_sender const& s) noexcept
+            struct default_set_value_fn
             {
-                return hpx::execution::experimental::get_env(s.sender);
-            }
+                template <class...>
+                consteval auto operator()() const noexcept
+                {
+                    return hpx::execution::experimental::completion_signatures<
+                        hpx::execution::experimental::set_value_t()>{};
+                }
+            };
+
+            struct default_set_error_fn
+            {
+                template <class Err>
+                consteval auto operator()() const noexcept
+                {
+                    return hpx::execution::experimental::completion_signatures<
+                        hpx::execution::experimental::set_error_t(
+                            std::decay_t<Err>)>{};
+                }
+            };
+
+            template <typename Env>
+            friend auto tag_invoke(get_completion_signatures_t,
+                bulk_sender const&, Env) noexcept -> decltype(hpx::execution::
+                    experimental::transform_completion_signatures(
+                        hpx::execution::experimental::
+                            completion_signatures_of_t<Sender, Env>{},
+                        default_set_value_fn{}, default_set_error_fn{},
+                        hpx::execution::experimental::ignore_completion{},
+                        hpx::execution::experimental::completion_signatures<
+                            hpx::execution::experimental::set_error_t(
+                                std::exception_ptr)>{}));
+
+            constexpr auto get_env() const noexcept
+            {
+                return hpx::execution::experimental::get_env(sender);
+            };
+
             template <typename Receiver>
             struct bulk_receiver
             {

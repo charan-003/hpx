@@ -230,39 +230,34 @@ struct large_sender : example_sender<Ts...>
 
 struct error_receiver
 {
+    using receiver_concept = hpx::execution::experimental::receiver_t;
+
     std::atomic<bool>& set_error_called;
 
-    struct is_receiver
-    {
-    };
-
-    friend void tag_invoke(hpx::execution::experimental::set_error_t,
-        error_receiver&& r, std::exception_ptr&& e) noexcept
+    void set_error(std::exception_ptr e) && noexcept
     {
         try
         {
             std::rethrow_exception(std::move(e));
         }
-        catch (std::runtime_error const& e)
+        catch (std::runtime_error const& re)
         {
-            HPX_TEST_EQ(std::string(e.what()), std::string("error"));
+            HPX_TEST_EQ(std::string(re.what()), std::string("error"));
         }
         catch (...)
         {
             HPX_TEST(false);
         }
-        r.set_error_called = true;
+        set_error_called = true;
     }
 
-    friend void tag_invoke(
-        hpx::execution::experimental::set_stopped_t, error_receiver&&) noexcept
+    void set_stopped() && noexcept
     {
         HPX_TEST(false);
-    };
+    }
 
     template <typename... Ts>
-    friend void tag_invoke(hpx::execution::experimental::set_value_t,
-        error_receiver&&, Ts&&...) noexcept
+    void set_value(Ts&&...) && noexcept
     {
         HPX_TEST(false);
     }

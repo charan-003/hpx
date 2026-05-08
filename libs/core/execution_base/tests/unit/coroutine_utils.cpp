@@ -127,21 +127,13 @@ struct recv_set_value
     using receiver_concept = hpx::execution::experimental::receiver_t;
     using dependent = awaiter;
 
-    friend void tag_invoke(hpx::execution::experimental::set_value_t,
-        recv_set_value,
-        decltype(std::declval<dependent>().await_ready())) noexcept
+    void set_value(
+        decltype(std::declval<dependent>().await_ready())) && noexcept
     {
     }
-    friend void tag_invoke(
-        hpx::execution::experimental::set_stopped_t, recv_set_value) noexcept
-    {
-    }
-    friend void tag_invoke(hpx::execution::experimental::set_error_t,
-        recv_set_value, std::exception_ptr) noexcept
-    {
-    }
-    friend dependent tag_invoke(
-        hpx::execution::experimental::get_env_t, recv_set_value const&) noexcept
+    void set_stopped() && noexcept {}
+    void set_error(std::exception_ptr) && noexcept {}
+    dependent get_env() const noexcept
     {
         return {};
     }

@@ -189,15 +189,20 @@ namespace hpx::mpi::experimental {
             friend auto tag_invoke(
                 hpx::execution::experimental::get_completion_signatures_t,
                 transform_mpi_sender const&, Env const&)
-            ->  hpx::execution::experimental::transform_completion_signatures_of<
-                    Sender, Env,
-                    hpx::execution::experimental::completion_signatures<
-                        hpx::execution::experimental::set_error_t(std::exception_ptr)
-                    >,
-                    invoke_function_transformation,
-                    default_set_error,
-                    no_set_stopped_signature
-                >;
+            ->  decltype(hpx::execution::experimental::transform_completion_signatures(
+                    hpx::execution::experimental::completion_signatures_of_t<
+                        Sender, Env>{},
+                    invoke_function_transformation{},
+                    default_set_error{},
+                    no_set_stopped_signature{}))
+            {
+                return hpx::execution::experimental::transform_completion_signatures(
+                    hpx::execution::experimental::completion_signatures_of_t<
+                        Sender, Env>{},
+                    invoke_function_transformation{},
+                    default_set_error{},
+                    no_set_stopped_signature{});
+            }
             // clang-format on
 
             template <typename R>
