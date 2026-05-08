@@ -18,7 +18,6 @@
 #include <vector>
 
 using hpx::execution::experimental::continues_on;
-using hpx::execution::experimental::execute;
 using hpx::execution::experimental::then;
 using hpx::execution::experimental::thread_pool_scheduler;
 using hpx::experimental::async_rw_mutex;

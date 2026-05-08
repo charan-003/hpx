@@ -1307,8 +1307,17 @@ namespace hpx::experimental {
                         // NOLINTNEXTLINE(bugprone-undefined-memory-manipulation)
                         std::memmove(static_cast<void*>(std::to_address(dest)),
                             std::to_address(first), count * sizeof(value_type));
-                        return parallel::util::detail::algorithm_result<
-                            ExPolicy, FwdIter>::get(std::next(dest, count));
+                        if constexpr (has_scheduler_executor)
+                        {
+                            namespace ex = hpx::execution::experimental;
+                            return ex::unique_any_sender<FwdIter>(
+                                ex::just(std::next(dest, count)));
+                        }
+                        else
+                        {
+                            return parallel::util::detail::algorithm_result<
+                                ExPolicy, FwdIter>::get(std::next(dest, count));
+                        }
                     }
                 }
             }

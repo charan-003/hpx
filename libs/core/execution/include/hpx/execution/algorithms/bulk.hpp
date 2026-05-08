@@ -56,11 +56,11 @@ namespace hpx::execution::experimental {
 
             struct default_set_value_fn
             {
-                template <class...>
+                template <class... Args>
                 consteval auto operator()() const noexcept
                 {
                     return hpx::execution::experimental::completion_signatures<
-                        hpx::execution::experimental::set_value_t()>{};
+                        hpx::execution::experimental::set_value_t(Args...)>{};
                 }
             };
 
