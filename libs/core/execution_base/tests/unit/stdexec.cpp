@@ -17,7 +17,8 @@ int main()
     auto result = hpx::execution::experimental::sync_wait(std::move(x));
 
     HPX_TEST(result.has_value());
-    if (!result) return hpx::util::report_errors();
+    if (!result)
+        return hpx::util::report_errors();
     auto [a] = std::move(*result);
 
     HPX_TEST(a == 42);

@@ -22,8 +22,6 @@
 namespace ex = hpx::execution::experimental;
 namespace tt = hpx::this_thread::experimental;
 
-
-
 // NOLINTBEGIN(bugprone-unchecked-optional-access)
 int hpx_main()
 {
@@ -248,8 +246,6 @@ int hpx_main()
 
         HPX_TEST(i == 3);
     }
-
-
 
     // Failure path
     {

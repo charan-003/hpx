@@ -24,7 +24,6 @@
 
 namespace ex = hpx::execution::experimental;
 
-
 int main()
 {
     // Success path
@@ -187,8 +186,6 @@ int main()
         HPX_TEST(scheduler_schedule_called);
         HPX_TEST(!scheduler_execute_called);
     }
-
-
 
     // Failure path
     {

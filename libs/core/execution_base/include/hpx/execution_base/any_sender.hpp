@@ -378,7 +378,7 @@ namespace hpx::execution::experimental::detail {
         any_operation_state& operator=(any_operation_state&&) = delete;
         any_operation_state& operator=(any_operation_state const&) = delete;
 
-        HPX_CORE_EXPORT void start() & noexcept;
+        void start() & noexcept;
     };
 
     HPX_CXX_CORE_EXPORT template <typename... Ts>

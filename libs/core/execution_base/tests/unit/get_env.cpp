@@ -76,8 +76,7 @@ namespace mylib {
         decltype(auto) get_env() const noexcept
         {
             // Return flat env with both props instead of nesting
-            return ex::make_env(
-                ex::prop(receiver_env, 42),
+            return ex::make_env(ex::prop(receiver_env, 42),
                 ex::prop(receiver_env, std::string("42")));
         }
     };
@@ -107,8 +106,7 @@ namespace mylib {
         decltype(auto) get_env() const noexcept
         {
             // Return flat env with both props instead of nesting
-            return ex::make_env(
-                ex::prop(receiver_env, 42),
+            return ex::make_env(ex::prop(receiver_env, 42),
                 ex::prop(receiver_env1, std::string("42")));
         }
     };

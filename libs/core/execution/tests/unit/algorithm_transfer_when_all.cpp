@@ -49,8 +49,6 @@ int main()
         static_assert(ex::is_sender_v<decltype(s)>,
             "transfer_when_all must return a sender");
 
-
-
         auto f = [](int x) { HPX_TEST_EQ(x, 42); };
         auto r = callback_receiver<decltype(f)>{f, set_value_called};
         auto os = ex::connect(std::move(s), std::move(r));
@@ -73,8 +71,6 @@ int main()
             ex::just(std::string("hello")), ex::just(3.14));
         static_assert(ex::is_sender_v<decltype(s)>,
             "transfer_when_all must return a sender");
-
-
 
         auto f = [](int x, std::string y, double z) {
             HPX_TEST_EQ(x, 42);
@@ -102,8 +98,6 @@ int main()
             sched, ex::just(), ex::just(std::string("hello")), ex::just(3.14));
         static_assert(ex::is_sender_v<decltype(s)>,
             "transfer_when_all must return a sender");
-
-
 
         auto f = [](std::string y, double z) {
             HPX_TEST_EQ(y, std::string("hello"));

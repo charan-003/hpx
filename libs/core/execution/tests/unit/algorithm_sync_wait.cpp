@@ -21,8 +21,6 @@
 namespace ex = hpx::execution::experimental;
 namespace tt = hpx::this_thread::experimental;
 
-
-
 // NOLINTBEGIN(bugprone-unchecked-optional-access)
 int hpx_main()
 {
@@ -97,8 +95,6 @@ int hpx_main()
     {
         HPX_TEST_EQ(hpx::get<0>(*tt::sync_wait(ex::just(3))), 3);
     }
-
-
 
     // Failure path
     {
