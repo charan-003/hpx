@@ -11,6 +11,7 @@
 #include <hpx/modules/functional.hpp>
 #include <hpx/modules/type_support.hpp>
 
+#include <concepts>
 #include <cstddef>
 #include <type_traits>
 #include <utility>
