@@ -469,16 +469,14 @@ namespace hpx::experimental {
                 operation_state(operation_state const&) = delete;
                 operation_state& operator=(operation_state const&) = delete;
 
-                friend void tag_invoke(hpx::execution::experimental::start_t,
-                    operation_state& os) noexcept
+                void start() & noexcept
                 {
-                    HPX_ASSERT_MSG(os.state,
+                    HPX_ASSERT_MSG(state,
                         "async_rw_lock::sender::operation_state state is "
                         "empty, was the sender already started?");
 
                     auto continuation =
-                        [r = HPX_MOVE(os.r)](
-                            shared_state_ptr_type state) mutable {
+                        [r = HPX_MOVE(r)](shared_state_ptr_type state) mutable {
                             try
                             {
                                 hpx::execution::experimental::set_value(
@@ -491,20 +489,20 @@ namespace hpx::experimental {
                             }
                         };
 
-                    if (os.prev_state)
+                    if (prev_state)
                     {
-                        os.prev_state->add_continuation(HPX_MOVE(continuation));
+                        prev_state->add_continuation(HPX_MOVE(continuation));
 
                         // We release prev_state here to allow continuations to
                         // run. The operation state may otherwise keep it alive
                         // longer than needed.
-                        os.prev_state.reset();
+                        prev_state.reset();
                     }
                     else
                     {
                         // There is no previous state on the first access. We
                         // can immediately trigger the continuation.
-                        continuation(HPX_MOVE(os.state));
+                        continuation(HPX_MOVE(state));
                     }
                 }
             };
@@ -665,16 +663,14 @@ namespace hpx::experimental {
                 operation_state(operation_state const&) = delete;
                 operation_state& operator=(operation_state const&) = delete;
 
-                friend void tag_invoke(hpx::execution::experimental::start_t,
-                    operation_state& os) noexcept
+                void start() & noexcept
                 {
-                    HPX_ASSERT_MSG(os.state,
+                    HPX_ASSERT_MSG(state,
                         "async_rw_lock::sender::operation_state state is "
                         "empty, was the sender already started?");
 
                     auto continuation =
-                        [r = HPX_MOVE(os.r)](
-                            shared_state_ptr_type state) mutable {
+                        [r = HPX_MOVE(r)](shared_state_ptr_type state) mutable {
                             try
                             {
                                 hpx::execution::experimental::set_value(
@@ -687,19 +683,19 @@ namespace hpx::experimental {
                             }
                         };
 
-                    if (os.prev_state)
+                    if (prev_state)
                     {
-                        os.prev_state->add_continuation(HPX_MOVE(continuation));
+                        prev_state->add_continuation(HPX_MOVE(continuation));
                         // We release prev_state here to allow continuations to
                         // run. The operation state may otherwise keep it alive
                         // longer than needed.
-                        os.prev_state.reset();
+                        prev_state.reset();
                     }
                     else
                     {
                         // There is no previous state on the first access. We
                         // can immediately trigger the continuation.
-                        continuation(HPX_MOVE(os.state));
+                        continuation(HPX_MOVE(state));
                     }
                 }
             };

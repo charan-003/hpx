@@ -94,11 +94,10 @@ struct default_task_context_impl
     template <typename ParentPromise, typename T>
     friend struct default_awaiter_context;
 
-    friend auto tag_invoke(hpx::execution::experimental::get_stop_token_t,
-        default_task_context_impl const& self) noexcept
+    auto query(hpx::execution::experimental::get_stop_token_t) const noexcept
         -> hpx::experimental::in_place_stop_token
     {
-        return self.stop_token_;
+        return stop_token_;
     }
 
 public:
@@ -336,10 +335,9 @@ private:
         }
         using context_t =
             typename Context::template promise_context_t<_promise>;
-        friend context_t tag_invoke(hpx::execution::experimental::get_env_t,
-            _promise const& self) noexcept
+        context_t get_env() const noexcept
         {
-            return self.context_;
+            return context_;
         }
         context_t context_;
     };

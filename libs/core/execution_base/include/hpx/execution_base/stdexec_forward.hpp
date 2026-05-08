@@ -111,7 +111,7 @@ namespace hpx::execution::experimental {
     HPX_CXX_CORE_EXPORT using stdexec::forwarding_query_t;
     HPX_CXX_CORE_EXPORT using stdexec::get_allocator_t;
     HPX_CXX_CORE_EXPORT using stdexec::get_completion_scheduler_t;
-    HPX_CXX_CORE_EXPORT using stdexec::get_delegatee_scheduler_t;
+    HPX_CXX_CORE_EXPORT using stdexec::get_delegation_scheduler_t;
     HPX_CXX_CORE_EXPORT using stdexec::get_domain_t;
     HPX_CXX_CORE_EXPORT using stdexec::get_forward_progress_guarantee_t;
     HPX_CXX_CORE_EXPORT using stdexec::get_scheduler_t;
@@ -121,7 +121,7 @@ namespace hpx::execution::experimental {
     HPX_CXX_CORE_EXPORT using stdexec::forwarding_query;
     HPX_CXX_CORE_EXPORT using stdexec::get_allocator;
     HPX_CXX_CORE_EXPORT using stdexec::get_completion_scheduler;
-    HPX_CXX_CORE_EXPORT using stdexec::get_delegatee_scheduler;
+    HPX_CXX_CORE_EXPORT using stdexec::get_delegation_scheduler;
     HPX_CXX_CORE_EXPORT using stdexec::get_domain;
     HPX_CXX_CORE_EXPORT using stdexec::get_forward_progress_guarantee;
     HPX_CXX_CORE_EXPORT using stdexec::get_scheduler;
@@ -284,9 +284,12 @@ namespace hpx::execution::experimental {
     HPX_CXX_CORE_EXPORT using stdexec::sends_stopped;
     HPX_CXX_CORE_EXPORT using stdexec::value_types_of_t;
 
-    HPX_CXX_CORE_EXPORT using stdexec::transform_completion_signatures;
-    HPX_CXX_CORE_EXPORT using stdexec::transform_completion_signatures_of;
+    // New exec:: API for transform_completion_signatures (consteval function)
+    using exec::transform_completion_signatures;
     HPX_CXX_CORE_EXPORT using exec::keep_completion;
+    HPX_CXX_CORE_EXPORT using exec::ignore_completion;
+    HPX_CXX_CORE_EXPORT using exec::transform_arguments;
+    HPX_CXX_CORE_EXPORT using exec::decay_arguments;
 
     // Transform sender
     HPX_CXX_CORE_EXPORT using stdexec::transform_sender;

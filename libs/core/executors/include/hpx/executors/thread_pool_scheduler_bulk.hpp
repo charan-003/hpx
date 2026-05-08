@@ -363,22 +363,17 @@ namespace hpx::execution::experimental::detail {
         using receiver_concept = hpx::execution::experimental::receiver_t;
         OperationState* op_state;
 
-        template <typename Receiver, typename E>
-            requires std::same_as<std::remove_cvref_t<Receiver>, bulk_receiver>
-        friend void tag_invoke(hpx::execution::experimental::set_error_t,
-            Receiver&& r, E&& e) noexcept
+        template <typename E>
+        void set_error(E&& e) && noexcept
         {
             hpx::execution::experimental::set_error(
-                HPX_MOVE(r.op_state->receiver), HPX_FORWARD(E, e));
+                HPX_MOVE(op_state->receiver), HPX_FORWARD(E, e));
         }
 
-        template <typename Receiver>
-            requires std::same_as<std::remove_cvref_t<Receiver>, bulk_receiver>
-        friend void tag_invoke(
-            hpx::execution::experimental::set_stopped_t, Receiver&& r) noexcept
+        void set_stopped() && noexcept
         {
             hpx::execution::experimental::set_stopped(
-                HPX_MOVE(r.op_state->receiver));
+                HPX_MOVE(op_state->receiver));
         }
 
         // Initialize a queue for a worker thread.
@@ -630,16 +625,14 @@ namespace hpx::execution::experimental::detail {
             }
         }
 
-        template <typename Receiver, typename... Ts>
-            requires std::same_as<std::remove_cvref_t<Receiver>, bulk_receiver>
-        friend void tag_invoke(hpx::execution::experimental::set_value_t,
-            Receiver&& r, Ts&&... ts) noexcept
+        template <typename... Ts>
+        void set_value(Ts&&... ts) && noexcept
         {
             hpx::detail::try_catch_exception_ptr(
-                [&]() { r.execute(HPX_FORWARD(Ts, ts)...); },
+                [&]() { this->execute(HPX_FORWARD(Ts, ts)...); },
                 [&](std::exception_ptr ep) {
                     hpx::execution::experimental::set_error(
-                        HPX_MOVE(r.op_state->receiver), HPX_MOVE(ep));
+                        HPX_MOVE(op_state->receiver), HPX_MOVE(ep));
                 });
         }
     };
@@ -708,21 +701,24 @@ namespace hpx::execution::experimental::detail {
         using sender_concept = hpx::execution::experimental::sender_t;
 
         template <typename Env>
-#if defined(HPX_CLANG_VERSION)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#endif
         friend auto tag_invoke(
             hpx::execution::experimental::get_completion_signatures_t,
-            thread_pool_bulk_sender const&, Env const&)
-            -> hpx::execution::experimental::transform_completion_signatures_of<
-                Sender, Env,
-                hpx::execution::experimental::completion_signatures<
-                    hpx::execution::experimental::set_error_t(
-                        std::exception_ptr)>>;
-#if defined(HPX_CLANG_VERSION)
-#pragma clang diagnostic pop
-#endif
+            thread_pool_bulk_sender const&, Env const&) -> decltype(hpx::
+                execution::experimental::transform_completion_signatures(
+                    hpx::execution::experimental::completion_signatures_of_t<
+                        Sender, Env>{},
+                    hpx::execution::experimental::keep_completion<
+                        hpx::execution::experimental::set_value_t>{},
+                    hpx::execution::experimental::keep_completion<
+                        hpx::execution::experimental::set_error_t>{},
+                    hpx::execution::experimental::keep_completion<
+                        hpx::execution::experimental::set_stopped_t>{},
+                    hpx::execution::experimental::completion_signatures<
+                        hpx::execution::experimental::set_error_t(
+                            std::exception_ptr)>{}))
+        {
+            return {};
+        }
 
         struct env
         {
@@ -763,11 +759,9 @@ namespace hpx::execution::experimental::detail {
 
         // It may be also be correct to forward the entire env of the
         // pred. sender.
-        friend constexpr auto tag_invoke(
-            hpx::execution::experimental::get_env_t,
-            thread_pool_bulk_sender const& s) noexcept
+        constexpr auto get_env() const noexcept
         {
-            return env{s.sender, s.scheduler};
+            return env{sender, scheduler};
         }
 
     private:
@@ -827,9 +821,9 @@ namespace hpx::execution::experimental::detail {
                 HPX_ASSERT(hpx::threads::count(pu_mask) == num_worker_threads);
             }
 
-            friend void tag_invoke(start_t, operation_state& os) noexcept
+            void start() & noexcept
             {
-                hpx::execution::experimental::start(os.op_state);
+                hpx::execution::experimental::start(op_state);
             }
         };
 

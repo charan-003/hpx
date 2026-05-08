@@ -30,7 +30,7 @@ namespace mylib {
     using delegatee_sched = my_namespace::my_scheduler_template<0>;
 
     using delegatee_sched_env_t = ex::env<sched_env_t,
-        ex::prop<ex::get_delegatee_scheduler_t, delegatee_sched>>;
+        ex::prop<ex::get_delegation_scheduler_t, delegatee_sched>>;
 
     struct allocator
     {
@@ -99,21 +99,21 @@ namespace mylib {
 
         auto get_env() const noexcept
         {
-            auto sched_env = ex::prop(ex::get_scheduler_t{}, sched());
+            auto sched_env = ex::prop{ex::get_scheduler_t{}, sched()};
             static_assert(std::is_same_v<decltype(sched_env), sched_env_t>,
                 "must return sched_env");
-            auto delegatee_sched_env = ex::env(std::move(sched_env),
-                ex::prop(ex::get_delegatee_scheduler_t{}, delegatee_sched()));
+            auto delegatee_sched_env = ex::env{{sched_env,
+                ex::prop{ex::get_delegation_scheduler_t{}, delegatee_sched()}}};
             static_assert(std::is_same_v<decltype(delegatee_sched_env),
                               delegatee_sched_env_t>,
                 "must return delegatee_sched_env");
-            auto allocator_env = ex::env(std::move(delegatee_sched_env),
-                ex::prop(ex::get_allocator_t{}, allocator()));
+            auto allocator_env = ex::env{{delegatee_sched_env,
+                ex::prop{ex::get_allocator_t{}, allocator()}}};
             static_assert(
                 std::is_same_v<decltype(allocator_env), allocator_env_t>,
                 "must return allocator_env");
-            auto stop_token_env = ex::env(std::move(allocator_env),
-                ex::prop(ex::get_stop_token_t{}, stop_token()));
+            auto stop_token_env = ex::env{{allocator_env,
+                ex::prop{ex::get_stop_token_t{}, stop_token()}}};
             static_assert(
                 std::is_same_v<decltype(stop_token_env), stop_token_env_t>,
                 "must return stop_token_env");
@@ -133,7 +133,7 @@ int main()
         static_assert(std::is_same_v<decltype(sched), mylib::sched>,
             "must return mylib::sched");
 
-        auto delegatee_sched = ex::get_delegatee_scheduler(env);
+        auto delegatee_sched = ex::get_delegation_scheduler(env);
         static_assert(
             std::is_same_v<decltype(delegatee_sched), mylib::delegatee_sched>,
             "must return mylib::delegatee_sched");
@@ -154,7 +154,7 @@ int main()
     }
     {
         mylib::receiver_1 rcv;
-        auto os = ex::connect(ex::get_delegatee_scheduler(), rcv);
+        auto os = ex::connect(ex::get_delegation_scheduler(), rcv);
         ex::start(os);
         HPX_TEST(set_value_delegatee_sched_called);
     }

@@ -106,27 +106,25 @@ struct check_context_receiver
     bool& executed;
 
     template <typename E>
-    friend void tag_invoke(
-        ex::set_error_t, check_context_receiver&&, E&&) noexcept
+    void set_error(E&&) && noexcept
     {
         HPX_TEST(false);
     }
 
-    friend void tag_invoke(ex::set_stopped_t, check_context_receiver&&) noexcept
+    void set_stopped() && noexcept
     {
         HPX_TEST(false);
     }
 
     template <typename... Ts>
-    friend void tag_invoke(
-        ex::set_value_t, check_context_receiver&& r, Ts&&...) noexcept
+    void set_value(Ts&&...) && noexcept
     {
-        HPX_TEST_EQ(r.parent_id, hpx::this_thread::get_id());
+        HPX_TEST_EQ(parent_id, hpx::this_thread::get_id());
         HPX_TEST_NEQ(hpx::thread::id(hpx::threads::invalid_thread_id),
             hpx::this_thread::get_id());
 
-        r.executed = true;
-        r.loop.finish();
+        executed = true;
+        loop.finish();
     }
 };
 

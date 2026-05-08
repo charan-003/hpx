@@ -858,11 +858,10 @@ namespace my_namespace {
             {
                 std::decay_t<R> r;
 
-                friend void tag_invoke(hpx::execution::experimental::start_t,
-                    operation_state& os) noexcept
+                void start() & noexcept
                 {
-                    hpx::execution::experimental::set_value(std::move(os.r));
-                };
+                    hpx::execution::experimental::set_value(std::move(r));
+                }
             };
 
             template <typename R>
@@ -871,9 +870,7 @@ namespace my_namespace {
             {
                 return operation_state<R>{std::forward<R>(r)};
             }
-            friend env_with_scheduler<my_scheduler_template> tag_invoke(
-                hpx::execution::experimental::get_env_t,
-                my_sender const&) noexcept
+            env_with_scheduler<my_scheduler_template> get_env() const noexcept
             {
                 return {};
             }
@@ -886,8 +883,7 @@ namespace my_namespace {
                     hpx::execution::experimental::set_value_t()>;
         };
 
-        friend my_sender tag_invoke(
-            hpx::execution::experimental::schedule_t, my_scheduler_template)
+        my_sender schedule() const noexcept
         {
             return {};
         }

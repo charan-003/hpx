@@ -84,27 +84,25 @@ struct check_context_receiver
     bool& executed;
     using receiver_concept = ex::receiver_t;
     template <typename E>
-    friend void tag_invoke(
-        ex::set_error_t, check_context_receiver&&, E&&) noexcept
+    void set_error(E&&) && noexcept
     {
         HPX_TEST(false);
     }
 
-    friend void tag_invoke(ex::set_stopped_t, check_context_receiver&&) noexcept
+    void set_stopped() && noexcept
     {
         HPX_TEST(false);
     }
 
     template <typename... Ts>
-    friend void tag_invoke(
-        ex::set_value_t, check_context_receiver&& r, Ts&&...) noexcept
+    void set_value(Ts&&...) && noexcept
     {
-        HPX_TEST_NEQ(r.parent_id, hpx::this_thread::get_id());
+        HPX_TEST_NEQ(parent_id, hpx::this_thread::get_id());
         HPX_TEST_NEQ(hpx::thread::id(hpx::threads::invalid_thread_id),
             hpx::this_thread::get_id());
-        std::lock_guard l{r.mtx};
-        r.executed = true;
-        r.cond.notify_one();
+        std::lock_guard l{mtx};
+        executed = true;
+        cond.notify_one();
     }
 };
 
@@ -249,24 +247,23 @@ struct callback_receiver
     using receiver_concept = ex::receiver_t;
 
     template <typename E>
-    friend void tag_invoke(ex::set_error_t, callback_receiver&&, E&&) noexcept
+    void set_error(E&&) && noexcept
     {
         HPX_TEST(false);
     }
 
-    friend void tag_invoke(ex::set_stopped_t, callback_receiver&&) noexcept
+    void set_stopped() && noexcept
     {
         HPX_TEST(false);
     }
 
     template <typename... Ts>
-    friend void tag_invoke(
-        ex::set_value_t, callback_receiver&& r, Ts&&...) noexcept
+    void set_value(Ts&&...) && noexcept
     {
-        HPX_INVOKE(r.f, );
-        std::lock_guard l{r.mtx};
-        r.executed = true;
-        r.cond.notify_one();
+        HPX_INVOKE(f, );
+        std::lock_guard l{mtx};
+        executed = true;
+        cond.notify_one();
     }
 };
 
@@ -1710,40 +1707,38 @@ void test_bulk()
     }
 
     {
-        std::unordered_set<std::string> string_map;
-        std::vector<std::string> v = {"hello", "brave", "new", "world"};
-        std::vector<std::string> v_ref = v;
-
-        hpx::mutex mtx;
-        tt::sync_wait(ex::schedule(ex::thread_pool_scheduler{}) |
-            ex::bulk(std::move(v), [&](std::string const& s) {
-                std::lock_guard lk(mtx);
-                string_map.insert(s);
-            }));
-
-        for (auto const& s : v_ref)
+        for (auto n : ns)
         {
-            HPX_TEST(string_map.find(s) != string_map.end());
-        }
-    }
+            int i_fail = 3;
 
-    for (auto n : ns)
-    {
-        int i_fail = 3;
+            std::vector<int> v(n, -1);
+            bool const expect_exception = n > i_fail;
 
-        std::vector<int> v(n, -1);
-        bool const expect_exception = n > i_fail;
+            try
+            {
+                tt::sync_wait(ex::just(ex::thread_pool_scheduler{}) |
+                    ex::bulk(n, [&v, i_fail](int i) {
+                        if (i == i_fail)
+                        {
+                            throw std::runtime_error("error");
+                        }
+                        v[i] = i;
+                    }));
 
-        try
-        {
-            tt::sync_wait(ex::just(ex::thread_pool_scheduler{}) |
-                ex::bulk(n, [&v, i_fail](int i) {
-                    if (i == i_fail)
-                    {
-                        throw std::runtime_error("error");
-                    }
-                    v[i] = i;
-                }));
+                if (expect_exception)
+                {
+                    HPX_TEST(false);
+                }
+            }
+            catch (std::runtime_error const& e)
+            {
+                if (!expect_exception)
+                {
+                    HPX_TEST(false);
+                }
+
+                HPX_TEST(std::string(e.what()).find("error") == 0);
+            }
 
             if (expect_exception)
             {
