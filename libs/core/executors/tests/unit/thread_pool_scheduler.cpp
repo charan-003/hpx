@@ -2325,10 +2325,6 @@ int main(int argc, char* argv[])
 
     return hpx::util::report_errors();
 }
-
-#if defined(HPX_CLANG_VERSION)
-#pragma clang diagnostic pop
-#endif
 #else
 int main()
 {

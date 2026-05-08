@@ -295,12 +295,11 @@ namespace hpx::cuda::experimental {
             using invoke_function_transformation =
                 invoke_function_transformation_helper<Args...>::type;
 
-            template <typename Self, typename Env>
-            friend auto tag_invoke(
-                hpx::execution::experimental::get_completion_signatures_t,
-                transform_stream_sender const&, Env const&)
+            template <typename Self, typename... Env>
+            static consteval auto get_completion_signatures() noexcept
                 -> hpx::execution::experimental::completion_signatures<
-                    hpx::execution::experimental::set_error_t(std::exception_ptr)>
+                    hpx::execution::experimental::set_error_t(
+                        std::exception_ptr)>
             {
                 return {};
             }

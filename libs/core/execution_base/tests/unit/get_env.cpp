@@ -40,6 +40,7 @@ namespace mylib {
     {
         // clang-format off
         template <typename Env>
+            requires requires(Env const& e, receiver_env_t q) { e.query(q); }
         decltype(auto) operator()(Env const& e) const noexcept
         {
             return e.query(*this);
@@ -62,8 +63,9 @@ namespace mylib {
     };
 
     // clang-format off
-    auto env4 = ex::env(
-        std::move(env3), ex::prop(receiver_env, std::string("42")));
+    auto env4 = ex::make_env(
+        ex::prop(receiver_env, 42),
+        ex::prop(receiver_env, std::string("42")));
     // clang-format on
     using env4_t = decltype(env4);
 
@@ -73,27 +75,17 @@ namespace mylib {
 
         decltype(auto) get_env() const noexcept
         {
-            receiver_3 rcv;
-
-            /* Due to https://github.com/llvm/llvm-project/issues/88077
-            * The following line never compiles, and if it does, it misbehaves.
-            * return ex::env(
-            *           ex::prop(receiver_env, std::string("42")),
-            *           ex::get_env(rcv)
-            *       );
-            *
-            * The following is a workaround */
-
-            auto e = ex::get_env(rcv);
-            auto p = ex::prop(receiver_env, std::string("42"));
-
-            return ex::env(std::move(e), std::move(p));
+            // Return flat env with both props instead of nesting
+            return ex::make_env(
+                ex::prop(receiver_env, 42),
+                ex::prop(receiver_env, std::string("42")));
         }
     };
 
     inline constexpr struct receiver_env1_t final : ex::forwarding_query_t
     {
         template <typename Env>
+            requires requires(Env const& e, receiver_env1_t q) { e.query(q); }
         decltype(auto) operator()(Env const& e) const noexcept
         {
             return e.query(*this);
@@ -102,7 +94,9 @@ namespace mylib {
 
     // clang-format off
     auto env5 =
-        ex::env(std::move(env3), ex::prop(receiver_env1, std::string("42")));
+        ex::make_env(
+            ex::prop(receiver_env, 42),
+            ex::prop(receiver_env1, std::string("42")));
     // clang-format on
     using env5_t = decltype(env5);
 
@@ -112,15 +106,10 @@ namespace mylib {
 
         decltype(auto) get_env() const noexcept
         {
-            receiver_3 rcv;
-            /* Same as receiver_4
-             * This would cause the compiler to crash:
-             * return ex::env(
-             *    ex::get_env(rcv), ex::prop(receiver_env1, std::string("42")));
-             * */
-            auto e = ex::get_env(rcv);
-            auto p = ex::prop(receiver_env1, std::string("42"));
-            return ex::env(std::move(e), std::move(p));
+            // Return flat env with both props instead of nesting
+            return ex::make_env(
+                ex::prop(receiver_env, 42),
+                ex::prop(receiver_env1, std::string("42")));
         }
     };
 }    // namespace mylib
@@ -151,9 +140,9 @@ int main()
         // The resulting env_ = env(env1, env2) will query env1 first and env2
         // in that order, in order to find the resulting value of some query.
         // In cases when both env1 and env2 support the same query, as seen here
-        // with receiver_env the result of env1 is picked.
+        // with receiver_env, the new stdexec API returns the last value.
         auto env = ex::get_env(rcv);
-        HPX_TEST_EQ(mylib::receiver_env(env), 42);
+        HPX_TEST_EQ(mylib::receiver_env(env), std::string("42"));
     }
     {
         mylib::receiver_5 rcv;

@@ -187,37 +187,36 @@ struct default_awaiter_context<ParentPromise,
 template <>
 struct default_awaiter_context<void>
 {
-    explicit default_awaiter_context(default_task_context_impl&, auto&) noexcept
-    {
-    }
-
-    template <typename ParentPromise,
-        typename =
-            std::enable_if_t<indirect_stop_token_provider<ParentPromise>>>
+    template <typename ParentPromise>
     explicit default_awaiter_context(
         default_task_context_impl& self, ParentPromise& parent)
     {
         // Register a callback that will request stop on this basic_task's
         // stop_source when stop is requested on the parent coroutine's stop
         // token.
-        using stop_token_t = hpx::execution::experimental::stop_token_of_t<
-            hpx::execution::experimental::env_of_t<ParentPromise>>;
-        using stop_callback_t =
-            typename stop_token_t::template callback_type<forward_stop_request>;
+        if constexpr (requires {
+            hpx::execution::experimental::get_env(parent);
+        })
+        {
+            using stop_token_t = hpx::execution::experimental::stop_token_of_t<
+                hpx::execution::experimental::env_of_t<ParentPromise>>;
+            using stop_callback_t =
+                typename stop_token_t::template callback_type<forward_stop_request>;
 
-        if constexpr (std::is_same_v<stop_token_t,
-                          hpx::experimental::in_place_stop_token>)
-        {
-            self.stop_token_ = hpx::execution::experimental::get_stop_token(
-                hpx::execution::experimental::get_env(parent));
-        }
-        else if (auto token = hpx::execution::experimental::get_stop_token(
-                     hpx::execution::experimental::get_env(parent));
-            token.stop_possible())
-        {
-            stop_callback_.emplace<stop_callback_t>(
-                std::move(token), forward_stop_request{stop_source_});
-            self.stop_token_ = stop_source_.get_token();
+            if constexpr (std::is_same_v<stop_token_t,
+                              hpx::experimental::in_place_stop_token>)
+            {
+                self.stop_token_ = hpx::execution::experimental::get_stop_token(
+                    hpx::execution::experimental::get_env(parent));
+            }
+            else if (auto token = hpx::execution::experimental::get_stop_token(
+                         hpx::execution::experimental::get_env(parent));
+                token.stop_possible())
+            {
+                stop_callback_.emplace<stop_callback_t>(
+                    std::move(token), forward_stop_request{stop_source_});
+                self.stop_token_ = stop_source_.get_token();
+            }
         }
     }
 

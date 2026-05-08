@@ -439,14 +439,13 @@ namespace hpx::experimental {
                     AccessType>;
             using sender_concept = hpx::execution::experimental::sender_t;
 
-            template <typename Env>
-            friend auto tag_invoke(
-                hpx::execution::experimental::get_completion_signatures_t,
-                sender const&, Env const&)
+            template <typename Self, typename... Env>
+            static consteval auto get_completion_signatures() noexcept
                 -> hpx::execution::experimental::completion_signatures<
                     hpx::execution::experimental::set_value_t(access_type),
                     hpx::execution::experimental::set_error_t(
-                        std::exception_ptr)>;
+                        std::exception_ptr)>
+            { return {}; }
 
             template <typename R>
             struct operation_state
@@ -633,14 +632,13 @@ namespace hpx::experimental {
 
             using sender_concept = hpx::execution::experimental::sender_t;
 
-            template <typename Env>
-            friend auto tag_invoke(
-                hpx::execution::experimental::get_completion_signatures_t,
-                sender const&, Env)
+            template <typename Self, typename... Env>
+            static consteval auto get_completion_signatures() noexcept
                 -> hpx::execution::experimental::completion_signatures<
                     hpx::execution::experimental::set_value_t(access_type),
                     hpx::execution::experimental::set_error_t(
-                        std::exception_ptr)>;
+                        std::exception_ptr)>
+            { return {}; }
 
             template <typename R>
             struct operation_state

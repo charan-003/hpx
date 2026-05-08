@@ -185,10 +185,8 @@ namespace hpx::mpi::experimental {
                 hpx::execution::experimental::completion_signatures<>;
 
             // clang-format off
-            template <typename Env>
-            friend auto tag_invoke(
-                hpx::execution::experimental::get_completion_signatures_t,
-                transform_mpi_sender const&, Env const&)
+            template <typename Self, typename Env>
+            static consteval auto get_completion_signatures() noexcept
             ->  decltype(hpx::execution::experimental::transform_completion_signatures(
                     hpx::execution::experimental::completion_signatures_of_t<
                         Sender, Env>{},
