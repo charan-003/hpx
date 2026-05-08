@@ -138,9 +138,11 @@ namespace hpx::when_all_vector_detail {
             }
         };
 
-        template <typename Self, typename Env = hpx::execution::experimental::empty_env>
-        static consteval auto get_completion_signatures() noexcept -> decltype(hpx::execution::experimental::
-                transform_completion_signatures(
+        template <typename Self,
+            typename Env = hpx::execution::experimental::empty_env>
+        static consteval auto
+        get_completion_signatures() noexcept -> decltype(hpx::execution::
+                experimental::transform_completion_signatures(
                     hpx::execution::experimental::completion_signatures_of_t<
                         Sender, Env>{},
                     transformed_comp_sigs_identity_fn{}, decay_set_error_fn{},

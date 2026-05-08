@@ -19,8 +19,6 @@
 
 namespace ex = hpx::execution::experimental;
 
-
-
 int main()
 {
     {
@@ -74,8 +72,6 @@ int main()
     // operator| overload
     {
     }
-
-
 
     return hpx::util::report_errors();
 }

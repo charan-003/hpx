@@ -40,8 +40,6 @@ struct custom_transformer
     }
 };
 
-
-
 ///////////////////////////////////////////////////////////////////////////////
 void test_execution_then_return_int()
 {
@@ -328,8 +326,6 @@ int hpx_main()
         HPX_TEST(set_value_called);
     }
 
-
-
     // Failure path
     {
         std::atomic<bool> set_error_called{false};
@@ -386,8 +382,6 @@ int hpx_main()
         ex::start(os);
         HPX_TEST(set_error_called);
     }
-
-
 
     test_execution_then_return_int();
     test_execution_then_return_void();

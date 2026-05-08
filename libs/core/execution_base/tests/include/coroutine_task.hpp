@@ -195,13 +195,14 @@ struct default_awaiter_context<void>
         // stop_source when stop is requested on the parent coroutine's stop
         // token.
         if constexpr (requires {
-            hpx::execution::experimental::get_env(parent);
-        })
+                          hpx::execution::experimental::get_env(parent);
+                      })
         {
             using stop_token_t = hpx::execution::experimental::stop_token_of_t<
                 hpx::execution::experimental::env_of_t<ParentPromise>>;
             using stop_callback_t =
-                typename stop_token_t::template callback_type<forward_stop_request>;
+                typename stop_token_t::template callback_type<
+                    forward_stop_request>;
 
             if constexpr (std::is_same_v<stop_token_t,
                               hpx::experimental::in_place_stop_token>)
