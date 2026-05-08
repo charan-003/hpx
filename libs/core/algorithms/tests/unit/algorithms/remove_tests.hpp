@@ -748,7 +748,9 @@ void test_remove_if_sender(
     using scheduler_t = ex::thread_pool_policy_scheduler<LnPolicy>;
 
     std::size_t rand_base = g();
-    auto pred = [rand_base](int const a) -> bool { return a == rand_base; };
+    auto pred = [rand_base](int const a) -> bool {
+        return static_cast<std::size_t>(a) == rand_base;
+    };
 
     std::size_t const size = 10007;
     std::vector<int> c(size), d;

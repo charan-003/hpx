@@ -34,14 +34,14 @@ namespace hpx::parallel::util::detail {
                 hpx::tuple_size<std::decay_t<T>>::value>;
 
             // NOLINTBEGIN(bugprone-use-after-move)
-            if constexpr (std::is_invocable_v<F, embedded_index_pack_type, T&&>)
+            if constexpr (std::invocable<F, embedded_index_pack_type, T&&>)
             {
                 return HPX_INVOKE_R(
                     Result, f_, embedded_index_pack_type{}, HPX_FORWARD(T, t));
             }
             else
             {
-                return (*this)(embedded_index_pack_type{}, t);
+                return (*this)(embedded_index_pack_type{}, HPX_FORWARD(T, t));
             }
             // NOLINTEND(bugprone-use-after-move)
         }
