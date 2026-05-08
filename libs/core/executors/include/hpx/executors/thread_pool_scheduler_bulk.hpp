@@ -700,22 +700,21 @@ namespace hpx::execution::experimental::detail {
 
         using sender_concept = hpx::execution::experimental::sender_t;
 
-        template <typename Env>
-        friend auto tag_invoke(
-            hpx::execution::experimental::get_completion_signatures_t,
-            thread_pool_bulk_sender const&, Env const&) -> decltype(hpx::
-                execution::experimental::transform_completion_signatures(
-                    hpx::execution::experimental::completion_signatures_of_t<
-                        Sender, Env>{},
-                    hpx::execution::experimental::keep_completion<
-                        hpx::execution::experimental::set_value_t>{},
-                    hpx::execution::experimental::keep_completion<
-                        hpx::execution::experimental::set_error_t>{},
-                    hpx::execution::experimental::keep_completion<
-                        hpx::execution::experimental::set_stopped_t>{},
-                    hpx::execution::experimental::completion_signatures<
-                        hpx::execution::experimental::set_error_t(
-                            std::exception_ptr)>{}))
+        template <typename Self, typename Env>
+        static consteval auto get_completion_signatures() noexcept
+            -> decltype(hpx::execution::experimental::
+                    transform_completion_signatures(
+                        hpx::execution::experimental::
+                            completion_signatures_of_t<Sender, Env>{},
+                        hpx::execution::experimental::keep_completion<
+                            hpx::execution::experimental::set_value_t>{},
+                        hpx::execution::experimental::keep_completion<
+                            hpx::execution::experimental::set_error_t>{},
+                        hpx::execution::experimental::keep_completion<
+                            hpx::execution::experimental::set_stopped_t>{},
+                        hpx::execution::experimental::completion_signatures<
+                            hpx::execution::experimental::set_error_t(
+                                std::exception_ptr)>{}))
         {
             return {};
         }

@@ -224,7 +224,8 @@ struct stopped_sender
     template <typename Self, typename... Env>
     static consteval auto get_completion_signatures() noexcept
         -> hpx::execution::experimental::completion_signatures<
-            hpx::execution::experimental::set_stopped_t()>;
+            hpx::execution::experimental::set_stopped_t()>
+    { return {}; }
 };
 
 struct stopped_sender_with_value_type
@@ -259,7 +260,8 @@ struct stopped_sender_with_value_type
     static consteval auto get_completion_signatures() noexcept
         -> hpx::execution::experimental::completion_signatures<
             hpx::execution::experimental::set_stopped_t(),
-            hpx::execution::experimental::set_value_t()>;
+            hpx::execution::experimental::set_value_t()>
+    { return {}; }
 };
 
 template <typename F>
@@ -397,7 +399,8 @@ struct error_typed_sender
     static consteval auto get_completion_signatures() noexcept
         -> hpx::execution::experimental::completion_signatures<
             hpx::execution::experimental::set_value_t(T),
-            hpx::execution::experimental::set_error_t(std::exception_ptr)>;
+            hpx::execution::experimental::set_error_t(std::exception_ptr)>
+    { return {}; }
 };
 
 template <typename T>
@@ -436,7 +439,8 @@ struct const_reference_sender
     static consteval auto get_completion_signatures() noexcept
         -> hpx::execution::experimental::completion_signatures<
             hpx::execution::experimental::set_value_t(std::decay_t<T>&),
-            hpx::execution::experimental::set_error_t(std::exception_ptr)>;
+            hpx::execution::experimental::set_error_t(std::exception_ptr)>
+    { return {}; }
 };
 
 struct const_reference_error_sender
@@ -473,7 +477,8 @@ struct const_reference_error_sender
         -> hpx::execution::experimental::completion_signatures<
             hpx::execution::experimental::set_value_t(),
             hpx::execution::experimental::set_error_t(
-                std::exception_ptr const&)>;
+                std::exception_ptr const&)>
+    { return {}; }
 };
 
 struct check_exception_ptr
@@ -522,12 +527,11 @@ struct custom_sender_tag_invoke
         return {std::forward<R>(r)};
     }
 
-    template <typename Env>
-    friend auto tag_invoke(
-        hpx::execution::experimental::get_completion_signatures_t,
-        custom_sender_tag_invoke const&, Env)
+    template <typename Self, typename... Env>
+    static consteval auto get_completion_signatures() noexcept
         -> hpx::execution::experimental::completion_signatures<
-            hpx::execution::experimental::set_value_t()>;
+            hpx::execution::experimental::set_value_t()>
+    { return {}; }
 };
 
 struct custom_sender
@@ -538,13 +542,12 @@ struct custom_sender
     std::atomic<bool>& connect_called;
     std::atomic<bool>& tag_invoke_overload_called;
 
-    template <typename Env>
-    friend auto tag_invoke(
-        hpx::execution::experimental::get_completion_signatures_t,
-        custom_sender const&, Env&&)
+    template <typename Self, typename... Env>
+    static consteval auto get_completion_signatures() noexcept
         -> hpx::execution::experimental::completion_signatures<
             hpx::execution::experimental::set_value_t(),
-            hpx::execution::experimental::set_error_t(std::exception_ptr)>;
+            hpx::execution::experimental::set_error_t(std::exception_ptr)>
+    { return {}; }
 
     template <typename R>
     struct operation_state
@@ -578,14 +581,13 @@ struct custom_sender_multi_tuple
 
     bool expect_set_value = true;
 
-    template <typename Env>
-    friend auto tag_invoke(
-        hpx::execution::experimental::get_completion_signatures_t,
-        custom_sender_multi_tuple const&, Env&&)
+    template <typename Self, typename... Env>
+    static consteval auto get_completion_signatures() noexcept
         -> hpx::execution::experimental::completion_signatures<
             hpx::execution::experimental::set_value_t(int),
             hpx::execution::experimental::set_value_t(std::string),
-            hpx::execution::experimental::set_error_t(std::exception_ptr)>;
+            hpx::execution::experimental::set_error_t(std::exception_ptr)>
+    { return {}; }
 
     template <typename R>
     struct operation_state
@@ -603,7 +605,8 @@ struct custom_sender_multi_tuple
             }
             else
             {
-                hpx::execution::experimental::set_value(std::move(r), "err");
+                hpx::execution::experimental::set_value(
+                    std::move(r), std::string("err"));
             }
         }
     };
@@ -651,13 +654,12 @@ struct custom_typed_sender
             std::move(s.x), s.start_called, std::forward<R>(r)};
     }
 
-    template <typename Env>
-    friend auto tag_invoke(
-        hpx::execution::experimental::get_completion_signatures_t,
-        custom_typed_sender const&, Env&&)
+    template <typename Self, typename... Env>
+    static consteval auto get_completion_signatures() noexcept
         -> hpx::execution::experimental::completion_signatures<
             hpx::execution::experimental::set_value_t(T),
-            hpx::execution::experimental::set_error_t(std::exception_ptr)>;
+            hpx::execution::experimental::set_error_t(std::exception_ptr)>
+    { return {}; }
 };
 
 struct custom_sender2 : custom_sender

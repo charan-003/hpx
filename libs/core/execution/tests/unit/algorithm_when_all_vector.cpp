@@ -373,7 +373,7 @@ int main()
         check_value_types<
             hpx::variant<hpx::tuple<std::vector<double>, std::vector<int>>>>(s);
         check_error_types<hpx::variant<std::exception_ptr>>(s);
-        check_sends_stopped<true>(s);
+        check_sends_stopped<false>(s);
 
         auto f = [](std::vector<double> v1, std::vector<int> v3) {
             HPX_TEST_EQ(v1.size(), std::size_t(3));

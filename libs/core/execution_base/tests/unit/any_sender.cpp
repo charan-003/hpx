@@ -89,13 +89,12 @@ struct non_copyable_sender
         std::decay_t<R> r;
         hpx::tuple<std::decay_t<Ts>...> ts;
 
-        friend void tag_invoke(
-            hpx::execution::experimental::start_t, operation_state& os) noexcept
+        void start() & noexcept
         {
             hpx::invoke_fused(
                 hpx::bind_front(
-                    hpx::execution::experimental::set_value, std::move(os.r)),
-                std::move(os.ts));
+                    hpx::execution::experimental::set_value, std::move(r)),
+                std::move(ts));
         };
     };
 
@@ -148,13 +147,12 @@ struct example_sender
         std::decay_t<R> r;
         hpx::tuple<std::decay_t<Ts>...> ts;
 
-        friend void tag_invoke(
-            hpx::execution::experimental::start_t, operation_state& os) noexcept
+        void start() & noexcept
         {
             hpx::invoke_fused(
                 hpx::bind_front(
-                    hpx::execution::experimental::set_value, std::move(os.r)),
-                std::move(os.ts));
+                    hpx::execution::experimental::set_value, std::move(r)),
+                std::move(ts));
         };
     };
 

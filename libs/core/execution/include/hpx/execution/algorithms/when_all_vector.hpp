@@ -138,11 +138,8 @@ namespace hpx::when_all_vector_detail {
             }
         };
 
-        template <typename Env>
-        friend auto tag_invoke(
-            hpx::execution::experimental::get_completion_signatures_t,
-            when_all_vector_sender_type const&,
-            Env const&) noexcept -> decltype(hpx::execution::experimental::
+        template <typename Self, typename Env = hpx::execution::experimental::empty_env>
+        static consteval auto get_completion_signatures() noexcept -> decltype(hpx::execution::experimental::
                 transform_completion_signatures(
                     hpx::execution::experimental::completion_signatures_of_t<
                         Sender, Env>{},
@@ -151,7 +148,10 @@ namespace hpx::when_all_vector_detail {
                         hpx::execution::experimental::set_stopped_t>{},
                     hpx::execution::experimental::completion_signatures<
                         hpx::execution::experimental::set_error_t(
-                            std::exception_ptr)>{}));
+                            std::exception_ptr)>{}))
+        {
+            return {};
+        }
 
         template <typename Receiver>
         struct operation_state
@@ -229,14 +229,10 @@ namespace hpx::when_all_vector_detail {
 
                 // clang-format off
                 auto get_env() const noexcept
-                    -> hpx::execution::experimental::env<
-                        hpx::execution::experimental::env_of_t<receiver_type>,
-                        hpx::execution::experimental::prop<
-                            hpx::execution::experimental::get_stop_token_t,
-                            hpx::experimental::in_place_stop_token>>
                 {
                     /* The new calling convention is:
-                     * env(old_env, prop(tag, val))*/
+                     * make_env(old_env, prop(tag, val))*/
+
 
                     // Due to the bug described in the get_env.cpp tests,
                     // returning an env constructed directly with the
@@ -247,7 +243,7 @@ namespace hpx::when_all_vector_detail {
                     auto p = hpx::execution::experimental::prop(
                         hpx::execution::experimental::get_stop_token,
                         op_state.stop_source_.get_token());
-                    return hpx::execution::experimental::env(
+                    return hpx::execution::experimental::make_env(
                         std::move(e), std::move(p));
                 }
                 // clang-format on

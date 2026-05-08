@@ -378,9 +378,7 @@ namespace hpx::execution::experimental::detail {
         any_operation_state& operator=(any_operation_state&&) = delete;
         any_operation_state& operator=(any_operation_state const&) = delete;
 
-        HPX_CORE_EXPORT friend void tag_invoke(
-            hpx::execution::experimental::start_t,
-            any_operation_state& os) noexcept;
+        HPX_CORE_EXPORT void start() & noexcept;
     };
 
     HPX_CXX_CORE_EXPORT template <typename... Ts>
