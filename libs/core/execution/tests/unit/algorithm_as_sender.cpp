@@ -128,8 +128,8 @@ int hpx_main()
         auto os = ex::connect(std::move(s), std::move(r));
         ex::start(os);
         // Wait for the async callback (future needs ~100ms to resolve)
-        auto const deadline = std::chrono::steady_clock::now() +
-            std::chrono::seconds(5);
+        auto const deadline =
+            std::chrono::steady_clock::now() + std::chrono::seconds(5);
         while (!set_value_called)
         {
             if (std::chrono::steady_clock::now() > deadline)
