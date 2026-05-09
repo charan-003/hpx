@@ -24,10 +24,22 @@ namespace hpx::tracing {
         bool is_stackless = false;
     };
 
+    ////////////////////////////////////////////////////////////////////////////
+    HPX_CXX_CORE_EXPORT struct HPX_CORE_EXPORT [[maybe_unused]] loop_context
+    {
+        constexpr explicit loop_context() noexcept {}
+
+        ~loop_context() = default;
+
+        loop_context(loop_context const&) = delete;
+        loop_context& operator=(loop_context const&) = delete;
+    };
+
+    ////////////////////////////////////////////////////////////////////////////
     HPX_CXX_CORE_EXPORT struct HPX_CORE_EXPORT region
     {
-        explicit region(
-            region_init_data const& init_data, std::size_t num_thread) noexcept;
+        explicit region(loop_context&, region_init_data const& init_data,
+            std::size_t num_thread) noexcept;
 
         ~region();
 
@@ -87,6 +99,86 @@ namespace hpx::tracing {
 
 }    // namespace hpx::tracing
 
+#elif defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0
+#include <hpx/modules/itt_notify.hpp>
+
+namespace hpx::tracing {
+
+    ////////////////////////////////////////////////////////////////////////////
+    HPX_CXX_CORE_EXPORT struct region_init_data
+    {
+        char const* name = nullptr;
+        std::size_t thread_phase = 0;
+        void const* thread_ptr = nullptr;
+        bool is_stackless = false;
+        std::size_t address = 0;
+        bool is_address_type = false;
+        void* itt_string_handle = nullptr;
+    };
+
+    ////////////////////////////////////////////////////////////////////////////
+    HPX_CXX_CORE_EXPORT struct HPX_CORE_EXPORT loop_context
+    {
+        explicit loop_context() noexcept;
+        ~loop_context();
+
+        loop_context(loop_context const&) = delete;
+        loop_context& operator=(loop_context const&) = delete;
+
+        util::itt::stack_context stack_ctx;
+        util::itt::thread_domain thread_domain;
+        util::itt::string_handle task_id;
+        util::itt::string_handle task_phase;
+    };
+
+    ////////////////////////////////////////////////////////////////////////////
+    HPX_CXX_CORE_EXPORT struct HPX_CORE_EXPORT region
+    {
+        explicit region(
+            loop_context& ctx, region_init_data const& data, std::size_t);
+        ~region();
+
+        region(region const&) = delete;
+        region& operator=(region const&) = delete;
+
+    private:
+        static util::itt::task make_task(
+            loop_context& ctx, region_init_data const& data);
+
+        util::itt::caller_context cctx;
+        util::itt::task task;
+    };
+
+    ////////////////////////////////////////////////////////////////////////////
+    HPX_CXX_CORE_EXPORT struct [[maybe_unused]] mark_event
+    {
+        constexpr explicit mark_event(char const*) noexcept {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////
+    HPX_CXX_CORE_EXPORT struct fiber_region_init_data
+    {
+    };
+
+    HPX_CXX_CORE_EXPORT struct [[maybe_unused]] fiber_region
+    {
+        constexpr explicit fiber_region(
+            fiber_region_init_data const&, std::size_t) noexcept
+        {
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////
+    HPX_CXX_CORE_EXPORT struct [[maybe_unused]] fiber_suspend_region
+    {
+        constexpr explicit fiber_suspend_region(char const*) noexcept {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////
+    HPX_CXX_CORE_EXPORT constexpr void set_thread_name(char const*) noexcept {}
+
+}    // namespace hpx::tracing
+
 #else
 
 namespace hpx::tracing {
@@ -96,9 +188,22 @@ namespace hpx::tracing {
     {
     };
 
+    ////////////////////////////////////////////////////////////////////////////
+    HPX_CXX_CORE_EXPORT struct [[maybe_unused]] loop_context
+    {
+        constexpr explicit loop_context() noexcept {}
+
+        ~loop_context() = default;
+
+        loop_context(loop_context const&) = delete;
+        loop_context& operator=(loop_context const&) = delete;
+    };
+
+    ////////////////////////////////////////////////////////////////////////////
     HPX_CXX_CORE_EXPORT struct [[maybe_unused]] region
     {
-        constexpr explicit region(region_init_data const&, std::size_t) noexcept
+        constexpr explicit region(
+            loop_context&, region_init_data const&, std::size_t) noexcept
         {
         }
     };

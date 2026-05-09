@@ -677,6 +677,15 @@ namespace hpx::threads {
 
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT tracing::fiber_region_init_data
     get_fiber_region_init_data(thread_data const* thrdptr);
+#elif defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0
+    HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT tracing::region_init_data
+    get_region_init_data(thread_data const* thrdptr);
+
+    HPX_CXX_CORE_EXPORT constexpr tracing::fiber_region_init_data
+    get_fiber_region_init_data(thread_data const*) noexcept
+    {
+        return {};
+    }
 #else
     HPX_CXX_CORE_EXPORT constexpr tracing::region_init_data
     get_region_init_data(thread_data const*) noexcept
