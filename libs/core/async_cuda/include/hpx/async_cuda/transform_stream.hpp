@@ -278,14 +278,18 @@ namespace hpx::cuda::experimental {
                     {
                         return hpx::execution::experimental::
                             completion_signatures<
-                                hpx::execution::experimental::set_value_t()>{};
+                                hpx::execution::experimental::set_value_t(),
+                                hpx::execution::experimental::set_error_t(
+                                    std::exception_ptr)>{};
                     }
                     else
                     {
                         return hpx::execution::experimental::
                             completion_signatures<
                                 hpx::execution::experimental::set_value_t(
-                                    result_type)>{};
+                                    result_type),
+                                hpx::execution::experimental::set_error_t(
+                                    std::exception_ptr)>{};
                     }
                 }
             };

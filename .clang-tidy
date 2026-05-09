@@ -15,6 +15,7 @@ Checks: >
     -bugprone-easily-swappable-parameters,
     -bugprone-reserved-identifier,
     -bugprone-lambda-function-name,
+    -bugprone-unchecked-optional-access,
     modernize-use-nullptr,
     misc-assert-side-effect
     misc-dangling-handle

@@ -13,12 +13,12 @@
 
 namespace mylib {
 
-    // CPO
+    // Using member query function (new stdexec API)
     struct inline_scheduler_0
     {
-        constexpr friend HPX_FORCEINLINE auto tag_invoke(
-            hpx::execution::experimental::get_forward_progress_guarantee_t,
-            inline_scheduler_0 const&) noexcept
+        constexpr auto
+        query(hpx::execution::experimental::
+                get_forward_progress_guarantee_t) const noexcept
         {
             return hpx::execution::experimental::forward_progress_guarantee::
                 concurrent;
@@ -26,17 +26,12 @@ namespace mylib {
 
     } scheduler{};
 
-    // CPO
+    // Using member query function (new stdexec API)
     struct inline_scheduler_1
     {
-        /// With the same user-defined tag_invoke overload, the user-defined
-        /// overload will now be used if it is a match even if it isn't an exact
-        /// match.
-        /// This is because tag_fallback will dispatch to tag_fallback_invoke only
-        /// if there are no matching tag_invoke overloads.
-        constexpr friend auto tag_invoke(
-            hpx::execution::experimental::get_forward_progress_guarantee_t,
-            inline_scheduler_1) noexcept
+        constexpr auto
+        query(hpx::execution::experimental::
+                get_forward_progress_guarantee_t) const noexcept
         {
             return hpx::execution::experimental::forward_progress_guarantee::
                 concurrent;

@@ -127,6 +127,15 @@ int hpx_main()
         auto r = callback_receiver<decltype(f)>{f, set_value_called};
         auto os = ex::connect(std::move(s), std::move(r));
         ex::start(os);
+        // Wait for the async callback (future needs ~100ms to resolve)
+        auto const deadline = std::chrono::steady_clock::now() +
+            std::chrono::seconds(5);
+        while (!set_value_called)
+        {
+            if (std::chrono::steady_clock::now() > deadline)
+                break;
+            hpx::this_thread::yield();
+        }
         HPX_TEST(set_value_called);
     }
 
