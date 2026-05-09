@@ -28,6 +28,11 @@ jobs:
               -DCMAKE_BUILD_TYPE=Release \
               -DCMAKE_INSTALL_PREFIX=$PWD/ittapi/install
           cmake --build ittapi/build --target install
+    - name: Build ref-collector
+      shell: bash
+      run: |
+          cd ittapi/src/ittnotify_refcol
+          make CC=gcc
     - name: Configure
       shell: bash
       env:
@@ -56,10 +61,27 @@ jobs:
     - name: Test
       shell: bash
       run: |
-          export LD_LIBRARY_PATH="$GITHUB_WORKSPACE/ittapi/install/lib:$GITHUB_WORKSPACE/ittapi/install/lib64:$LD_LIBRARY_PATH"
+          export INTEL_LIBITTNOTIFY64="${GITHUB_WORKSPACE}/ittapi/src/ittnotify_refcol/libittnotify_refcol.so"
+          export INTEL_LIBITTNOTIFY_LOG_DIR="${GITHUB_WORKSPACE}/itt_logs"
+          # Enable ITT bindings at runtime so the ref-collector is loaded
+          export HPX_HAVE_ITTNOTIFY=1
+          mkdir -p $INTEL_LIBITTNOTIFY_LOG_DIR
           cd build
           ctest \
             --output-on-failure \
-            --tests-regex tests.examples \
-            --exclude-regex tests.examples.transpose.transpose_block_numa \
-            --exclude-regex tests.examples.quickstart.1d_wave_equation
+            --tests-regex tests.examples.itt_notify \
+            -j1
+    - name: Verify ITT API usage
+      shell: bash
+      run: |
+          LOG_DIR="${GITHUB_WORKSPACE}/itt_logs"
+          # Fallback to /tmp if custom dir wasn't picked up
+          if ! ls ${LOG_DIR}/libittnotify_refcol_*.log 1>/dev/null 2>&1; then
+            LOG_DIR="/tmp"
+          fi
+          
+          echo "=== ITT ref-collector log contents (from ${LOG_DIR}) ==="
+          cat ${LOG_DIR}/libittnotify_refcol_*.log
+          grep -q "__itt_domain_create" ${LOG_DIR}/libittnotify_refcol_*.log
+          grep -q "__itt_task_begin" ${LOG_DIR}/libittnotify_refcol_*.log
+          echo "ITT API verification passed."
