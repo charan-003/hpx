@@ -24,7 +24,7 @@ int hpx_main()
     auto s = ex::starts_on(
         sch, ex::just() | ex::bulk(1, [&called](auto) { called = true; }));
 
-    tt::sync_wait(s);
+    tt::sync_wait(HPX_MOVE(s));
 
     HPX_TEST(called.load());
 

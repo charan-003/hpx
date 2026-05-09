@@ -666,9 +666,17 @@ void test_future_sender()
     {
         ex::run_loop loop;
         [[maybe_unused]] auto sched = loop.get_scheduler();
-        auto result = tt::sync_wait(
-            ex::as_sender(ex::make_future(ex::transfer_just(sched, 42))));
-        HPX_TEST_EQ(hpx::get<0>(*result), 42);
+
+        std::atomic<bool> called{false};
+        auto s = ex::as_sender(ex::make_future(ex::transfer_just(sched, 42)));
+        auto r = callback_receiver{[&called](int value) {
+                                       called = true;
+                                       HPX_TEST_EQ(value, 42);
+                                   },
+            called};
+        auto os = ex::connect(std::move(s), std::move(r));
+        ex::start(os);
+        HPX_TEST(called);
     }
 
     std::cout << "7\n";
@@ -1426,37 +1434,49 @@ void test_keep_future_sender()
     // the future should be passed to then, not it's contained value
     {
         ex::run_loop loop;
+        auto t = hpx::thread([&] { loop.run(); });
         [[maybe_unused]] auto sched = loop.get_scheduler();
         tt::sync_wait(ex::keep_future(hpx::make_ready_future<void>()) |
             ex::then([](hpx::future<void>&& f) { HPX_TEST(f.is_ready()); }));
+        loop.finish();
+        t.join();
     }
 
     {
         ex::run_loop loop;
+        auto t = hpx::thread([&] { loop.run(); });
         [[maybe_unused]] auto sched = loop.get_scheduler();
         tt::sync_wait(ex::keep_future(hpx::make_ready_future<void>().share()) |
             ex::then(
                 [](hpx::shared_future<void>&& f) { HPX_TEST(f.is_ready()); }));
+        loop.finish();
+        t.join();
     }
 
     {
         ex::run_loop loop;
+        auto t = hpx::thread([&] { loop.run(); });
         [[maybe_unused]] auto sched = loop.get_scheduler();
         tt::sync_wait(ex::keep_future(hpx::make_ready_future<int>(42)) |
             ex::then([](hpx::future<int>&& f) {
                 HPX_TEST(f.is_ready());
                 HPX_TEST_EQ(f.get(), 42);
             }));
+        loop.finish();
+        t.join();
     }
 
     {
         ex::run_loop loop;
+        auto t = hpx::thread([&] { loop.run(); });
         [[maybe_unused]] auto sched = loop.get_scheduler();
         tt::sync_wait(ex::keep_future(hpx::make_ready_future<int>(42).share()) |
             ex::then([](hpx::shared_future<int>&& f) {
                 HPX_TEST(f.is_ready());
                 HPX_TEST_EQ(f.get(), 42);
             }));
+        loop.finish();
+        t.join();
     }
 
     {

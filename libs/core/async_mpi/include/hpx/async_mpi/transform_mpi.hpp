@@ -144,45 +144,42 @@ namespace hpx::mpi::experimental {
             using is_sender = void;
             using sender_concept = hpx::execution::experimental::sender_t;
 
-            template <typename... Args>
-            struct invoke_function_transformation_helper
+            struct invoke_function_transformation_fn
             {
-                template <bool IsVoid, typename T>
-                struct set_value_void_checked
+                template <typename... Args>
+                consteval auto operator()() const noexcept
                 {
-                    using type = hpx::execution::experimental::set_value_t(T);
-                };
+                    static_assert(hpx::is_invocable_v<F, Args..., MPI_Request*>,
+                        "F not invocable with the value_types specified.");
 
-                template <typename T>
-                struct set_value_void_checked<true, T>
-                {
-                    using type = hpx::execution::experimental::set_value_t();
-                };
+                    using result_type =
+                        hpx::util::invoke_result_t<F, Args..., MPI_Request*>;
 
-                static_assert(hpx::is_invocable_v<F, Args..., MPI_Request*>,
-                    "F not invocable with the value_types specified.");
-
-                using result_type =
-                    hpx::util::invoke_result_t<F, Args..., MPI_Request*>;
-                using set_value_result_type =
-                    typename set_value_void_checked<std::is_void_v<result_type>,
-                        result_type>::type;
-                using type =
-                    hpx::execution::experimental::completion_signatures<
-                        set_value_result_type>;
+                    if constexpr (std::is_void_v<result_type>)
+                    {
+                        return hpx::execution::experimental::
+                            completion_signatures<
+                                hpx::execution::experimental::set_value_t()>{};
+                    }
+                    else
+                    {
+                        return hpx::execution::experimental::
+                            completion_signatures<
+                                hpx::execution::experimental::set_value_t(
+                                    result_type)>{};
+                    }
+                }
             };
 
-            template <typename... Args>
-            using invoke_function_transformation =
-                invoke_function_transformation_helper<Args...>::type;
-
-            template <typename Err>
-            using default_set_error =
-                hpx::execution::experimental::completion_signatures<
-                    hpx::execution::experimental::set_error_t(Err)>;
-
-            using no_set_stopped_signature =
-                hpx::execution::experimental::completion_signatures<>;
+            struct default_set_error_fn
+            {
+                template <typename Err>
+                consteval auto operator()() const noexcept
+                {
+                    return hpx::execution::experimental::completion_signatures<
+                        hpx::execution::experimental::set_error_t(Err)>{};
+                }
+            };
 
             // clang-format off
             template <typename Self, typename Env>
@@ -190,16 +187,16 @@ namespace hpx::mpi::experimental {
             ->  decltype(hpx::execution::experimental::transform_completion_signatures(
                     hpx::execution::experimental::completion_signatures_of_t<
                         Sender, Env>{},
-                    invoke_function_transformation{},
-                    default_set_error{},
-                    no_set_stopped_signature{}))
+                    invoke_function_transformation_fn{},
+                    default_set_error_fn{},
+                    hpx::execution::experimental::ignore_completion{}))
             {
                 return hpx::execution::experimental::transform_completion_signatures(
                     hpx::execution::experimental::completion_signatures_of_t<
                         Sender, Env>{},
-                    invoke_function_transformation{},
-                    default_set_error{},
-                    no_set_stopped_signature{});
+                    invoke_function_transformation_fn{},
+                    default_set_error_fn{},
+                    hpx::execution::experimental::ignore_completion{});
             }
             // clang-format on
 

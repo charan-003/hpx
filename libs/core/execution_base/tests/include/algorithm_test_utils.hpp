@@ -295,6 +295,10 @@ struct callback_receiver
     }
 };
 
+// Deduction guide for callback_receiver
+template <typename F>
+callback_receiver(F, std::atomic<bool>&) -> callback_receiver<F>;
+
 template <typename F>
 struct error_callback_receiver
 {

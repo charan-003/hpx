@@ -10,6 +10,7 @@
 
 #include "algorithm_test_utils.hpp"
 
+#include <cstddef>
 #include <exception>
 #include <type_traits>
 #include <utility>
@@ -34,6 +35,16 @@ namespace mylib {
 
     struct allocator
     {
+        using value_type = std::byte;
+        value_type* allocate(std::size_t n)
+        {
+            return new value_type[n];
+        }
+        void deallocate(value_type* p, std::size_t)
+        {
+            delete[] p;
+        }
+        bool operator==(allocator const&) const noexcept = default;
     };
 
     using allocator_env_t = ex::env<delegatee_sched_env_t,
@@ -102,21 +113,24 @@ namespace mylib {
             auto sched_env = ex::prop{ex::get_scheduler_t{}, sched()};
             static_assert(std::is_same_v<decltype(sched_env), sched_env_t>,
                 "must return sched_env");
-            auto delegatee_sched_env = ex::env{{sched_env,
-                ex::prop{ex::get_delegation_scheduler_t{}, delegatee_sched()}}};
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmissing-braces"
+            auto delegatee_sched_env = ex::env{sched_env,
+                ex::prop{ex::get_delegation_scheduler_t{}, delegatee_sched()}};
             static_assert(std::is_same_v<decltype(delegatee_sched_env),
                               delegatee_sched_env_t>,
                 "must return delegatee_sched_env");
-            auto allocator_env = ex::env{{delegatee_sched_env,
-                ex::prop{ex::get_allocator_t{}, allocator()}}};
+            auto allocator_env = ex::env{delegatee_sched_env,
+                ex::prop{ex::get_allocator_t{}, allocator()}};
             static_assert(
                 std::is_same_v<decltype(allocator_env), allocator_env_t>,
                 "must return allocator_env");
-            auto stop_token_env = ex::env{{allocator_env,
-                ex::prop{ex::get_stop_token_t{}, stop_token()}}};
+            auto stop_token_env = ex::env{
+                allocator_env, ex::prop{ex::get_stop_token_t{}, stop_token()}};
             static_assert(
                 std::is_same_v<decltype(stop_token_env), stop_token_env_t>,
                 "must return stop_token_env");
+#pragma GCC diagnostic pop
 
             return stop_token_env;
         }
