@@ -75,17 +75,20 @@ namespace hpx::execution::experimental {
                 }
             };
 
-            template <typename Env>
-            friend auto tag_invoke(get_completion_signatures_t,
-                bulk_sender const&, Env) noexcept -> decltype(hpx::execution::
-                    experimental::transform_completion_signatures(
-                        hpx::execution::experimental::
-                            completion_signatures_of_t<Sender, Env>{},
-                        default_set_value_fn{}, default_set_error_fn{},
-                        hpx::execution::experimental::ignore_completion{},
-                        hpx::execution::experimental::completion_signatures<
-                            hpx::execution::experimental::set_error_t(
-                                std::exception_ptr)>{}));
+            template <typename Self, typename Env>
+            static consteval auto get_completion_signatures() noexcept
+                -> decltype(hpx::execution::experimental::
+                        transform_completion_signatures(
+                            hpx::execution::experimental::
+                                completion_signatures_of_t<Sender, Env>{},
+                            default_set_value_fn{}, default_set_error_fn{},
+                            hpx::execution::experimental::ignore_completion{},
+                            hpx::execution::experimental::completion_signatures<
+                                hpx::execution::experimental::set_error_t(
+                                    std::exception_ptr)>{}))
+            {
+                return {};
+            }
 
             constexpr auto get_env() const noexcept
             {

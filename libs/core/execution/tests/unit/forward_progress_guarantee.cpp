@@ -16,9 +16,9 @@ namespace mylib {
     // Using member query function (new stdexec API)
     struct inline_scheduler_0
     {
-        constexpr auto
-        query(hpx::execution::experimental::
-                get_forward_progress_guarantee_t) const noexcept
+        constexpr auto query(
+            hpx::execution::experimental::get_forward_progress_guarantee_t)
+            const noexcept
         {
             return hpx::execution::experimental::forward_progress_guarantee::
                 concurrent;
@@ -29,9 +29,9 @@ namespace mylib {
     // Using member query function (new stdexec API)
     struct inline_scheduler_1
     {
-        constexpr auto
-        query(hpx::execution::experimental::
-                get_forward_progress_guarantee_t) const noexcept
+        constexpr auto query(
+            hpx::execution::experimental::get_forward_progress_guarantee_t)
+            const noexcept
         {
             return hpx::execution::experimental::forward_progress_guarantee::
                 concurrent;
