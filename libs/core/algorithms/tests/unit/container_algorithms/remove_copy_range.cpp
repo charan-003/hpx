@@ -269,7 +269,7 @@ void test_remove_copy_projection()
         if (e.key != remove_key)
             expected.push_back(e);
 
-    // No-policy (sequential) — range form
+    // No-policy (sequential) - range form
     {
         std::vector<projected_element> dest(size);
         auto res =
@@ -309,7 +309,7 @@ void test_remove_copy_projection()
             std::end(expected)));
     }
 
-    // seq(task) — async
+    // seq(task) - async
     {
         std::vector<projected_element> dest(size);
         auto f =
@@ -321,7 +321,7 @@ void test_remove_copy_projection()
             std::end(expected)));
     }
 
-    // par(task) — async
+    // par(task) - async
     {
         std::vector<projected_element> dest(size);
         auto f =

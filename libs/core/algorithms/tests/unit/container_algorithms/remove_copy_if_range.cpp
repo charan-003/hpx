@@ -288,7 +288,7 @@ void test_remove_copy_if_projection()
         if (e.key % 2 == 0)
             expected.push_back(e);
 
-    // No-policy (sequential) — range form
+    // No-policy (sequential) - range form
     {
         std::vector<projected_element> dest(size);
         auto res = hpx::ranges::remove_copy_if(c, std::begin(dest), pred, proj);
@@ -327,7 +327,7 @@ void test_remove_copy_if_projection()
             std::end(expected)));
     }
 
-    // seq(task) — async
+    // seq(task) - async
     {
         std::vector<projected_element> dest(size);
         auto f = hpx::ranges::remove_copy_if(
@@ -339,7 +339,7 @@ void test_remove_copy_if_projection()
             std::end(expected)));
     }
 
-    // par(task) — async
+    // par(task) - async
     {
         std::vector<projected_element> dest(size);
         auto f = hpx::ranges::remove_copy_if(

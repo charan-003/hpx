@@ -274,7 +274,7 @@ void test_unique_copy_projection()
         HPX_TEST(test::equal(std::begin(dr), res.out, std::begin(ds), sol));
     }
 
-    // seq(task) — async
+    // seq(task) - async
     {
         std::vector<DataType> dr(size), ds(size);
         std::generate(std::begin(c), std::end(c), random_fill(0, 6));
@@ -288,7 +288,7 @@ void test_unique_copy_projection()
         HPX_TEST(test::equal(std::begin(dr), res.out, std::begin(ds), sol));
     }
 
-    // par(task) — async
+    // par(task) - async
     {
         std::vector<DataType> dr(size), ds(size);
         std::generate(std::begin(c), std::end(c), random_fill(0, 6));

@@ -300,7 +300,7 @@ void test_partition_copy_projection()
         return proj(e) < rand_base;
     };
 
-    // No-policy (sequential) — range form
+    // No-policy (sequential) - range form
     {
         std::vector<DataType> c(size), d_true(size), d_false(size), t_sol(size),
             f_sol(size);
@@ -376,7 +376,7 @@ void test_partition_copy_projection()
             std::begin(d_false), res.out2, std::begin(f_sol), sol.second));
     }
 
-    // seq(task) — async
+    // seq(task) - async
     {
         std::vector<DataType> c(size), d_true(size), d_false(size), t_sol(size),
             f_sol(size);
@@ -397,7 +397,7 @@ void test_partition_copy_projection()
             std::begin(d_false), res.out2, std::begin(f_sol), sol.second));
     }
 
-    // par(task) — async
+    // par(task) - async
     {
         std::vector<DataType> c(size), d_true(size), d_false(size), t_sol(size),
             f_sol(size);
