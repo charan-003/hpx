@@ -107,11 +107,12 @@ void replace_chunk_size()
     {
         std::atomic<bool> invoked_replaced(false);
 
-        auto params =
-            join_executor_parameters(experimental::static_chunk_size());
+        auto params = join_executor_parameters(
+            hpx::execution::experimental::static_chunk_size());
         auto rebound_params = rebind_executor_parameters(
             params, test_replaced_get_chunk_size(invoked_replaced));
-        auto policy = create_rebound_policy(par, rebound_params);
+        auto policy =
+            create_rebound_policy(hpx::execution::par, rebound_params);
         parameters_test(policy);
 
         HPX_TEST(invoked_replaced);
@@ -122,10 +123,12 @@ void replace_chunk_size()
     {
         std::atomic<bool> invoked_replaced(false);
 
-        auto params = join_executor_parameters(experimental::max_num_chunks());
+        auto params = join_executor_parameters(
+            hpx::execution::experimental::max_num_chunks());
         auto rebound_params = rebind_executor_parameters(
             params, test_replaced_get_chunk_size(invoked_replaced));
-        auto policy = create_rebound_policy(par, rebound_params);
+        auto policy =
+            create_rebound_policy(hpx::execution::par, rebound_params);
         parameters_test(policy);
 
         HPX_TEST(invoked_replaced);
@@ -137,9 +140,10 @@ void replace_chunk_size()
 
         auto params = join_executor_parameters(
             test_replaced_get_chunk_size(invoked_replaced));
-        auto rebound_params =
-            rebind_executor_parameters(params, experimental::num_cores(4));
-        auto policy = create_rebound_policy(par, rebound_params);
+        auto rebound_params = rebind_executor_parameters(
+            params, hpx::execution::experimental::num_cores(4));
+        auto policy =
+            create_rebound_policy(hpx::execution::par, rebound_params);
         parameters_test(policy);
 
         HPX_TEST(invoked_replaced);
@@ -151,10 +155,12 @@ void replace_chunk_size()
         std::atomic<bool> invoked_replaced(false);
 
         auto params = join_executor_parameters(
-            experimental::static_chunk_size(), experimental::num_cores(4));
+            hpx::execution::experimental::static_chunk_size(),
+            hpx::execution::experimental::num_cores(4));
         auto rebound_params = rebind_executor_parameters(
             params, test_replaced_get_chunk_size(invoked_replaced));
-        auto policy = create_rebound_policy(par, rebound_params);
+        auto policy =
+            create_rebound_policy(hpx::execution::par, rebound_params);
         parameters_test(policy);
 
         HPX_TEST(invoked_replaced);
@@ -169,7 +175,8 @@ void replace_chunk_size()
             test_replaced_get_chunk_size(invoked_inner_replaced));
         auto rebound_params = rebind_executor_parameters(
             params, test_wrapping_replaced_get_chunk_size(invoked_replaced));
-        auto policy = create_rebound_policy(par, rebound_params);
+        auto policy =
+            create_rebound_policy(hpx::execution::par, rebound_params);
         parameters_test(policy);
 
         HPX_TEST(invoked_replaced);
@@ -245,7 +252,7 @@ void replace_measure_iteration()
         static_assert(
             extract_invokes_testing_function_v<decltype(bound_params)>,
             "extract_invokes_testing_function_v<decltype(bound_params)>");
-        auto policy = create_rebound_policy(par, bound_params);
+        auto policy = create_rebound_policy(hpx::execution::par, bound_params);
         parameters_test(policy);
 
         HPX_TEST(invoked_replaced);
@@ -256,13 +263,14 @@ void replace_measure_iteration()
     {
         std::atomic<bool> invoked_replaced(false);
 
-        auto params = join_executor_parameters(experimental::max_num_chunks());
+        auto params = join_executor_parameters(
+            hpx::execution::experimental::max_num_chunks());
         auto bound_params = rebind_executor_parameters(
             params, test_replaced_measure_iteration(invoked_replaced));
         static_assert(
             extract_invokes_testing_function_v<decltype(bound_params)>,
             "extract_invokes_testing_function_v<decltype(bound_params)>");
-        auto policy = create_rebound_policy(par, bound_params);
+        auto policy = create_rebound_policy(hpx::execution::par, bound_params);
         parameters_test(policy);
 
         HPX_TEST(invoked_replaced);
@@ -274,12 +282,12 @@ void replace_measure_iteration()
 
         auto params = join_executor_parameters(
             test_replaced_measure_iteration(invoked_replaced));
-        auto bound_params =
-            rebind_executor_parameters(params, experimental::num_cores(4));
+        auto bound_params = rebind_executor_parameters(
+            params, hpx::execution::experimental::num_cores(4));
         static_assert(
             extract_invokes_testing_function_v<decltype(bound_params)>,
             "extract_invokes_testing_function_v<decltype(bound_params)>");
-        auto policy = create_rebound_policy(par, bound_params);
+        auto policy = create_rebound_policy(hpx::execution::par, bound_params);
         parameters_test(policy);
 
         HPX_TEST(invoked_replaced);
@@ -290,14 +298,14 @@ void replace_measure_iteration()
     {
         std::atomic<bool> invoked_replaced(false);
 
-        auto params = join_executor_parameters(
-            base_measure_iteration(), experimental::num_cores(4));
+        auto params = join_executor_parameters(base_measure_iteration(),
+            hpx::execution::experimental::num_cores(4));
         auto bound_params = rebind_executor_parameters(
             params, test_replaced_measure_iteration(invoked_replaced));
         static_assert(
             extract_invokes_testing_function_v<decltype(bound_params)>,
             "extract_invokes_testing_function_v<decltype(bound_params)>");
-        auto policy = create_rebound_policy(par, bound_params);
+        auto policy = create_rebound_policy(hpx::execution::par, bound_params);
         parameters_test(policy);
 
         HPX_TEST(invoked_replaced);
@@ -346,10 +354,11 @@ void replace_maximal_number_of_chunks()
     {
         std::atomic<bool> invoked_replaced(false);
 
-        auto params = join_executor_parameters(experimental::max_num_chunks());
+        auto params = join_executor_parameters(
+            hpx::execution::experimental::max_num_chunks());
         auto bound_params = rebind_executor_parameters(
             params, test_replaced_maximal_number_of_chunks(invoked_replaced));
-        auto policy = create_rebound_policy(par, bound_params);
+        auto policy = create_rebound_policy(hpx::execution::par, bound_params);
         parameters_test(policy);
 
         HPX_TEST(invoked_replaced);
@@ -360,11 +369,11 @@ void replace_maximal_number_of_chunks()
     {
         std::atomic<bool> invoked_replaced(false);
 
-        auto params =
-            join_executor_parameters(experimental::static_chunk_size());
+        auto params = join_executor_parameters(
+            hpx::execution::experimental::static_chunk_size());
         auto bound_params = rebind_executor_parameters(
             params, test_replaced_maximal_number_of_chunks(invoked_replaced));
-        auto policy = create_rebound_policy(par, bound_params);
+        auto policy = create_rebound_policy(hpx::execution::par, bound_params);
         parameters_test(policy);
 
         HPX_TEST(invoked_replaced);
@@ -377,9 +386,9 @@ void replace_maximal_number_of_chunks()
 
         auto params = join_executor_parameters(
             test_replaced_maximal_number_of_chunks(invoked_replaced));
-        auto bound_params =
-            rebind_executor_parameters(params, experimental::num_cores(4));
-        auto policy = create_rebound_policy(par, bound_params);
+        auto bound_params = rebind_executor_parameters(
+            params, hpx::execution::experimental::num_cores(4));
+        auto policy = create_rebound_policy(hpx::execution::par, bound_params);
         parameters_test(policy);
 
         HPX_TEST(invoked_replaced);
@@ -391,10 +400,11 @@ void replace_maximal_number_of_chunks()
         std::atomic<bool> invoked_replaced(false);
 
         auto params = join_executor_parameters(
-            experimental::max_num_chunks(), experimental::num_cores(4));
+            hpx::execution::experimental::max_num_chunks(),
+            hpx::execution::experimental::num_cores(4));
         auto bound_params = rebind_executor_parameters(
             params, test_replaced_maximal_number_of_chunks(invoked_replaced));
-        auto policy = create_rebound_policy(par, bound_params);
+        auto policy = create_rebound_policy(hpx::execution::par, bound_params);
         parameters_test(policy);
 
         HPX_TEST(invoked_replaced);
@@ -498,7 +508,7 @@ void replace_execution_markers()
         auto bound_params = rebind_executor_parameters(params,
             test_replaced_execution_markers(
                 invoked_begin, invoked_end, invoked_end_execution));
-        auto policy = create_rebound_policy(par, bound_params);
+        auto policy = create_rebound_policy(hpx::execution::par, bound_params);
         parameters_test(policy);
 
         HPX_TEST(invoked_begin);
@@ -514,11 +524,12 @@ void replace_execution_markers()
         std::atomic<bool> invoked_end(false);
         std::atomic<bool> invoked_end_execution(false);
 
-        auto params = join_executor_parameters(experimental::max_num_chunks());
+        auto params = join_executor_parameters(
+            hpx::execution::experimental::max_num_chunks());
         auto bound_params = rebind_executor_parameters(params,
             test_replaced_execution_markers(
                 invoked_begin, invoked_end, invoked_end_execution));
-        auto policy = create_rebound_policy(par, bound_params);
+        auto policy = create_rebound_policy(hpx::execution::par, bound_params);
         parameters_test(policy);
 
         HPX_TEST(invoked_begin);
@@ -535,9 +546,9 @@ void replace_execution_markers()
 
         auto params = join_executor_parameters(test_replaced_execution_markers(
             invoked_begin, invoked_end, invoked_end_execution));
-        auto bound_params =
-            rebind_executor_parameters(params, experimental::num_cores(4));
-        auto policy = create_rebound_policy(par, bound_params);
+        auto bound_params = rebind_executor_parameters(
+            params, hpx::execution::experimental::num_cores(4));
+        auto policy = create_rebound_policy(hpx::execution::par, bound_params);
         parameters_test(policy);
 
         HPX_TEST(invoked_begin);
@@ -553,12 +564,12 @@ void replace_execution_markers()
         std::atomic<bool> invoked_end(false);
         std::atomic<bool> invoked_end_execution(false);
 
-        auto params = join_executor_parameters(
-            base_execution_markers(), experimental::num_cores(4));
+        auto params = join_executor_parameters(base_execution_markers(),
+            hpx::execution::experimental::num_cores(4));
         auto bound_params = rebind_executor_parameters(params,
             test_replaced_execution_markers(
                 invoked_begin, invoked_end, invoked_end_execution));
-        auto policy = create_rebound_policy(par, bound_params);
+        auto policy = create_rebound_policy(hpx::execution::par, bound_params);
         parameters_test(policy);
 
         HPX_TEST(invoked_begin);
@@ -629,7 +640,7 @@ void replace_processing_units_count()
         auto params = join_executor_parameters(base_processing_units_count());
         auto bound_params = rebind_executor_parameters(
             params, test_replaced_processing_units_count(invoked_replaced));
-        auto policy = create_rebound_policy(par, bound_params);
+        auto policy = create_rebound_policy(hpx::execution::par, bound_params);
         parameters_test(policy);
 
         HPX_TEST(invoked_replaced);
@@ -640,11 +651,11 @@ void replace_processing_units_count()
     {
         std::atomic<bool> invoked_replaced(false);
 
-        auto params =
-            join_executor_parameters(experimental::static_chunk_size());
+        auto params = join_executor_parameters(
+            hpx::execution::experimental::static_chunk_size());
         auto bound_params = rebind_executor_parameters(
             params, test_replaced_processing_units_count(invoked_replaced));
-        auto policy = create_rebound_policy(par, bound_params);
+        auto policy = create_rebound_policy(hpx::execution::par, bound_params);
         parameters_test(policy);
 
         HPX_TEST(invoked_replaced);
@@ -658,8 +669,8 @@ void replace_processing_units_count()
         auto params = join_executor_parameters(
             test_replaced_processing_units_count(invoked_replaced));
         auto bound_params = rebind_executor_parameters(
-            params, experimental::static_chunk_size());
-        auto policy = create_rebound_policy(par, bound_params);
+            params, hpx::execution::experimental::static_chunk_size());
+        auto policy = create_rebound_policy(hpx::execution::par, bound_params);
         parameters_test(policy);
 
         HPX_TEST(invoked_replaced);
@@ -669,11 +680,11 @@ void replace_processing_units_count()
     // with another parameters object that exposes it
     {
         std::atomic<bool> invoked_replaced(false);
-        auto params = join_executor_parameters(
-            base_processing_units_count(), experimental::static_chunk_size());
+        auto params = join_executor_parameters(base_processing_units_count(),
+            hpx::execution::experimental::static_chunk_size());
         auto bound_params = rebind_executor_parameters(
             params, test_replaced_processing_units_count(invoked_replaced));
-        auto policy = create_rebound_policy(par, bound_params);
+        auto policy = create_rebound_policy(hpx::execution::par, bound_params);
         parameters_test(policy);
 
         HPX_TEST(invoked_replaced);
@@ -738,11 +749,11 @@ void replace_collect_execution_parameters()
     {
         std::atomic<bool> invoked_replaced(false);
 
-        auto params =
-            join_executor_parameters(experimental::static_chunk_size());
+        auto params = join_executor_parameters(
+            hpx::execution::experimental::static_chunk_size());
         auto bound_params = rebind_executor_parameters(params,
             test_replaced_collect_execution_parameters(invoked_replaced));
-        auto policy = create_rebound_policy(par, bound_params);
+        auto policy = create_rebound_policy(hpx::execution::par, bound_params);
         parameters_test(policy);
 
         HPX_TEST(invoked_replaced);
@@ -753,10 +764,11 @@ void replace_collect_execution_parameters()
     {
         std::atomic<bool> invoked_replaced(false);
 
-        auto params = join_executor_parameters(experimental::max_num_chunks());
+        auto params = join_executor_parameters(
+            hpx::execution::experimental::max_num_chunks());
         auto bound_params = rebind_executor_parameters(params,
             test_replaced_collect_execution_parameters(invoked_replaced));
-        auto policy = create_rebound_policy(par, bound_params);
+        auto policy = create_rebound_policy(hpx::execution::par, bound_params);
         parameters_test(policy);
 
         HPX_TEST(invoked_replaced);
@@ -769,9 +781,9 @@ void replace_collect_execution_parameters()
 
         auto params = join_executor_parameters(
             test_replaced_collect_execution_parameters(invoked_replaced));
-        auto bound_params =
-            rebind_executor_parameters(params, experimental::num_cores(4));
-        auto policy = create_rebound_policy(par, bound_params);
+        auto bound_params = rebind_executor_parameters(
+            params, hpx::execution::experimental::num_cores(4));
+        auto policy = create_rebound_policy(hpx::execution::par, bound_params);
         parameters_test(policy);
 
         HPX_TEST(invoked_replaced);
@@ -786,7 +798,7 @@ void replace_collect_execution_parameters()
             join_executor_parameters(base_collect_execution_parameters());
         auto bound_params = rebind_executor_parameters(params,
             test_replaced_collect_execution_parameters(invoked_replaced));
-        auto policy = create_rebound_policy(par, bound_params);
+        auto policy = create_rebound_policy(hpx::execution::par, bound_params);
         parameters_test(policy);
 
         HPX_TEST(invoked_replaced);

@@ -112,7 +112,7 @@ void test_find_end1_sender(
                 std::begin(h), std::end(h)) |
             hpx::find_end(ex_policy.on(exec)));
 
-        iterator index = hpx::get<0>(*snd_result);
+        iterator index = hpx::get<0>(snd_result.value());
 
         iterator test_index = std::find_end(iterator(std::begin(c)),
             iterator(std::end(c)), std::begin(h), std::end(h));
@@ -127,7 +127,7 @@ void test_find_end1_sender(
             ex::just(iterator(std::begin(c)), iterator(std::end(c)),
                 std::begin(h), std::begin(h)) |
             hpx::find_end(ex_policy.on(exec)));
-        auto result = hpx::get<0>(*snd_result);
+        auto result = hpx::get<0>(snd_result.value());
 
         HPX_TEST(iterator(std::end(c)) == result);
     }
@@ -139,7 +139,7 @@ void test_find_end1_sender(
             ex::just(iterator(std::begin(c)), iterator(std::begin(c)),
                 std::begin(h), std::end(h)) |
             hpx::find_end(ex_policy.on(exec)));
-        auto result = hpx::get<0>(*snd_result);
+        auto result = hpx::get<0>(snd_result.value());
 
         HPX_TEST(iterator(std::begin(c)) == result);
     }
@@ -256,7 +256,7 @@ void test_find_end2_sender(
         tt::sync_wait(ex::just(iterator(std::begin(c)), iterator(std::end(c)),
                           std::begin(h), std::end(h)) |
             hpx::find_end(ex_policy.on(exec)));
-    iterator index = hpx::get<0>(*snd_result);
+    iterator index = hpx::get<0>(snd_result.value());
 
     iterator test_index = std::find_end(iterator(std::begin(c)),
         iterator(std::end(c)), std::begin(h), std::end(h));
