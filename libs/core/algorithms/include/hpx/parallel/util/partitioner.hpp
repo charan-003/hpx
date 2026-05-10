@@ -322,34 +322,7 @@ namespace hpx::parallel::util::detail {
 
                     scoped_params.mark_end_of_scheduling();
 
-                    // For scheduler executors, partition returns a sender.
-                    // Compose with f2 via then, then sync_wait to get the
-                    // concrete value. This ensures consistent return types
-                    // with early-return paths in algorithms.
-                    if constexpr (hpx::
-                                      execution_policy_has_scheduler_executor_v<
-                                          ExPolicy_>)
-                    {
-                        namespace ex = hpx::execution::experimental;
-                        namespace tt = hpx::this_thread::experimental;
-                        auto sender =
-                            ex::then(HPX_MOVE(items), HPX_FORWARD(F2, f2));
-                        auto result = tt::sync_wait(HPX_MOVE(sender));
-                        if constexpr (hpx::tuple_size_v<
-                                          std::decay_t<decltype(*result)>> == 0)
-                        {
-                            return;
-                        }
-                        else
-                        {
-                            auto value = hpx::get<0>(HPX_MOVE(*result));
-                            return value;
-                        }
-                    }
-                    else
-                    {
-                        return reduce(HPX_MOVE(items), HPX_FORWARD(F2, f2));
-                    }
+                    return reduce(HPX_MOVE(items), HPX_FORWARD(F2, f2));
                 }
             }
             catch (...)
@@ -393,30 +366,7 @@ namespace hpx::parallel::util::detail {
 
                     scoped_params.mark_end_of_scheduling();
 
-                    if constexpr (hpx::
-                                      execution_policy_has_scheduler_executor_v<
-                                          ExPolicy_>)
-                    {
-                        namespace ex = hpx::execution::experimental;
-                        namespace tt = hpx::this_thread::experimental;
-                        auto sender =
-                            ex::then(HPX_MOVE(items), HPX_FORWARD(F2, f2));
-                        auto result = tt::sync_wait(HPX_MOVE(sender));
-                        if constexpr (hpx::tuple_size_v<
-                                          std::decay_t<decltype(*result)>> == 0)
-                        {
-                            return;
-                        }
-                        else
-                        {
-                            auto value = hpx::get<0>(HPX_MOVE(*result));
-                            return value;
-                        }
-                    }
-                    else
-                    {
-                        return reduce(HPX_MOVE(items), HPX_FORWARD(F2, f2));
-                    }
+                    return reduce(HPX_MOVE(items), HPX_FORWARD(F2, f2));
                 }
             }
             catch (...)

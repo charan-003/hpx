@@ -250,9 +250,6 @@ namespace hpx::execution::experimental {
     HPX_CXX_CORE_EXPORT using exec::start_detached;
     HPX_CXX_CORE_EXPORT using exec::start_detached_t;
 
-    HPX_CXX_CORE_EXPORT using stdexec::transfer_just;
-    HPX_CXX_CORE_EXPORT using stdexec::transfer_just_t;
-
     // Stop token
     HPX_CXX_CORE_EXPORT using stdexec::stop_callback_for_t;
     HPX_CXX_CORE_EXPORT using stdexec::stoppable_token;
@@ -285,7 +282,7 @@ namespace hpx::execution::experimental {
     HPX_CXX_CORE_EXPORT using stdexec::value_types_of_t;
 
     // New exec:: API for transform_completion_signatures (consteval function)
-    using exec::transform_completion_signatures;
+    HPX_CXX_CORE_EXPORT using exec::transform_completion_signatures;
     HPX_CXX_CORE_EXPORT using exec::keep_completion;
     HPX_CXX_CORE_EXPORT using exec::ignore_completion;
     HPX_CXX_CORE_EXPORT using exec::transform_arguments;

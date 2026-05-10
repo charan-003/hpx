@@ -41,7 +41,7 @@ void find_end_sender_pipe_compare(std::vector<int> const& c, int const* hf,
     static_assert(hpx::is_async_execution_policy_v<ExPolicy>,
         "hpx::is_async_execution_policy_v<ExPolicy>");
 
-    using base_iterator = std::vector<int>::iterator;
+    using base_iterator = std::vector<int>::const_iterator;
     using iterator = test::test_iterator<base_iterator, IteratorTag>;
 
     namespace ex = hpx::execution::experimental;
@@ -136,8 +136,8 @@ void test_find_end1_sender(
 
     int h[] = {1, 2};
 
-    find_end_sender_pipe_compare<IteratorTag>(c, std::begin(h), std::end(h),
-        ln_policy, HPX_FORWARD(ExPolicy, ex_policy));
+    find_end_sender_pipe_compare<IteratorTag>(
+        c, std::begin(h), std::end(h), ln_policy, ex_policy);
 
     auto exec = ex::explicit_scheduler_executor(scheduler_t(ln_policy));
 

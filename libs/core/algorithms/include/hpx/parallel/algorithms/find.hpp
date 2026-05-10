@@ -1328,6 +1328,11 @@ namespace hpx::parallel {
                 }
 
                 difference_type partitioner_count = count - diff + 1;
+                if constexpr (has_scheduler_executor)
+                {
+                    if (diff == 0 || diff > count)
+                        partitioner_count = static_cast<difference_type>(0);
+                }
 
                 decltype(auto) policy =
                     hpx::execution::experimental::adapt_placement_mode(

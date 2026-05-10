@@ -61,19 +61,13 @@ namespace hpx::detail {
     {
         if constexpr (hpx::execution_policy_has_scheduler_executor_v<ExPolicy>)
         {
-            // For scheduler executors, convert to a non-task policy so
-            // the algorithm returns a value (not a sender). This avoids
-            // dependent_sender_error in let_value, since the algorithm's
-            // internal sender chain would have non-deducible completion
-            // signatures. The algorithm still uses the scheduler's thread
-            // pool for parallel work via sync_wait inside the partitioner.
-            auto non_task_policy = hpx::execution::experimental::to_non_task(
-                HPX_FORWARD(ExPolicy, policy));
-
-            return hpx::execution::experimental::then(
+            // If the executor contained in the execution policy explicitly
+            // returns senders, we don't need to wrap the algorithm in any
+            // specific way as it directly integrates with the given
+            // predecessor.
+            return hpx::execution::experimental::let_value(
                 HPX_FORWARD(Predecessor, predecessor),
-                bound_algorithm<Tag, decltype(non_task_policy)>{
-                    HPX_MOVE(non_task_policy)});
+                bound_algorithm<Tag, ExPolicy>{HPX_FORWARD(ExPolicy, policy)});
         }
         else if constexpr (hpx::execution::detail::has_async_execution_policy_v<
                                ExPolicy>)

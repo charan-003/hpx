@@ -1102,16 +1102,19 @@ namespace hpx::experimental {
                         // NOLINTNEXTLINE(bugprone-undefined-memory-manipulation)
                         std::memmove(static_cast<void*>(std::to_address(dest)),
                             std::to_address(first), count * sizeof(value_type));
+
+                        auto result =
+                            parallel::util::detail::algorithm_result<ExPolicy,
+                                FwdIter>::get(std::next(dest, count));
                         if constexpr (has_scheduler_executor)
                         {
                             namespace ex = hpx::execution::experimental;
                             return ex::unique_any_sender<FwdIter>(
-                                ex::just(std::next(dest, count)));
+                                HPX_MOVE(result));
                         }
                         else
                         {
-                            return parallel::util::detail::algorithm_result<
-                                ExPolicy, FwdIter>::get(std::next(dest, count));
+                            return result;
                         }
                     }
                 }
@@ -1143,23 +1146,20 @@ namespace hpx::experimental {
                                 auto d = static_cast<std::size_t>(
                                     std::to_address(first) -
                                     std::to_address(dest));
+                                auto result = parallel::util::get_second_element(
+                                    hpx::parallel::detail::
+                                        parallel_uninitialized_relocate_n_overlap(
+                                            HPX_FORWARD(ExPolicy, policy),
+                                            first, count, dest, d));
                                 if constexpr (has_scheduler_executor)
                                 {
                                     namespace ex = hpx::execution::experimental;
-                                    return ex::unique_any_sender<
-                                        FwdIter>(parallel::util::get_second_element(
-                                        hpx::parallel::detail::
-                                            parallel_uninitialized_relocate_n_overlap(
-                                                HPX_FORWARD(ExPolicy, policy),
-                                                first, count, dest, d)));
+                                    return ex::unique_any_sender<FwdIter>(
+                                        HPX_MOVE(result));
                                 }
                                 else
                                 {
-                                    return parallel::util::get_second_element(
-                                        hpx::parallel::detail::
-                                            parallel_uninitialized_relocate_n_overlap(
-                                                HPX_FORWARD(ExPolicy, policy),
-                                                first, count, dest, d));
+                                    return result;
                                 }
                             }
                         }
@@ -1168,46 +1168,37 @@ namespace hpx::experimental {
 
                 if (!has_overlap)
                 {
+                    auto result = parallel::util::get_second_element(
+                        hpx::parallel::detail::uninitialized_relocate_n<
+                            parallel::util::in_out_result<InIter, FwdIter>>()
+                            .call(HPX_FORWARD(ExPolicy, policy), first, count,
+                                dest));
                     if constexpr (has_scheduler_executor)
                     {
                         namespace ex = hpx::execution::experimental;
-                        return ex::unique_any_sender<FwdIter>(
-                            parallel::util::get_second_element(
-                                hpx::parallel::detail::uninitialized_relocate_n<
-                                    parallel::util::in_out_result<InIter,
-                                        FwdIter>>()
-                                    .call(HPX_FORWARD(ExPolicy, policy), first,
-                                        count, dest)));
+                        return ex::unique_any_sender<FwdIter>(HPX_MOVE(result));
                     }
                     else
                     {
-                        return parallel::util::get_second_element(
-                            hpx::parallel::detail::uninitialized_relocate_n<
-                                parallel::util::in_out_result<InIter,
-                                    FwdIter>>()
-                                .call(HPX_FORWARD(ExPolicy, policy), first,
-                                    count, dest));
+                        return result;
                     }
                 }
             }
 
+            auto result = parallel::util::get_second_element(
+                hpx::parallel::detail::uninitialized_relocate_n<
+                    parallel::util::in_out_result<InIter, FwdIter>>()
+                    .call(hpx::execution::seq, first,
+                        static_cast<std::size_t>(count), dest));
             if constexpr (has_scheduler_executor)
             {
                 namespace ex = hpx::execution::experimental;
                 return ex::unique_any_sender<FwdIter>(
-                    ex::just(parallel::util::get_second_element(
-                        hpx::parallel::detail::uninitialized_relocate_n<
-                            parallel::util::in_out_result<InIter, FwdIter>>()
-                            .call(hpx::execution::seq, first,
-                                static_cast<std::size_t>(count), dest))));
+                    ex::just(HPX_MOVE(result)));
             }
             else
             {
-                return parallel::util::get_second_element(
-                    hpx::parallel::detail::uninitialized_relocate_n<
-                        parallel::util::in_out_result<InIter, FwdIter>>()
-                        .call(hpx::execution::seq, first,
-                            static_cast<std::size_t>(count), dest));
+                return result;
             }
         }
     } uninitialized_relocate_n{};
@@ -1309,18 +1300,21 @@ namespace hpx::experimental {
                         FwdIter>::is_memcpyable;
                 if constexpr (is_trivially_relocatable)
                 {
-                    auto last = std::next(first, count);
-                    if (first < dest && dest < last)
+                    auto src_last = std::next(first, count);
+                    if (first < dest && dest < src_last)
                     {
                         using value_type = std::iter_value_t<InIter1>;
                         // NOLINTNEXTLINE(bugprone-undefined-memory-manipulation)
                         std::memmove(static_cast<void*>(std::to_address(dest)),
                             std::to_address(first), count * sizeof(value_type));
+
                         if constexpr (has_scheduler_executor)
                         {
                             namespace ex = hpx::execution::experimental;
                             return ex::unique_any_sender<FwdIter>(
-                                ex::just(std::next(dest, count)));
+                                parallel::util::detail::algorithm_result<
+                                    ExPolicy, FwdIter>::get(std::next(dest,
+                                    count)));
                         }
                         else
                         {
@@ -1338,9 +1332,9 @@ namespace hpx::experimental {
                     hpx::traits::is_contiguous_iterator_v<InIter2> &&
                     hpx::traits::is_contiguous_iterator_v<FwdIter>)
                 {
-                    auto last = std::next(first, count);
+                    auto src_last = std::next(first, count);
                     auto dest_last = std::next(dest, count);
-                    has_overlap = (first < dest_last) && (dest_last < last);
+                    has_overlap = (first < dest_last) && (dest_last < src_last);
 
                     if (has_overlap)
                     {
@@ -1358,23 +1352,20 @@ namespace hpx::experimental {
                                 auto d = static_cast<std::size_t>(
                                     std::to_address(first) -
                                     std::to_address(dest));
+                                auto result = parallel::util::get_second_element(
+                                    hpx::parallel::detail::
+                                        parallel_uninitialized_relocate_n_overlap(
+                                            HPX_FORWARD(ExPolicy, policy),
+                                            first, count, dest, d));
                                 if constexpr (has_scheduler_executor)
                                 {
                                     namespace ex = hpx::execution::experimental;
-                                    return ex::unique_any_sender<
-                                        FwdIter>(parallel::util::get_second_element(
-                                        hpx::parallel::detail::
-                                            parallel_uninitialized_relocate_n_overlap(
-                                                HPX_FORWARD(ExPolicy, policy),
-                                                first, count, dest, d)));
+                                    return ex::unique_any_sender<FwdIter>(
+                                        HPX_MOVE(result));
                                 }
                                 else
                                 {
-                                    return parallel::util::get_second_element(
-                                        hpx::parallel::detail::
-                                            parallel_uninitialized_relocate_n_overlap(
-                                                HPX_FORWARD(ExPolicy, policy),
-                                                first, count, dest, d));
+                                    return result;
                                 }
                             }
                         }
@@ -1383,44 +1374,36 @@ namespace hpx::experimental {
 
                 if (!has_overlap)
                 {
+                    auto result = parallel::util::get_second_element(
+                        hpx::parallel::detail::uninitialized_relocate_n<
+                            parallel::util::in_out_result<InIter1, FwdIter>>()
+                            .call(HPX_FORWARD(ExPolicy, policy), first, count,
+                                dest));
                     if constexpr (has_scheduler_executor)
                     {
                         namespace ex = hpx::execution::experimental;
-                        return ex::unique_any_sender<FwdIter>(
-                            parallel::util::get_second_element(
-                                hpx::parallel::detail::uninitialized_relocate_n<
-                                    parallel::util::in_out_result<InIter1,
-                                        FwdIter>>()
-                                    .call(HPX_FORWARD(ExPolicy, policy), first,
-                                        count, dest)));
+                        return ex::unique_any_sender<FwdIter>(HPX_MOVE(result));
                     }
                     else
                     {
-                        return parallel::util::get_second_element(
-                            hpx::parallel::detail::uninitialized_relocate_n<
-                                parallel::util::in_out_result<InIter1,
-                                    FwdIter>>()
-                                .call(HPX_FORWARD(ExPolicy, policy), first,
-                                    count, dest));
+                        return result;
                     }
                 }
             }
 
+            auto result = parallel::util::get_second_element(
+                hpx::parallel::detail::uninitialized_relocate_n<
+                    parallel::util::in_out_result<InIter1, FwdIter>>()
+                    .call(hpx::execution::seq, first, count, dest));
             if constexpr (has_scheduler_executor)
             {
                 namespace ex = hpx::execution::experimental;
                 return ex::unique_any_sender<FwdIter>(
-                    ex::just(parallel::util::get_second_element(
-                        hpx::parallel::detail::uninitialized_relocate_n<
-                            parallel::util::in_out_result<InIter1, FwdIter>>()
-                            .call(hpx::execution::seq, first, count, dest))));
+                    ex::just(HPX_MOVE(result)));
             }
             else
             {
-                return parallel::util::get_second_element(
-                    hpx::parallel::detail::uninitialized_relocate_n<
-                        parallel::util::in_out_result<InIter1, FwdIter>>()
-                        .call(hpx::execution::seq, first, count, dest));
+                return result;
             }
         }
     } uninitialized_relocate{};
@@ -1533,23 +1516,22 @@ namespace hpx::experimental {
                                 auto d = static_cast<std::size_t>(
                                     std::to_address(dest_first) -
                                     std::to_address(first));
+
+                                auto result = parallel::util::get_second_element(
+                                    hpx::parallel::detail::
+                                        parallel_uninitialized_relocate_n_bwd_overlap(
+                                            HPX_FORWARD(ExPolicy, policy),
+                                            first, count, dest_last, d));
+
                                 if constexpr (has_scheduler_executor)
                                 {
                                     namespace ex = hpx::execution::experimental;
-                                    return ex::unique_any_sender<
-                                        BiIter2>(parallel::util::get_second_element(
-                                        hpx::parallel::detail::
-                                            parallel_uninitialized_relocate_n_bwd_overlap(
-                                                HPX_FORWARD(ExPolicy, policy),
-                                                first, count, dest_last, d)));
+                                    return ex::unique_any_sender<BiIter2>(
+                                        HPX_MOVE(result));
                                 }
                                 else
                                 {
-                                    return parallel::util::get_second_element(
-                                        hpx::parallel::detail::
-                                            parallel_uninitialized_relocate_n_bwd_overlap(
-                                                HPX_FORWARD(ExPolicy, policy),
-                                                first, count, dest_last, d));
+                                    return result;
                                 }
                             }
                         }
@@ -1558,45 +1540,36 @@ namespace hpx::experimental {
 
                 if (!has_overlap)
                 {
+                    auto result = parallel::util::get_second_element(
+                        hpx::parallel::detail::uninitialized_relocate_backward<
+                            parallel::util::in_out_result<BiIter1, BiIter2>>()
+                            .call(HPX_FORWARD(ExPolicy, policy), first, last,
+                                dest_last));
                     if constexpr (has_scheduler_executor)
                     {
                         namespace ex = hpx::execution::experimental;
-                        return ex::unique_any_sender<BiIter2>(
-                            parallel::util::get_second_element(hpx::parallel::
-                                    detail::uninitialized_relocate_backward<
-                                        parallel::util::in_out_result<BiIter1,
-                                            BiIter2>>()
-                                        .call(HPX_FORWARD(ExPolicy, policy),
-                                            first, last, dest_last)));
+                        return ex::unique_any_sender<BiIter2>(HPX_MOVE(result));
                     }
                     else
                     {
-                        return parallel::util::get_second_element(
-                            hpx::parallel::detail::
-                                uninitialized_relocate_backward<parallel::util::
-                                        in_out_result<BiIter1, BiIter2>>()
-                                    .call(HPX_FORWARD(ExPolicy, policy), first,
-                                        last, dest_last));
+                        return result;
                     }
                 }
             }
 
+            auto result = parallel::util::get_second_element(
+                hpx::parallel::detail::uninitialized_relocate_backward<
+                    parallel::util::in_out_result<BiIter1, BiIter2>>()
+                    .call(hpx::execution::seq, first, last, dest_last));
             if constexpr (has_scheduler_executor)
             {
                 namespace ex = hpx::execution::experimental;
                 return ex::unique_any_sender<BiIter2>(
-                    ex::just(parallel::util::get_second_element(
-                        hpx::parallel::detail::uninitialized_relocate_backward<
-                            parallel::util::in_out_result<BiIter1, BiIter2>>()
-                            .call(
-                                hpx::execution::seq, first, last, dest_last))));
+                    ex::just(HPX_MOVE(result)));
             }
             else
             {
-                return parallel::util::get_second_element(
-                    hpx::parallel::detail::uninitialized_relocate_backward<
-                        parallel::util::in_out_result<BiIter1, BiIter2>>()
-                        .call(hpx::execution::seq, first, last, dest_last));
+                return result;
             }
         }
     } uninitialized_relocate_backward{};

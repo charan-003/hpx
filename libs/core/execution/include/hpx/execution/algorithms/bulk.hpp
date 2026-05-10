@@ -200,7 +200,7 @@ namespace hpx::execution::experimental {
                 is_sender_v<Sender> &&
                 experimental::detail::is_completion_scheduler_tag_invocable_v<
                     hpx::execution::experimental::set_value_t, Sender,
-                    bulk_t, Shape, F
+                    bulk_t, Shape, F&&
                 >
             )>
         // clang-format on

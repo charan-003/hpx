@@ -7,6 +7,7 @@
 set(tests
     algorithm_as_sender
     algorithm_bulk
+    algorithm_continues_on
     algorithm_ensure_started
     algorithm_just
     algorithm_just_error
@@ -20,8 +21,6 @@ set(tests
     algorithm_sync_wait
     algorithm_sync_wait_with_variant
     algorithm_then
-    algorithm_transfer
-    algorithm_transfer_just
     algorithm_transfer_when_all
     algorithm_when_all
     algorithm_when_all_vector

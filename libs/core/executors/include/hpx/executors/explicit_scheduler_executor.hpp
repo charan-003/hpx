@@ -39,14 +39,10 @@ namespace hpx::execution::experimental {
 
         constexpr explicit_scheduler_executor() = default;
 
-        // clang-format off
-        template <typename Scheduler,
-            typename Enable =
-                std::enable_if_t<
-                   !std::is_same_v<
-                        std::decay_t<Scheduler>, explicit_scheduler_executor> &&
-                    hpx::execution::experimental::is_scheduler_v<Scheduler>>>
-        // clang-format on
+        template <typename Scheduler>
+            requires(!std::is_same_v<std::decay_t<Scheduler>,
+                         explicit_scheduler_executor> &&
+                hpx::execution::experimental::is_scheduler_v<Scheduler>)
         constexpr explicit explicit_scheduler_executor(Scheduler&& sched)
           : sched_(HPX_FORWARD(Scheduler, sched))
         {
@@ -167,12 +163,8 @@ namespace hpx::execution::experimental {
 
         // BulkTwoWayExecutor interface
         // Integral shape overload - passes integral directly to bulk
-        // clang-format off
-        template <typename F, typename S, typename... Ts,
-            HPX_CONCEPT_REQUIRES_(
-                std::is_integral_v<S>
-            )>
-        // clang-format on
+        template <typename F, typename S, typename... Ts>
+            requires(std::is_integral_v<S>)
         friend decltype(auto) tag_invoke(
             hpx::parallel::execution::bulk_async_execute_t,
             explicit_scheduler_executor const& exec, F&& f, S const& shape,
@@ -183,47 +175,42 @@ namespace hpx::execution::experimental {
         }
 
         // Range shape overload
-        // clang-format off
-        template <typename F, typename S, typename... Ts,
-            HPX_CONCEPT_REQUIRES_(
-                !std::is_integral_v<S>
-            )>
-        // clang-format on
+        template <typename F, typename S, typename... Ts>
+            requires(!std::is_integral_v<S>)
         friend decltype(auto) tag_invoke(
             hpx::parallel::execution::bulk_async_execute_t,
             explicit_scheduler_executor const& exec, F&& f, S const& shape,
             Ts&&... ts)
         {
-            using shape_element =
-                typename hpx::traits::range_traits<S>::value_type;
+            using shape_element = hpx::traits::range_traits<S>::value_type;
             using result_type = hpx::util::detail::invoke_deferred_result_t<F,
                 shape_element, Ts...>;
-
-            /* A boolean as result_type is disallowed because the elements of a
-             * vector<bool> cannot be modified concurrently. */
-            static_assert(!std::is_same_v<result_type, bool>,
-                "Using an invocable that returns a boolean with "
-                "explicit_scheduler_executor::bulk_async_execution "
-                "can result in data races!");
 
             if constexpr (std::is_void_v<result_type>)
             {
                 // stdexec::bulk requires integral shape and execution policy
-                using size_type = decltype(util::size(shape));
-                size_type const n = util::size(shape);
+                using size_type = decltype(std::ranges::size(shape));
+                size_type const n = std::ranges::size(shape);
                 return bulk(schedule(exec.sched_), n,
                     [shape,
                         bound_f = hpx::bind_back(HPX_FORWARD(F, f),
                             HPX_FORWARD(Ts, ts)...)](size_type i) mutable {
-                        auto it = util::begin(shape);
-                        std::advance(it, i);
+                        auto it = std::ranges::begin(shape);
+                        std::ranges::advance(it, i);
                         HPX_INVOKE(bound_f, *it);
                     });
             }
             else
             {
-                using size_type = decltype(util::size(shape));
-                size_type const shape_size = util::size(shape);
+                // A boolean as result_type is disallowed because the elements
+                // of a vector<bool> cannot be modified concurrently.
+                static_assert(!std::is_same_v<result_type, bool>,
+                    "Using an invocable that returns a boolean with "
+                    "explicit_scheduler_executor::bulk_async_execution "
+                    "can result in data races!");
+
+                using size_type = decltype(std::ranges::size(shape));
+                size_type const shape_size = std::ranges::size(shape);
 
                 using result_vector_type = std::vector<result_type>;
                 result_vector_type result_vector(shape_size);
@@ -231,7 +218,7 @@ namespace hpx::execution::experimental {
                 auto f_wrapper = [](size_type const i,
                                      result_vector_type& result_vector,
                                      S const& shape, F& f, Ts&... ts) {
-                    auto it = std::begin(shape);
+                    auto it = std::ranges::begin(shape);
                     result_vector[i] = HPX_INVOKE(f, *std::next(it, i), ts...);
                 };
 
@@ -250,12 +237,8 @@ namespace hpx::execution::experimental {
         }
 
         // Integral shape overload - passes integral directly
-        // clang-format off
-        template <typename F, typename S, typename... Ts,
-            HPX_CONCEPT_REQUIRES_(
-                std::is_integral_v<S>
-            )>
-        // clang-format on
+        template <typename F, typename S, typename... Ts>
+            requires(std::is_integral_v<S>)
         friend decltype(auto) tag_invoke(
             hpx::parallel::execution::bulk_sync_execute_t,
             explicit_scheduler_executor const& exec, F&& f, S const& shape,
@@ -267,12 +250,8 @@ namespace hpx::execution::experimental {
         }
 
         // Range shape overload
-        // clang-format off
-        template <typename F, typename S, typename... Ts,
-            HPX_CONCEPT_REQUIRES_(
-                !std::is_integral_v<S>
-            )>
-        // clang-format on
+        template <typename F, typename S, typename... Ts>
+            requires(!std::is_integral_v<S>)
         friend decltype(auto) tag_invoke(
             hpx::parallel::execution::bulk_sync_execute_t,
             explicit_scheduler_executor const& exec, F&& f, S const& shape,
@@ -284,12 +263,8 @@ namespace hpx::execution::experimental {
         }
 
         // Integral shape overload - passes integral directly to bulk
-        // clang-format off
-        template <typename F, typename S, typename Future, typename... Ts,
-            HPX_CONCEPT_REQUIRES_(
-                std::is_integral_v<S>
-            )>
-        // clang-format on
+        template <typename F, typename S, typename Future, typename... Ts>
+            requires(std::is_integral_v<S>)
         friend auto tag_invoke(hpx::parallel::execution::bulk_then_execute_t,
             explicit_scheduler_executor const& exec, F&& f, S const& shape,
             Future&& predecessor, Ts&&... ts)
@@ -303,12 +278,8 @@ namespace hpx::execution::experimental {
         }
 
         // Range shape overload
-        // clang-format off
-        template <typename F, typename S, typename Future, typename... Ts,
-            HPX_CONCEPT_REQUIRES_(
-                !std::is_integral_v<S>
-            )>
-        // clang-format on
+        template <typename F, typename S, typename Future, typename... Ts>
+            requires(!std::is_integral_v<S>)
         friend auto tag_invoke(hpx::parallel::execution::bulk_then_execute_t,
             explicit_scheduler_executor const& exec, F&& f, S const& shape,
             Future&& predecessor, Ts&&... ts)
@@ -323,16 +294,16 @@ namespace hpx::execution::experimental {
             auto pre_req =
                 when_all(keep_future(HPX_FORWARD(Future, predecessor)));
 
-            using size_type = decltype(util::size(shape));
-            size_type const n = util::size(shape);
+            using size_type = decltype(std::ranges::size(shape));
+            size_type const n = std::ranges::size(shape);
             return continues_on(HPX_MOVE(pre_req), exec.sched_) |
                 bulk(n,
                     [shape,
                         bound_f = hpx::bind_back(
                             HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...)](
                         size_type i, auto&... receiver_args) mutable {
-                        auto it = util::begin(shape);
-                        std::advance(it, i);
+                        auto it = std::ranges::begin(shape);
+                        std::ranges::advance(it, i);
                         HPX_INVOKE(bound_f, *it, receiver_args...);
                     });
         }
