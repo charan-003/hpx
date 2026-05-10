@@ -289,11 +289,16 @@ namespace hpx::parallel {
                     util::detail::algorithm_result<ExPolicy, Iter>;
                 using difference_type =
                     typename std::iterator_traits<Iter>::difference_type;
+                constexpr bool has_scheduler_executor =
+                    hpx::execution_policy_has_scheduler_executor_v<ExPolicy>;
 
                 difference_type count = detail::distance(first, last);
 
-                if (count == 0)
-                    return algorithm_result::get(HPX_MOVE(first));
+                if constexpr (!has_scheduler_executor)
+                {
+                    if (count == 0)
+                        return algorithm_result::get(HPX_MOVE(first));
+                }
 
                 std::shared_ptr<bool[]> flags(new bool[count]);
 

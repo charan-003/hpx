@@ -585,33 +585,6 @@ namespace hpx {
                     .call(HPX_FORWARD(ExPolicy, policy), first, last,
                         HPX_MOVE(f), hpx::identity_v));
         }
-
-        template <typename Scheduler, typename FwdIter, typename F>
-        // clang-format off
-            requires (
-                hpx::execution::experimental::is_policy_aware_scheduler_v<
-                    std::decay_t<Scheduler>> &&
-                hpx::traits::is_iterator_v<FwdIter>
-            )
-        // clang-format on
-        friend decltype(auto) tag_fallback_invoke(hpx::for_each_t,
-            Scheduler&& sched, FwdIter first, FwdIter last, F f)
-        {
-            static_assert(std::forward_iterator<FwdIter>,
-                "Requires at least forward iterator.");
-
-            // Extract the policy from the scheduler
-            // Note: For task policies, we intentionally don't pass the
-            // scheduler through to the future's continuation chain to avoid
-            // complexity. The algorithm executes on the scheduler but the
-            // returned future doesn't carry scheduler information.
-            auto policy = sched.get_policy();
-            return hpx::parallel::util::detail::
-                algorithm_result<decltype(policy), FwdIter>::get(
-                    hpx::parallel::detail::for_each<FwdIter>().call(
-                        HPX_MOVE(policy), first, last, HPX_MOVE(f),
-                        hpx::identity_v));
-        }
     } for_each{};
 
     ///////////////////////////////////////////////////////////////////////////

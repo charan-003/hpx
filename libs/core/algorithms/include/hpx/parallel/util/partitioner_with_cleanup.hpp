@@ -82,8 +82,8 @@ namespace hpx::parallel::util {
                         // Wrap f1 in a variant type to handle exceptions
                         auto wrapped_f1 = [f1 = HPX_FORWARD(F1, f1)](FwdIter it,
                                               auto&&... args) mutable noexcept {
-                            using result_type =
-                                std::decay_t<decltype(f1(it, args...))>;
+                            using result_type = std::decay_t<decltype(f1(
+                                it, HPX_FORWARD(decltype(args), args)...))>;
                             using nonvoid_result_type =
                                 std::conditional_t<std::is_void_v<result_type>,
                                     std::monostate, result_type>;
@@ -95,14 +95,17 @@ namespace hpx::parallel::util {
                             {
                                 if constexpr (std::is_void_v<result_type>)
                                 {
-                                    f1(it, args...);
+                                    f1(it,
+                                        HPX_FORWARD(decltype(args), args)...);
                                     return variant_type{std::in_place_index<0>,
                                         std::monostate{}};
                                 }
                                 else
                                 {
                                     return variant_type{std::in_place_index<0>,
-                                        f1(it, args...)};
+                                        f1(it,
+                                            HPX_FORWARD(
+                                                decltype(args), args)...)};
                                 }
                             }
                             catch (...)
