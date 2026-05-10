@@ -718,7 +718,7 @@ void test_remove_sender(LnPolicy ln_policy, ExPolicy&& ex_policy, IteratorTag)
     using scheduler_t = ex::thread_pool_policy_scheduler<LnPolicy>;
 
     std::size_t rand_base = g();
-    std::size_t value = rand_base + 2;
+    int value = static_cast<int>(rand_base + 2);
 
     std::size_t const size = 10007;
     std::vector<int> c(size), d;
