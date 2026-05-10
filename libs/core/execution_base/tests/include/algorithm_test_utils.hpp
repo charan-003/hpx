@@ -899,12 +899,13 @@ namespace my_namespace {
                 return {};
             }
 
-            template <typename Env>
-            friend auto tag_invoke(
-                hpx::execution::experimental::get_completion_signatures_t,
-                my_sender const&, Env)
+            template <typename Self, typename... Env>
+            static consteval auto get_completion_signatures() noexcept
                 -> hpx::execution::experimental::completion_signatures<
-                    hpx::execution::experimental::set_value_t()>;
+                    hpx::execution::experimental::set_value_t()>
+            {
+                return {};
+            }
         };
 
         my_sender schedule() const noexcept
@@ -947,12 +948,13 @@ namespace my_namespace {
             return {std::forward<R>(r)};
         }
 
-        template <typename Env>
-        friend auto tag_invoke(
-            hpx::execution::experimental::get_completion_signatures_t,
-            my_sender const&, Env)
+        template <typename Self, typename... Env>
+        static consteval auto get_completion_signatures() noexcept
             -> hpx::execution::experimental::completion_signatures<
-                hpx::execution::experimental::set_value_t()>;
+                hpx::execution::experimental::set_value_t()>
+        {
+            return {};
+        }
     };
 
     // This overload should not be chosen by test_adl_isolation below. We make

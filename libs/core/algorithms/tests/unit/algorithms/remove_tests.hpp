@@ -25,8 +25,16 @@
 #include "test_utils.hpp"
 
 ///////////////////////////////////////////////////////////////////////////////
-unsigned int seed = std::random_device{}();
-std::mt19937 g(seed);
+// Deterministic default; mains call remove_tests_seed_rng so --seed matches
+// std::srand and this generator (random_fill / user_defined_type).
+inline unsigned int remove_test_rng_seed = 4242424242u;
+inline std::mt19937 g(remove_test_rng_seed);
+
+inline void remove_tests_seed_rng(unsigned int s)
+{
+    remove_test_rng_seed = s;
+    g.seed(s);
+}
 
 struct throw_always
 {
