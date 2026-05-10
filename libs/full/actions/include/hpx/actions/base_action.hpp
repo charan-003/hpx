@@ -41,7 +41,7 @@ namespace hpx::actions {
     // The \a base_action class is an abstract class used as the base class
     // for all action types. It's main purpose is to allow polymorphic
     // serialization of action instances through a unique_ptr.
-    struct base_action
+    HPX_CXX_EXPORT struct base_action
     {
         /// Destructor
         virtual ~base_action();
@@ -138,7 +138,7 @@ namespace hpx::actions {
     };
 
     ///////////////////////////////////////////////////////////////////////////
-    struct base_action_data : base_action
+    HPX_CXX_EXPORT struct base_action_data : base_action
     {
         base_action_data() = default;
 
@@ -184,11 +184,11 @@ namespace hpx::actions {
 // serialization support for basic_action
 namespace hpx::serialization {
 
-    template <typename Archive, typename Component, typename R,
+    HPX_CXX_EXPORT template <typename Archive, typename Component, typename R,
         typename... Args, typename Derived>
-    HPX_FORCEINLINE void serialize(Archive& /* ar */,
-        ::hpx::actions::basic_action<Component, R(Args...), Derived>& /* t */,
-        unsigned int const /* version */ = 0)
+    constexpr void serialize(Archive&,
+        ::hpx::actions::basic_action<Component, R(Args...), Derived>&,
+        unsigned int const) noexcept
     {
     }
 }    // namespace hpx::serialization

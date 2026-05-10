@@ -16,7 +16,7 @@
 
 namespace hpx::actions::detail {
 
-    template <typename Action>
+    HPX_CXX_EXPORT template <typename Action>
     struct register_action
     {
         register_action(register_action const&) = delete;

@@ -28,8 +28,6 @@ include(HPX_AddModule)
 add_hpx_module(
   core async_sycl
   GLOBAL_HEADER_GEN ON
-  GLOBAL_HEADER_MODULE_GEN ON
-  ADD_TO_GLOBAL_HEADER hpx/async_sycl/detail/sycl_event_callback.hpp
   SOURCES ${async_sycl_sources}
   HEADERS ${async_sycl_headers}
   COMPAT_HEADERS ${async_sycl_compat_headers}

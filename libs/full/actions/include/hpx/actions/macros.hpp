@@ -10,6 +10,8 @@
 #include <hpx/actions_base/macros.hpp>
 #include <hpx/modules/preprocessor.hpp>
 
+#include <type_traits>
+
 #if defined(HPX_HAVE_NETWORKING)
 
 // Helper macro for action serialization; each of the defined actions needs to

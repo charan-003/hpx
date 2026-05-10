@@ -91,14 +91,14 @@ namespace hpx::actions {
 
 namespace hpx {
 
-    template <std::size_t I, typename Args>
+    HPX_CXX_EXPORT template <std::size_t I, typename Args>
     constexpr HPX_HOST_DEVICE HPX_FORCEINLINE hpx::tuple_element_t<I, Args>&
     get(hpx::actions::detail::argument_holder<Args>& t)
     {
         return hpx::tuple_element<I, Args>::get(t.data());
     }
 
-    template <std::size_t I, typename Args>
+    HPX_CXX_EXPORT template <std::size_t I, typename Args>
     constexpr HPX_HOST_DEVICE HPX_FORCEINLINE
         hpx::tuple_element_t<I, Args> const&
         get(hpx::actions::detail::argument_holder<Args> const& t)
@@ -106,7 +106,7 @@ namespace hpx {
         return hpx::tuple_element<I, Args>::get(t.data());
     }
 
-    template <std::size_t I, typename Args>
+    HPX_CXX_EXPORT template <std::size_t I, typename Args>
     constexpr HPX_HOST_DEVICE HPX_FORCEINLINE hpx::tuple_element_t<I, Args>&&
     get(hpx::actions::detail::argument_holder<Args>&& t)
     {
@@ -114,7 +114,7 @@ namespace hpx {
             hpx::get<I>(t.data()));
     }
 
-    template <std::size_t I, typename Args>
+    HPX_CXX_EXPORT template <std::size_t I, typename Args>
     constexpr HPX_HOST_DEVICE HPX_FORCEINLINE
         hpx::tuple_element_t<I, Args> const&&
         get(hpx::actions::detail::argument_holder<Args> const&& t)
@@ -127,7 +127,7 @@ namespace hpx {
 namespace hpx::actions {
 
     ///////////////////////////////////////////////////////////////////////////
-    template <typename Action>
+    HPX_CXX_EXPORT template <typename Action>
     struct transfer_base_action : base_action_data
     {
         transfer_base_action(transfer_base_action const&) = delete;
@@ -329,7 +329,7 @@ namespace hpx::actions {
     }    // namespace detail
 
     ///////////////////////////////////////////////////////////////////////////
-    template <std::size_t N, typename Action>
+    HPX_CXX_EXPORT template <std::size_t N, typename Action>
     constexpr hpx::tuple_element_t<N,
         typename transfer_action<Action>::arguments_type> const&
     get(transfer_base_action<Action> const& args)
@@ -343,7 +343,7 @@ namespace hpx::actions {
 #include <hpx/modules/actions_base.hpp>
 
 /// \cond NOINTERNAL
-template <typename Action>
+HPX_CXX_EXPORT template <typename Action>
 void hpx::actions::detail::register_per_action_data_counter_types(
     hpx::actions::detail::per_action_data_counter_registry& registry)
 {

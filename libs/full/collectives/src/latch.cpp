@@ -6,10 +6,10 @@
 
 #include <hpx/assert.hpp>
 #include <hpx/async_distributed/continuation.hpp>
-#include <hpx/modules/actions.hpp>
 #include <hpx/async_distributed/transfer_continuation_action.hpp>
 #include <hpx/collectives/latch.hpp>
 #include <hpx/components/client_base.hpp>
+#include <hpx/modules/actions.hpp>
 #include <hpx/modules/actions_base.hpp>
 #include <hpx/modules/async_distributed.hpp>
 #include <hpx/modules/futures.hpp>

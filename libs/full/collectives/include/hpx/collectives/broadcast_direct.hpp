@@ -132,8 +132,8 @@ namespace hpx { namespace lcos {
 #include <hpx/async_colocated/async_colocated.hpp>
 #include <hpx/async_colocated/post_colocated.hpp>
 #include <hpx/async_distributed/post.hpp>
-#include <hpx/modules/actions.hpp>
 #include <hpx/async_distributed/transfer_continuation_action.hpp>
+#include <hpx/modules/actions.hpp>
 #include <hpx/modules/actions_base.hpp>
 #include <hpx/modules/async_combinators.hpp>
 #include <hpx/modules/datastructures.hpp>

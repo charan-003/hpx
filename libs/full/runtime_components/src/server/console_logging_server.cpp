@@ -7,8 +7,8 @@
 
 #include <hpx/config.hpp>
 #include <hpx/async_distributed/continuation.hpp>
-#include <hpx/modules/actions.hpp>
 #include <hpx/async_distributed/transfer_continuation_action.hpp>
+#include <hpx/modules/actions.hpp>
 #include <hpx/modules/concurrency.hpp>
 #include <hpx/modules/datastructures.hpp>
 #include <hpx/modules/ini.hpp>

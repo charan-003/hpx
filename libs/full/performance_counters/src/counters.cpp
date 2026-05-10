@@ -9,8 +9,8 @@
 #include <hpx/assert.hpp>
 #include <hpx/async_distributed/continuation.hpp>
 #include <hpx/async_distributed/detail/post.hpp>
-#include <hpx/modules/actions.hpp>
 #include <hpx/async_distributed/transfer_continuation_action.hpp>
+#include <hpx/modules/actions.hpp>
 #include <hpx/modules/actions_base.hpp>
 #include <hpx/modules/components_base.hpp>
 #include <hpx/modules/errors.hpp>

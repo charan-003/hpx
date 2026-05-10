@@ -35,7 +35,7 @@ namespace hpx::actions {
     /// \cond NOINTERNAL
 
     ///////////////////////////////////////////////////////////////////////////
-    template <typename Action>
+    HPX_CXX_EXPORT template <typename Action>
     struct transfer_action final : transfer_base_action<Action>
     {
         transfer_action(transfer_action const&) = delete;

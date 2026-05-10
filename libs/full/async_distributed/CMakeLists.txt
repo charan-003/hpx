@@ -119,24 +119,6 @@ set(async_sources
 include(HPX_AddModule)
 add_hpx_module(
   full async_distributed
-  GLOBAL_HEADER_MODULE_GEN ON
-  ADD_TO_GLOBAL_HEADER
-    hpx/async_distributed/detail/async_implementations.hpp
-    hpx/async_distributed/detail/async_implementations_fwd.hpp
-    hpx/async_distributed/detail/async_unwrap_result_implementations.hpp
-    hpx/async_distributed/detail/async_unwrap_result_implementations_fwd.hpp
-    hpx/async_distributed/detail/post.hpp
-    hpx/async_distributed/detail/post_callback.hpp
-    hpx/async_distributed/detail/post_continue.hpp
-    hpx/async_distributed/detail/post_continue_callback.hpp
-    hpx/async_distributed/detail/post_continue_fwd.hpp
-    hpx/async_distributed/detail/post_implementations.hpp
-    hpx/async_distributed/detail/post_implementations_fwd.hpp
-    hpx/async_distributed/detail/promise_base.hpp
-    hpx/async_distributed/detail/promise_lco.hpp
-    hpx/async_distributed/detail/sync_implementations.hpp
-    hpx/async_distributed/detail/sync_implementations_fwd.hpp
-    hpx/async_distributed/detail/trigger.hpp
   GLOBAL_HEADER_GEN OFF
   SOURCES ${async_sources}
   HEADERS ${async_headers}

@@ -49,8 +49,7 @@ configure_file(
 include(HPX_AddModule)
 add_hpx_module(
   full parcelports
-  GLOBAL_HEADER_MODULE_GEN ON
-  GLOBAL_HEADER_GEN ON
+  GLOBAL_HEADER_GEN OFF
   GENERATED_HEADERS ${parcelports_generated_headers}
   SOURCES ${parcelports_sources}
   HEADERS ${parcelports_headers}

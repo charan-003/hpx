@@ -41,8 +41,6 @@ include(HPX_AddModule)
 add_hpx_module(
   full compute
   GLOBAL_HEADER_GEN ON
-  GLOBAL_HEADER_MODULE_GEN ON
-  ADD_TO_GLOBAL_HEADER hpx/compute/detail/target_distribution_policy.hpp
   SOURCES ${compute_sources}
   HEADERS ${compute_headers}
   COMPAT_HEADERS ${compute_compat_headers}
