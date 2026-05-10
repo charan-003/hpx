@@ -1303,15 +1303,10 @@ namespace hpx::parallel {
                     util::detail::algorithm_result<ExPolicy, Iter1>;
                 using difference_type =
                     typename std::iterator_traits<Iter1>::difference_type;
-                constexpr bool has_scheduler_executor =
-                    hpx::execution_policy_has_scheduler_executor_v<ExPolicy>;
 
-                if constexpr (!has_scheduler_executor)
+                if (first2 == last2)
                 {
-                    if (first2 == last2)
-                    {
-                        return result_type::get(HPX_MOVE(last1));
-                    }
+                    return result_type::get(HPX_MOVE(last1));
                 }
 
                 difference_type count =
@@ -1319,20 +1314,12 @@ namespace hpx::parallel {
                 difference_type diff =
                     hpx::parallel::detail::distance(first2, last2);
 
-                if constexpr (!has_scheduler_executor)
+                if (diff > count)
                 {
-                    if (diff > count)
-                    {
-                        return result_type::get(HPX_MOVE(last1));
-                    }
+                    return result_type::get(HPX_MOVE(last1));
                 }
 
                 difference_type partitioner_count = count - diff + 1;
-                if constexpr (has_scheduler_executor)
-                {
-                    if (diff == 0 || diff > count)
-                        partitioner_count = static_cast<difference_type>(0);
-                }
 
                 decltype(auto) policy =
                     hpx::execution::experimental::adapt_placement_mode(
@@ -1356,7 +1343,7 @@ namespace hpx::parallel {
                         HPX_FORWARD(Proj1, proj1), HPX_FORWARD(Proj2, proj2));
                 };
 
-                auto f2 = [tok, first1](
+                auto f2 = [tok, first1, last1](
                               auto&&... data) mutable -> Iter1 {
                     static_assert(sizeof...(data) < 2);
 
@@ -1365,6 +1352,11 @@ namespace hpx::parallel {
                     util::detail::clear_container(data...);
 
                     difference_type find_end_res = tok.get_data();
+
+                    if (find_end_res < 0)
+                    {
+                        return advance_to_sentinel(first1, last1);
+                    }
 
                     std::advance(first1, find_end_res);
                     return first1;
