@@ -212,11 +212,12 @@ namespace hpx::execution::experimental {
                 using size_type = decltype(util::size(shape));
                 size_type const n = util::size(shape);
                 return bulk(schedule(exec.sched_), n,
-                    [shape, f = HPX_FORWARD(F, f),
-                        ... args = HPX_FORWARD(Ts, ts)](size_type i) mutable {
+                    [shape,
+                        bound_f = hpx::bind_back(HPX_FORWARD(F, f),
+                            HPX_FORWARD(Ts, ts)...)](size_type i) mutable {
                         auto it = util::begin(shape);
                         std::advance(it, i);
-                        HPX_INVOKE(f, *it, args...);
+                        HPX_INVOKE(bound_f, *it);
                     });
             }
             else
@@ -225,19 +226,26 @@ namespace hpx::execution::experimental {
                 size_type const shape_size = util::size(shape);
 
                 using result_vector_type = std::vector<result_type>;
-                auto results = std::make_shared<result_vector_type>(shape_size);
+                result_vector_type result_vector(shape_size);
 
-                return then(bulk(schedule(exec.sched_), shape_size,
-                                [results, shape, f = HPX_FORWARD(F, f),
-                                    ... args = HPX_FORWARD(Ts, ts)](
-                                    size_type i) mutable {
-                                    auto it = util::begin(shape);
-                                    std::advance(it, i);
-                                    (*results)[i] = HPX_INVOKE(f, *it, args...);
-                                }),
-                    [results]() mutable -> result_vector_type {
-                        return HPX_MOVE(*results);
-                    });
+                auto f_wrapper = [](size_type const i,
+                                     result_vector_type& result_vector,
+                                     S const& shape, F& f, Ts&... ts) {
+                    auto it = std::begin(shape);
+                    result_vector[i] = HPX_INVOKE(f, *std::next(it, i), ts...);
+                };
+
+                auto get_result = [](result_vector_type&& result_vector,
+                                      S const&, F&&, Ts&&...) {
+                    return HPX_MOVE(result_vector);
+                };
+
+                return continues_on(
+                           just(HPX_MOVE(result_vector), shape,
+                               HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...),
+                           exec.sched_) |
+                    bulk(shape_size, HPX_MOVE(f_wrapper)) |
+                    then(HPX_MOVE(get_result));
             }
         }
 
@@ -319,12 +327,13 @@ namespace hpx::execution::experimental {
             size_type const n = util::size(shape);
             return continues_on(HPX_MOVE(pre_req), exec.sched_) |
                 bulk(n,
-                    [shape, f = HPX_FORWARD(F, f),
-                        ... args = HPX_FORWARD(Ts, ts)](
+                    [shape,
+                        bound_f = hpx::bind_back(
+                            HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...)](
                         size_type i, auto&... receiver_args) mutable {
                         auto it = util::begin(shape);
                         std::advance(it, i);
-                        HPX_INVOKE(f, *it, args..., receiver_args...);
+                        HPX_INVOKE(bound_f, *it, receiver_args...);
                     });
         }
 

@@ -1303,10 +1303,15 @@ namespace hpx::parallel {
                     util::detail::algorithm_result<ExPolicy, Iter1>;
                 using difference_type =
                     typename std::iterator_traits<Iter1>::difference_type;
+                constexpr bool has_scheduler_executor =
+                    hpx::execution_policy_has_scheduler_executor_v<ExPolicy>;
 
-                if (first2 == last2)
+                if constexpr (!has_scheduler_executor)
                 {
-                    return result_type::get(HPX_MOVE(last1));
+                    if (first2 == last2)
+                    {
+                        return result_type::get(HPX_MOVE(last1));
+                    }
                 }
 
                 difference_type count =
@@ -1314,9 +1319,12 @@ namespace hpx::parallel {
                 difference_type diff =
                     hpx::parallel::detail::distance(first2, last2);
 
-                if (diff > count)
+                if constexpr (!has_scheduler_executor)
                 {
-                    return result_type::get(HPX_MOVE(last1));
+                    if (diff > count)
+                    {
+                        return result_type::get(HPX_MOVE(last1));
+                    }
                 }
 
                 difference_type partitioner_count = count - diff + 1;
