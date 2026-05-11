@@ -37,7 +37,7 @@ jobs:
         clang-format-20 -i **/*.{cpp,hpp}
         
         cd "$REPO_ROOT/examples"
-        clang-format-20-i **/*.{cpp,hpp}
+        clang-format-20 -i **/*.{cpp,hpp}
         
         cd "$REPO_ROOT/tests"
         clang-format-20 -i **/*.{cpp,hpp}
