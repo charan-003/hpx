@@ -526,8 +526,11 @@ namespace hpx::compute {
     }
 }    // namespace hpx::compute
 
-HPX_CXX_CORE_EXPORT template <typename T, typename Allocator>
-struct hpx::traits::is_contiguous_iterator<
-    hpx::compute::detail::iterator<T, Allocator>> : std::true_type
-{
-};
+namespace hpx::traits {
+
+    template <typename T, typename Allocator>
+    struct is_contiguous_iterator<hpx::compute::detail::iterator<T, Allocator>>
+      : std::true_type
+    {
+    };
+}    // namespace hpx::traits

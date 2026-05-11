@@ -47,7 +47,7 @@ namespace hpx {
     HPX_CXX_CORE_EXPORT template <typename Sig, bool Serializable = false>
     class move_only_function;
 
-    HPX_CXX_CORE_EXPORT template <typename R, typename... Ts, bool Serializable>
+    template <typename R, typename... Ts, bool Serializable>
     class move_only_function<R(Ts...), Serializable>
       : public util::detail::basic_function<R(Ts...), false, Serializable>
     {

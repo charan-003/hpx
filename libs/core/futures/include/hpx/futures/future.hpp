@@ -53,14 +53,14 @@ namespace hpx::lcos::detail {
     HPX_CXX_CORE_EXPORT template <typename Future, typename Enable = void>
     struct future_unwrap_result;
 
-    HPX_CXX_CORE_EXPORT template <template <typename> class Future, typename R>
+    template <template <typename> class Future, typename R>
     struct future_unwrap_result<Future<Future<R>>>
     {
         using type = R;
         using wrapped_type = Future<type>;
     };
 
-    HPX_CXX_CORE_EXPORT template <typename R>
+    template <typename R>
     struct future_unwrap_result<hpx::future<hpx::shared_future<R>>>
     {
         using type = R;
@@ -86,7 +86,7 @@ namespace hpx::lcos::detail {
         }
     };
 
-    HPX_CXX_CORE_EXPORT template <typename T>
+    template <typename T>
     struct future_value<T&> : future_data_result<T&>
     {
         HPX_FORCEINLINE static T& get(T* u) noexcept
@@ -150,7 +150,7 @@ namespace hpx::lcos::detail {
     using continuation_result_t =
         typename continuation_result<ContResult>::type;
 
-    HPX_CXX_CORE_EXPORT template <typename ContResult>
+    template <typename ContResult>
     struct continuation_result<hpx::future<ContResult>>
     {
         using type = ContResult;

@@ -272,7 +272,7 @@ namespace hpx::parallel::util {
             typename Enable = void>
         struct datapar_loop_n;
 
-        HPX_CXX_CORE_EXPORT template <typename Iterator, bool IsConst>
+        template <typename Iterator, bool IsConst>
         struct datapar_loop_n<Iterator, IsConst,
             std::enable_if_t<hpx::traits::is_iterator_v<Iterator>>>
         {
@@ -362,7 +362,7 @@ namespace hpx::parallel::util {
             }
         };
 
-        HPX_CXX_CORE_EXPORT template <typename I, bool IsConst>
+        template <typename I, bool IsConst>
         struct datapar_loop_n<I, IsConst,
             std::enable_if_t<std::is_integral_v<I>>>
         {

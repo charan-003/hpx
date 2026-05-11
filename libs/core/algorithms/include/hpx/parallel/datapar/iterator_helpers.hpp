@@ -31,7 +31,7 @@ namespace hpx::parallel::util::detail {
     {
     };
 
-    HPX_CXX_CORE_EXPORT template <typename... Ts>
+    template <typename... Ts>
     struct is_lvalue_ref<hpx::tuple<Ts...>>
       : hpx::util::all_of<std::is_lvalue_reference<Ts>...>
     {
@@ -105,7 +105,7 @@ namespace hpx::parallel::util::detail {
     {
     };
 
-    HPX_CXX_CORE_EXPORT template <typename Iter>
+    template <typename Iter>
     struct iterator_datapar_compatible<Iter,
         std::enable_if_t<std::random_access_iterator<Iter>>>
       : iterator_datapar_compatible_impl<std::decay_t<Iter>>::type
@@ -201,7 +201,7 @@ namespace hpx::parallel::util::detail {
         }
     };
 
-    HPX_CXX_CORE_EXPORT template <typename I, bool IsConst>
+    template <typename I, bool IsConst>
     struct datapar_loop_step<I, IsConst,
         std::enable_if_t<std::is_integral_v<I>>>
     {

@@ -26,28 +26,28 @@ namespace hpx::parallel::util::detail {
     HPX_CXX_CORE_EXPORT template <typename IterOrR, typename Enable = void>
     struct chunk_size_iterator_category;
 
-    HPX_CXX_CORE_EXPORT template <typename IterOrR>
+    template <typename IterOrR>
     struct chunk_size_iterator_category<IterOrR,
         std::enable_if_t<std::is_integral_v<IterOrR>>>
     {
         using type = std::random_access_iterator_tag;
     };
 
-    HPX_CXX_CORE_EXPORT template <typename Iterator>
+    template <typename Iterator>
     struct chunk_size_iterator_category<Iterator,
         std::enable_if_t<hpx::traits::is_iterator_v<Iterator>>>
     {
         using type = hpx::traits::iter_category_t<Iterator>;
     };
 
-    HPX_CXX_CORE_EXPORT template <typename Range>
+    template <typename Range>
     struct chunk_size_iterator_category<Range,
         std::enable_if_t<std::ranges::range<Range>>>
     {
         using type = hpx::traits::range_category_t<Range>;
     };
 
-    HPX_CXX_CORE_EXPORT template <typename Range>
+    template <typename Range>
     struct chunk_size_iterator_category<Range,
         std::enable_if_t<hpx::traits::is_range_generator_v<Range>>>
     {
@@ -61,7 +61,7 @@ namespace hpx::parallel::util::detail {
     HPX_CXX_CORE_EXPORT template <typename IterOrR, typename Enable = void>
     struct iterator_type;
 
-    HPX_CXX_CORE_EXPORT template <typename T>
+    template <typename T>
     struct iterator_type<T,
         std::enable_if_t<std::is_integral_v<T> ||
             hpx::traits::is_range_generator_v<T>>>
@@ -69,14 +69,14 @@ namespace hpx::parallel::util::detail {
         using type = T;
     };
 
-    HPX_CXX_CORE_EXPORT template <typename Iterator>
+    template <typename Iterator>
     struct iterator_type<Iterator,
         std::enable_if_t<hpx::traits::is_iterator_v<Iterator>>>
     {
         using type = Iterator;
     };
 
-    HPX_CXX_CORE_EXPORT template <typename Range>
+    template <typename Range>
     struct iterator_type<Range, std::enable_if_t<std::ranges::range<Range>>>
     {
         using type = std::ranges::iterator_t<Range>;

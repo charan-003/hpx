@@ -432,7 +432,7 @@ namespace hpx::execution::experimental::detail {
     };
 }    // namespace hpx::execution::experimental::detail
 
-HPX_CXX_CORE_EXPORT template <typename... Ts>
+template <typename... Ts>
 struct hpx::detail::empty_vtable_type<
     hpx::execution::experimental::detail::any_receiver_base<Ts...>>
 {

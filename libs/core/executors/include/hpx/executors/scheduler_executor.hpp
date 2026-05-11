@@ -335,35 +335,35 @@ namespace hpx::execution::experimental {
     }
 
     /// \cond NOINTERNAL
-    HPX_CXX_CORE_EXPORT template <typename BaseScheduler>
+    template <typename BaseScheduler>
     struct is_one_way_executor<
         hpx::execution::experimental::scheduler_executor<BaseScheduler>>
       : std::true_type
     {
     };
 
-    HPX_CXX_CORE_EXPORT template <typename BaseScheduler>
+    template <typename BaseScheduler>
     struct is_never_blocking_one_way_executor<
         hpx::execution::experimental::scheduler_executor<BaseScheduler>>
       : std::true_type
     {
     };
 
-    HPX_CXX_CORE_EXPORT template <typename BaseScheduler>
+    template <typename BaseScheduler>
     struct is_bulk_one_way_executor<
         hpx::execution::experimental::scheduler_executor<BaseScheduler>>
       : std::true_type
     {
     };
 
-    HPX_CXX_CORE_EXPORT template <typename BaseScheduler>
+    template <typename BaseScheduler>
     struct is_two_way_executor<
         hpx::execution::experimental::scheduler_executor<BaseScheduler>>
       : std::true_type
     {
     };
 
-    HPX_CXX_CORE_EXPORT template <typename BaseScheduler>
+    template <typename BaseScheduler>
     struct is_bulk_two_way_executor<
         hpx::execution::experimental::scheduler_executor<BaseScheduler>>
       : std::true_type

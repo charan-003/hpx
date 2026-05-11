@@ -563,21 +563,21 @@ namespace hpx::execution::experimental {
     /// \cond NOINTERNAL
 
     ///////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT template <typename BaseExecutor>
+    template <typename BaseExecutor>
     struct is_one_way_executor<
         parallel::execution::timed_executor<BaseExecutor>>
       : is_one_way_executor<std::decay_t<BaseExecutor>>
     {
     };
 
-    HPX_CXX_CORE_EXPORT template <typename BaseExecutor>
+    template <typename BaseExecutor>
     struct is_two_way_executor<
         parallel::execution::timed_executor<BaseExecutor>>
       : is_two_way_executor<std::decay_t<BaseExecutor>>
     {
     };
 
-    HPX_CXX_CORE_EXPORT template <typename BaseExecutor>
+    template <typename BaseExecutor>
     struct is_never_blocking_one_way_executor<
         parallel::execution::timed_executor<BaseExecutor>>
       : is_never_blocking_one_way_executor<std::decay_t<BaseExecutor>>

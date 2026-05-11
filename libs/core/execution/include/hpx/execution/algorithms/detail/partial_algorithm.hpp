@@ -21,8 +21,7 @@ namespace hpx::execution::experimental::detail {
     HPX_CXX_CORE_EXPORT template <typename Tag, typename IsPack, typename... Ts>
     struct partial_algorithm_base;
 
-    HPX_CXX_CORE_EXPORT template <typename Tag, std::size_t... Is,
-        typename... Ts>
+    template <typename Tag, std::size_t... Is, typename... Ts>
     struct partial_algorithm_base<Tag, hpx::util::index_pack<Is...>, Ts...>
     {
     private:
