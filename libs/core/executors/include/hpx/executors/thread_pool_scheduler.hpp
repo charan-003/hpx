@@ -13,11 +13,10 @@
 #include <hpx/modules/errors.hpp>
 #include <hpx/modules/execution.hpp>
 #include <hpx/modules/execution_base.hpp>
+#include <hpx/modules/synchronization.hpp>
 #include <hpx/modules/threading_base.hpp>
 #include <hpx/modules/timing.hpp>
 #include <hpx/modules/topology.hpp>
-#include <hpx/synchronization/condition_variable.hpp>
-#include <hpx/synchronization/spinlock.hpp>
 
 #include <concepts>
 #include <cstddef>
@@ -37,10 +36,11 @@
 
 // Forward declaration
 namespace hpx::execution::experimental::detail {
-    template <typename Policy, typename Sender, typename Shape, typename F,
-        bool IsChunked>
+
+    HPX_CXX_CORE_EXPORT template <typename Policy, typename Sender,
+        typename Shape, typename F, bool IsChunked>
     class thread_pool_bulk_sender;
-}
+}    // namespace hpx::execution::experimental::detail
 
 namespace hpx::execution::experimental {
 
@@ -66,13 +66,13 @@ namespace hpx::execution::experimental {
     }    // namespace detail
 
     // Forward declarations
-    template <typename Policy>
+    HPX_CXX_CORE_EXPORT template <typename Policy>
     struct thread_pool_policy_scheduler;
 
     // Forward declarations for domain system
 
     // Concept to match bulk sender types
-    template <typename Sender>
+    HPX_CXX_CORE_EXPORT template <typename Sender>
     concept bulk_chunked_or_unchunked_sender =
         hpx::execution::experimental::stdexec_internal::__sender_for<Sender,
             hpx::execution::experimental::bulk_t> ||
@@ -100,7 +100,7 @@ namespace hpx::execution::experimental {
         // so the calling HPX task is suspended (cooperatively),
         // freeing the underlying OS worker to service queued tasks.
 
-        template <typename T>
+        HPX_CXX_CORE_EXPORT template <typename T>
         struct stopped_t
         {
         };
@@ -117,7 +117,7 @@ namespace hpx::execution::experimental {
         // hpx::condition_variable_any in shared_state::wait_get_value().
         // HPX senders complete on the thread-pool scheduler, so no work is
         // ever enqueued onto the run_loop.
-        struct env
+        HPX_CXX_CORE_EXPORT struct env
         {
             hpx::execution::experimental::run_loop* loop_ = nullptr;
 
@@ -136,24 +136,24 @@ namespace hpx::execution::experimental {
 
         // Compute the single-value tuple type for a sender against
         // the receiver env, using only public stdexec APIs.
-        template <typename... Ts>
+        HPX_CXX_CORE_EXPORT template <typename... Ts>
         using decayed_tuple = std::tuple<std::decay_t<Ts>...>;
 
-        template <typename Variant>
+        HPX_CXX_CORE_EXPORT template <typename Variant>
         struct first_alternative;
 
-        template <typename T>
+        HPX_CXX_CORE_EXPORT template <typename T>
         struct first_alternative<std::variant<T>>
         {
             using type = T;
         };
 
-        template <typename Sender>
+        HPX_CXX_CORE_EXPORT template <typename Sender>
         using value_tuple_for_t = typename first_alternative<
             hpx::execution::experimental::value_types_of_t<Sender, env,
                 decayed_tuple, std::variant>>::type;
 
-        template <typename ValueTuple>
+        HPX_CXX_CORE_EXPORT template <typename ValueTuple>
         struct shared_state
         {
             hpx::spinlock mtx;
@@ -255,7 +255,7 @@ namespace hpx::execution::experimental {
             }
         };
 
-        template <typename ValueTuple>
+        HPX_CXX_CORE_EXPORT template <typename ValueTuple>
         struct receiver
         {
             using receiver_concept = hpx::execution::experimental::receiver_t;
@@ -289,7 +289,7 @@ namespace hpx::execution::experimental {
 
     // Domain customization for stdexec bulk operations and sync_wait.
     // Following the stdexec parallel_scheduler pattern (set_value_t tag-based).
-    template <typename Policy>
+    HPX_CXX_CORE_EXPORT template <typename Policy>
     struct thread_pool_domain : hpx::execution::experimental::default_domain
     {
         // transform_sender for bulk operations
