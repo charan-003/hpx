@@ -55,26 +55,6 @@ namespace hpx::parallel::util {
 
             template <typename ExPolicy, typename Begin, typename End,
                 typename F>
-                requires(    // forces hpx::execution::unseq
-                    hpx::is_unsequenced_execution_policy_v<ExPolicy> &&
-                    !hpx::is_parallel_execution_policy_v<ExPolicy>)
-            HPX_HOST_DEVICE HPX_FORCEINLINE static Begin call(
-                ExPolicy&&, Begin it, End last, F&& f)
-            {
-                // clang-format off
-                HPX_IVDEP HPX_UNROLL HPX_VECTORIZE
-                for (Begin& iter = it; iter != last; ++iter)
-                {
-                    HPX_INVOKE(f, iter);
-                }
-                // clang-format on
-
-                return it;
-            }
-
-            template <typename ExPolicy, typename Begin, typename End,
-                typename F>
-                requires(!hpx::is_unsequenced_execution_policy_v<ExPolicy>)
             HPX_HOST_DEVICE HPX_FORCEINLINE static constexpr Begin call(
                 ExPolicy&&, Begin it, End last, F&& f)
             {
