@@ -12,6 +12,17 @@
 
 namespace hpx::experimental {
 
+// P2786R13 specifies a single feature-test macro __cpp_trivial_relocatability
+// that signals availability of both the language facilities and the library
+// trait std::is_trivially_relocatable, see
+// https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2786r13.html#language-feature-test-macros
+#if defined(__cpp_trivial_relocatability)
+    template <typename T>
+    struct is_trivially_relocatable : std::is_trivially_relocatable<T>
+    {
+    };
+#else
+
     // All trivially copyable types are trivially relocatable
     // Other types should default to false.
     HPX_CXX_CORE_EXPORT template <typename T>
@@ -73,6 +84,8 @@ namespace hpx::experimental {
       : is_trivially_relocatable<T>
     {
     };
+
+#endif
 
     HPX_CXX_CORE_EXPORT template <typename T>
     inline constexpr bool is_trivially_relocatable_v =
