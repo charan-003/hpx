@@ -290,8 +290,7 @@ namespace hpx::execution::experimental {
         // thread being blocked, avoiding deadlock with --hpx:threads=1.
         template <stdexec::sender_in<stdexec::__sync_wait::__env> Sender>
         auto apply_sender(stdexec::sync_wait_t, Sender&& sndr) const
-            -> std::optional<
-                stdexec::__sync_wait::__value_tuple_for_t<Sender>>
+            -> std::optional<stdexec::__sync_wait::__value_tuple_for_t<Sender>>
         {
             using value_tuple_t =
                 stdexec::__sync_wait::__value_tuple_for_t<Sender>;
@@ -300,8 +299,7 @@ namespace hpx::execution::experimental {
             stdexec::run_loop loop;    // type-only, never run
 
             auto op_state = stdexec::connect(HPX_FORWARD(Sender, sndr),
-                detail::hpx_sync_wait::receiver<value_tuple_t>{
-                    &state, &loop});
+                detail::hpx_sync_wait::receiver<value_tuple_t>{&state, &loop});
             stdexec::start(op_state);
             return state.wait_get_value();
         }
