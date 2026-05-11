@@ -33,14 +33,14 @@ jobs:
         REPO_ROOT=$(git rev-parse --show-toplevel)
         cd "$REPO_ROOT/libs" && shopt -s globstar # to activate the ** globbing
         
-        clang-format-21 --version
-        clang-format-21 -i **/*.{cpp,hpp}
+        clang-format-20 --version
+        clang-format-20 -i **/*.{cpp,hpp}
         
         cd "$REPO_ROOT/examples"
-        clang-format-21 -i **/*.{cpp,hpp}
+        clang-format-20-i **/*.{cpp,hpp}
         
         cd "$REPO_ROOT/tests"
-        clang-format-21 -i **/*.{cpp,hpp}
+        clang-format-20 -i **/*.{cpp,hpp}
 
         cd "$REPO_ROOT"
 
