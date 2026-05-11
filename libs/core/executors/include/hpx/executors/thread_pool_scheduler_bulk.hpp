@@ -750,9 +750,13 @@ namespace hpx::execution::experimental::detail {
 
             // P3826R5: report the completion domain for this bulk sender
             template <typename CPO>
-            auto query(stdexec::get_completion_domain_t<CPO>) const noexcept
+            auto query(
+                hpx::execution::experimental::get_completion_domain_t<CPO>)
+                const noexcept
             {
-                return sch.query(stdexec::get_completion_domain_t<CPO>{});
+                return sch.query(
+                    hpx::execution::experimental::get_completion_domain_t<
+                        CPO>{});
             }
         };
 

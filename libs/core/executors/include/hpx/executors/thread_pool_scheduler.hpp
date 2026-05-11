@@ -105,11 +105,60 @@ namespace hpx::execution::experimental {
         {
         };
 
+        // Receiver env: exposes a run_loop::scheduler via the standard
+        // get_scheduler / get_delegation_scheduler queries so dependent
+        // senders (let_value, let_error, etc.) can compute their completion
+        // signatures against this environment.
+        //
+        // The run_loop is owned by shared_state and is never executed. It
+        // exists purely as a type carrier for sender type-checking.
+        //
+        // Actual waiting is implemented using hpx::spinlock and
+        // hpx::condition_variable_any in shared_state::wait_get_value().
+        // HPX senders complete on the thread-pool scheduler, so no work is
+        // ever enqueued onto the run_loop.
+        struct env
+        {
+            hpx::execution::experimental::run_loop* loop_ = nullptr;
+
+            auto query(
+                hpx::execution::experimental::get_scheduler_t) const noexcept
+            {
+                return loop_->get_scheduler();
+            }
+
+            auto query(hpx::execution::experimental::get_delegation_scheduler_t)
+                const noexcept
+            {
+                return loop_->get_scheduler();
+            }
+        };
+
+        // Compute the single-value tuple type for a sender against
+        // the receiver env, using only public stdexec APIs.
+        template <typename... Ts>
+        using decayed_tuple = std::tuple<std::decay_t<Ts>...>;
+
+        template <typename Variant>
+        struct first_alternative;
+
+        template <typename T>
+        struct first_alternative<std::variant<T>>
+        {
+            using type = T;
+        };
+
+        template <typename Sender>
+        using value_tuple_for_t = typename first_alternative<
+            hpx::execution::experimental::value_types_of_t<Sender, env,
+                decayed_tuple, std::variant>>::type;
+
         template <typename ValueTuple>
         struct shared_state
         {
             hpx::spinlock mtx;
             hpx::condition_variable_any cv;
+            hpx::execution::experimental::run_loop loop;
             bool done = false;
             std::variant<std::monostate, ValueTuple, std::exception_ptr,
                 stopped_t<ValueTuple>>
@@ -209,15 +258,9 @@ namespace hpx::execution::experimental {
         template <typename ValueTuple>
         struct receiver
         {
-            using receiver_concept = stdexec::receiver_t;
+            using receiver_concept = hpx::execution::experimental::receiver_t;
 
             shared_state<ValueTuple>* state;
-            // Hold a stdexec __sync_wait::__env-compatible env so adapters
-            // querying get_scheduler/get_delegation_scheduler against the
-            // receiver env type-check identically to stdexec's default
-            // sync_wait path. The run_loop instance is owned externally
-            // (in shared_state via __env wrapper at caller).
-            stdexec::run_loop* loop;
 
             template <typename... Vs>
             void set_value(Vs&&... vs) && noexcept
@@ -236,9 +279,9 @@ namespace hpx::execution::experimental {
                 state->notify_stopped();
             }
 
-            constexpr auto get_env() const noexcept
+            constexpr env get_env() const noexcept
             {
-                return stdexec::__sync_wait::__env{loop};
+                return env{&state->loop};
             }
         };
 
@@ -288,19 +331,22 @@ namespace hpx::execution::experimental {
         // implement sync_wait using HPX synchronization primitives so
         // the calling HPX task yields cooperatively rather than the OS
         // thread being blocked, avoiding deadlock with --hpx:threads=1.
-        template <stdexec::sender_in<stdexec::__sync_wait::__env> Sender>
-        auto apply_sender(stdexec::sync_wait_t, Sender&& sndr) const
-            -> std::optional<stdexec::__sync_wait::__value_tuple_for_t<Sender>>
+        template <
+            hpx::execution::experimental::sender_in<detail::hpx_sync_wait::env>
+                Sender>
+        auto apply_sender(
+            hpx::execution::experimental::sync_wait_t, Sender&& sndr) const
+            -> std::optional<detail::hpx_sync_wait::value_tuple_for_t<Sender>>
         {
             using value_tuple_t =
-                stdexec::__sync_wait::__value_tuple_for_t<Sender>;
+                detail::hpx_sync_wait::value_tuple_for_t<Sender>;
 
             detail::hpx_sync_wait::shared_state<value_tuple_t> state;
-            stdexec::run_loop loop;    // type-only, never run
 
-            auto op_state = stdexec::connect(HPX_FORWARD(Sender, sndr),
-                detail::hpx_sync_wait::receiver<value_tuple_t>{&state, &loop});
-            stdexec::start(op_state);
+            auto op_state =
+                hpx::execution::experimental::connect(HPX_FORWARD(Sender, sndr),
+                    detail::hpx_sync_wait::receiver<value_tuple_t>{&state});
+            hpx::execution::experimental::start(op_state);
             return state.wait_get_value();
         }
     };
@@ -640,9 +686,13 @@ namespace hpx::execution::experimental {
                 //              -> scheduler -> get_completion_domain<set_value_t>
                 //              -> thread_pool_domain
                 template <typename CPO>
-                auto query(stdexec::get_completion_domain_t<CPO>) const noexcept
+                auto query(
+                    hpx::execution::experimental::get_completion_domain_t<CPO>)
+                    const noexcept
                 {
-                    return sched.query(stdexec::get_completion_domain_t<CPO>{});
+                    return sched.query(
+                        hpx::execution::experimental::get_completion_domain_t<
+                            CPO>{});
                 }
             };
 
@@ -698,8 +748,8 @@ namespace hpx::execution::experimental {
         /// transform_sender to invoke for bulk operations.
         template <typename CPO>
         [[nodiscard]]
-        auto query(stdexec::get_completion_domain_t<CPO>) const noexcept
-            -> thread_pool_domain<Policy>
+        auto query(hpx::execution::experimental::get_completion_domain_t<CPO>)
+            const noexcept -> thread_pool_domain<Policy>
         {
             return {};
         }
