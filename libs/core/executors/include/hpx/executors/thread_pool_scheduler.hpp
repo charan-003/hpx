@@ -16,13 +16,19 @@
 #include <hpx/modules/threading_base.hpp>
 #include <hpx/modules/timing.hpp>
 #include <hpx/modules/topology.hpp>
+#include <hpx/synchronization/condition_variable.hpp>
+#include <hpx/synchronization/spinlock.hpp>
 
 #include <concepts>
 #include <cstddef>
 #include <exception>
+#include <mutex>
+#include <optional>
 #include <string>
+#include <system_error>
 #include <type_traits>
 #include <utility>
+#include <variant>
 
 #include <hpx/execution/algorithms/bulk.hpp>
 #include <hpx/execution_base/stdexec_forward.hpp>
@@ -75,7 +81,170 @@ namespace hpx::execution::experimental {
         hpx::execution::experimental::stdexec_internal::__sender_for<Sender,
             hpx::execution::experimental::bulk_unchunked_t>;
 
-    // Domain customization for stdexec bulk operations
+    namespace detail::hpx_sync_wait {
+
+        // P3826R5 / stdexec: when a sync_wait sender's completion domain
+        // is our thread_pool_domain, stdexec dispatches via
+        //   apply_sender(domain, sync_wait_t{}, sndr).
+        // The default_domain implementation runs a stdexec::run_loop
+        // which uses std-level condition_variable / atomic-queue waits,
+        // i.e. it OS-blocks the calling thread. When sync_wait is
+        // called from an HPX worker thread (typical: from hpx_main),
+        // and the wrapped sender schedules work on the same HPX thread
+        // pool, this deadlocks at low worker counts (--hpx:threads=1):
+        // the only worker is OS-blocked in sync_wait, so the queued
+        // work never runs.
+        //
+        // The HPX-aware path below replaces the wait with
+        //   hpx::spinlock + hpx::condition_variable_any
+        // so the calling HPX task is suspended (cooperatively),
+        // freeing the underlying OS worker to service queued tasks.
+
+        template <typename T>
+        struct stopped_t
+        {
+        };
+
+        template <typename ValueTuple>
+        struct shared_state
+        {
+            hpx::spinlock mtx;
+            hpx::condition_variable_any cv;
+            bool done = false;
+            std::variant<std::monostate, ValueTuple, std::exception_ptr,
+                stopped_t<ValueTuple>>
+                result;
+
+            template <typename... Vs>
+            void notify_value(Vs&&... vs) noexcept
+            {
+                try
+                {
+                    {
+                        std::unique_lock<hpx::spinlock> l(mtx);
+                        result.template emplace<ValueTuple>(
+                            HPX_FORWARD(Vs, vs)...);
+                        done = true;
+                    }
+                    cv.notify_all();
+                }
+                catch (...)
+                {
+                    {
+                        std::unique_lock<hpx::spinlock> l(mtx);
+                        result.template emplace<std::exception_ptr>(
+                            std::current_exception());
+                        done = true;
+                    }
+                    cv.notify_all();
+                }
+            }
+
+            template <typename E>
+            void notify_error(E&& e) noexcept
+            {
+                {
+                    std::unique_lock<hpx::spinlock> l(mtx);
+                    using err_t = std::decay_t<E>;
+                    if constexpr (std::is_same_v<err_t, std::exception_ptr>)
+                    {
+                        result.template emplace<std::exception_ptr>(
+                            HPX_FORWARD(E, e));
+                    }
+                    else if constexpr (std::is_same_v<err_t, std::error_code>)
+                    {
+                        result.template emplace<std::exception_ptr>(
+                            std::make_exception_ptr(std::system_error(e)));
+                    }
+                    else
+                    {
+                        try
+                        {
+                            throw HPX_FORWARD(E, e);
+                        }
+                        catch (...)
+                        {
+                            result.template emplace<std::exception_ptr>(
+                                std::current_exception());
+                        }
+                    }
+                    done = true;
+                }
+                cv.notify_all();
+            }
+
+            void notify_stopped() noexcept
+            {
+                {
+                    std::unique_lock<hpx::spinlock> l(mtx);
+                    result.template emplace<stopped_t<ValueTuple>>();
+                    done = true;
+                }
+                cv.notify_all();
+            }
+
+            // Wait HPX-aware: yields the calling HPX task while waiting,
+            // does not block the underlying OS thread.
+            std::optional<ValueTuple> wait_get_value()
+            {
+                {
+                    std::unique_lock<hpx::spinlock> l(mtx);
+                    cv.wait(l, [this] { return done; });
+                }
+
+                if (auto* v = std::get_if<ValueTuple>(&result))
+                {
+                    return std::optional<ValueTuple>(HPX_MOVE(*v));
+                }
+                if (auto* ep = std::get_if<std::exception_ptr>(&result))
+                {
+                    auto e = HPX_MOVE(*ep);
+                    std::rethrow_exception(HPX_MOVE(e));
+                }
+                // set_stopped
+                return std::optional<ValueTuple>{};
+            }
+        };
+
+        template <typename ValueTuple>
+        struct receiver
+        {
+            using receiver_concept = stdexec::receiver_t;
+
+            shared_state<ValueTuple>* state;
+            // Hold a stdexec __sync_wait::__env-compatible env so adapters
+            // querying get_scheduler/get_delegation_scheduler against the
+            // receiver env type-check identically to stdexec's default
+            // sync_wait path. The run_loop instance is owned externally
+            // (in shared_state via __env wrapper at caller).
+            stdexec::run_loop* loop;
+
+            template <typename... Vs>
+            void set_value(Vs&&... vs) && noexcept
+            {
+                state->notify_value(HPX_FORWARD(Vs, vs)...);
+            }
+
+            template <typename E>
+            void set_error(E&& e) && noexcept
+            {
+                state->notify_error(HPX_FORWARD(E, e));
+            }
+
+            void set_stopped() && noexcept
+            {
+                state->notify_stopped();
+            }
+
+            constexpr auto get_env() const noexcept
+            {
+                return stdexec::__sync_wait::__env{loop};
+            }
+        };
+
+    }    // namespace detail::hpx_sync_wait
+
+    // Domain customization for stdexec bulk operations and sync_wait.
     // Following the stdexec parallel_scheduler pattern (set_value_t tag-based).
     template <typename Policy>
     struct thread_pool_domain : hpx::execution::experimental::default_domain
@@ -112,6 +281,29 @@ namespace hpx::execution::experimental {
                     std::decay_t<decltype(f)>, is_chunked>(HPX_MOVE(sched),
                     HPX_FORWARD(decltype(child), child), HPX_MOVE(iota_shape),
                     HPX_FORWARD(decltype(f), f));
+        }
+
+        // P2300/P2855 customization: stdexec::sync_wait dispatches here
+        // when the sender's completion domain is thread_pool_domain. We
+        // implement sync_wait using HPX synchronization primitives so
+        // the calling HPX task yields cooperatively rather than the OS
+        // thread being blocked, avoiding deadlock with --hpx:threads=1.
+        template <stdexec::sender_in<stdexec::__sync_wait::__env> Sender>
+        auto apply_sender(stdexec::sync_wait_t, Sender&& sndr) const
+            -> std::optional<
+                stdexec::__sync_wait::__value_tuple_for_t<Sender>>
+        {
+            using value_tuple_t =
+                stdexec::__sync_wait::__value_tuple_for_t<Sender>;
+
+            detail::hpx_sync_wait::shared_state<value_tuple_t> state;
+            stdexec::run_loop loop;    // type-only, never run
+
+            auto op_state = stdexec::connect(HPX_FORWARD(Sender, sndr),
+                detail::hpx_sync_wait::receiver<value_tuple_t>{
+                    &state, &loop});
+            stdexec::start(op_state);
+            return state.wait_get_value();
         }
     };
 
