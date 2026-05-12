@@ -303,9 +303,7 @@ namespace hpx::threads {
             spinlock_pool::spinlock_for(this));
         std::swap(description_, value);
 
-#if defined(HPX_HAVE_MODULE_TRACY)
-        tracy::detail::rename_region(description_.get_description());
-#endif
+        hpx::tracing::rename_region(description_.get_description());
 
         return value;
     }
