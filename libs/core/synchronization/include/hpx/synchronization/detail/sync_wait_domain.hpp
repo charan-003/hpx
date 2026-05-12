@@ -24,50 +24,46 @@
 // HPX-aware sync_wait domain.
 //
 // stdexec::sync_wait normally blocks using OS condition variables via an
-// internal run_loop. When called on an HPX worker thread, this can
-// deadlock if completion requires more work on the same HPX thread pool,
-// especially with --hpx:threads=1.
+// internal run_loop. When called on an HPX worker thread, this can deadlock if
+// completion requires more work on the same HPX thread pool, especially with
+// --hpx:threads=1.
 //
-// hpx_sync_wait_domain customizes apply_sender(sync_wait_t, sndr) to use
-// HPX-aware waiting with hpx::spinlock +
-// hpx::condition_variable_any. This suspends the HPX task
-// cooperatively instead of OS-blocking the worker thread, allowing queued
-// HPX work to continue running.
+// sync_wait_domain customizes apply_sender(sync_wait_t, sndr) to use HPX-aware
+// waiting with hpx::spinlock + hpx::condition_variable_any. This suspends the
+// HPX task cooperatively instead of OS-blocking the worker thread, allowing
+// queued HPX work to continue running.
 //
 // Senders executing through HPX should expose this domain through
 // get_completion_domain<set_value_t> so sync_wait routes here.
 
-namespace hpx::synchronization::detail::hpx_sync_wait_domain_impl {
+namespace hpx::synchronization::detail {
 
     // Marker for the set_stopped completion path.
-    template <typename T>
+    HPX_CXX_CORE_EXPORT template <typename T>
     struct stopped_t
     {
     };
 
     // Receiver env: exposes a stdexec run_loop scheduler via the standard
-    // get_scheduler / get_delegation_scheduler queries so dependent
-    // senders (let_value, let_error, etc.) can compute their completion
-    // signatures against this environment. The run_loop is owned by
-    // shared_state and is NEVER actually run; it exists purely as a
-    // type carrier required by stdexec::sync_wait_t's constraint
-    // (sender_in<sync_wait::__env>).
+    // get_scheduler / get_delegation_scheduler queries so dependent senders
+    // (let_value, let_error, etc.) can compute their completion signatures
+    // against this environment. The run_loop is owned by shared_state and is
+    // NEVER actually run; it exists purely as a type carrier required by
+    // stdexec::sync_wait_t's constraint (sender_in<sync_wait::__env>).
     //
     // Modern P2300: Uses query() functions instead of old tag_invoke.
     //
-    // IMPORTANT:
-    // We intentionally DO NOT provide a stop token.
+    // IMPORTANT: We intentionally DO NOT provide a stop token.
     //
-    // If we return never_stop_token, stdexec assumes the operation
-    // can never be stopped, so it removes set_stopped from the
-    // completion signatures.
+    // If we return never_stop_token, stdexec assumes the operation can never be
+    // stopped, so it removes set_stopped from the completion signatures.
     //
-    // But our code may still call set_stopped().
-    // That creates type mismatches and breaks things.
+    // But our code may still call set_stopped(). That creates type mismatches
+    // and breaks things.
     //
-    // By not exposing a stop token, stdexec keeps set_stopped
-    // in the completion signatures, which matches our behavior.
-    struct env
+    // By not exposing a stop token, stdexec keeps set_stopped in the completion
+    // signatures, which matches our behavior.
+    HPX_CXX_CORE_EXPORT struct env
     {
         hpx::execution::experimental::run_loop* loop_ = nullptr;
 
@@ -87,24 +83,26 @@ namespace hpx::synchronization::detail::hpx_sync_wait_domain_impl {
         }
     };
 
-    template <typename... Ts>
+    // Compute the single-value tuple type for a sender against the receiver
+    // env, using only public stdexec APIs.
+    HPX_CXX_CORE_EXPORT template <typename... Ts>
     using decayed_tuple = std::tuple<std::decay_t<Ts>...>;
 
-    template <typename Variant>
+    HPX_CXX_CORE_EXPORT template <typename Variant>
     struct first_alternative;
 
-    template <typename T>
+    HPX_CXX_CORE_EXPORT template <typename T>
     struct first_alternative<std::variant<T>>
     {
         using type = T;
     };
 
-    template <typename Sender>
-    using value_tuple_for_t = typename first_alternative<
-        hpx::execution::experimental::value_types_of_t<Sender, env,
-            decayed_tuple, std::variant>>::type;
+    HPX_CXX_CORE_EXPORT template <typename Sender>
+    using value_tuple_for_t =
+        first_alternative<hpx::execution::experimental::value_types_of_t<Sender,
+            env, decayed_tuple, std::variant>>::type;
 
-    template <typename ValueTuple>
+    HPX_CXX_CORE_EXPORT template <typename ValueTuple>
     struct shared_state
     {
         hpx::spinlock mtx;
@@ -182,6 +180,8 @@ namespace hpx::synchronization::detail::hpx_sync_wait_domain_impl {
             cv.notify_all();
         }
 
+        // Wait HPX-aware: yields the calling HPX task while waiting, does not
+        // block the underlying OS thread.
         std::optional<ValueTuple> wait_get_value()
         {
             {
@@ -203,7 +203,7 @@ namespace hpx::synchronization::detail::hpx_sync_wait_domain_impl {
         }
     };
 
-    template <typename ValueTuple>
+    HPX_CXX_CORE_EXPORT template <typename ValueTuple>
     struct receiver
     {
         using receiver_concept = hpx::execution::experimental::receiver_t;
@@ -234,31 +234,28 @@ namespace hpx::synchronization::detail::hpx_sync_wait_domain_impl {
         }
     };
 
-}    // namespace hpx::synchronization::detail::hpx_sync_wait_domain_impl
-
-namespace hpx::synchronization::detail {
-
-    // stdexec domain customizing only `apply_sender(sync_wait_t, ...)`
-    // to use HPX-aware cooperative waiting.
-    struct hpx_sync_wait_domain : hpx::execution::experimental::default_domain
+    // stdexec domain customizing only `apply_sender(sync_wait_t, ...)` to use
+    // HPX-aware cooperative waiting.
+    HPX_CXX_CORE_EXPORT struct sync_wait_domain
+      : hpx::execution::experimental::default_domain
     {
-        template <hpx::execution::experimental::sender Sender>
-        auto apply_sender(
-            hpx::execution::experimental::sync_wait_t, Sender&& sndr) const
-            -> std::optional<
-                hpx_sync_wait_domain_impl::value_tuple_for_t<Sender>>
+        // P2300/P2855 customization: stdexec::sync_wait dispatches here when
+        // the sender's completion domain is thread_pool_domain. We implement
+        // sync_wait using HPX synchronization primitives so the calling HPX
+        // task yields cooperatively rather than the OS thread being blocked,
+        // avoiding deadlock with --hpx:threads=1.
+        template <hpx::execution::experimental::sender_in<env> Sender>
+        auto apply_sender(hpx::execution::experimental::sync_wait_t,
+            Sender&& sndr) const -> std::optional<value_tuple_for_t<Sender>>
         {
-            using value_tuple_t =
-                hpx_sync_wait_domain_impl::value_tuple_for_t<Sender>;
+            using value_tuple_t = value_tuple_for_t<Sender>;
 
-            hpx_sync_wait_domain_impl::shared_state<value_tuple_t> state;
+            shared_state<value_tuple_t> state;
 
-            auto op_state =
-                hpx::execution::experimental::connect(HPX_FORWARD(Sender, sndr),
-                    hpx_sync_wait_domain_impl::receiver<value_tuple_t>{&state});
+            auto op_state = hpx::execution::experimental::connect(
+                HPX_FORWARD(Sender, sndr), receiver<value_tuple_t>{&state});
             hpx::execution::experimental::start(op_state);
             return state.wait_get_value();
         }
     };
-
 }    // namespace hpx::synchronization::detail

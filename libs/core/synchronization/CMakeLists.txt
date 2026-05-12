@@ -18,8 +18,8 @@ set(synchronization_headers
     hpx/synchronization/counting_semaphore.hpp
     hpx/synchronization/detail/condition_variable.hpp
     hpx/synchronization/detail/counting_semaphore.hpp
-    hpx/synchronization/detail/hpx_sync_wait_domain.hpp
     hpx/synchronization/detail/sliding_semaphore.hpp
+    hpx/synchronization/detail/sync_wait_domain.hpp
     hpx/synchronization/event.hpp
     hpx/synchronization/latch.hpp
     hpx/synchronization/lock_types.hpp
@@ -74,6 +74,7 @@ add_hpx_module(
   GLOBAL_HEADER_MODULE_GEN ON
   SOURCES ${synchronization_sources}
   HEADERS ${synchronization_headers}
+  ADD_TO_GLOBAL_HEADER "hpx/synchronization/detail/sync_wait_domain.hpp"
   MACRO_HEADERS ${synchronization_macro_headers}
   COMPAT_HEADERS ${synchronization_compat_headers}
   MODULE_DEPENDENCIES
