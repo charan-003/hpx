@@ -14,7 +14,7 @@
 #include <hpx/modules/parcelset_base.hpp>
 #include <hpx/modules/serialization.hpp>
 
-#include <hpx/actions/actions_fwd.hpp>
+#include <hpx/modules/actions.hpp>
 #include <hpx/parcelset/detail/parcel_await.hpp>
 #include <hpx/parcelset/parcelset_fwd.hpp>
 

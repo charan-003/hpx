@@ -18,7 +18,7 @@
 
 #include <hpx/async_colocated/server/destroy_component.hpp>
 
-#include <hpx/actions/invoke_function.hpp>
+#include <hpx/modules/actions.hpp>
 
 #include <hpx/components/client.hpp>
 #include <hpx/components/client_base.hpp>

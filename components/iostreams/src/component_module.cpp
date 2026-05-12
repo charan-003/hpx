@@ -11,6 +11,7 @@
 #include <hpx/components/iostreams/server/output_stream.hpp>
 #include <hpx/components/iostreams/standard_streams.hpp>
 
+#include <hpx/modules/actions.hpp>
 #include <hpx/async_distributed/transfer_continuation_action.hpp>
 #include <hpx/modules/actions_base.hpp>
 #include <hpx/modules/components_base.hpp>

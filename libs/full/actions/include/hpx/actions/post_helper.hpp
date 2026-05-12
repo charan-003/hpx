@@ -24,7 +24,7 @@
 namespace hpx::detail {
 
     ///////////////////////////////////////////////////////////////////////////
-    template <typename Action, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename... Ts>
     void call_async(threads::thread_init_data&& data,
         hpx::id_type const& target, naming::address::address_type lva,
         naming::address::component_type comptype, Ts&&... vs)
@@ -52,7 +52,8 @@ namespace hpx::detail {
         traits::action_schedule_thread<Action>::call(lva, comptype, data);
     }
 
-    template <typename Action, typename Continuation, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename Continuation,
+        typename... Ts>
     void call_async(threads::thread_init_data&& data, Continuation&& cont,
         hpx::id_type const& target, naming::address::address_type lva,
         naming::address::component_type comptype, Ts&&... vs)
@@ -74,14 +75,15 @@ namespace hpx::detail {
         traits::action_schedule_thread<Action>::call(lva, comptype, data);
     }
 
-    template <typename Action, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename... Ts>
     HPX_FORCEINLINE void call_sync(naming::address::address_type lva,
         naming::address::component_type comptype, Ts&&... vs)
     {
         Action::execute_function(lva, comptype, HPX_FORWARD(Ts, vs)...);
     }
 
-    template <typename Action, typename Continuation, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename Continuation,
+        typename... Ts>
     HPX_FORCEINLINE void call_sync(Continuation&& cont,
         naming::address::address_type lva,
         naming::address::component_type comptype, Ts&&... vs)
@@ -100,7 +102,7 @@ namespace hpx::detail {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    template <typename Action>
+    HPX_CXX_EXPORT template <typename Action>
     struct post_helper<Action, /*DirectExecute=*/false>
     {
         template <typename... Ts>
@@ -149,7 +151,7 @@ namespace hpx::detail {
     };
 
     ///////////////////////////////////////////////////////////////////////////
-    template <typename Action>
+    HPX_CXX_EXPORT template <typename Action>
     struct post_helper<Action, /*DirectExecute=*/true>
     {
         // If local and to be directly executed, just call the function
