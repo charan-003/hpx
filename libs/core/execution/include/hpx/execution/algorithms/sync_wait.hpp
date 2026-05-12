@@ -36,7 +36,6 @@ namespace hpx::this_thread::experimental {
     //
     // When called from a non-HPX (OS) thread, fall back to stdexec's
     // default sync_wait, which is correct in that context.
-    
     HPX_CXX_CORE_EXPORT inline constexpr struct sync_wait_t
     {
         template <hpx::execution::experimental::sender Sender>
