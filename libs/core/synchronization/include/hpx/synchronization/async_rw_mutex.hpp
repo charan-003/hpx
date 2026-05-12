@@ -12,7 +12,7 @@
 #include <hpx/modules/datastructures.hpp>
 #include <hpx/modules/execution_base.hpp>
 #include <hpx/modules/functional.hpp>
-#include <hpx/synchronization/detail/hpx_sync_wait_domain.hpp>
+#include <hpx/synchronization/detail/sync_wait_domain.hpp>
 #include <hpx/synchronization/mutex.hpp>
 
 #include <exception>
@@ -462,7 +462,7 @@ namespace hpx::experimental {
                 static constexpr auto query(
                     hpx::execution::experimental::get_completion_domain_t<
                         CPO>) noexcept
-                    -> hpx::synchronization::detail::hpx_sync_wait_domain
+                    -> hpx::synchronization::detail::sync_wait_domain
                 {
                     return {};
                 }
@@ -680,7 +680,7 @@ namespace hpx::experimental {
                 static constexpr auto query(
                     hpx::execution::experimental::get_completion_domain_t<
                         CPO>) noexcept
-                    -> hpx::synchronization::detail::hpx_sync_wait_domain
+                    -> hpx::synchronization::detail::sync_wait_domain
                 {
                     return {};
                 }

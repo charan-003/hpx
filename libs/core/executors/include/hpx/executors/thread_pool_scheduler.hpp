@@ -81,216 +81,10 @@ namespace hpx::execution::experimental {
         hpx::execution::experimental::stdexec_internal::__sender_for<Sender,
             hpx::execution::experimental::bulk_unchunked_t>;
 
-    namespace detail::hpx_sync_wait {
-
-        // P3826R5 / stdexec: when a sync_wait sender's completion domain
-        // is our thread_pool_domain, stdexec dispatches via
-        //   apply_sender(domain, sync_wait_t{}, sndr).
-        // The default_domain implementation runs a stdexec::run_loop
-        // which uses std-level condition_variable / atomic-queue waits,
-        // i.e. it OS-blocks the calling thread. When sync_wait is
-        // called from an HPX worker thread (typical: from hpx_main),
-        // and the wrapped sender schedules work on the same HPX thread
-        // pool, this deadlocks at low worker counts (--hpx:threads=1):
-        // the only worker is OS-blocked in sync_wait, so the queued
-        // work never runs.
-        //
-        // The HPX-aware path below replaces the wait with
-        //   hpx::spinlock + hpx::condition_variable_any
-        // so the calling HPX task is suspended (cooperatively),
-        // freeing the underlying OS worker to service queued tasks.
-
-        HPX_CXX_CORE_EXPORT template <typename T>
-        struct stopped_t
-        {
-        };
-
-        // Receiver env: exposes a run_loop::scheduler via the standard
-        // get_scheduler / get_delegation_scheduler queries so dependent
-        // senders (let_value, let_error, etc.) can compute their completion
-        // signatures against this environment.
-        //
-        // The run_loop is owned by shared_state and is never executed. It
-        // exists purely as a type carrier for sender type-checking.
-        //
-        // Actual waiting is implemented using hpx::spinlock and
-        // hpx::condition_variable_any in shared_state::wait_get_value().
-        // HPX senders complete on the thread-pool scheduler, so no work is
-        // ever enqueued onto the run_loop.
-        HPX_CXX_CORE_EXPORT struct env
-        {
-            hpx::execution::experimental::run_loop* loop_ = nullptr;
-
-            auto query(
-                hpx::execution::experimental::get_scheduler_t) const noexcept
-            {
-                return loop_->get_scheduler();
-            }
-
-            auto query(hpx::execution::experimental::get_delegation_scheduler_t)
-                const noexcept
-            {
-                return loop_->get_scheduler();
-            }
-        };
-
-        // Compute the single-value tuple type for a sender against
-        // the receiver env, using only public stdexec APIs.
-        HPX_CXX_CORE_EXPORT template <typename... Ts>
-        using decayed_tuple = std::tuple<std::decay_t<Ts>...>;
-
-        HPX_CXX_CORE_EXPORT template <typename Variant>
-        struct first_alternative;
-
-        HPX_CXX_CORE_EXPORT template <typename T>
-        struct first_alternative<std::variant<T>>
-        {
-            using type = T;
-        };
-
-        HPX_CXX_CORE_EXPORT template <typename Sender>
-        using value_tuple_for_t = typename first_alternative<
-            hpx::execution::experimental::value_types_of_t<Sender, env,
-                decayed_tuple, std::variant>>::type;
-
-        HPX_CXX_CORE_EXPORT template <typename ValueTuple>
-        struct shared_state
-        {
-            hpx::spinlock mtx;
-            hpx::condition_variable_any cv;
-            hpx::execution::experimental::run_loop loop;
-            bool done = false;
-            std::variant<std::monostate, ValueTuple, std::exception_ptr,
-                stopped_t<ValueTuple>>
-                result;
-
-            template <typename... Vs>
-            void notify_value(Vs&&... vs) noexcept
-            {
-                try
-                {
-                    {
-                        std::unique_lock<hpx::spinlock> l(mtx);
-                        result.template emplace<ValueTuple>(
-                            HPX_FORWARD(Vs, vs)...);
-                        done = true;
-                    }
-                    cv.notify_all();
-                }
-                catch (...)
-                {
-                    {
-                        std::unique_lock<hpx::spinlock> l(mtx);
-                        result.template emplace<std::exception_ptr>(
-                            std::current_exception());
-                        done = true;
-                    }
-                    cv.notify_all();
-                }
-            }
-
-            template <typename E>
-            void notify_error(E&& e) noexcept
-            {
-                {
-                    std::unique_lock<hpx::spinlock> l(mtx);
-                    using err_t = std::decay_t<E>;
-                    if constexpr (std::is_same_v<err_t, std::exception_ptr>)
-                    {
-                        result.template emplace<std::exception_ptr>(
-                            HPX_FORWARD(E, e));
-                    }
-                    else if constexpr (std::is_same_v<err_t, std::error_code>)
-                    {
-                        result.template emplace<std::exception_ptr>(
-                            std::make_exception_ptr(std::system_error(e)));
-                    }
-                    else
-                    {
-                        try
-                        {
-                            throw HPX_FORWARD(E, e);
-                        }
-                        catch (...)
-                        {
-                            result.template emplace<std::exception_ptr>(
-                                std::current_exception());
-                        }
-                    }
-                    done = true;
-                }
-                cv.notify_all();
-            }
-
-            void notify_stopped() noexcept
-            {
-                {
-                    std::unique_lock<hpx::spinlock> l(mtx);
-                    result.template emplace<stopped_t<ValueTuple>>();
-                    done = true;
-                }
-                cv.notify_all();
-            }
-
-            // Wait HPX-aware: yields the calling HPX task while waiting,
-            // does not block the underlying OS thread.
-            std::optional<ValueTuple> wait_get_value()
-            {
-                {
-                    std::unique_lock<hpx::spinlock> l(mtx);
-                    cv.wait(l, [this] { return done; });
-                }
-
-                if (auto* v = std::get_if<ValueTuple>(&result))
-                {
-                    return std::optional<ValueTuple>(HPX_MOVE(*v));
-                }
-                if (auto* ep = std::get_if<std::exception_ptr>(&result))
-                {
-                    auto e = HPX_MOVE(*ep);
-                    std::rethrow_exception(HPX_MOVE(e));
-                }
-                // set_stopped
-                return std::optional<ValueTuple>{};
-            }
-        };
-
-        HPX_CXX_CORE_EXPORT template <typename ValueTuple>
-        struct receiver
-        {
-            using receiver_concept = hpx::execution::experimental::receiver_t;
-
-            shared_state<ValueTuple>* state;
-
-            template <typename... Vs>
-            void set_value(Vs&&... vs) && noexcept
-            {
-                state->notify_value(HPX_FORWARD(Vs, vs)...);
-            }
-
-            template <typename E>
-            void set_error(E&& e) && noexcept
-            {
-                state->notify_error(HPX_FORWARD(E, e));
-            }
-
-            void set_stopped() && noexcept
-            {
-                state->notify_stopped();
-            }
-
-            constexpr env get_env() const noexcept
-            {
-                return env{&state->loop};
-            }
-        };
-
-    }    // namespace detail::hpx_sync_wait
-
     // Domain customization for stdexec bulk operations and sync_wait.
     // Following the stdexec parallel_scheduler pattern (set_value_t tag-based).
     HPX_CXX_CORE_EXPORT template <typename Policy>
-    struct thread_pool_domain : hpx::execution::experimental::default_domain
+    struct thread_pool_domain : hpx::synchronization::detail::sync_wait_domain
     {
         // transform_sender for bulk operations
         // (following stdexec parallel_scheduler pattern)
@@ -309,8 +103,7 @@ namespace hpx::execution::experimental {
             auto&& [tag, data, child] = sndr;
             auto&& [pol, shape, f] = data;
 
-            auto iota_shape =
-                hpx::util::counting_shape(decltype(shape){0}, shape);
+            auto iota_shape = hpx::util::counting_shape(shape);
 
             // bulk_t and bulk_unchunked_t use unchunked mode (f(index, ...values))
             // bulk_chunked_t uses chunked mode (f(begin, end, ...values))
@@ -320,34 +113,10 @@ namespace hpx::execution::experimental {
 
             return hpx::execution::experimental::detail::
                 thread_pool_bulk_sender<Policy, std::decay_t<decltype(child)>,
-                    std::decay_t<decltype(iota_shape)>,
-                    std::decay_t<decltype(f)>, is_chunked>(HPX_MOVE(sched),
+                    decltype(iota_shape), std::decay_t<decltype(f)>,
+                    is_chunked>(HPX_MOVE(sched),
                     HPX_FORWARD(decltype(child), child), HPX_MOVE(iota_shape),
                     HPX_FORWARD(decltype(f), f));
-        }
-
-        // P2300/P2855 customization: stdexec::sync_wait dispatches here
-        // when the sender's completion domain is thread_pool_domain. We
-        // implement sync_wait using HPX synchronization primitives so
-        // the calling HPX task yields cooperatively rather than the OS
-        // thread being blocked, avoiding deadlock with --hpx:threads=1.
-        template <
-            hpx::execution::experimental::sender_in<detail::hpx_sync_wait::env>
-                Sender>
-        auto apply_sender(
-            hpx::execution::experimental::sync_wait_t, Sender&& sndr) const
-            -> std::optional<detail::hpx_sync_wait::value_tuple_for_t<Sender>>
-        {
-            using value_tuple_t =
-                detail::hpx_sync_wait::value_tuple_for_t<Sender>;
-
-            detail::hpx_sync_wait::shared_state<value_tuple_t> state;
-
-            auto op_state =
-                hpx::execution::experimental::connect(HPX_FORWARD(Sender, sndr),
-                    detail::hpx_sync_wait::receiver<value_tuple_t>{&state});
-            hpx::execution::experimental::start(op_state);
-            return state.wait_get_value();
         }
     };
 
@@ -735,21 +504,23 @@ namespace hpx::execution::experimental {
             return policy_;
         }
 
-        /// Returns the execution domain of this scheduler (following system_context.hpp pattern).
+        // Returns the execution domain of this scheduler (following
+        // system_context.hpp pattern).
         [[nodiscard]]
-        auto query(hpx::execution::experimental::get_domain_t) const noexcept
+        static auto query(hpx::execution::experimental::get_domain_t) noexcept
             -> thread_pool_domain<Policy>
         {
             return {};
         }
 
-        /// P3826R5: Returns the completion domain for this scheduler.
-        /// The domain resolution chain uses this to determine which domains
-        /// transform_sender to invoke for bulk operations.
+        // P3826R5: Returns the completion domain for this scheduler. The domain
+        // resolution chain uses this to determine which domains
+        // transform_sender to invoke for bulk operations.
         template <typename CPO>
         [[nodiscard]]
-        auto query(hpx::execution::experimental::get_completion_domain_t<CPO>)
-            const noexcept -> thread_pool_domain<Policy>
+        static auto query(
+            hpx::execution::experimental::get_completion_domain_t<CPO>) noexcept
+            -> thread_pool_domain<Policy>
         {
             return {};
         }
