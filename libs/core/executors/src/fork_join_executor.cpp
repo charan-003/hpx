@@ -6,6 +6,7 @@
 
 #include <hpx/executors/fork_join_executor.hpp>
 
+#include <cstdint>
 #include <ostream>
 #include <type_traits>
 

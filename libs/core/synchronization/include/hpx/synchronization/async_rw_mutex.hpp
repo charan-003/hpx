@@ -12,6 +12,7 @@
 #include <hpx/modules/datastructures.hpp>
 #include <hpx/modules/execution_base.hpp>
 #include <hpx/modules/functional.hpp>
+#include <hpx/synchronization/detail/hpx_sync_wait_domain.hpp>
 #include <hpx/synchronization/mutex.hpp>
 
 #include <exception>
@@ -449,6 +450,29 @@ namespace hpx::experimental {
                 return {};
             }
 
+            // Sender environment that advertises the HPX-aware sync_wait
+            // domain via get_completion_domain<set_value_t>. Without this,
+            // stdexec::sync_wait routes through default_domain, whose
+            // run_loop OS-blocks the calling thread. Because async_rw_mutex
+            // continuations are dispatched on HPX worker threads, OS-blocking
+            // the caller deadlocks at low worker counts (--hpx:threads=1).
+            struct env_t
+            {
+                template <typename CPO>
+                static constexpr auto query(
+                    hpx::execution::experimental::get_completion_domain_t<
+                        CPO>) noexcept
+                    -> hpx::synchronization::detail::hpx_sync_wait_domain
+                {
+                    return {};
+                }
+            };
+
+            constexpr env_t get_env() const noexcept
+            {
+                return {};
+            }
+
             template <typename R>
             struct operation_state
             {
@@ -640,6 +664,29 @@ namespace hpx::experimental {
                     hpx::execution::experimental::set_value_t(access_type),
                     hpx::execution::experimental::set_error_t(
                         std::exception_ptr)>
+            {
+                return {};
+            }
+
+            // Sender environment that advertises the HPX-aware sync_wait
+            // domain via get_completion_domain<set_value_t>. Without this,
+            // stdexec::sync_wait routes through default_domain, whose
+            // run_loop OS-blocks the calling thread. Because async_rw_mutex
+            // continuations are dispatched on HPX worker threads, OS-blocking
+            // the caller deadlocks at low worker counts (--hpx:threads=1).
+            struct env_t
+            {
+                template <typename CPO>
+                static constexpr auto query(
+                    hpx::execution::experimental::get_completion_domain_t<
+                        CPO>) noexcept
+                    -> hpx::synchronization::detail::hpx_sync_wait_domain
+                {
+                    return {};
+                }
+            };
+
+            constexpr env_t get_env() const noexcept
             {
                 return {};
             }

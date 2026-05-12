@@ -515,12 +515,27 @@ struct check_exception_ptr
     }
 };
 
+// Tag struct used as a copyable first member so that stdexec's structured
+// binding-based sender introspection (which extracts the sender's tag by
+// passing the first member by value into __get_desc) does not require
+// copying non-copyable members like std::atomic<bool>&.
+struct custom_sender_descriptor_tag
+{
+};
+
 struct custom_sender_tag_invoke
 {
     using is_sender = void;
     using sender_concept = hpx::execution::experimental::sender_t;
 
+    [[no_unique_address]] custom_sender_descriptor_tag __desc_tag{};
     std::atomic<bool>& tag_invoke_overload_called;
+
+    explicit custom_sender_tag_invoke(
+        std::atomic<bool>& tag_invoke_overload_called_) noexcept
+      : tag_invoke_overload_called(tag_invoke_overload_called_)
+    {
+    }
 
     template <typename R>
     struct operation_state
@@ -554,9 +569,23 @@ struct custom_sender
 {
     using is_sender = void;
     using sender_concept = hpx::execution::experimental::sender_t;
+
+    [[no_unique_address]] custom_sender_descriptor_tag __desc_tag{};
     std::atomic<bool>& start_called;
     std::atomic<bool>& connect_called;
     std::atomic<bool>& tag_invoke_overload_called;
+
+    custom_sender(std::atomic<bool>& start_called_,
+        std::atomic<bool>& connect_called_,
+        std::atomic<bool>& tag_invoke_overload_called_) noexcept
+      : start_called(start_called_)
+      , connect_called(connect_called_)
+      , tag_invoke_overload_called(tag_invoke_overload_called_)
+    {
+    }
+
+    custom_sender(custom_sender const&) = default;
+    custom_sender(custom_sender&&) = default;
 
     template <typename Self, typename... Env>
     static consteval auto get_completion_signatures() noexcept
@@ -593,11 +622,27 @@ struct custom_sender_multi_tuple
 {
     using is_sender = void;
     using sender_concept = hpx::execution::experimental::sender_t;
+
+    [[no_unique_address]] custom_sender_descriptor_tag __desc_tag{};
     std::atomic<bool>& start_called;
     std::atomic<bool>& connect_called;
     std::atomic<bool>& tag_invoke_overload_called;
 
     bool expect_set_value = true;
+
+    custom_sender_multi_tuple(std::atomic<bool>& start_called_,
+        std::atomic<bool>& connect_called_,
+        std::atomic<bool>& tag_invoke_overload_called_,
+        bool expect_set_value_ = true) noexcept
+      : start_called(start_called_)
+      , connect_called(connect_called_)
+      , tag_invoke_overload_called(tag_invoke_overload_called_)
+      , expect_set_value(expect_set_value_)
+    {
+    }
+
+    custom_sender_multi_tuple(custom_sender_multi_tuple const&) = default;
+    custom_sender_multi_tuple(custom_sender_multi_tuple&&) = default;
 
     template <typename Self, typename... Env>
     static consteval auto get_completion_signatures() noexcept
@@ -645,11 +690,27 @@ struct custom_typed_sender
 {
     using is_sender = void;
     using sender_concept = hpx::execution::experimental::sender_t;
+
+    [[no_unique_address]] custom_sender_descriptor_tag __desc_tag{};
     std::decay_t<T> x;
 
     std::atomic<bool>& start_called;
     std::atomic<bool>& connect_called;
     std::atomic<bool>& tag_invoke_overload_called;
+
+    template <typename U>
+    custom_typed_sender(U&& x_, std::atomic<bool>& start_called_,
+        std::atomic<bool>& connect_called_,
+        std::atomic<bool>& tag_invoke_overload_called_) noexcept
+      : x(std::forward<U>(x_))
+      , start_called(start_called_)
+      , connect_called(connect_called_)
+      , tag_invoke_overload_called(tag_invoke_overload_called_)
+    {
+    }
+
+    custom_typed_sender(custom_typed_sender const&) = default;
+    custom_typed_sender(custom_typed_sender&&) = default;
 
     template <typename R>
     struct operation_state
