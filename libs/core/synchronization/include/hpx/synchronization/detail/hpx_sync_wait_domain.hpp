@@ -52,16 +52,35 @@ namespace hpx::synchronization::detail::hpx_sync_wait_domain_impl {
     // shared_state and is NEVER actually run; it exists purely as a
     // type carrier required by stdexec::sync_wait_t's constraint
     // (sender_in<sync_wait::__env>).
+    //
+    // Modern P2300: Uses query() functions instead of old tag_invoke.
+    //
+    // IMPORTANT:
+    // We intentionally DO NOT provide a stop token.
+    //
+    // If we return never_stop_token, stdexec assumes the operation
+    // can never be stopped, so it removes set_stopped from the
+    // completion signatures.
+    //
+    // But our code may still call set_stopped().
+    // That creates type mismatches and breaks things.
+    //
+    // By not exposing a stop token, stdexec keeps set_stopped
+    // in the completion signatures, which matches our behavior.
     struct env
     {
         hpx::execution::experimental::run_loop* loop_ = nullptr;
 
-        auto query(hpx::execution::experimental::get_scheduler_t) const noexcept
+        [[nodiscard]]
+        constexpr auto query(
+            hpx::execution::experimental::get_scheduler_t) const noexcept
         {
             return loop_->get_scheduler();
         }
 
-        auto query(hpx::execution::experimental::get_delegation_scheduler_t)
+        [[nodiscard]]
+        constexpr auto query(
+            hpx::execution::experimental::get_delegation_scheduler_t)
             const noexcept
         {
             return loop_->get_scheduler();
@@ -192,22 +211,23 @@ namespace hpx::synchronization::detail::hpx_sync_wait_domain_impl {
         shared_state<ValueTuple>* state;
 
         template <typename... Vs>
-        void set_value(Vs&&... vs) && noexcept
+        constexpr void set_value(Vs&&... vs) && noexcept
         {
             state->notify_value(HPX_FORWARD(Vs, vs)...);
         }
 
         template <typename E>
-        void set_error(E&& e) && noexcept
+        constexpr void set_error(E&& e) && noexcept
         {
             state->notify_error(HPX_FORWARD(E, e));
         }
 
-        void set_stopped() && noexcept
+        constexpr void set_stopped() && noexcept
         {
             state->notify_stopped();
         }
 
+        [[nodiscard]]
         constexpr env get_env() const noexcept
         {
             return env{&state->loop};
@@ -222,9 +242,7 @@ namespace hpx::synchronization::detail {
     // to use HPX-aware cooperative waiting.
     struct hpx_sync_wait_domain : hpx::execution::experimental::default_domain
     {
-        template <hpx::execution::experimental::sender_in<
-            hpx_sync_wait_domain_impl::env>
-                Sender>
+        template <hpx::execution::experimental::sender Sender>
         auto apply_sender(
             hpx::execution::experimental::sync_wait_t, Sender&& sndr) const
             -> std::optional<
