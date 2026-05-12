@@ -473,7 +473,7 @@ namespace hpx::execution::experimental::detail {
 
         void set_stopped() && noexcept override
         {
-            hpx::execution::experimental::set_stopped(HPX_MOVE(receiver));
+            HPX_UNREACHABLE;
         }
     };
 
