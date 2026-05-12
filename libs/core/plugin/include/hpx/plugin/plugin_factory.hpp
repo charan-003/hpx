@@ -188,8 +188,7 @@ namespace hpx::util::plugin {
             typename Parameters>
         struct HPX_PLUGIN_EXPORT_API plugin_factory_item;
 
-        HPX_CXX_CORE_EXPORT template <typename BasePlugin, typename Base,
-            typename... Parameters>
+        template <typename BasePlugin, typename Base, typename... Parameters>
         struct HPX_PLUGIN_EXPORT_API plugin_factory_item<BasePlugin, Base,
             hpx::util::pack<Parameters...>> : public Base
         {
@@ -256,8 +255,7 @@ namespace hpx::util::plugin {
             typename Parameters>
         struct HPX_PLUGIN_EXPORT_API static_plugin_factory_item;
 
-        HPX_CXX_CORE_EXPORT template <typename BasePlugin, typename Base,
-            typename... Parameters>
+        template <typename BasePlugin, typename Base, typename... Parameters>
         struct HPX_PLUGIN_EXPORT_API static_plugin_factory_item<BasePlugin,
             Base, hpx::util::pack<Parameters...>> : public Base
         {

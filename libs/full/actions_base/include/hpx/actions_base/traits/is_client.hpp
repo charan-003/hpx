@@ -27,12 +27,12 @@ namespace hpx::traits {
     {
     };
 
-    HPX_CXX_EXPORT template <typename T>
+    template <typename T>
     struct is_client_or_client_array<T[]> : is_client<T>
     {
     };
 
-    HPX_CXX_EXPORT template <typename T, std::size_t N>
+    template <typename T, std::size_t N>
     struct is_client_or_client_array<T[N]> : is_client<T>
     {
     };

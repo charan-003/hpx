@@ -128,15 +128,17 @@ namespace hpx::serialization::detail {
     };
 }    // namespace hpx::serialization::detail
 
-// This is explicitly instantiated to ensure that the id is stable across
-// shared libraries.
-template <>
-struct hpx::util::extra_data_helper<
-    hpx::serialization::detail::preprocess_gid_types>
-{
-    HPX_EXPORT static extra_data_id_type id() noexcept;
-    static constexpr void reset(
-        serialization::detail::preprocess_gid_types*) noexcept
+namespace hpx::util {
+
+    // This is explicitly instantiated to ensure that the id is stable across
+    // shared libraries.
+    template <>
+    struct extra_data_helper<hpx::serialization::detail::preprocess_gid_types>
     {
-    }
-};
+        HPX_EXPORT static extra_data_id_type id() noexcept;
+        static constexpr void reset(
+            serialization::detail::preprocess_gid_types*) noexcept
+        {
+        }
+    };
+}    // namespace hpx::util

@@ -138,7 +138,7 @@ namespace hpx::parallel::util {
             }
         };
 
-        HPX_CXX_CORE_EXPORT template <typename Dummy>
+        template <typename Dummy>
         struct copy_helper<hpx::traits::trivially_copyable_pointer_tag, Dummy>
         {
             template <typename InIter, typename Sent, typename OutIter>
@@ -201,7 +201,7 @@ namespace hpx::parallel::util {
             }
         };
 
-        HPX_CXX_CORE_EXPORT template <typename Dummy>
+        template <typename Dummy>
         struct copy_n_helper<hpx::traits::trivially_copyable_pointer_tag, Dummy>
         {
             template <typename InIter, typename OutIter>
@@ -293,7 +293,7 @@ namespace hpx::parallel::util {
             }
         };
 
-        HPX_CXX_CORE_EXPORT template <typename Dummy>
+        template <typename Dummy>
         struct move_helper<hpx::traits::trivially_copyable_pointer_tag, Dummy>
         {
             template <typename InIter, typename Sent, typename OutIter>
@@ -349,7 +349,7 @@ namespace hpx::parallel::util {
             }
         };
 
-        HPX_CXX_CORE_EXPORT template <typename Dummy>
+        template <typename Dummy>
         struct move_n_helper<hpx::traits::trivially_copyable_pointer_tag, Dummy>
         {
             template <typename InIter, typename OutIter>
@@ -394,7 +394,7 @@ namespace hpx::parallel::util {
             }
         };
 
-        HPX_CXX_CORE_EXPORT template <typename Dummy>
+        template <typename Dummy>
         struct uninit_copy_n_helper<hpx::traits::trivially_copyable_pointer_tag,
             Dummy>
         {
@@ -454,7 +454,7 @@ namespace hpx::parallel::util {
             }
         };
 
-        HPX_CXX_CORE_EXPORT template <typename Dummy>
+        template <typename Dummy>
         struct uninit_move_n_helper<hpx::traits::trivially_copyable_pointer_tag,
             Dummy>
         {

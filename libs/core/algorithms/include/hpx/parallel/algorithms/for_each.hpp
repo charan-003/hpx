@@ -327,7 +327,7 @@ namespace hpx::parallel {
             }
         };
 
-        HPX_CXX_CORE_EXPORT template <typename ExPolicy, typename F>
+        template <typename ExPolicy, typename F>
         struct for_each_iteration<ExPolicy, F, hpx::identity>
         {
             using execution_policy_type = std::decay_t<ExPolicy>;

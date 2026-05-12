@@ -180,7 +180,7 @@ namespace hpx::parallel {
         HPX_CXX_CORE_EXPORT template <typename I, typename Tag, typename = void>
         inline constexpr bool is_category = false;
 
-        HPX_CXX_CORE_EXPORT template <typename I, typename Tag>
+        template <typename I, typename Tag>
         inline constexpr bool is_category<I, Tag,
             std::enable_if_t<
                 std::is_convertible_v<iterator_category_t<I>, Tag>>> = true;
@@ -321,8 +321,7 @@ namespace hpx {
                 std::is_integral_v<Size>
             )
         // clang-format on
-        friend typename hpx::parallel::util::detail::algorithm_result<ExPolicy,
-            FwdIter>::type
+        friend parallel::util::detail::algorithm_result_t<ExPolicy, FwdIter>
         tag_fallback_invoke(shift_right_t, ExPolicy&& policy, FwdIter first,
             FwdIter last, Size n)
         {

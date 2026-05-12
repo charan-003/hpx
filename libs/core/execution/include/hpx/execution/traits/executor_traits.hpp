@@ -174,15 +174,14 @@ namespace hpx::execution::experimental {
         {
         };
 
-        HPX_CXX_CORE_EXPORT template <typename Executor, typename T>
+        template <typename Executor, typename T>
         struct exposes_future_type<Executor, T,
             std::void_t<typename Executor::template future_type<T>>>
           : std::true_type
         {
         };
 
-        HPX_CXX_CORE_EXPORT template <typename Executor, typename T,
-            typename... Ts>
+        template <typename Executor, typename T, typename... Ts>
         struct executor_future<Executor, T, hpx::util::pack<Ts...>,
             std::enable_if_t<hpx::traits::is_two_way_executor_v<Executor> &&
                 exposes_future_type<Executor, T>::value>>
@@ -190,8 +189,7 @@ namespace hpx::execution::experimental {
             using type = typename Executor::template future_type<T>;
         };
 
-        HPX_CXX_CORE_EXPORT template <typename Executor, typename T,
-            typename... Ts>
+        template <typename Executor, typename T, typename... Ts>
         struct executor_future<Executor, T, hpx::util::pack<Ts...>,
             std::enable_if_t<hpx::traits::is_two_way_executor_v<Executor> &&
                 has_async_execute_member<Executor>::value &&
@@ -201,8 +199,7 @@ namespace hpx::execution::experimental {
                 std::declval<T (*)(Ts...)>(), std::declval<Ts>()...));
         };
 
-        HPX_CXX_CORE_EXPORT template <typename Executor, typename T,
-            typename... Ts>
+        template <typename Executor, typename T, typename... Ts>
         struct executor_future<Executor, T, hpx::util::pack<Ts...>,
             std::enable_if_t<hpx::traits::is_two_way_executor_v<Executor> &&
                 !has_async_execute_member<Executor>::value &&
@@ -213,8 +210,7 @@ namespace hpx::execution::experimental {
                 T (*)(Ts...), Ts...>;
         };
 
-        HPX_CXX_CORE_EXPORT template <typename Executor, typename T,
-            typename Ts>
+        template <typename Executor, typename T, typename Ts>
         struct executor_future<Executor, T, Ts,
             std::enable_if_t<!hpx::traits::is_two_way_executor_v<Executor>>>
         {

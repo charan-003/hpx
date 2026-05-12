@@ -39,7 +39,7 @@ namespace hpx {
     HPX_CXX_CORE_EXPORT template <typename Sig, bool Serializable = false>
     class function;
 
-    HPX_CXX_CORE_EXPORT template <typename R, typename... Ts, bool Serializable>
+    template <typename R, typename... Ts, bool Serializable>
     class function<R(Ts...), Serializable>
       : public util::detail::basic_function<R(Ts...), true, Serializable>
     {

@@ -89,7 +89,7 @@ namespace hpx {
     }    // namespace util::detail
 
     ///////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT template <typename R, typename... Ts>
+    template <typename R, typename... Ts>
     class function_ref<R(Ts...)>
     {
         using VTable = util::detail::function_ref_vtable<R(Ts...)>;
