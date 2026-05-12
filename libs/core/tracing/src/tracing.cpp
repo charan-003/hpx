@@ -85,6 +85,14 @@ namespace hpx::tracing {
         hpx::tracy::set_thread_name(name);
     }
 
+    ////////////////////////////////////////////////////////////////////////////
+    // rename_region
+
+    char const* rename_region(char const* name) noexcept
+    {
+        return hpx::tracy::detail::rename_region(name);
+    }
+
 }    // namespace hpx::tracing
 
 #elif defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0

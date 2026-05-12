@@ -97,6 +97,10 @@ namespace hpx::tracing {
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT void set_thread_name(
         char const* name) noexcept;
 
+    ////////////////////////////////////////////////////////////////////////////
+    HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT char const* rename_region(
+        char const* name) noexcept;
+
 }    // namespace hpx::tracing
 
 #elif defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0
@@ -177,6 +181,14 @@ namespace hpx::tracing {
     ////////////////////////////////////////////////////////////////////////////
     HPX_CXX_CORE_EXPORT constexpr void set_thread_name(char const*) noexcept {}
 
+    ////////////////////////////////////////////////////////////////////////////
+    // ITT has no rename_region equivalent
+    HPX_CXX_CORE_EXPORT constexpr char const* rename_region(
+        char const*) noexcept
+    {
+        return nullptr;
+    }
+
 }    // namespace hpx::tracing
 
 #else
@@ -235,6 +247,13 @@ namespace hpx::tracing {
 
     ////////////////////////////////////////////////////////////////////////////
     HPX_CXX_CORE_EXPORT constexpr void set_thread_name(char const*) noexcept {}
+
+    ////////////////////////////////////////////////////////////////////////////
+    HPX_CXX_CORE_EXPORT constexpr char const* rename_region(
+        char const*) noexcept
+    {
+        return nullptr;
+    }
 
 }    // namespace hpx::tracing
 
