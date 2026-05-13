@@ -95,6 +95,7 @@ add_hpx_module(
     hpx_thread_support
     hpx_timing
     hpx_topology
+    hpx_tracing
     hpx_type_support
     ${additional_dependencies}
   CMAKE_SUBDIRS examples tests

@@ -22,9 +22,7 @@
 #include <hpx/modules/execution_base.hpp>
 #include <hpx/modules/itt_notify.hpp>
 #include <hpx/modules/lock_registration.hpp>
-#if defined(HPX_HAVE_MODULE_TRACY)
-#include <hpx/modules/tracy.hpp>
-#endif
+#include <hpx/modules/tracing.hpp>
 
 #include <atomic>
 #include <cstddef>
@@ -50,37 +48,27 @@ namespace hpx {
 
         private:
             std::atomic<bool> v_;
-#if defined(HPX_HAVE_MODULE_TRACY)
-            hpx::tracy::lock_data context_;
-#endif
+            HPX_NO_UNIQUE_ADDRESS hpx::tracing::lock_context context_;
 
         public:
-#if HPX_HAVE_ITTNOTIFY != 0 || defined(HPX_HAVE_MODULE_TRACY)
+#if HPX_HAVE_TRACING != 0
             spinlock() noexcept
               : v_(false)
+              , context_("hpx::spinlock")
             {
                 HPX_ITT_SYNC_CREATE(this, "hpx::spinlock", nullptr);
-#if defined(HPX_HAVE_MODULE_TRACY)
-                context_ = hpx::tracy::create("hpx::spinlock");
-#endif
             }
 
             explicit spinlock(char const* const desc) noexcept
               : v_(false)
+              , context_(std::string("hpx::spinlock#") + desc)
             {
                 HPX_ITT_SYNC_CREATE(this, "hpx::spinlock", desc);
-#if defined(HPX_HAVE_MODULE_TRACY)
-                context_ =
-                    hpx::tracy::create(std::string("hpx::spinlock#") + desc);
-#endif
             }
 
             ~spinlock()
             {
                 HPX_ITT_SYNC_DESTROY(this);
-#if defined(HPX_HAVE_MODULE_TRACY)
-                hpx::tracy::destroy(context_);
-#endif
             }
 #else
             constexpr spinlock() noexcept
@@ -99,9 +87,7 @@ namespace hpx {
             void lock()
             {
                 HPX_ITT_SYNC_PREPARE(this);
-#if defined(HPX_HAVE_MODULE_TRACY)
-                bool const run_after = hpx::tracy::lock_prepare(context_);
-#endif
+                bool const run_after = context_.before_lock();
 
                 // Checking for the value in is_locked() ensures that
                 // acquire_lock is only called when is_locked computes to false.
@@ -132,10 +118,8 @@ namespace hpx {
                 }
 
                 HPX_ITT_SYNC_ACQUIRED(this);
-#if defined(HPX_HAVE_MODULE_TRACY)
                 if (run_after)
-                    hpx::tracy::lock_acquired(context_);
-#endif
+                    context_.after_lock();
                 util::register_lock(this);
             }
 
@@ -143,26 +127,20 @@ namespace hpx {
                 noexcept(util::register_lock(std::declval<spinlock*>())))
             {
                 HPX_ITT_SYNC_PREPARE(this);
-#if defined(HPX_HAVE_MODULE_TRACY)
-                bool const run_after = hpx::tracy::lock_prepare(context_);
-#endif
+                bool const run_after = context_.before_lock();
 
                 if (acquire_lock())
                 {
                     HPX_ITT_SYNC_ACQUIRED(this);
-#if defined(HPX_HAVE_MODULE_TRACY)
                     if (run_after)
-                        hpx::tracy::lock_acquired(context_, true);
-#endif
+                        context_.after_try_lock(true);
                     util::register_lock(this);
                     return true;
                 }
 
                 HPX_ITT_SYNC_CANCEL(this);
-#if defined(HPX_HAVE_MODULE_TRACY)
                 if (run_after)
-                    hpx::tracy::lock_acquired(context_, false);
-#endif
+                    context_.after_try_lock(false);
                 return false;
             }
 
@@ -174,9 +152,7 @@ namespace hpx {
                 relinquish_lock();
 
                 HPX_ITT_SYNC_RELEASED(this);
-#if defined(HPX_HAVE_MODULE_TRACY)
-                hpx::tracy::lock_released(context_);
-#endif
+                context_.after_unlock();
                 util::unregister_lock(this);
             }
 
