@@ -1786,7 +1786,6 @@ void test_completion_scheduler()
 
     {
         auto sender = ex::then(ex::schedule(sched), []() {});
-        using hpx::functional::tag_invoke;
         auto completion_scheduler =
             ex::get_completion_scheduler<ex::set_value_t>(ex::get_env(sender));
         static_assert(
