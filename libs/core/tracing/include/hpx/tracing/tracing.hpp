@@ -10,9 +10,12 @@
 #include <hpx/config.hpp>
 
 #include <cstddef>
+#include <string>
 
 #if defined(HPX_HAVE_MODULE_TRACY)
 #include <hpx/modules/tracy.hpp>
+
+#define HPX_HAVE_TRACING 1
 
 namespace hpx::tracing {
 
@@ -94,6 +97,26 @@ namespace hpx::tracing {
     };
 
     ////////////////////////////////////////////////////////////////////////////
+    HPX_CXX_CORE_EXPORT struct HPX_CORE_EXPORT lock_context
+    {
+        explicit lock_context(char const* name = nullptr) noexcept;
+        explicit lock_context(std::string const& name) noexcept;
+
+        ~lock_context();
+
+        lock_context(lock_context const&) = delete;
+        lock_context& operator=(lock_context const&) = delete;
+
+        bool before_lock() const noexcept;
+        void after_lock() const noexcept;
+        void after_try_lock(bool acquired) const noexcept;
+        void after_unlock() const noexcept;
+
+    private:
+        hpx::tracy::lock_data impl;
+    };
+
+    ////////////////////////////////////////////////////////////////////////////
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT void set_thread_name(
         char const* name) noexcept;
 
@@ -105,6 +128,8 @@ namespace hpx::tracing {
 
 #elif defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0
 #include <hpx/modules/itt_notify.hpp>
+
+#define HPX_HAVE_TRACING 1
 
 namespace hpx::tracing {
 
@@ -179,6 +204,24 @@ namespace hpx::tracing {
     };
 
     ////////////////////////////////////////////////////////////////////////////
+    HPX_CXX_CORE_EXPORT struct [[maybe_unused]] lock_context
+    {
+        constexpr explicit lock_context(char const* = nullptr) noexcept {}
+        constexpr explicit lock_context(std::string const&) noexcept {}
+
+        constexpr bool before_lock() const noexcept
+        {
+            return false;
+        }
+
+        constexpr void after_lock() const noexcept {}
+
+        constexpr void after_try_lock(bool) const noexcept {}
+
+        constexpr void after_unlock() const noexcept {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////
     HPX_CXX_CORE_EXPORT constexpr void set_thread_name(char const*) noexcept {}
 
     ////////////////////////////////////////////////////////////////////////////
@@ -192,6 +235,8 @@ namespace hpx::tracing {
 }    // namespace hpx::tracing
 
 #else
+
+#define HPX_HAVE_TRACING 0
 
 namespace hpx::tracing {
 
@@ -243,6 +288,24 @@ namespace hpx::tracing {
     HPX_CXX_CORE_EXPORT struct [[maybe_unused]] fiber_suspend_region
     {
         constexpr explicit fiber_suspend_region(char const*) noexcept {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////
+    HPX_CXX_CORE_EXPORT struct [[maybe_unused]] lock_context
+    {
+        constexpr explicit lock_context(char const* = nullptr) noexcept {}
+        constexpr explicit lock_context(std::string const&) noexcept {}
+
+        constexpr bool before_lock() const noexcept
+        {
+            return false;
+        }
+
+        constexpr void after_lock() const noexcept {}
+
+        constexpr void after_try_lock(bool) const noexcept {}
+
+        constexpr void after_unlock() const noexcept {}
     };
 
     ////////////////////////////////////////////////////////////////////////////
