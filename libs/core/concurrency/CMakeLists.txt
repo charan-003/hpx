@@ -76,6 +76,7 @@ add_hpx_module(
     hpx_itt_notify
     hpx_lock_registration
     hpx_thread_support
+    hpx_tracing
     hpx_type_support
     hpx_version
     ${additional_dependencies}
