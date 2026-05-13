@@ -15,6 +15,7 @@
 #include <hpx/execution.hpp>
 #include <hpx/functional.hpp>
 #include <hpx/init.hpp>
+#include <hpx/modules/execution_base.hpp>
 #include <hpx/modules/testing.hpp>
 #include <hpx/mutex.hpp>
 #include <hpx/thread.hpp>
@@ -1979,16 +1980,16 @@ void test_stdexec_bulk_unchunked_customization()
 void test_stdexec_thread_distribution()
 {
     auto scheduler = ex::thread_pool_scheduler{};
-    std::thread::id main_thread_id = std::this_thread::get_id();
+    hpx::thread::id main_id = hpx::this_thread::get_id();
 
     // Test that bulk operations run on worker threads
-    std::set<std::thread::id> worker_threads;
+    std::set<hpx::thread::id> worker_threads;
     std::atomic<int> task_count{0};
 
     auto bulk_sender =
         ex::bulk_chunked(ex::schedule(scheduler) | ex::then([]() { return 0; }),
             ex::par, 8, [&](int start, int end, int value) {
-                worker_threads.insert(std::this_thread::get_id());
+                worker_threads.insert(hpx::this_thread::get_id());
                 for (int idx = start; idx < end; ++idx)
                 {
                     (void) value;
@@ -2004,10 +2005,10 @@ void test_stdexec_thread_distribution()
     HPX_TEST(task_count.load() > 0);     // Should have at least 1 call
     HPX_TEST(!worker_threads.empty());
 
-    // Verify tasks didn't run on main thread (they use HPX thread pool)
+    // Verify bulk work ran on different HPX threads than the caller
     for (auto const& thread_id : worker_threads)
     {
-        HPX_TEST_NEQ(thread_id, main_thread_id);
+        HPX_TEST_NEQ(thread_id, main_id);
     }
 }
 
