@@ -38,11 +38,69 @@
 
 namespace hpx::synchronization::detail {
 
+    struct sync_wait_domain;
+
     // Marker for the set_stopped completion path.
     HPX_CXX_CORE_EXPORT template <typename T>
     struct stopped_t
     {
     };
+
+    namespace sync_wait_detail {
+
+        template <typename T>
+        using attrs_completion_scheduler_t = std::decay_t<
+            decltype(hpx::execution::experimental::get_completion_scheduler<
+                hpx::execution::experimental::set_value_t>(
+                hpx::execution::experimental::get_env(std::declval<T&>())))>;
+
+        template <typename Sender, typename = void>
+        struct can_attrs_completion_scheduler : std::false_type
+        {
+        };
+
+        template <typename Sender>
+        struct can_attrs_completion_scheduler<Sender,
+            std::void_t<
+                attrs_completion_scheduler_t<std::remove_cvref_t<Sender>>>>
+          : std::integral_constant<bool,
+                hpx::execution::experimental::scheduler<
+                    attrs_completion_scheduler_t<std::remove_cvref_t<Sender>>>>
+        {
+        };
+    }    // namespace sync_wait_detail
+
+    HPX_CXX_CORE_EXPORT template <typename Sender, typename Enable = void>
+    inline constexpr bool sync_wait_can_query_attrs_completion_scheduler_v =
+        false;
+
+    HPX_CXX_CORE_EXPORT template <typename Sender>
+    inline constexpr bool sync_wait_can_query_attrs_completion_scheduler_v<
+        Sender,
+        std::enable_if_t<
+            sync_wait_detail::can_attrs_completion_scheduler<Sender>::value>> =
+        true;
+
+    HPX_CXX_CORE_EXPORT template <typename Sender, typename Enable = void>
+    struct sync_wait_rcv_scheduler_impl
+    {
+        using type = std::decay_t<
+            decltype(std::declval<hpx::execution::experimental::run_loop&>()
+                    .get_scheduler())>;
+    };
+
+    HPX_CXX_CORE_EXPORT template <typename Sender>
+    struct sync_wait_rcv_scheduler_impl<Sender,
+        std::enable_if_t<
+            sync_wait_detail::can_attrs_completion_scheduler<Sender>::value>>
+    {
+        using type = sync_wait_detail::attrs_completion_scheduler_t<
+            std::remove_cvref_t<Sender>>;
+    };
+
+    HPX_CXX_CORE_EXPORT template <typename Sender>
+    using sync_wait_rcv_scheduler_t =
+        typename sync_wait_rcv_scheduler_impl<Sender>::type;
 
     // Receiver env: exposes a stdexec run_loop scheduler via the standard
     // get_scheduler / get_delegation_scheduler queries so dependent senders
@@ -63,15 +121,48 @@ namespace hpx::synchronization::detail {
     //
     // By not exposing a stop token, stdexec keeps set_stopped in the completion
     // signatures, which matches our behavior.
-    HPX_CXX_CORE_EXPORT struct env
+    HPX_CXX_CORE_EXPORT template <typename Sender>
+    struct sync_wait_rcv_env
     {
-        hpx::execution::experimental::run_loop* loop_ = nullptr;
+        using scheduler_type = sync_wait_rcv_scheduler_t<Sender>;
+
+        scheduler_type sched_;
+
+        constexpr explicit sync_wait_rcv_env(scheduler_type sched) noexcept
+          : sched_(HPX_MOVE(sched))
+        {
+        }
+
+        template <typename S>
+        static sync_wait_rcv_env make(
+            S&& sndr, hpx::execution::experimental::run_loop& fallback_loop)
+        {
+            if constexpr (sync_wait_can_query_attrs_completion_scheduler_v<
+                              std::remove_cvref_t<S>>)
+            {
+                return sync_wait_rcv_env(
+                    hpx::execution::experimental::get_completion_scheduler<
+                        hpx::execution::experimental::set_value_t>(
+                        hpx::execution::experimental::get_env(sndr)));
+            }
+            else
+            {
+                return sync_wait_rcv_env(fallback_loop.get_scheduler());
+            }
+        }
 
         [[nodiscard]]
         constexpr auto query(
             hpx::execution::experimental::get_scheduler_t) const noexcept
         {
-            return loop_->get_scheduler();
+            return sched_;
+        }
+
+        [[nodiscard]]
+        constexpr auto query(
+            hpx::execution::experimental::get_start_scheduler_t) const noexcept
+        {
+            return sched_;
         }
 
         [[nodiscard]]
@@ -79,8 +170,14 @@ namespace hpx::synchronization::detail {
             hpx::execution::experimental::get_delegation_scheduler_t)
             const noexcept
         {
-            return loop_->get_scheduler();
+            return sched_;
         }
+
+        template <typename CPO>
+        [[nodiscard]]
+        constexpr auto query(
+            hpx::execution::experimental::get_completion_domain_t<CPO>)
+            const noexcept -> sync_wait_domain;
     };
 
     // Compute the single-value tuple type for a sender against the receiver
@@ -100,7 +197,7 @@ namespace hpx::synchronization::detail {
     HPX_CXX_CORE_EXPORT template <typename Sender>
     using value_tuple_for_t =
         first_alternative<hpx::execution::experimental::value_types_of_t<Sender,
-            env, decayed_tuple, std::variant>>::type;
+            sync_wait_rcv_env<Sender>, decayed_tuple, std::variant>>::type;
 
     HPX_CXX_CORE_EXPORT template <typename ValueTuple>
     struct shared_state
@@ -203,12 +300,13 @@ namespace hpx::synchronization::detail {
         }
     };
 
-    HPX_CXX_CORE_EXPORT template <typename ValueTuple>
+    HPX_CXX_CORE_EXPORT template <typename Sender, typename ValueTuple>
     struct receiver
     {
         using receiver_concept = hpx::execution::experimental::receiver_t;
 
         shared_state<ValueTuple>* state;
+        sync_wait_rcv_env<Sender> env_;
 
         template <typename... Vs>
         constexpr void set_value(Vs&&... vs) && noexcept
@@ -228,9 +326,9 @@ namespace hpx::synchronization::detail {
         }
 
         [[nodiscard]]
-        constexpr env get_env() const noexcept
+        constexpr sync_wait_rcv_env<Sender> get_env() const noexcept
         {
-            return env{&state->loop};
+            return env_;
         }
     };
 
@@ -244,18 +342,31 @@ namespace hpx::synchronization::detail {
         // sync_wait using HPX synchronization primitives so the calling HPX
         // task yields cooperatively rather than the OS thread being blocked,
         // avoiding deadlock with --hpx:threads=1.
-        template <hpx::execution::experimental::sender_in<env> Sender>
+        template <typename Sender>
+            requires hpx::execution::experimental::sender_in<Sender,
+                sync_wait_rcv_env<Sender>>
         auto apply_sender(hpx::execution::experimental::sync_wait_t,
             Sender&& sndr) const -> std::optional<value_tuple_for_t<Sender>>
         {
             using value_tuple_t = value_tuple_for_t<Sender>;
 
             shared_state<value_tuple_t> state;
+            auto env = sync_wait_rcv_env<Sender>::make(sndr, state.loop);
 
-            auto op_state = hpx::execution::experimental::connect(
-                HPX_FORWARD(Sender, sndr), receiver<value_tuple_t>{&state});
+            auto op_state =
+                hpx::execution::experimental::connect(HPX_FORWARD(Sender, sndr),
+                    receiver<Sender, value_tuple_t>{&state, HPX_MOVE(env)});
             hpx::execution::experimental::start(op_state);
             return state.wait_get_value();
         }
     };
+
+    template <typename Sender>
+    template <typename CPO>
+    constexpr auto sync_wait_rcv_env<Sender>::query(
+        hpx::execution::experimental::get_completion_domain_t<CPO>)
+        const noexcept -> sync_wait_domain
+    {
+        return {};
+    }
 }    // namespace hpx::synchronization::detail
