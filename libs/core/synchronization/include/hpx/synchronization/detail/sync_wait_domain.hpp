@@ -199,6 +199,14 @@ namespace hpx::synchronization::detail {
         first_alternative<hpx::execution::experimental::value_types_of_t<Sender,
             sync_wait_rcv_env<Sender>, decayed_tuple, std::variant>>::type;
 
+    HPX_CXX_CORE_EXPORT template <typename Sender>
+    using into_variant_sender_t = std::remove_cvref_t<decltype(
+        hpx::execution::experimental::into_variant(std::declval<Sender>()))>;
+
+    HPX_CXX_CORE_EXPORT template <typename Sender>
+    using value_variant_for_t = std::tuple_element_t<0,
+        value_tuple_for_t<into_variant_sender_t<Sender>>>;
+
     HPX_CXX_CORE_EXPORT template <typename ValueTuple>
     struct shared_state
     {
@@ -358,6 +366,25 @@ namespace hpx::synchronization::detail {
                     receiver<Sender, value_tuple_t>{&state, HPX_MOVE(env)});
             hpx::execution::experimental::start(op_state);
             return state.wait_get_value();
+        }
+
+        template <typename Sender>
+            requires hpx::execution::experimental::sender_in<
+                into_variant_sender_t<Sender>,
+                sync_wait_rcv_env<into_variant_sender_t<Sender>>>
+        auto apply_sender(
+            hpx::execution::experimental::sync_wait_with_variant_t,
+            Sender&& sndr) const -> std::optional<value_variant_for_t<Sender>>
+        {
+            auto opt = apply_sender(
+                hpx::execution::experimental::sync_wait_t{},
+                hpx::execution::experimental::into_variant(
+                    HPX_FORWARD(Sender, sndr)));
+            if (!opt)
+            {
+                return std::nullopt;
+            }
+            return std::make_optional(std::get<0>(std::move(*opt)));
         }
     };
 
