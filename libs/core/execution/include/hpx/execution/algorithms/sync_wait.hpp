@@ -10,6 +10,7 @@
 
 #include <hpx/config.hpp>
 
+#include <hpx/execution/algorithms/detail/sync_wait_domain.hpp>
 #include <hpx/modules/execution_base.hpp>
 #include <hpx/modules/synchronization.hpp>
 #include <hpx/modules/threading_base.hpp>
@@ -38,7 +39,7 @@ namespace hpx::this_thread::experimental {
         {
             if (hpx::threads::get_self_ptr() != nullptr)
             {
-                return hpx::synchronization::detail::sync_wait_domain{}
+                return hpx::execution::experimental::detail::sync_wait_domain{}
                     .apply_sender(hpx::execution::experimental::sync_wait_t{},
                         HPX_FORWARD(Sender, sndr));
             }
@@ -49,8 +50,8 @@ namespace hpx::this_thread::experimental {
 
     // HPX-aware sync_wait_with_variant.
     //
-    // Prevents OS-level blocking when waiting on a sender from an HPX worker thread.
-    // Uses HPX-friendly waiting instead and also works for senders
+    // Prevents OS-level blocking when waiting on a sender from an HPX worker
+    // thread. Uses HPX-friendly waiting instead and also works for senders
     HPX_CXX_CORE_EXPORT inline constexpr struct sync_wait_with_variant_t
     {
         template <hpx::execution::experimental::sender Sender>
@@ -58,7 +59,7 @@ namespace hpx::this_thread::experimental {
         {
             if (hpx::threads::get_self_ptr() != nullptr)
             {
-                return hpx::synchronization::detail::sync_wait_domain{}
+                return hpx::execution::experimental::detail::sync_wait_domain{}
                     .apply_sender(hpx::execution::experimental::
                                       sync_wait_with_variant_t{},
                         HPX_FORWARD(Sender, sndr));

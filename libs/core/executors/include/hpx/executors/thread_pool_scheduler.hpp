@@ -84,7 +84,8 @@ namespace hpx::execution::experimental {
     // Domain customization for stdexec bulk operations and sync_wait.
     // Following the stdexec parallel_scheduler pattern (set_value_t tag-based).
     HPX_CXX_CORE_EXPORT template <typename Policy>
-    struct thread_pool_domain : hpx::synchronization::detail::sync_wait_domain
+    struct thread_pool_domain
+      : hpx::execution::experimental::detail::sync_wait_domain
     {
         // transform_sender for bulk operations
         // (following stdexec parallel_scheduler pattern)

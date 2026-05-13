@@ -10,6 +10,7 @@
 #include <hpx/execution/algorithms/detail/inject_scheduler.hpp>
 #include <hpx/execution/algorithms/detail/partial_algorithm.hpp>
 #include <hpx/execution/algorithms/detail/single_result.hpp>
+#include <hpx/execution/algorithms/run_loop.hpp>
 #include <hpx/execution_base/stdexec_forward.hpp>
 #include <hpx/modules/allocator_support.hpp>
 #include <hpx/modules/errors.hpp>
@@ -31,32 +32,26 @@ namespace hpx::execution::experimental {
 
         // Recover the parent `run_loop&` from a `run_loop::scheduler`.
         //
-        // P2300 deliberately does not provide a public API to obtain the
-        // owning `run_loop&` from one of its schedulers. The only way to do
-        // this against the current stdexec implementation is to read the
-        // private `__loop_` member exposed by the scheduler's environment.
-        //
-        // This helper is the single point in HPX that touches that internal
-        // detail. If upstream stdexec ever renames/removes `__loop_` (as
-        // happened with `stdexec::tags`), only this function needs to change.
-        // Post-cleanup follow-up of #7123.
+        // P2300 deliberately does not provide a public API to obtain the owning
+        // `run_loop&` from one of its schedulers. The only way to do this
+        // against the current stdexec implementation is to read the private
+        // `loop` member exposed by the scheduler's environment.
         //
         // The parameter is constrained to the concrete `run_loop::scheduler`
         // type (rather than a generic template) because the implementation
-        // depends on `.__loop_` being the specific stdexec env layout.
-        // `run_loop::scheduler::schedule()` is `noexcept`, so the
-        // unconditional `noexcept` here is sound. The function is not marked
-        // `constexpr` because the `stdexec::schedule` CPO wrapper is not
-        // declared `constexpr` (GCC strict mode rejects calling it from a
-        // constexpr context, even though the underlying member is constexpr).
+        // depends on `.loop` being the specific stdexec env layout.
+        // `run_loop::scheduler::schedule()` is `noexcept`, so the unconditional
+        // `noexcept` here is sound. The function is not marked `constexpr`
+        // because the `stdexec::schedule` CPO wrapper is not declared
+        // `constexpr` (GCC strict mode rejects calling it from a constexpr
+        // context, even though the underlying member is constexpr).
         inline hpx::execution::experimental::run_loop&
         get_run_loop_from_scheduler(
             decltype(std::declval<hpx::execution::experimental::run_loop>()
                     .get_scheduler()) const& sched) noexcept
         {
             return static_cast<hpx::execution::experimental::run_loop&>(
-                *hpx::execution::experimental::get_env(schedule(sched))
-                    .__loop_);
+                *hpx::execution::experimental::get_env(schedule(sched)).loop);
         }
 
         template <typename OperationState>
@@ -110,7 +105,7 @@ namespace hpx::execution::experimental {
                 data.reset();
             }
 
-            void set_stopped() && noexcept
+            static void set_stopped() noexcept
             {
                 std::terminate();
             }
@@ -161,8 +156,8 @@ namespace hpx::execution::experimental {
             using base_type = hpx::lcos::detail::future_data_allocator<T,
                 Allocator, derived_type>;
             using operation_state_type = std::decay_t<OperationState>;
-            using init_no_addref = typename base_type::init_no_addref;
-            using other_allocator = typename std::allocator_traits<
+            using init_no_addref = base_type::init_no_addref;
+            using other_allocator = std::allocator_traits<
                 Allocator>::template rebind_alloc<future_data>;
 
             operation_state_type op_state;
@@ -194,8 +189,8 @@ namespace hpx::execution::experimental {
 
             using base_type = future_data<T, Allocator, OperationState,
                 future_data_with_run_loop>;
-            using init_no_addref = typename base_type::init_no_addref;
-            using other_allocator = typename base_type::other_allocator;
+            using init_no_addref = base_type::init_no_addref;
+            using other_allocator = base_type::other_allocator;
 
             template <typename Sender>
             future_data_with_run_loop(init_no_addref no_addref,
@@ -240,8 +235,8 @@ namespace hpx::execution::experimental {
 
             using shared_state =
                 future_data<result_type, allocator_type, operation_state_type>;
-            using init_no_addref = typename shared_state::init_no_addref;
-            using other_allocator = typename std::allocator_traits<
+            using init_no_addref = shared_state::init_no_addref;
+            using other_allocator = std::allocator_traits<
                 allocator_type>::template rebind_alloc<shared_state>;
             using allocator_traits = std::allocator_traits<other_allocator>;
             using unique_ptr = std::unique_ptr<shared_state,
@@ -282,8 +277,8 @@ namespace hpx::execution::experimental {
 
             using shared_state = future_data_with_run_loop<result_type,
                 allocator_type, operation_state_type>;
-            using init_no_addref = typename shared_state::init_no_addref;
-            using other_allocator = typename std::allocator_traits<
+            using init_no_addref = shared_state::init_no_addref;
+            using other_allocator = std::allocator_traits<
                 allocator_type>::template rebind_alloc<shared_state>;
             using allocator_traits = std::allocator_traits<other_allocator>;
             using unique_ptr = std::unique_ptr<shared_state,

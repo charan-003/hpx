@@ -8,11 +8,11 @@
 #pragma once
 
 #include <hpx/assert.hpp>
+#include <hpx/execution/algorithms/detail/sync_wait_domain.hpp>
 #include <hpx/modules/allocator_support.hpp>
 #include <hpx/modules/datastructures.hpp>
 #include <hpx/modules/execution_base.hpp>
 #include <hpx/modules/functional.hpp>
-#include <hpx/synchronization/detail/sync_wait_domain.hpp>
 #include <hpx/synchronization/mutex.hpp>
 
 #include <exception>
@@ -462,13 +462,13 @@ namespace hpx::experimental {
                 static constexpr auto query(
                     hpx::execution::experimental::get_completion_domain_t<
                         CPO>) noexcept
-                    -> hpx::synchronization::detail::sync_wait_domain
+                    -> hpx::execution::experimental::detail::sync_wait_domain
                 {
                     return {};
                 }
             };
 
-            constexpr env_t get_env() const noexcept
+            static constexpr env_t get_env() noexcept
             {
                 return {};
             }
@@ -680,7 +680,7 @@ namespace hpx::experimental {
                 static constexpr auto query(
                     hpx::execution::experimental::get_completion_domain_t<
                         CPO>) noexcept
-                    -> hpx::synchronization::detail::sync_wait_domain
+                    -> hpx::execution::experimental::detail::sync_wait_domain
                 {
                     return {};
                 }

@@ -1,4 +1,4 @@
-//  Copyright (c) 2025 The HPX Authors
+//  Copyright (c) 2026 The HPX Authors
 //
 //  SPDX-License-Identifier: BSL-1.0
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -8,9 +8,9 @@
 
 #include <hpx/config.hpp>
 #include <hpx/assert.hpp>
+#include <hpx/execution/algorithms/run_loop.hpp>
 #include <hpx/modules/execution_base.hpp>
-#include <hpx/synchronization/condition_variable.hpp>
-#include <hpx/synchronization/spinlock.hpp>
+#include <hpx/modules/synchronization.hpp>
 
 #include <exception>
 #include <mutex>
@@ -36,9 +36,9 @@
 // Senders executing through HPX should expose this domain through
 // get_completion_domain<set_value_t> so sync_wait routes here.
 
-namespace hpx::synchronization::detail {
+namespace hpx::execution::experimental::detail {
 
-    struct sync_wait_domain;
+    HPX_CXX_CORE_EXPORT struct sync_wait_domain;
 
     // Marker for the set_stopped completion path.
     HPX_CXX_CORE_EXPORT template <typename T>
@@ -175,15 +175,15 @@ namespace hpx::synchronization::detail {
 
         template <typename CPO>
         [[nodiscard]]
-        constexpr auto query(
-            hpx::execution::experimental::get_completion_domain_t<CPO>)
-            const noexcept -> sync_wait_domain;
+        static constexpr auto query(
+            hpx::execution::experimental::get_completion_domain_t<CPO>) noexcept
+            -> sync_wait_domain;
     };
 
     // Compute the single-value tuple type for a sender against the receiver
     // env, using only public stdexec APIs.
     HPX_CXX_CORE_EXPORT template <typename... Ts>
-    using decayed_tuple = std::tuple<std::decay_t<Ts>...>;
+    using decayed_std_tuple = std::tuple<std::decay_t<Ts>...>;
 
     HPX_CXX_CORE_EXPORT template <typename Variant>
     struct first_alternative;
@@ -197,11 +197,12 @@ namespace hpx::synchronization::detail {
     HPX_CXX_CORE_EXPORT template <typename Sender>
     using value_tuple_for_t =
         first_alternative<hpx::execution::experimental::value_types_of_t<Sender,
-            sync_wait_rcv_env<Sender>, decayed_tuple, std::variant>>::type;
+            sync_wait_rcv_env<Sender>, decayed_std_tuple, std::variant>>::type;
 
     HPX_CXX_CORE_EXPORT template <typename Sender>
-    using into_variant_sender_t = std::remove_cvref_t<decltype(
-        hpx::execution::experimental::into_variant(std::declval<Sender>()))>;
+    using into_variant_sender_t =
+        std::remove_cvref_t<decltype(hpx::execution::experimental::into_variant(
+            std::declval<Sender>()))>;
 
     HPX_CXX_CORE_EXPORT template <typename Sender>
     using value_variant_for_t = std::tuple_element_t<0,
@@ -294,6 +295,9 @@ namespace hpx::synchronization::detail {
                 cv.wait(l, [this] { return done; });
             }
 
+            loop.finish();
+            loop.run();
+
             if (auto* v = std::get_if<ValueTuple>(&result))
             {
                 return std::optional<ValueTuple>(HPX_MOVE(*v));
@@ -376,8 +380,7 @@ namespace hpx::synchronization::detail {
             hpx::execution::experimental::sync_wait_with_variant_t,
             Sender&& sndr) const -> std::optional<value_variant_for_t<Sender>>
         {
-            auto opt = apply_sender(
-                hpx::execution::experimental::sync_wait_t{},
+            auto opt = apply_sender(hpx::execution::experimental::sync_wait_t{},
                 hpx::execution::experimental::into_variant(
                     HPX_FORWARD(Sender, sndr)));
             if (!opt)
@@ -391,9 +394,9 @@ namespace hpx::synchronization::detail {
     template <typename Sender>
     template <typename CPO>
     constexpr auto sync_wait_rcv_env<Sender>::query(
-        hpx::execution::experimental::get_completion_domain_t<CPO>)
-        const noexcept -> sync_wait_domain
+        hpx::execution::experimental::get_completion_domain_t<CPO>) noexcept
+        -> sync_wait_domain
     {
         return {};
     }
-}    // namespace hpx::synchronization::detail
+}    // namespace hpx::execution::experimental::detail

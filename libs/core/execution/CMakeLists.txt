@@ -14,8 +14,10 @@ set(execution_headers
     hpx/execution/algorithms/detail/partial_algorithm.hpp
     hpx/execution/algorithms/detail/predicates.hpp
     hpx/execution/algorithms/detail/single_result.hpp
+    hpx/execution/algorithms/detail/sync_wait_domain.hpp
     hpx/execution/algorithms/keep_future.hpp
     hpx/execution/algorithms/make_future.hpp
+    hpx/execution/algorithms/run_loop.hpp
     hpx/execution/algorithms/sync_wait.hpp
     hpx/execution/algorithms/when_all.hpp
     hpx/execution/algorithms/when_all_vector.hpp
@@ -85,10 +87,11 @@ set(execution_headers
     hpx/execution/traits/vector_pack_load_store.hpp
     hpx/execution/traits/vector_pack_reduce.hpp
     hpx/execution/traits/vector_pack_type.hpp
+    hpx/synchronization/async_rw_mutex.hpp
 )
 
 set(execution_sources execution_parameter_callbacks.cpp
-                      polymorphic_executor.cpp
+                      polymorphic_executor.cpp run_loop.cpp
 )
 
 # cmake-format: off
@@ -153,6 +156,7 @@ add_hpx_module(
     "hpx/execution/algorithms/detail/partial_algorithm.hpp"
     "hpx/execution/algorithms/detail/predicates.hpp"
     "hpx/execution/algorithms/detail/single_result.hpp"
+    "hpx/execution/algorithms/detail/sync_wait_domain.hpp"
     "hpx/execution/detail/async_launch_policy_dispatch.hpp"
     "hpx/execution/detail/execution_parameter_callbacks.hpp"
     "hpx/execution/detail/future_exec.hpp"

@@ -241,9 +241,6 @@ namespace hpx::execution::experimental {
     HPX_CXX_CORE_EXPORT using stdexec::let_stopped;
     HPX_CXX_CORE_EXPORT using stdexec::let_value;
 
-    // Run loop
-    HPX_CXX_CORE_EXPORT using stdexec::run_loop;
-
     // Schedule from
     HPX_CXX_CORE_EXPORT using stdexec::schedule_from;
     HPX_CXX_CORE_EXPORT using stdexec::schedule_from_t;

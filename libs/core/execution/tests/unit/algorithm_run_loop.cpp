@@ -1467,8 +1467,8 @@ void test_keep_future_sender()
     }
 
     {
-        ex::run_loop loop;
-        [[maybe_unused]] auto sched = loop.get_scheduler();
+        //ex::run_loop loop;
+        //[[maybe_unused]] auto sched = loop.get_scheduler();
 
         std::atomic<bool> called{false};
         auto f = hpx::async([&]() {
@@ -1501,9 +1501,6 @@ void test_keep_future_sender()
     }
 
     {
-        ex::run_loop loop;
-        [[maybe_unused]] auto sched = loop.get_scheduler();
-
         std::atomic<bool> called{false};
         auto f = hpx::async([&]() {
             called = true;
@@ -1517,9 +1514,6 @@ void test_keep_future_sender()
     }
 
     {
-        ex::run_loop loop;
-        [[maybe_unused]] auto sched = loop.get_scheduler();
-
         std::atomic<std::size_t> calls{0};
         auto sf = hpx::async([&]() { ++calls; }).share();
         tt::sync_wait(ex::keep_future(sf));
@@ -1541,9 +1535,6 @@ void test_keep_future_sender()
     }
 
     {
-        ex::run_loop loop;
-        [[maybe_unused]] auto sched = loop.get_scheduler();
-
         std::atomic<std::size_t> calls{0};
         auto sf = hpx::async([&]() {
             ++calls;
@@ -1623,7 +1614,7 @@ void test_keep_future_sender()
     {
         ex::run_loop loop;
         auto t = hpx::thread([&] { loop.run(); });
-        [[maybe_unused]] auto sched = loop.get_scheduler();
+        //[[maybe_unused]] auto sched = loop.get_scheduler();
 
         auto f = hpx::async([]() { return 42; });
         auto sf = hpx::async([]() { return 3.14; }).share();
@@ -1709,9 +1700,6 @@ void test_bulk()
         }
         loop.finish();
         t.join();
-    }
-
-    {
     }
 
     {
