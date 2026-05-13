@@ -8,6 +8,7 @@
 #include <hpx/tracing/tracing.hpp>
 
 #include <cstddef>
+#include <string>
 
 #if defined(HPX_HAVE_MODULE_TRACY)
 
