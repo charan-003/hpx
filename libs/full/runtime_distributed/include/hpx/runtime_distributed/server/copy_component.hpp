@@ -7,8 +7,8 @@
 #pragma once
 
 #include <hpx/config.hpp>
-#include <hpx/components/get_ptr.hpp>
 #include <hpx/modules/actions_base.hpp>
+#include <hpx/modules/components.hpp>
 #include <hpx/modules/futures.hpp>
 #include <hpx/modules/naming_base.hpp>
 #include <hpx/runtime_components/components_fwd.hpp>

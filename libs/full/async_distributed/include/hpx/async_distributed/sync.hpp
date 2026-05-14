@@ -41,10 +41,10 @@ namespace hpx {
 #include <hpx/async_distributed/bind_action.hpp>
 #include <hpx/async_distributed/detail/sync_implementations.hpp>
 #include <hpx/async_distributed/sync.hpp>
-#include <hpx/components/client_base.hpp>
 #include <hpx/modules/actions_base.hpp>
 #include <hpx/modules/async_base.hpp>
 #include <hpx/modules/async_local.hpp>
+#include <hpx/modules/components.hpp>
 #include <hpx/modules/execution.hpp>
 #include <hpx/modules/executors.hpp>
 #include <hpx/modules/functional.hpp>

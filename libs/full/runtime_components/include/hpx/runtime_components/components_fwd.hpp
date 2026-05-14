@@ -8,7 +8,7 @@
 #pragma once
 
 #include <hpx/config.hpp>
-#include <hpx/components/components_fwd.hpp>
+#include <hpx/modules/components.hpp>
 #include <hpx/modules/runtime_configuration.hpp>
 
 #include <cstddef>

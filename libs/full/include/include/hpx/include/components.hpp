@@ -19,12 +19,7 @@
 #include <hpx/async_colocated/server/destroy_component.hpp>
 
 #include <hpx/modules/actions.hpp>
-
-#include <hpx/components/client.hpp>
-#include <hpx/components/client_base.hpp>
-#include <hpx/components/executor_component.hpp>
-#include <hpx/components/get_ptr.hpp>
-
+#include <hpx/modules/components.hpp>
 #include <hpx/modules/components_base.hpp>
 
 #include <hpx/runtime_distributed/copy_component.hpp>

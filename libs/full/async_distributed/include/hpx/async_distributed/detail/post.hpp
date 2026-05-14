@@ -12,11 +12,11 @@
 #include <hpx/async_distributed/continuation.hpp>
 #include <hpx/async_distributed/detail/post_implementations_fwd.hpp>
 #include <hpx/async_distributed/put_parcel_fwd.hpp>
-#include <hpx/components/client_base.hpp>
 #include <hpx/modules/actions.hpp>
 #include <hpx/modules/actions_base.hpp>
 #include <hpx/modules/async_base.hpp>
 #include <hpx/modules/async_local.hpp>
+#include <hpx/modules/components.hpp>
 #include <hpx/modules/components_base.hpp>
 #include <hpx/modules/functional.hpp>
 #include <hpx/modules/naming_base.hpp>
