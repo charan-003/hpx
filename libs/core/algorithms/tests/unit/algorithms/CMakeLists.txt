@@ -263,3 +263,11 @@ foreach(test ${tests})
     "modules.algorithms.algorithms" ${test} ${${test}_PARAMETERS}
   )
 endforeach()
+
+if(HPX_WITH_CXX_MODULES AND (CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
+  foreach(test copyn_sender)
+    target_compile_definitions(
+      ${test}_test PRIVATE HPX_HAVE_FORCE_NO_CXX_MODULES
+    )
+  endforeach()
+endif()

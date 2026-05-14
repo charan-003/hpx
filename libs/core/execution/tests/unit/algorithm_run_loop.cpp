@@ -31,7 +31,7 @@
 #include <hpx/config.hpp>
 
 // Clang V11 ICE's on this test
-#if !defined(HPX_CLANG_VERSION) || (HPX_CLANG_VERSION / 10000) != 11
+#if !defined(HPX_CLANG_VERSION) || ((HPX_CLANG_VERSION / 10000) > 22)
 
 #include <hpx/condition_variable.hpp>
 #include <hpx/execution.hpp>
