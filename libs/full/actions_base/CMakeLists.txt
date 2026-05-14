@@ -87,6 +87,32 @@ set(actions_base_sources
 )
 
 include(HPX_AddModule)
+
+# HPX_WITH_CXX26_REFLECTION flag can be used to enable reflection-based action
+# definition using C++26 reflection capabilities. It is ON by default if HPX is
+# built with C++26 reflection support.
+set(HPX_WITH_CXX26_REFLECTION_DEFAULT OFF)
+if(HPX_WITH_CXX26_EXPERIMENTAL_META)
+  set(HPX_WITH_CXX26_REFLECTION_DEFAULT ON)
+endif()
+
+hpx_option(
+  HPX_WITH_CXX26_REFLECTION
+  BOOL
+  "Enable reflection-based action definition using C++26 reflection \
+  capabilities. (default: ${HPX_WITH_CXX26_REFLECTION_DEFAULT})"
+  ${HPX_WITH_CXX26_REFLECTION_DEFAULT}
+  ADVANCED
+  CATEGORY "Modules"
+  MODULE ACTIONS_BASE
+)
+
+if(HPX_WITH_CXX26_REFLECTION)
+  hpx_add_config_define_namespace(
+    DEFINE HPX_HAVE_CXX26_REFLECTION NAMESPACE ACTIONS_BASE
+  )
+endif()
+
 add_hpx_module(
   full actions_base
   GLOBAL_HEADER_GEN ON
