@@ -87,8 +87,7 @@ namespace hpx {
         ///
         /// \param description description of the \a mutex.
         ///
-#if defined(HPX_HAVE_MODULE_TRACY) ||                                          \
-    (defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0)
+#if defined(HPX_HAVE_TRACING)
         HPX_CORE_EXPORT mutex(char const* const description = "");
 #else
         HPX_HOST_DEVICE_CONSTEXPR mutex(char const* const = "") noexcept

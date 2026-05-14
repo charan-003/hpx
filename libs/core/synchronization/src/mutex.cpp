@@ -24,8 +24,7 @@
 namespace hpx {
 
     ///////////////////////////////////////////////////////////////////////////
-#if defined(HPX_HAVE_MODULE_TRACY) ||                                          \
-    (defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0)
+#if defined(HPX_HAVE_TRACING)
     mutex::mutex(char const* const description)
       : owner_id_(threads::invalid_thread_id)
       , context_("hpx::mutex#", description)
@@ -34,8 +33,7 @@ namespace hpx {
     }
 #endif
 
-#if defined(HPX_HAVE_MODULE_TRACY) ||                                          \
-    (defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0)
+#if defined(HPX_HAVE_TRACING)
     mutex::~mutex()
     {
         HPX_ITT_SYNC_DESTROY(this);
