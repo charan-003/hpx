@@ -539,7 +539,7 @@ namespace hpx::threads {
     }
 #endif
 
-#if HPX_HAVE_TRACING != 0 && defined(HPX_HAVE_MODULE_TRACY)
+#if defined(HPX_HAVE_MODULE_TRACY)
     tracing::region_init_data get_region_init_data(thread_data const* thrdptr)
     {
         return {thrdptr->get_description().get_description(),
@@ -552,8 +552,7 @@ namespace hpx::threads {
         return {thrdptr->get_description().get_description(),
             thrdptr->get_tracy_fiber_name(), thrdptr->is_stackless()};
     }
-#elif HPX_HAVE_TRACING != 0 && defined(HPX_HAVE_ITTNOTIFY) &&                  \
-    HPX_HAVE_ITTNOTIFY != 0
+#elif defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0
     tracing::region_init_data get_region_init_data(thread_data const* thrdptr)
     {
         threads::thread_description const desc = thrdptr->get_description();
