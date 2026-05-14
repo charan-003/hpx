@@ -745,11 +745,9 @@ namespace hpx::ranges {
             static_assert(
                 std::input_iterator<I>, "Required at least input iterator.");
 
-            using type = typename std::iterator_traits<I>::value_type;
-
             return hpx::ranges::remove_copy_if(
                 first, last, dest,
-                [value](type const& a) -> bool { return value == a; },
+                [value](T const& a) -> bool { return value == a; },
                 HPX_MOVE(proj));
         }
 
@@ -769,12 +767,9 @@ namespace hpx::ranges {
             static_assert(std::input_iterator<std::ranges::iterator_t<Rng>>,
                 "Required at input forward iterator.");
 
-            using type = typename std::iterator_traits<
-                std::ranges::iterator_t<Rng>>::value_type;
-
             return hpx::ranges::remove_copy_if(
                 HPX_FORWARD(Rng, rng), dest,
-                [value](type const& a) -> bool { return value == a; },
+                [value](T const& a) -> bool { return value == a; },
                 HPX_MOVE(proj));
         }
 
@@ -799,11 +794,9 @@ namespace hpx::ranges {
             static_assert(std::forward_iterator<I>,
                 "Required at least forward iterator.");
 
-            using type = typename std::iterator_traits<I>::value_type;
-
             return hpx::ranges::remove_copy_if(
                 HPX_FORWARD(ExPolicy, policy), first, last, dest,
-                [value](type const& a) -> bool { return value == a; },
+                [value](T const& a) -> bool { return value == a; },
                 HPX_MOVE(proj));
         }
 
@@ -826,12 +819,9 @@ namespace hpx::ranges {
             static_assert(std::forward_iterator<std::ranges::iterator_t<Rng>>,
                 "Required at least forward iterator.");
 
-            using type = typename std::iterator_traits<
-                std::ranges::iterator_t<Rng>>::value_type;
-
             return hpx::ranges::remove_copy_if(
                 HPX_FORWARD(ExPolicy, policy), HPX_FORWARD(Rng, rng), dest,
-                [value](type const& a) -> bool { return value == a; },
+                [value](T const& a) -> bool { return value == a; },
                 HPX_MOVE(proj));
         }
     } remove_copy{};

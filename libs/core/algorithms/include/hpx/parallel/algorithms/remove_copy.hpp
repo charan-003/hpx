@@ -382,13 +382,10 @@ namespace hpx::parallel {
             parallel(ExPolicy&& policy, FwdIter1 first, Sent last,
                 FwdIter2 dest, F&& f, Proj&& proj)
             {
-                using value_type =
-                    typename std::iterator_traits<FwdIter1>::value_type;
-
                 return copy_if<IterPair>().call(
                     HPX_FORWARD(ExPolicy, policy), first, last, dest,
-                    [f = HPX_FORWARD(F, f)](value_type const& a) -> bool {
-                        return !HPX_INVOKE(f, a);
+                    [f = HPX_FORWARD(F, f)](auto&& a) -> bool {
+                        return !HPX_INVOKE(f, HPX_FORWARD(decltype(a), a));
                     },
                     HPX_FORWARD(Proj, proj));
             }
