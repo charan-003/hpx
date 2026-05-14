@@ -11,6 +11,7 @@
 
 #include <hpx/actions_base/reflect_action.hpp>
 
+#include <cstddef>
 #include <string>
 
 namespace app {
