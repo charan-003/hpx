@@ -17,12 +17,16 @@ namespace hpx::experimental {
 // that signals availability of both the language facilities and the library
 // trait std::is_replaceable, see
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2786r13.html#language-feature-test-macros
-#if defined(__cpp_trivial_relocatability)
-    HPX_CXX_CORE_EXPORT template <typename T>
-    struct is_replaceable : std::is_replaceable<T>
-    {
-    };
-#else
+
+// Note: while Clang V22.0.0 defines __cpp_trivial_relocatability, it does not
+// have std::is_replaceable.
+
+//#if defined(__cpp_trivial_relocatability)
+//    HPX_CXX_CORE_EXPORT template <typename T>
+//    struct is_replaceable : std::is_replaceable<T>
+//    {
+//    };
+//#else
     HPX_CXX_CORE_EXPORT template <typename T>
     struct is_replaceable
       : std::bool_constant<std::is_object_v<T> && !std::is_const_v<T> &&
@@ -44,7 +48,7 @@ namespace hpx::experimental {
     struct is_replaceable<T[N]> : std::false_type
     {
     };
-#endif
+//#endif
 
     HPX_CXX_CORE_EXPORT template <typename T>
     inline constexpr bool is_replaceable_v = is_replaceable<T>::value;
