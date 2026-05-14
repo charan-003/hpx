@@ -94,7 +94,7 @@ namespace hpx::tracing {
     };
 
     ////////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT struct HPX_CORE_EXPORT lock_context
+    HPX_CXX_CORE_EXPORT struct HPX_CORE_EXPORT [[maybe_unused]] lock_context
     {
         explicit lock_context(char const* name = nullptr) noexcept;
         explicit lock_context(char const* prefix, char const* suffix) noexcept;
