@@ -142,7 +142,7 @@ if(NOT TARGET hpx_dependencies_allocator)
     endif()
 
     hpx_add_config_define(HPX_HAVE_ITTNOTIFY 1)
-    hpx_add_config_define(HPX_HAVE_TRACING 1)
+    hpx_add_config_define(HPX_HAVE_TRACING)
     hpx_add_config_define(HPX_HAVE_THREAD_DESCRIPTION)
   endif()
 
