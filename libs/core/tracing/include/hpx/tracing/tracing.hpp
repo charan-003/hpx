@@ -11,7 +11,7 @@
 
 #include <cstddef>
 
-#if defined(HPX_HAVE_MODULE_TRACY)
+#if HPX_HAVE_TRACING != 0 && defined(HPX_HAVE_MODULE_TRACY)
 #include <hpx/modules/tracy.hpp>
 
 namespace hpx::tracing {
@@ -123,7 +123,8 @@ namespace hpx::tracing {
 
 }    // namespace hpx::tracing
 
-#elif defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0
+#elif HPX_HAVE_TRACING != 0 && defined(HPX_HAVE_ITTNOTIFY) &&                 \
+    HPX_HAVE_ITTNOTIFY != 0
 #include <hpx/modules/itt_notify.hpp>
 
 namespace hpx::tracing {
