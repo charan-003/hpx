@@ -86,8 +86,8 @@ namespace hpx::tracing {
     {
     }
 
-    lock_context::lock_context(std::string const& name) noexcept
-      : impl(hpx::tracy::create(name))
+    lock_context::lock_context(char const* prefix, char const* suffix) noexcept
+      : impl(hpx::tracy::create(std::string(prefix) + suffix))
     {
     }
 
