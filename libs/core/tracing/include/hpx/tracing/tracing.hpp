@@ -123,7 +123,7 @@ namespace hpx::tracing {
 
 }    // namespace hpx::tracing
 
-#elif HPX_HAVE_TRACING != 0 && defined(HPX_HAVE_ITTNOTIFY) &&                 \
+#elif HPX_HAVE_TRACING != 0 && defined(HPX_HAVE_ITTNOTIFY) &&                  \
     HPX_HAVE_ITTNOTIFY != 0
 #include <hpx/modules/itt_notify.hpp>
 
