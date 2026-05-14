@@ -20,12 +20,13 @@
 
 #include <hpx/config.hpp>
 
-#if defined(HPX_SERIALIZATION_HAVE_ALLOW_AUTO_GENERATE)
+#if defined(HPX_HAVE_CXX26_REFLECTION)
 
 #include <hpx/serialization/detail/refl_qualified_name_of.hpp>
 
 #include <cstddef>
 #include <meta>
+#include <type_traits>
 
 namespace hpx::actions {
 
@@ -44,7 +45,7 @@ namespace hpx::actions {
     struct reflect_action
     {
         /// The function pointer type (e.g. int(*)(double, double))
-        using func_ptr_type = [:std::meta::type_of(F):]*;
+        using func_ptr_type = std::add_pointer_t<[:std::meta::type_of(F):]>;
 
         /// The actual function pointer
         static constexpr func_ptr_type func_ptr = [:F:];
@@ -60,7 +61,7 @@ namespace hpx::actions {
         /// Called by hpx::actions::detail::register_action during
         /// static initialization to register this action with the
         /// HPX action registry.
-        static char const* get_action_name() noexcept
+        static consteval char const* get_action_name() noexcept
         {
             return name_storage.data;
         }
@@ -68,20 +69,4 @@ namespace hpx::actions {
 
 }    // namespace hpx::actions
 
-/// \brief Define a reflection-based HPX action for a free function.
-///
-/// Usage:
-///   using compute_action = HPX_ACTION(app::compute);
-///
-/// This replaces the three-step macro sequence:
-///   HPX_PLAIN_ACTION(app::compute, compute_action)
-///   HPX_REGISTER_ACTION_DECLARATION(compute_action)
-///   HPX_REGISTER_ACTION(compute_action)
-///
-/// The action name is extracted automatically from the function reflection.
-/// No manual registration is required.
-///
-/// \note Requires HPX_SERIALIZATION_WITH_ALLOW_AUTO_GENERATE=ON
-#define HPX_ACTION(func) hpx::actions::reflect_action<^^func> /**/
-
-#endif    // HPX_SERIALIZATION_HAVE_ALLOW_AUTO_GENERATE
+#endif    // HPX_HAVE_CXX26_REFLECTION

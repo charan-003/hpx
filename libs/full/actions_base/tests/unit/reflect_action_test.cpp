@@ -7,7 +7,7 @@
 #include <hpx/config.hpp>
 #include <hpx/modules/testing.hpp>
 
-#if defined(HPX_SERIALIZATION_HAVE_ALLOW_AUTO_GENERATE)
+#if defined(HPX_HAVE_CXX26_REFLECTION)
 
 #include <hpx/actions_base/reflect_action.hpp>
 
@@ -46,46 +46,46 @@ int main()
 {
     // Test: action name extraction for simple namespace function
     {
-        using compute_action = HPX_ACTION(app::compute);
+        HPX_ACTION(app::compute, compute_action);
         HPX_TEST_EQ(std::string(compute_action::get_action_name()),
             std::string("app::compute"));
     }
 
     // Test: action name extraction for void noexcept function
     {
-        using broadcast_action = HPX_ACTION(app::broadcast);
+        HPX_ACTION(app::broadcast, broadcast_action);
         HPX_TEST_EQ(std::string(broadcast_action::get_action_name()),
             std::string("app::broadcast"));
     }
 
     // Test: action name extraction for multiple parameters
     {
-        using transform_action = HPX_ACTION(app::transform);
+        HPX_ACTION(app::transform, transform_action);
         HPX_TEST_EQ(std::string(transform_action::get_action_name()),
             std::string("app::transform"));
     }
 
     // Test: action name extraction for nested namespace
     {
-        using deep_action = HPX_ACTION(app::nested::deep_compute);
+        HPX_ACTION(app::nested::deep_compute, deep_action);
         HPX_TEST_EQ(std::string(deep_action::get_action_name()),
             std::string("app::nested::deep_compute"));
     }
 
     // Test: arity extraction
     {
-        using compute_action = HPX_ACTION(app::compute);
+        HPX_ACTION(app::compute, compute_action);
         HPX_TEST_EQ(compute_action::arity, std::size_t(2));
     }
 
     {
-        using broadcast_action = HPX_ACTION(app::broadcast);
+        HPX_ACTION(app::broadcast, broadcast_action);
         HPX_TEST_EQ(broadcast_action::arity, std::size_t(1));
     }
 
     // Test: function invocation via func_ptr
     {
-        using compute_action = HPX_ACTION(app::compute);
+        HPX_ACTION(app::compute, compute_action);
         HPX_TEST_EQ(compute_action::func_ptr(3.0, 4.0), 7);
     }
 
