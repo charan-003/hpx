@@ -1227,6 +1227,8 @@ endif()
 unset(_hpx_tracing_backends)
 unset(_hpx_tracing_backends_count)
 
+hpx_add_config_cond_define(HPX_HAVE_TRACING 0)
+
 if(HPX_WITH_NETWORKING)
   hpx_add_config_define(HPX_HAVE_NETWORKING)
 

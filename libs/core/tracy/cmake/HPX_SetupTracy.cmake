@@ -6,6 +6,8 @@
 
 include(HPX_AddDefinitions)
 
+hpx_add_config_define(HPX_HAVE_TRACING 1)
+
 # compatibility with older CMake versions
 if(TRACY_ROOT AND NOT Tracy_ROOT)
   set(Tracy_ROOT
