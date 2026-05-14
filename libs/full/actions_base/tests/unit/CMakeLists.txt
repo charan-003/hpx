@@ -19,12 +19,8 @@ if(HPX_SERIALIZATION_WITH_ALLOW_AUTO_GENERATE)
       FOLDER "Tests/Unit/Modules/Full/ActionsBase"
     )
 
-    add_hpx_unit_test(
-      "modules.actions_base" ${test} ${${test}_PARAMETERS}
-    )
+    add_hpx_unit_test("modules.actions_base" ${test} ${${test}_PARAMETERS})
 
-    target_compile_definitions(
-      ${test}_test PRIVATE -DHPX_MODULE_STATIC_LINKING
-    )
+    target_compile_definitions(${test}_test PRIVATE -DHPX_MODULE_STATIC_LINKING)
   endforeach()
 endif()

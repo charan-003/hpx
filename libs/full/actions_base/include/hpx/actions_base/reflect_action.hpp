@@ -44,7 +44,7 @@ namespace hpx::actions {
     struct reflect_action
     {
         /// The function pointer type (e.g. int(*)(double, double))
-        using func_ptr_type = [: std::meta::type_of(F) :]*;
+        using func_ptr_type = [:std::meta::type_of(F):]*;
 
         /// The actual function pointer
         static constexpr func_ptr_type func_ptr = [:F:];
@@ -54,8 +54,7 @@ namespace hpx::actions {
             hpx::serialization::detail::scope_builder<F>::value;
 
         /// Number of parameters the function takes
-        static constexpr std::size_t arity =
-            std::meta::parameters_of(F).size();
+        static constexpr std::size_t arity = std::meta::parameters_of(F).size();
 
         /// Returns the fully qualified name of the action.
         /// Called by hpx::actions::detail::register_action during
@@ -83,8 +82,6 @@ namespace hpx::actions {
 /// No manual registration is required.
 ///
 /// \note Requires HPX_SERIALIZATION_WITH_ALLOW_AUTO_GENERATE=ON
-#define HPX_ACTION(func)                                                       \
-    hpx::actions::reflect_action<^^func>                                           \
-    /**/
+#define HPX_ACTION(func) hpx::actions::reflect_action<^^func> /**/
 
 #endif    // HPX_SERIALIZATION_HAVE_ALLOW_AUTO_GENERATE
