@@ -25,6 +25,7 @@ set(actions_base_headers
     hpx/actions_base/lambda_to_action.hpp
     hpx/actions_base/macros.hpp
     hpx/actions_base/plain_action.hpp
+    hpx/actions_base/reflect_action.hpp
     hpx/actions_base/preassigned_action_id.hpp
     hpx/actions_base/traits/action_continuation.hpp
     hpx/actions_base/traits/action_decorate_continuation.hpp
