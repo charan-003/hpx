@@ -51,7 +51,8 @@ namespace hpx {
             HPX_NO_UNIQUE_ADDRESS hpx::tracing::lock_context context_;
 
         public:
-#if HPX_HAVE_TRACING != 0
+#if defined(HPX_HAVE_MODULE_TRACY) ||                                          \
+    (defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0)
             spinlock() noexcept
               : v_(false)
               , context_("hpx::spinlock")
