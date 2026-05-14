@@ -27,7 +27,7 @@ namespace hpx {
 #if HPX_HAVE_ITTNOTIFY != 0 || HPX_HAVE_TRACING != 0
     mutex::mutex(char const* const description)
       : owner_id_(threads::invalid_thread_id)
-      , context_(std::string("hpx::mutex") + description)
+      , context_("hpx::mutex", description)
     {
         HPX_ITT_SYNC_CREATE(this, "hpx::mutex", description);
     }

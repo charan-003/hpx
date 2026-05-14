@@ -40,7 +40,7 @@ namespace hpx::util {
         }
 
         explicit spinlock(char const* desc) noexcept
-          : context_(std::string("util::spinlock#") + desc)
+          : context_("util::spinlock#", desc)
         {
             HPX_ITT_SYNC_CREATE(this, "util::spinlock", desc);
         }

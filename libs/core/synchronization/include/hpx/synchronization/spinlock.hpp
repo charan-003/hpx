@@ -61,7 +61,7 @@ namespace hpx {
 
             explicit spinlock(char const* const desc) noexcept
               : v_(false)
-              , context_(std::string("hpx::spinlock#") + desc)
+              , context_("hpx::spinlock#", desc)
             {
                 HPX_ITT_SYNC_CREATE(this, "hpx::spinlock", desc);
             }
