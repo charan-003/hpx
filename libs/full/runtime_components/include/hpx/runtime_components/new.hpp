@@ -11,9 +11,9 @@
 #pragma once
 
 #include <hpx/config.hpp>
-#include <hpx/components/client_base.hpp>
 #include <hpx/modules/actions_base.hpp>
 #include <hpx/modules/async_base.hpp>
+#include <hpx/modules/components.hpp>
 #include <hpx/modules/components_base.hpp>
 #include <hpx/modules/futures.hpp>
 #include <hpx/modules/naming_base.hpp>

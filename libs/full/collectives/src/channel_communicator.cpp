@@ -10,9 +10,8 @@
 
 #include <hpx/assert.hpp>
 #include <hpx/collectives/channel_communicator.hpp>
-#include <hpx/components/basename_registration.hpp>
-#include <hpx/components/client.hpp>
 #include <hpx/modules/async_base.hpp>
+#include <hpx/modules/components.hpp>
 #include <hpx/modules/components_base.hpp>
 #include <hpx/modules/errors.hpp>
 #include <hpx/modules/futures.hpp>
