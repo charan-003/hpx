@@ -8,6 +8,7 @@
 #pragma once
 
 #include <hpx/assert.hpp>
+#include <hpx/execution/algorithms/detail/sync_wait_domain.hpp>
 #include <hpx/modules/allocator_support.hpp>
 #include <hpx/modules/datastructures.hpp>
 #include <hpx/modules/execution_base.hpp>
@@ -439,14 +440,38 @@ namespace hpx::experimental {
                     AccessType>;
             using sender_concept = hpx::execution::experimental::sender_t;
 
-            template <typename Env>
-            friend auto tag_invoke(
-                hpx::execution::experimental::get_completion_signatures_t,
-                sender const&, Env const&)
+            template <typename Self, typename... Env>
+            static consteval auto get_completion_signatures() noexcept
                 -> hpx::execution::experimental::completion_signatures<
                     hpx::execution::experimental::set_value_t(access_type),
                     hpx::execution::experimental::set_error_t(
-                        std::exception_ptr)>;
+                        std::exception_ptr)>
+            {
+                return {};
+            }
+
+            // Sender environment that advertises the HPX-aware sync_wait
+            // domain via get_completion_domain<set_value_t>. Without this,
+            // stdexec::sync_wait routes through default_domain, whose
+            // run_loop OS-blocks the calling thread. Because async_rw_mutex
+            // continuations are dispatched on HPX worker threads, OS-blocking
+            // the caller deadlocks at low worker counts (--hpx:threads=1).
+            struct env_t
+            {
+                template <typename CPO>
+                static constexpr auto query(
+                    hpx::execution::experimental::get_completion_domain_t<
+                        CPO>) noexcept
+                    -> hpx::execution::experimental::detail::sync_wait_domain
+                {
+                    return {};
+                }
+            };
+
+            static constexpr env_t get_env() noexcept
+            {
+                return {};
+            }
 
             template <typename R>
             struct operation_state
@@ -469,16 +494,14 @@ namespace hpx::experimental {
                 operation_state(operation_state const&) = delete;
                 operation_state& operator=(operation_state const&) = delete;
 
-                friend void tag_invoke(hpx::execution::experimental::start_t,
-                    operation_state& os) noexcept
+                void start() & noexcept
                 {
-                    HPX_ASSERT_MSG(os.state,
+                    HPX_ASSERT_MSG(state,
                         "async_rw_lock::sender::operation_state state is "
                         "empty, was the sender already started?");
 
                     auto continuation =
-                        [r = HPX_MOVE(os.r)](
-                            shared_state_ptr_type state) mutable {
+                        [r = HPX_MOVE(r)](shared_state_ptr_type state) mutable {
                             try
                             {
                                 hpx::execution::experimental::set_value(
@@ -491,20 +514,20 @@ namespace hpx::experimental {
                             }
                         };
 
-                    if (os.prev_state)
+                    if (prev_state)
                     {
-                        os.prev_state->add_continuation(HPX_MOVE(continuation));
+                        prev_state->add_continuation(HPX_MOVE(continuation));
 
                         // We release prev_state here to allow continuations to
                         // run. The operation state may otherwise keep it alive
                         // longer than needed.
-                        os.prev_state.reset();
+                        prev_state.reset();
                     }
                     else
                     {
                         // There is no previous state on the first access. We
                         // can immediately trigger the continuation.
-                        continuation(HPX_MOVE(os.state));
+                        continuation(HPX_MOVE(state));
                     }
                 }
             };
@@ -635,14 +658,38 @@ namespace hpx::experimental {
 
             using sender_concept = hpx::execution::experimental::sender_t;
 
-            template <typename Env>
-            friend auto tag_invoke(
-                hpx::execution::experimental::get_completion_signatures_t,
-                sender const&, Env)
+            template <typename Self, typename... Env>
+            static consteval auto get_completion_signatures() noexcept
                 -> hpx::execution::experimental::completion_signatures<
                     hpx::execution::experimental::set_value_t(access_type),
                     hpx::execution::experimental::set_error_t(
-                        std::exception_ptr)>;
+                        std::exception_ptr)>
+            {
+                return {};
+            }
+
+            // Sender environment that advertises the HPX-aware sync_wait
+            // domain via get_completion_domain<set_value_t>. Without this,
+            // stdexec::sync_wait routes through default_domain, whose
+            // run_loop OS-blocks the calling thread. Because async_rw_mutex
+            // continuations are dispatched on HPX worker threads, OS-blocking
+            // the caller deadlocks at low worker counts (--hpx:threads=1).
+            struct env_t
+            {
+                template <typename CPO>
+                static constexpr auto query(
+                    hpx::execution::experimental::get_completion_domain_t<
+                        CPO>) noexcept
+                    -> hpx::execution::experimental::detail::sync_wait_domain
+                {
+                    return {};
+                }
+            };
+
+            constexpr env_t get_env() const noexcept
+            {
+                return {};
+            }
 
             template <typename R>
             struct operation_state
@@ -665,16 +712,14 @@ namespace hpx::experimental {
                 operation_state(operation_state const&) = delete;
                 operation_state& operator=(operation_state const&) = delete;
 
-                friend void tag_invoke(hpx::execution::experimental::start_t,
-                    operation_state& os) noexcept
+                void start() & noexcept
                 {
-                    HPX_ASSERT_MSG(os.state,
+                    HPX_ASSERT_MSG(state,
                         "async_rw_lock::sender::operation_state state is "
                         "empty, was the sender already started?");
 
                     auto continuation =
-                        [r = HPX_MOVE(os.r)](
-                            shared_state_ptr_type state) mutable {
+                        [r = HPX_MOVE(r)](shared_state_ptr_type state) mutable {
                             try
                             {
                                 hpx::execution::experimental::set_value(
@@ -687,19 +732,19 @@ namespace hpx::experimental {
                             }
                         };
 
-                    if (os.prev_state)
+                    if (prev_state)
                     {
-                        os.prev_state->add_continuation(HPX_MOVE(continuation));
+                        prev_state->add_continuation(HPX_MOVE(continuation));
                         // We release prev_state here to allow continuations to
                         // run. The operation state may otherwise keep it alive
                         // longer than needed.
-                        os.prev_state.reset();
+                        prev_state.reset();
                     }
                     else
                     {
                         // There is no previous state on the first access. We
                         // can immediately trigger the continuation.
-                        continuation(HPX_MOVE(os.state));
+                        continuation(HPX_MOVE(state));
                     }
                 }
             };

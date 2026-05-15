@@ -10,6 +10,7 @@
 #include <hpx/modules/testing.hpp>
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <iostream>
 #include <random>
@@ -55,7 +56,8 @@ void test_partial_sort_sender(
         auto exec = ex::explicit_scheduler_executor(scheduler_t(ln_policy));
 
         tt::sync_wait(
-            ex::just(iterator(std::begin(B)), iterator(std::begin(B) + i),
+            ex::just(iterator(std::begin(B)),
+                iterator(std::begin(B) + static_cast<std::ptrdiff_t>(i)),
                 iterator(std::end(B)), compare_t{}) |
             hpx::partial_sort(ex_policy.on(exec)));
 

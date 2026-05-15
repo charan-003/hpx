@@ -8,7 +8,6 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 # Default location is $HPX_ROOT/libs/synchronization/include
 set(synchronization_headers
-    hpx/synchronization/async_rw_mutex.hpp
     hpx/synchronization/barrier.hpp
     hpx/synchronization/binary_semaphore.hpp
     hpx/synchronization/channel_mpmc.hpp

@@ -15,10 +15,6 @@ set(tests
     wrapping_executor
 )
 
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang")
-  list(REMOVE_ITEM tests bulk_sync_wait)
-endif()
-
 foreach(test ${tests})
   set(sources ${test}.cpp)
 

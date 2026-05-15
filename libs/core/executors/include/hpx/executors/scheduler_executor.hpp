@@ -20,6 +20,7 @@
 
 #include <cstddef>
 #include <exception>
+#include <iterator>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -31,11 +32,11 @@ namespace hpx::execution::experimental {
         HPX_CXX_CORE_EXPORT template <typename F, typename... Ts>
         auto captured_args_then(F&& f, Ts&&... ts)
         {
-            return [f = HPX_FORWARD(F, f), ... ts = HPX_FORWARD(Ts, ts)](
+            return [bound_f = hpx::bind_back(
+                        HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...)](
                        auto i, auto&& predecessor, auto& v) mutable {
-                v[i] = HPX_INVOKE(HPX_FORWARD(F, f), i,
-                    HPX_FORWARD(decltype(predecessor), predecessor),
-                    HPX_FORWARD(Ts, ts)...);
+                v[i] = HPX_INVOKE(bound_f, i,
+                    HPX_FORWARD(decltype(predecessor), predecessor));
             };
         }
     }    // namespace detail
@@ -52,10 +53,10 @@ namespace hpx::execution::experimental {
 
         constexpr scheduler_executor() = default;
 
-        template <typename Scheduler,
-            typename Enable = std::enable_if_t<
-                hpx::execution::experimental::is_scheduler_v<Scheduler> &&
-                !std::is_same_v<std::decay_t<Scheduler>, scheduler_executor>>>
+        template <typename Scheduler>
+            requires(
+                !std::is_same_v<std::decay_t<Scheduler>, scheduler_executor> &&
+                hpx::execution::experimental::is_scheduler_v<Scheduler>)
         constexpr explicit scheduler_executor(Scheduler&& sched)
           : sched_(HPX_FORWARD(Scheduler, sched))
         {
@@ -172,34 +173,38 @@ namespace hpx::execution::experimental {
         friend auto tag_invoke(hpx::parallel::execution::bulk_async_execute_t,
             scheduler_executor const& exec, F&& f, S const& shape, Ts&&... ts)
         {
-            using shape_element =
-                typename hpx::traits::range_traits<S>::value_type;
+            using shape_element = hpx::traits::range_traits<S>::value_type;
             using result_type = hpx::util::detail::invoke_deferred_result_t<F,
                 shape_element, Ts...>;
 
+            // hpx::execution::experimental::bulk requires integral shape
+            using size_type = decltype(std::ranges::size(shape));
+            size_type const n = std::ranges::size(shape);
+
             if constexpr (std::is_void_v<result_type>)
             {
-                // hpx::execution::experimental::bulk requires integral shape
-                // and execution policy
-                using size_type = decltype(hpx::util::size(shape));
-                size_type const n = hpx::util::size(shape);
                 return make_future(bulk(schedule(exec.sched_), n,
-                    [shape, f = HPX_FORWARD(F, f),
-                        ... args = HPX_FORWARD(Ts, ts)](size_type i) mutable {
-                        auto it = hpx::util::begin(shape);
-                        std::advance(it, i);
-                        HPX_INVOKE(f, *it, args...);
+                    [shape,
+                        bound_f = hpx::bind_back(HPX_FORWARD(F, f),
+                            HPX_FORWARD(Ts, ts)...)](size_type i) mutable {
+                        auto it = std::ranges::begin(shape);
+                        std::ranges::advance(it, i);
+                        HPX_INVOKE(bound_f, *it);
                     }));
             }
             else
             {
+                // A boolean as result_type is disallowed because the elements
+                // of a vector<bool> cannot be modified concurrently.
+                static_assert(!std::is_same_v<result_type, bool>,
+                    "Using an invocable that returns a boolean with "
+                    "scheduler_executor::bulk_async_execution can result in "
+                    "data races!");
+
                 using promise_vector_type =
                     std::vector<hpx::promise<result_type>>;
                 using result_vector_type =
                     std::vector<hpx::future<result_type>>;
-
-                using size_type = decltype(hpx::util::size(shape));
-                size_type const n = hpx::util::size(shape);
 
                 promise_vector_type promises(n);
                 result_vector_type results;
@@ -215,8 +220,8 @@ namespace hpx::execution::experimental {
                                     S const& shape, Ts&... ts) {
                     hpx::detail::try_catch_exception_ptr(
                         [&]() mutable {
-                            auto it = hpx::util::begin(shape);
-                            std::advance(it, i);
+                            auto it = std::ranges::begin(shape);
+                            std::ranges::advance(it, i);
                             promises[i].set_value(HPX_INVOKE(f, *it, ts...));
                         },
                         [&](std::exception_ptr&& ep) {
@@ -239,26 +244,25 @@ namespace hpx::execution::experimental {
         friend auto tag_invoke(hpx::parallel::execution::bulk_sync_execute_t,
             scheduler_executor const& exec, F&& f, S const& shape, Ts&&... ts)
         {
-            using shape_element =
-                typename hpx::traits::range_traits<S>::value_type;
+            using shape_element = hpx::traits::range_traits<S>::value_type;
             using result_type = hpx::util::detail::invoke_deferred_result_t<F,
                 shape_element, Ts...>;
 
             // hpx::execution::experimental::bulk requires integral shape
-            // and execution policy
-            using size_type = decltype(hpx::util::size(shape));
-            size_type const n = hpx::util::size(shape);
+            using size_type = decltype(std::ranges::size(shape));
+            size_type const n = std::ranges::size(shape);
+
             return hpx::util::void_guard<result_type>(),
                    // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-                   *hpx::this_thread::experimental::sync_wait(
-                       bulk(schedule(exec.sched_), n,
-                           [shape, f = HPX_FORWARD(F, f),
-                               ... args = HPX_FORWARD(Ts, ts)](
-                               size_type i) mutable {
-                               auto it = hpx::util::begin(shape);
-                               std::advance(it, i);
-                               HPX_INVOKE(f, *it, args...);
-                           }));
+                   *hpx::this_thread::experimental::sync_wait(bulk(
+                       schedule(exec.sched_), n,
+                       [shape,
+                           bound_f = hpx::bind_back(HPX_FORWARD(F, f),
+                               HPX_FORWARD(Ts, ts)...)](size_type i) mutable {
+                           auto it = std::ranges::begin(shape);
+                           std::ranges::advance(it, i);
+                           HPX_INVOKE(bound_f, *it);
+                       }));
         }
 
         template <typename F, typename S, typename Future, typename... Ts>
@@ -286,10 +290,17 @@ namespace hpx::execution::experimental {
             }
             else
             {
+                // A boolean as result_type is disallowed because the elements
+                // of a vector<bool> cannot be modified concurrently.
+                static_assert(!std::is_same_v<result_type, bool>,
+                    "Using an invocable that returns a boolean with "
+                    "scheduler_executor::bulk_then_execute can result in "
+                    "data races!");
+
                 // the overall return value is future<std::vector<result_type>>
-                auto pre_req =
-                    when_all(keep_future(HPX_FORWARD(Future, predecessor)),
-                        just(std::vector<result_type>(hpx::util::size(shape))));
+                auto pre_req = when_all(
+                    keep_future(HPX_FORWARD(Future, predecessor)),
+                    just(std::vector<result_type>(std::ranges::size(shape))));
 
                 auto loop =
                     bulk(continues_on(HPX_MOVE(pre_req), exec.sched_), shape,

@@ -111,20 +111,22 @@ namespace hpx::execution::experimental {
     HPX_CXX_CORE_EXPORT using stdexec::forwarding_query_t;
     HPX_CXX_CORE_EXPORT using stdexec::get_allocator_t;
     HPX_CXX_CORE_EXPORT using stdexec::get_completion_scheduler_t;
-    HPX_CXX_CORE_EXPORT using stdexec::get_delegatee_scheduler_t;
+    HPX_CXX_CORE_EXPORT using stdexec::get_delegation_scheduler_t;
     HPX_CXX_CORE_EXPORT using stdexec::get_domain_t;
     HPX_CXX_CORE_EXPORT using stdexec::get_forward_progress_guarantee_t;
     HPX_CXX_CORE_EXPORT using stdexec::get_scheduler_t;
+    HPX_CXX_CORE_EXPORT using stdexec::get_start_scheduler_t;
     HPX_CXX_CORE_EXPORT using stdexec::get_stop_token_t;
 
     HPX_CXX_CORE_EXPORT using stdexec::execute_may_block_caller;
     HPX_CXX_CORE_EXPORT using stdexec::forwarding_query;
     HPX_CXX_CORE_EXPORT using stdexec::get_allocator;
     HPX_CXX_CORE_EXPORT using stdexec::get_completion_scheduler;
-    HPX_CXX_CORE_EXPORT using stdexec::get_delegatee_scheduler;
+    HPX_CXX_CORE_EXPORT using stdexec::get_delegation_scheduler;
     HPX_CXX_CORE_EXPORT using stdexec::get_domain;
     HPX_CXX_CORE_EXPORT using stdexec::get_forward_progress_guarantee;
     HPX_CXX_CORE_EXPORT using stdexec::get_scheduler;
+    HPX_CXX_CORE_EXPORT using stdexec::get_start_scheduler;
     HPX_CXX_CORE_EXPORT using stdexec::get_stop_token;
 
     HPX_CXX_CORE_EXPORT using stdexec::in_place_stop_callback;
@@ -196,19 +198,18 @@ namespace hpx::execution::experimental {
     // Execution policies
     HPX_CXX_CORE_EXPORT using stdexec::is_execution_policy;
     HPX_CXX_CORE_EXPORT using stdexec::is_execution_policy_v;
-    using stdexec::par;
-    using stdexec::par_unseq;
-    using stdexec::seq;
-    using stdexec::unseq;
+
+    HPX_CXX_CORE_EXPORT inline constexpr stdexec::parallel_policy par{};
+    HPX_CXX_CORE_EXPORT inline constexpr stdexec::parallel_unsequenced_policy
+        par_unseq{};
+    HPX_CXX_CORE_EXPORT inline constexpr stdexec::sequenced_policy seq{};
+    HPX_CXX_CORE_EXPORT inline constexpr stdexec::unsequenced_policy unseq{};
 
     HPX_CXX_CORE_EXPORT using exec::split;
     HPX_CXX_CORE_EXPORT using exec::split_t;
 
     HPX_CXX_CORE_EXPORT using exec::ensure_started;
     HPX_CXX_CORE_EXPORT using exec::ensure_started_t;
-
-    HPX_CXX_CORE_EXPORT using exec::execute;
-    HPX_CXX_CORE_EXPORT using exec::execute_t;
 
     // Environment queries
     HPX_CXX_CORE_EXPORT using exec::make_env;
@@ -242,9 +243,6 @@ namespace hpx::execution::experimental {
     HPX_CXX_CORE_EXPORT using stdexec::let_stopped;
     HPX_CXX_CORE_EXPORT using stdexec::let_value;
 
-    // Run loop
-    HPX_CXX_CORE_EXPORT using stdexec::run_loop;
-
     // Schedule from
     HPX_CXX_CORE_EXPORT using stdexec::schedule_from;
     HPX_CXX_CORE_EXPORT using stdexec::schedule_from_t;
@@ -252,9 +250,6 @@ namespace hpx::execution::experimental {
     // Start detached (moved to exec:: namespace in newer stdexec)
     HPX_CXX_CORE_EXPORT using exec::start_detached;
     HPX_CXX_CORE_EXPORT using exec::start_detached_t;
-
-    HPX_CXX_CORE_EXPORT using stdexec::transfer_just;
-    HPX_CXX_CORE_EXPORT using stdexec::transfer_just_t;
 
     // Stop token
     HPX_CXX_CORE_EXPORT using stdexec::stop_callback_for_t;
@@ -287,9 +282,12 @@ namespace hpx::execution::experimental {
     HPX_CXX_CORE_EXPORT using stdexec::sends_stopped;
     HPX_CXX_CORE_EXPORT using stdexec::value_types_of_t;
 
-    HPX_CXX_CORE_EXPORT using stdexec::transform_completion_signatures;
-    HPX_CXX_CORE_EXPORT using stdexec::transform_completion_signatures_of;
+    // New exec:: API for transform_completion_signatures (consteval function)
+    HPX_CXX_CORE_EXPORT using exec::transform_completion_signatures;
     HPX_CXX_CORE_EXPORT using exec::keep_completion;
+    HPX_CXX_CORE_EXPORT using exec::ignore_completion;
+    HPX_CXX_CORE_EXPORT using exec::transform_arguments;
+    HPX_CXX_CORE_EXPORT using exec::decay_arguments;
 
     // Transform sender
     HPX_CXX_CORE_EXPORT using stdexec::transform_sender;

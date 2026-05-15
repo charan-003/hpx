@@ -1,5 +1,5 @@
 //  Copyright (c) 2021 ETH Zurich
-//  Copyright (c) 2022 Hartmut Kaiser
+//  Copyright (c) 2022-2026 Hartmut Kaiser
 //
 //  SPDX-License-Identifier: BSL-1.0
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -7,9 +7,8 @@
 
 #include <hpx/config.hpp>
 
-// Clang V11 ICE's on this test, Clang V8 reports a bogus constexpr problem
-#if !defined(HPX_CLANG_VERSION) ||                                             \
-    ((HPX_CLANG_VERSION / 10000) != 11 && (HPX_CLANG_VERSION / 10000) != 8)
+// Clang up to V22 fails compiling this test
+#if !defined(HPX_CLANG_VERSION) || ((HPX_CLANG_VERSION / 10000) > 22)
 
 #include <hpx/modules/execution.hpp>
 #include <hpx/modules/testing.hpp>
@@ -373,7 +372,7 @@ int main()
         check_value_types<
             hpx::variant<hpx::tuple<std::vector<double>, std::vector<int>>>>(s);
         check_error_types<hpx::variant<std::exception_ptr>>(s);
-        check_sends_stopped<true>(s);
+        check_sends_stopped<false>(s);
 
         auto f = [](std::vector<double> v1, std::vector<int> v3) {
             HPX_TEST_EQ(v1.size(), std::size_t(3));

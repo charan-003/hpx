@@ -19,15 +19,6 @@
 
 namespace ex = hpx::execution::experimental;
 
-// This overload is only used to check dispatching. It is not a useful
-// implementation.
-template <typename F>
-auto tag_invoke(ex::let_error_t, custom_sender_tag_invoke s, F&&)
-{
-    s.tag_invoke_overload_called = true;
-    return void_sender{};
-}
-
 int main()
 {
     // "Success" path, i.e. let_error gets to handle the error
@@ -191,21 +182,6 @@ int main()
         ex::start(os);
         HPX_TEST(set_value_called);
         HPX_TEST(let_error_callback_called);
-    }
-
-    // tag_invoke overload
-    {
-        std::atomic<bool> tag_invoke_overload_called{false};
-        auto s = custom_sender_tag_invoke{tag_invoke_overload_called} |
-            ex::let_error([&](std::exception_ptr) { return ex::just(); });
-        HPX_TEST(tag_invoke_overload_called);
-
-        static_assert(ex::is_sender_v<decltype(s)>);
-        static_assert(ex::is_sender_in_v<decltype(s), ex::empty_env>);
-
-        check_value_types<hpx::variant<hpx::tuple<>>>(s);
-        check_error_types<hpx::variant<>>(s);
-        check_sends_stopped<false>(s);
     }
 
     // "Failure" path, i.e. let_error has no error to handle

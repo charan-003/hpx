@@ -235,7 +235,7 @@ struct sender_1
     }
 };
 
-template <typename Signatures, typename Env = ex::no_env>
+template <typename Signatures, typename Env = ex::empty_env>
 constexpr auto tag_invoke(ex::get_completion_signatures_t,
     sender_1<Signatures> const&, Env = Env{}) noexcept -> Signatures
 {

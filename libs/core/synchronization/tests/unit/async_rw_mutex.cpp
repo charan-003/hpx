@@ -18,7 +18,7 @@
 #include <vector>
 
 using hpx::execution::experimental::continues_on;
-using hpx::execution::experimental::execute;
+using hpx::execution::experimental::start_detached;
 using hpx::execution::experimental::then;
 using hpx::execution::experimental::thread_pool_scheduler;
 using hpx::experimental::async_rw_mutex;
@@ -153,20 +153,6 @@ struct checker
     }
 };
 
-template <typename Executor, typename Senders>
-void submit_senders(Executor&& exec, Senders& senders)
-{
-    for (auto& sender : senders)
-    {
-        // Original code uses sync_wait inside an hpx scheduler. Sync_wait completely
-        // blocks the thread with std synchronization primitives which causes it to hang
-        hpx::execution::experimental::start_detached(
-            hpx::execution::experimental::schedule(exec) |
-            hpx::execution::experimental::let_value(
-                [s = std::move(sender)]() mutable { return std::move(s); }));
-    }
-}
-
 template <typename ReadWriteT, typename ReadT = ReadWriteT>
 void test_single_read_access(async_rw_mutex<ReadWriteT, ReadT> rwm)
 {
@@ -250,11 +236,20 @@ void test_multiple_accesses(
         sender_helper(false);
     }
 
-    // Asynchronously submit the senders
-    submit_senders(exec, r_senders);
-    submit_senders(exec, rw_senders);
+    // Submit the senders using start_detached (fire-and-forget, doesn't block
+    // HPX threads)
+    for (auto& sender : r_senders)
+    {
+        start_detached(std::move(sender));
+    }
 
-    // The destructor does not block, so we block here manually
+    for (auto& sender : rw_senders)
+    {
+        start_detached(std::move(sender));
+    }
+
+    // Use a final readwrite access as a barrier to wait for all previous
+    // operations to complete
     sync_wait(rwm.readwrite());
 }
 

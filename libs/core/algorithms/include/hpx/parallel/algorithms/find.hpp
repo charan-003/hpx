@@ -1356,7 +1356,7 @@ namespace hpx::parallel {
                         HPX_FORWARD(Proj1, proj1), HPX_FORWARD(Proj2, proj2));
                 };
 
-                auto f2 = [tok, first1](
+                auto f2 = [tok, first1, last1](
                               auto&&... data) mutable -> Iter1 {
                     static_assert(sizeof...(data) < 2);
 
@@ -1365,6 +1365,11 @@ namespace hpx::parallel {
                     util::detail::clear_container(data...);
 
                     difference_type find_end_res = tok.get_data();
+
+                    if (find_end_res < 0)
+                    {
+                        return advance_to_sentinel(first1, last1);
+                    }
 
                     std::advance(first1, find_end_res);
                     return first1;

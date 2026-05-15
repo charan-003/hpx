@@ -32,12 +32,12 @@ namespace mylib {
 
     struct state_2
     {
-        friend void tag_invoke(ex::start_t, state_2&) {}
+        void start() & {}
     };
 
     struct state_3
     {
-        friend void tag_invoke(ex::start_t, state_3&) noexcept
+        void start() & noexcept
         {
             start_called = true;
         }
@@ -45,33 +45,31 @@ namespace mylib {
 
     struct state_4
     {
+        void start() & {}
     };
-
-    void tag_invoke(ex::start_t, state_4&) {}
 
     struct state_5
     {
-    };
-
-    void tag_invoke(ex::start_t, state_5&) noexcept
-    {
-        start_called = true;
-    }
+        void start() & noexcept
+        {
+            start_called = true;
+        }
+    };    // Added semicolon here
 
     template <bool Noexcept>
     struct state
     {
-        friend void tag_invoke(ex::start_t, state&&) noexcept(Noexcept)
+        void start() && noexcept(Noexcept)
         {
             HPX_TEST(false);
         }
 
-        friend void tag_invoke(ex::start_t, state&) noexcept(Noexcept)
+        void start() & noexcept(Noexcept)
         {
             started = 1;
         }
 
-        friend void tag_invoke(ex::start_t, state const&) noexcept(Noexcept)
+        void start() const& noexcept(Noexcept)
         {
             started = 2;
         }
@@ -83,7 +81,7 @@ namespace mylib {
         ~indestructible_state() {}
 
     public:
-        friend void tag_invoke(ex::start_t, indestructible_state&) noexcept
+        void start() & noexcept
         {
             started = 3;
         }
@@ -109,59 +107,44 @@ int main()
 
     {
         // verify test class
-        static_assert(noexcept(
-            tag_invoke(ex::start, std::declval<mylib::state<true>>())));
-        static_assert(noexcept(
-            tag_invoke(ex::start, std::declval<mylib::state<true>&&>())));
-        static_assert(noexcept(
-            tag_invoke(ex::start, std::declval<mylib::state<true>&>())));
-        static_assert(noexcept(
-            tag_invoke(ex::start, std::declval<mylib::state<true> const&>())));
+        static_assert(noexcept(std::declval<mylib::state<true>>().start()));
+        static_assert(noexcept(std::declval<mylib::state<true>&&>().start()));
+        static_assert(noexcept(std::declval<mylib::state<true>&>().start()));
+        static_assert(
+            noexcept(std::declval<mylib::state<true> const&>().start()));
 
         // rvalues can't be used via the start CPO
         static_assert(!hpx::is_invocable_v<ex::start_t, mylib::state<true>>);
         static_assert(!hpx::is_invocable_v<ex::start_t, mylib::state<true>&&>);
 
         // lvalues can be used via the start CPO and don't throw
-        static_assert(noexcept(hpx::functional::tag_invoke(
-            ex::start, std::declval<mylib::state<true>&>())));
-        static_assert(noexcept(hpx::functional::tag_invoke(
-            ex::start, std::declval<mylib::state<true> const&>())));
+        static_assert(noexcept(ex::start(std::declval<mylib::state<true>&>())));
         static_assert(
             std::is_nothrow_invocable_v<ex::start_t, mylib::state<true>&>);
-        static_assert(std::is_nothrow_invocable_v<ex::start_t,
-            mylib::state<true> const&>);
     }
 
     {
         // verify test class
-        static_assert(!noexcept(
-            tag_invoke(ex::start, std::declval<mylib::state<false>>())));
-        static_assert(!noexcept(
-            tag_invoke(ex::start, std::declval<mylib::state<false>&&>())));
-        static_assert(!noexcept(
-            tag_invoke(ex::start, std::declval<mylib::state<false>&>())));
-        static_assert(!noexcept(
-            tag_invoke(ex::start, std::declval<mylib::state<false> const&>())));
+        static_assert(!noexcept(std::declval<mylib::state<false>>().start()));
+        static_assert(!noexcept(std::declval<mylib::state<false>&&>().start()));
+        static_assert(!noexcept(std::declval<mylib::state<false>&>().start()));
+        static_assert(
+            !noexcept(std::declval<mylib::state<false> const&>().start()));
 
-        // none of the operations work via the start CPO if they'd throw
-        /*TODO: Check if the following way of invoking the start cpo leads to
-         * the required checks by the execution.op_state concept check. That
-         * check goes through the operator() of start_t but I am not sure if
-         * we ever reach that point when calling the tag_invoke directly.
-         */
-        //        static_assert(!hpx::is_invocable_v<ex::start_t, mylib::state<false>>);
-        //        static_assert(!hpx::is_invocable_v<ex::start_t, mylib::state<false>&&>);
-        //        static_assert(!hpx::is_invocable_v<ex::start_t, mylib::state<false>&>);
-        //        static_assert(
-        //            !hpx::is_invocable_v<ex::start_t, mylib::state<false> const&>);
+        // stdexec's start_t constraint only checks .start() member exists;
+        // noexcept is enforced via static_assert inside the body, not SFINAE.
+        // So start_t IS invocable even on non-noexcept operation states.
+        static_assert(hpx::is_invocable_v<ex::start_t, mylib::state<false>&>);
+        static_assert(
+            hpx::is_invocable_v<ex::start_t, mylib::state<false> const&>);
+        // rvalues/temporaries still not invocable (start_t takes _Op&)
+        static_assert(!hpx::is_invocable_v<ex::start_t, mylib::state<false>>);
+        static_assert(!hpx::is_invocable_v<ex::start_t, mylib::state<false>&&>);
     }
 
     {
-        static_assert(noexcept(hpx::functional::tag_invoke(
-            ex::start, std::declval<mylib::indestructible_state&>())));
-        static_assert(noexcept(hpx::functional::tag_invoke(
-            ex::start, std::declval<mylib::indestructible_state&>())));
+        static_assert(
+            noexcept(ex::start(std::declval<mylib::indestructible_state&>())));
         static_assert(std::is_nothrow_invocable_v<ex::start_t,
             mylib::indestructible_state&>);
 
