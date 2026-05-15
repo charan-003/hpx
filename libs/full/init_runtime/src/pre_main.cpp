@@ -19,9 +19,9 @@
 #include <hpx/modules/datastructures.hpp>
 #include <hpx/modules/errors.hpp>
 #include <hpx/modules/logging.hpp>
+#include <hpx/modules/parcelset.hpp>
 #include <hpx/modules/runtime_configuration.hpp>
 #include <hpx/modules/runtime_local.hpp>
-#include <hpx/parcelset/message_handler_fwd.hpp>
 #include <hpx/performance_counters/agas_counter_types.hpp>
 #include <hpx/performance_counters/parcelhandler_counter_types.hpp>
 #include <hpx/performance_counters/threadmanager_counter_types.hpp>

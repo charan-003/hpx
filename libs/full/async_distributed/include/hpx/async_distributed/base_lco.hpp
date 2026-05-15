@@ -13,7 +13,7 @@
 #include <hpx/modules/actions_base.hpp>
 #include <hpx/modules/components_base.hpp>
 #include <hpx/modules/naming_base.hpp>
-#include <hpx/parcelset/coalescing_message_handler_registration.hpp>
+#include <hpx/modules/parcelset.hpp>
 
 #include <cstddef>
 #include <exception>

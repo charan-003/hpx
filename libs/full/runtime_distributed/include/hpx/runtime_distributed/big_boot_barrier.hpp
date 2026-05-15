@@ -16,10 +16,10 @@
 #include <hpx/modules/allocator_support.hpp>
 #include <hpx/modules/concurrency.hpp>
 #include <hpx/modules/naming_base.hpp>
+#include <hpx/modules/parcelset.hpp>
 #include <hpx/modules/parcelset_base.hpp>
 #include <hpx/modules/runtime_local.hpp>
 #include <hpx/modules/synchronization.hpp>
-#include <hpx/parcelset/parcelset_fwd.hpp>
 
 #include <condition_variable>
 #include <cstddef>

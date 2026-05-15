@@ -17,6 +17,7 @@
 #include <hpx/modules/errors.hpp>
 #include <hpx/modules/execution_base.hpp>
 #include <hpx/modules/functional.hpp>
+#include <hpx/modules/parcelset.hpp>
 #include <hpx/modules/parcelset_base.hpp>
 #include <hpx/modules/plugin.hpp>
 #include <hpx/modules/plugin_factories.hpp>
@@ -26,12 +27,6 @@
 #include <hpx/modules/synchronization.hpp>
 #include <hpx/modules/timing.hpp>
 #include <hpx/modules/util.hpp>
-#include <hpx/parcelset/parcelport_connection.hpp>
-#include <hpx/parcelset/parcelport_impl.hpp>
-#include <hpx/parcelset/parcelset_fwd.hpp>
-
-#include <hpx/modules/parcelset_base.hpp>
-#include <hpx/parcelset/parcelport_connection.hpp>
 
 #include <hpx/modules/lci_base.hpp>
 #include <hpx/parcelport_lci/header.hpp>

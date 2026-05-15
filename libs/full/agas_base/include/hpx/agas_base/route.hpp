@@ -10,7 +10,7 @@
 
 #if defined(HPX_HAVE_NETWORKING)
 #include <hpx/agas_base/agas_fwd.hpp>
-#include <hpx/parcelset/parcel.hpp>
+#include <hpx/modules/parcelset.hpp>
 
 namespace hpx::agas::server {
 

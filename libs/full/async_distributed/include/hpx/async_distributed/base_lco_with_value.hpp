@@ -18,9 +18,9 @@
 #include <hpx/modules/errors.hpp>
 #include <hpx/modules/ini.hpp>
 #include <hpx/modules/naming_base.hpp>
+#include <hpx/modules/parcelset.hpp>
 #include <hpx/modules/preprocessor.hpp>
 #include <hpx/modules/type_support.hpp>
-#include <hpx/parcelset/coalescing_message_handler_registration.hpp>
 
 #include <cstddef>
 #include <cstdint>

@@ -10,13 +10,8 @@
 #include <hpx/assert.hpp>
 #include <hpx/modules/datastructures.hpp>
 #include <hpx/modules/errors.hpp>
-
+#include <hpx/modules/parcelset.hpp>
 #include <hpx/modules/parcelset_base.hpp>
-#include <hpx/parcelset/detail/message_handler_interface_functions.hpp>
-#include <hpx/parcelset/message_handler_fwd.hpp>
-#include <hpx/parcelset/parcel.hpp>
-#include <hpx/parcelset/parcelhandler.hpp>
-#include <hpx/parcelset/parcelset_fwd.hpp>
 #include <hpx/runtime_distributed.hpp>
 #include <hpx/runtime_distributed/runtime_fwd.hpp>
 
