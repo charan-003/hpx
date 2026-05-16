@@ -1,4 +1,4 @@
-//  Copyright (c) 2007-2023 Hartmut Kaiser
+//  Copyright (c) 2007-2026 Hartmut Kaiser
 //  Copyright (c) 2011-2015 Thomas Heller
 //  Copyright (c) 2007 Richard D Guidry Jr
 //  Copyright (c) 2011 Bryce Lelbach
@@ -153,7 +153,7 @@ namespace hpx::parcelset {
         }
     }    // namespace detail
 
-    template <typename Buffer>
+    HPX_CXX_EXPORT template <typename Buffer>
     std::size_t encode_parcels(parcelport& pp, parcel const* ps,
         std::size_t num_parcels, Buffer& buffer, int archive_flags_,
         std::uint64_t max_outbound_size)

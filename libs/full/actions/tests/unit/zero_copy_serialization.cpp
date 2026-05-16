@@ -13,10 +13,10 @@
 #include <hpx/include/actions.hpp>
 #include <hpx/include/post.hpp>
 #include <hpx/include/runtime.hpp>
+#include <hpx/modules/parcelset.hpp>
 #include <hpx/modules/serialization.hpp>
 #include <hpx/modules/testing.hpp>
 #include <hpx/modules/timing.hpp>
-#include <hpx/parcelset/parcel.hpp>
 
 #include <cstddef>
 #include <cstdint>

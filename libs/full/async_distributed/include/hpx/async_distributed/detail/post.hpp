@@ -20,10 +20,9 @@
 #include <hpx/modules/components_base.hpp>
 #include <hpx/modules/functional.hpp>
 #include <hpx/modules/naming_base.hpp>
+#include <hpx/modules/parcelset.hpp>
 #include <hpx/modules/parcelset_base.hpp>
 #include <hpx/modules/threading_base.hpp>
-#include <hpx/parcelset/detail/parcel_await.hpp>
-#include <hpx/parcelset/parcelset_fwd.hpp>
 #if defined(HPX_HAVE_THREAD_PARENT_REFERENCE)
 #include <hpx/modules/runtime_local.hpp>
 #endif

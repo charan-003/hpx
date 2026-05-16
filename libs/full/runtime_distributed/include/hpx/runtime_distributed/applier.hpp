@@ -14,9 +14,8 @@
 #include <hpx/assert.hpp>
 #include <hpx/modules/components_base.hpp>
 #include <hpx/modules/naming_base.hpp>
+#include <hpx/modules/parcelset.hpp>
 #include <hpx/modules/threadmanager.hpp>
-#include <hpx/parcelset/parcel.hpp>
-#include <hpx/parcelset/parcelset_fwd.hpp>
 
 #include <cstddef>
 #include <cstdint>

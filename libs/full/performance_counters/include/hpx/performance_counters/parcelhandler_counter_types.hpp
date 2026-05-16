@@ -9,7 +9,7 @@
 #include <hpx/config.hpp>
 
 #if defined(HPX_HAVE_NETWORKING)
-#include <hpx/parcelset/parcelset_fwd.hpp>
+#include <hpx/modules/parcelset.hpp>
 
 namespace hpx::performance_counters {
 

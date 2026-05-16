@@ -51,9 +51,9 @@
 #include <hpx/modules/components_base.hpp>
 #include <hpx/modules/naming.hpp>
 #if defined(HPX_HAVE_NETWORKING)
+#include <hpx/modules/parcelset.hpp>
 #include <hpx/modules/parcelset_base.hpp>
 #include <hpx/parcelports/init_all_parcelports.hpp>
-#include <hpx/parcelset/parcelhandler.hpp>
 #endif
 #include <hpx/performance_counters/counters.hpp>
 #include <hpx/performance_counters/query_counters.hpp>

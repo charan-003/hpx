@@ -1,4 +1,4 @@
-//  Copyright (c) 2007-2021 Hartmut Kaiser
+//  Copyright (c) 2007-2026 Hartmut Kaiser
 //  Copyright (c)      2012 Thomas Heller
 //  Copyright (c)      2012 Bryce Adelstein-Lelbach
 //
@@ -43,7 +43,7 @@ namespace hpx::util {
     ///////////////////////////////////////////////////////////////////////////
     /// This class implements an LRU cache to hold connections. It includes
     /// entries checked out from the cache in its cache size.
-    template <typename Connection, typename Key>
+    HPX_CXX_EXPORT template <typename Connection, typename Key>
     class connection_cache
     {
     public:
@@ -511,7 +511,8 @@ namespace hpx::util {
 
         /// Destroys all connections for the given locality in the cache, reset
         /// all associated counts.
-        void clear(key_type const& l, connection_type const& conn)
+        void clear(
+            key_type const& l, [[maybe_unused]] connection_type const& conn)
         {
             std::lock_guard<mutex_type> lock(mtx_);
 
@@ -540,8 +541,6 @@ namespace hpx::util {
                 // the connection itself will go out of scope on return
 #if defined(HPX_TRACK_STATE_OF_OUTGOING_TCP_CONNECTION)
                 conn->set_state(Connection::state_deleting);
-#else
-                HPX_UNUSED(conn);
 #endif
             }
 

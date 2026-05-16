@@ -9,7 +9,7 @@
 #if defined(HPX_HAVE_NETWORKING)
 #include <hpx/modules/format.hpp>
 #include <hpx/modules/functional.hpp>
-#include <hpx/parcelset/parcelhandler.hpp>
+#include <hpx/modules/parcelset.hpp>
 #include <hpx/performance_counters/counter_creators.hpp>
 #include <hpx/performance_counters/counters.hpp>
 #include <hpx/performance_counters/manage_counter_type.hpp>
