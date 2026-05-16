@@ -26,6 +26,7 @@
 
 #include <cstddef>
 #include <meta>
+#include <type_traits>
 
 namespace hpx::actions {
 
@@ -44,9 +45,11 @@ namespace hpx::actions {
     struct reflect_action
     {
         /// The function pointer type (e.g. int(*)(double, double))
-        // Note: std::add_pointer_t<[:std::meta::type_of(F):]> is not yet supported
-        // by current Clang P2996 as a template argument. Using splice pointer instead.
-        using func_ptr_type = [:std::meta::type_of(F):]*;
+        /// The function type (e.g. int(double, double))
+        using func_type = [:std::meta::type_of(F):];
+
+        /// The function pointer type (e.g. int(*)(double, double))
+        using func_ptr_type = std::add_pointer_t<func_type>;
 
         /// The actual function pointer
         static constexpr func_ptr_type func_ptr = [:F:];
