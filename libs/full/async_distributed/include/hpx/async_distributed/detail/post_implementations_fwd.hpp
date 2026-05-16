@@ -21,56 +21,60 @@ namespace hpx::detail {
 
     ///////////////////////////////////////////////////////////////////////////
     // forward declaration only
-    template <typename Action, typename Continuation, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename Continuation,
+        typename... Ts>
     bool post_l_p(Continuation&& c, hpx::id_type const& target,
         naming::address&& addr, hpx::launch policy, Ts&&... vs);
 
-    template <typename Action, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename... Ts>
     bool post_l_p(hpx::id_type const& target, naming::address&& addr,
         hpx::launch policy, Ts&&... vs);
 
-    template <typename Action, typename Continuation, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename Continuation,
+        typename... Ts>
     bool post_r_p(naming::address&& addr, Continuation&& c,
         hpx::id_type const& id, hpx::launch policy, Ts&&... vs);
 
-    template <typename Action, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename... Ts>
     bool post_r_p(naming::address&& addr, hpx::id_type const& id,
         hpx::launch policy, Ts&&... vs);
 
-    template <typename Action, typename Continuation, typename Callback,
-        typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename Continuation,
+        typename Callback, typename... Ts>
     bool post_r_p_cb(naming::address&& addr, Continuation&& c,
         hpx::id_type const& id, hpx::launch policy, Callback&& cb, Ts&&... vs);
 
-    template <typename Action, typename Callback, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename Callback, typename... Ts>
     bool post_r_p_cb(naming::address&& addr, hpx::id_type const& id,
         hpx::launch policy, Callback&& cb, Ts&&... vs);
 
     ///////////////////////////////////////////////////////////////////////////
-    template <typename Action, typename Continuation, typename... Ts>
-    std::enable_if_t<traits::is_continuation_v<Continuation>, bool> post_impl(
-        Continuation&& c, hpx::id_type const& id, hpx::launch policy,
+    HPX_CXX_EXPORT template <typename Action, typename Continuation,
+        typename... Ts>
+        requires(traits::is_continuation_v<Continuation>)
+    bool post_impl(Continuation&& c, hpx::id_type const& id, hpx::launch policy,
         Ts&&... vs);
 
-    template <typename Action, typename Continuation, typename... Ts>
-    std::enable_if_t<traits::is_continuation_v<Continuation>, bool> post_impl(
-        Continuation&& c, hpx::id_type const& id, naming::address&& addr,
-        hpx::launch policy, Ts&&... vs);
-
-    template <typename Action, typename Continuation, typename Callback,
+    HPX_CXX_EXPORT template <typename Action, typename Continuation,
         typename... Ts>
-    std::enable_if_t<traits::is_continuation_v<Continuation>, bool>
-    post_cb_impl(Continuation&& c, hpx::id_type const& id, hpx::launch policy,
-        Callback&& cb, Ts&&... vs);
+        requires(traits::is_continuation_v<Continuation>)
+    bool post_impl(Continuation&& c, hpx::id_type const& id,
+        naming::address&& addr, hpx::launch policy, Ts&&... vs);
 
-    template <typename Action, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename Continuation,
+        typename Callback, typename... Ts>
+        requires(traits::is_continuation_v<Continuation>)
+    bool post_cb_impl(Continuation&& c, hpx::id_type const& id,
+        hpx::launch policy, Callback&& cb, Ts&&... vs);
+
+    HPX_CXX_EXPORT template <typename Action, typename... Ts>
     bool post_impl(hpx::id_type const& id, hpx::launch policy, Ts&&... vs);
 
-    template <typename Action, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename... Ts>
     bool post_impl(hpx::id_type const& id, naming::address&&,
         hpx::launch policy, Ts&&... vs);
 
-    template <typename Action, typename Callback, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename Callback, typename... Ts>
     bool post_cb_impl(
         hpx::id_type const& id, hpx::launch policy, Callback&& cb, Ts&&... vs);
 

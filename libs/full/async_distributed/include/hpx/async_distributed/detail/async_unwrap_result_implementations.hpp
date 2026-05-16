@@ -22,8 +22,8 @@ namespace hpx::detail {
 
     /// \cond NOINTERNAL
     ///////////////////////////////////////////////////////////////////////////
-    template <typename Action, typename... Ts>
-    typename hpx::traits::extract_action_t<Action>::local_result_type
+    HPX_CXX_EXPORT template <typename Action, typename... Ts>
+    hpx::traits::extract_action_t<Action>::local_result_type
     async_local_unwrap_impl(launch policy, hpx::id_type const& id,
         naming::address& addr, std::pair<bool, components::pinned_ptr>& r,
         Ts&&... vs)
@@ -54,8 +54,8 @@ namespace hpx::detail {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    template <typename Action, typename Launch, typename... Ts>
-    typename hpx::traits::extract_action_t<Action>::local_result_type
+    HPX_CXX_EXPORT template <typename Action, typename Launch, typename... Ts>
+    hpx::traits::extract_action_t<Action>::local_result_type
     async_unwrap_result_impl(
         Launch&& policy, hpx::id_type const& id, Ts&&... vs)
     {

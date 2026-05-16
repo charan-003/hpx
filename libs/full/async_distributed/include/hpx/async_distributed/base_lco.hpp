@@ -1,4 +1,4 @@
-//  Copyright (c) 2007-2022 Hartmut Kaiser
+//  Copyright (c) 2007-2026 Hartmut Kaiser
 //
 //  SPDX-License-Identifier: BSL-1.0
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -8,6 +8,7 @@
 
 #include <hpx/config.hpp>
 #include <hpx/async_distributed/lcos_fwd.hpp>
+#include <hpx/async_distributed/macros.hpp>
 #include <hpx/async_distributed/transfer_continuation_action.hpp>
 #include <hpx/modules/actions.hpp>
 #include <hpx/modules/actions_base.hpp>
@@ -23,7 +24,7 @@ namespace hpx::lcos {
 
     /// The \a base_lco class is the common base class for all LCO's
     /// implementing a simple set_event action
-    class base_lco
+    HPX_CXX_EXPORT class base_lco
     {
     public:
         virtual void set_event() = 0;

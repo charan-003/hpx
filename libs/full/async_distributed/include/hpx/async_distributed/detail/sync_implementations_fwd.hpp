@@ -13,7 +13,7 @@
 namespace hpx::detail {
 
     ///////////////////////////////////////////////////////////////////////////
-    template <typename Action, typename Launch, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename Launch, typename... Ts>
     typename hpx::traits::extract_action_t<Action>::local_result_type sync_impl(
         Launch&& policy, hpx::id_type const& id, Ts&&... vs);
 }    // namespace hpx::detail

@@ -8,8 +8,7 @@
 #include <hpx/config.hpp>
 #include <hpx/agas/addressing_service.hpp>
 #include <hpx/assert.hpp>
-#include <hpx/async_distributed/continuation.hpp>
-#include <hpx/async_distributed/detail/post.hpp>
+#include <hpx/modules/async_distributed.hpp>
 #include <hpx/modules/components_base.hpp>
 #include <hpx/modules/concurrency.hpp>
 #include <hpx/modules/datastructures.hpp>

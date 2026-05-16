@@ -8,12 +8,12 @@
 #include <hpx/config.hpp>
 #if !defined(HPX_COMPUTE_DEVICE_CODE)
 
-#include <hpx/async_distributed/continuation.hpp>
 #include <hpx/hpx_init.hpp>
 #include <hpx/include/async.hpp>
 #include <hpx/iostream.hpp>
 #include <hpx/modules/actions_base.hpp>
 #include <hpx/modules/async_combinators.hpp>
+#include <hpx/modules/async_distributed.hpp>
 #include <hpx/modules/format.hpp>
 #include <hpx/modules/itt_notify.hpp>
 #include <hpx/modules/lock_registration.hpp>

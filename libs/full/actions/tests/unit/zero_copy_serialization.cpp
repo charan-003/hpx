@@ -9,10 +9,10 @@
 #include <hpx/hpx_init.hpp>
 
 #include <hpx/config/endian.hpp>
-#include <hpx/async_distributed/base_lco_with_value.hpp>
 #include <hpx/include/actions.hpp>
 #include <hpx/include/post.hpp>
 #include <hpx/include/runtime.hpp>
+#include <hpx/modules/async_distributed.hpp>
 #include <hpx/modules/parcelset.hpp>
 #include <hpx/modules/serialization.hpp>
 #include <hpx/modules/testing.hpp>

@@ -10,8 +10,8 @@
 #pragma once
 
 #include <hpx/config.hpp>
-#include <hpx/async_distributed/dataflow.hpp>
 #include <hpx/modules/algorithms.hpp>
+#include <hpx/modules/async_distributed.hpp>
 #include <hpx/modules/datastructures.hpp>
 #include <hpx/modules/execution.hpp>
 #include <hpx/modules/executors.hpp>

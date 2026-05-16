@@ -22,7 +22,7 @@
 #include <hpx/modules/timed_execution.hpp>
 #include <hpx/modules/type_support.hpp>
 
-#include <hpx/async_distributed/traits/action_trigger_continuation.hpp>
 #include <hpx/modules/actions_base.hpp>
+#include <hpx/modules/async_distributed.hpp>
 #include <hpx/modules/components_base.hpp>
 #include <hpx/modules/parcelset_base.hpp>

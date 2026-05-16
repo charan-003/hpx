@@ -9,9 +9,9 @@
 #pragma once
 
 #include <hpx/config.hpp>
-#include <hpx/async_distributed/transfer_continuation_action.hpp>
 #include <hpx/modules/actions.hpp>
 #include <hpx/modules/actions_base.hpp>
+#include <hpx/modules/async_distributed.hpp>
 
 #include <string>
 

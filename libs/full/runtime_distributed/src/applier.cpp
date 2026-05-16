@@ -11,7 +11,7 @@
 #include <hpx/agas/addressing_service.hpp>
 #include <hpx/agas/agas_fwd.hpp>
 #include <hpx/assert.hpp>
-#include <hpx/async_distributed/continuation.hpp>
+#include <hpx/modules/async_distributed.hpp>
 #include <hpx/modules/components_base.hpp>
 #include <hpx/modules/errors.hpp>
 #include <hpx/modules/lock_registration.hpp>

@@ -1,4 +1,4 @@
-//  Copyright (c) 2007-2023 Hartmut Kaiser
+//  Copyright (c) 2007-2026 Hartmut Kaiser
 //
 //  SPDX-License-Identifier: BSL-1.0
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -137,7 +137,7 @@ namespace hpx::detail {
 namespace hpx {
 
     // clang-format off
-    template <typename Action, typename F, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename F, typename... Ts>
     HPX_FORCEINLINE auto async_cb(F&& f, Ts&&... ts) -> decltype(
         detail::async_cb_action_dispatch<Action, std::decay_t<F>>::call(
             HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...))
@@ -259,7 +259,7 @@ namespace hpx {
 
     // different versions of clang-format disagree
     // clang-format off
-    template <typename F, typename... Ts>
+    HPX_CXX_EXPORT template <typename F, typename... Ts>
     HPX_FORCEINLINE auto async_cb(F&& f, Ts&&... ts) -> decltype(
         detail::async_cb_dispatch< std::decay_t<F>>::call(
             HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...))

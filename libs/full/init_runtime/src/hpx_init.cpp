@@ -44,7 +44,6 @@
 #include <hpx/modules/mpi_base.hpp>
 #endif
 #if defined(HPX_HAVE_DISTRIBUTED_RUNTIME)
-#include <hpx/async_distributed/bind_action.hpp>
 #include <hpx/init_runtime/pre_main.hpp>
 #include <hpx/modules/actions_base.hpp>
 #include <hpx/modules/async_distributed.hpp>

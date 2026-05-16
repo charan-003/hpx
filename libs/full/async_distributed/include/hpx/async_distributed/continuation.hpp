@@ -1,4 +1,4 @@
-//  Copyright (c) 2007-2025 Hartmut Kaiser
+//  Copyright (c) 2007-2026 Hartmut Kaiser
 //  Copyright (c) 2016 Thomas Heller
 //
 //  SPDX-License-Identifier: BSL-1.0
@@ -32,7 +32,7 @@ namespace hpx::actions {
     ///////////////////////////////////////////////////////////////////////////
     // Continuations are polymorphic objects encapsulating the
     // id_type of the destination where the result has to be sent.
-    class HPX_EXPORT continuation
+    HPX_CXX_EXPORT class HPX_EXPORT continuation
     {
     public:
         using continuation_tag = void;
@@ -185,11 +185,10 @@ namespace hpx::actions {
     };
 
     ///////////////////////////////////////////////////////////////////////////
-    // This specialization is needed to call the right
-    // base_lco_with_value action if the local Result is computed
-    // via get_remote_result and differs from the actions original
-    // local result type
-    template <typename Result, typename RemoteResult>
+    // This specialization is needed to call the right base_lco_with_value
+    // action if the local Result is computed via get_remote_result and differs
+    // from the actions original local result type
+    HPX_CXX_EXPORT template <typename Result, typename RemoteResult>
     struct typed_continuation : typed_continuation<RemoteResult>
     {
     private:

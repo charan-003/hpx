@@ -13,9 +13,9 @@
 #include <hpx/agas_base/detail/hosted_component_namespace.hpp>
 #include <hpx/agas_base/detail/hosted_locality_namespace.hpp>
 #include <hpx/assert.hpp>
-#include <hpx/async_distributed/put_parcel.hpp>
 #include <hpx/modules/actions_base.hpp>
 #include <hpx/modules/agas_base.hpp>
+#include <hpx/modules/async_distributed.hpp>
 #include <hpx/modules/components_base.hpp>
 #include <hpx/modules/errors.hpp>
 #include <hpx/modules/execution_base.hpp>
