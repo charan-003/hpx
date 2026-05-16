@@ -20,7 +20,7 @@
 
 #include <hpx/config.hpp>
 
-#if defined(HPX_HAVE_CXX26_REFLECTION)
+#if defined(HPX_HAVE_CXX26_EXPERIMENTAL_META)
 
 #include <hpx/serialization/detail/refl_qualified_name_of.hpp>
 
@@ -70,4 +70,4 @@ namespace hpx::actions {
 
 }    // namespace hpx::actions
 
-#endif    // HPX_HAVE_CXX26_REFLECTION
+#endif    // HPX_HAVE_CXX26_EXPERIMENTAL_META

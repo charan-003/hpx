@@ -4,7 +4,7 @@
 # Distributed under the Boost Software License, Version 1.0. (See accompanying
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-if(HPX_WITH_CXX26_REFLECTION)
+if(HPX_WITH_CXX26_EXPERIMENTAL_META)
   set(tests reflect_action_test)
 
   foreach(test ${tests})

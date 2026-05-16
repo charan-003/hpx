@@ -7,7 +7,7 @@
 #include <hpx/config.hpp>
 #include <hpx/modules/testing.hpp>
 
-#if defined(HPX_HAVE_CXX26_REFLECTION)
+#if defined(HPX_HAVE_CXX26_EXPERIMENTAL_META)
 
 #include <hpx/actions_base/reflect_action.hpp>
 

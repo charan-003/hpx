@@ -689,7 +689,7 @@
 
 #endif
 
-#if defined(HPX_HAVE_CXX26_REFLECTION)
+#if defined(HPX_HAVE_CXX26_EXPERIMENTAL_META)
 /// \brief Define a reflection-based HPX action for a free function.
 ///
 /// Usage:
@@ -706,23 +706,4 @@
 /// \note Requires HPX_WITH_CXX26_REFLECTION=ON
 #define HPX_ACTION(func, name)                                                 \
     using name = hpx::actions::reflect_action<^^func> /**/
-#endif    // HPX_HAVE_CXX26_REFLECTION
-
-#if defined(HPX_HAVE_CXX26_REFLECTION)
-/// \brief Define a reflection-based HPX action for a free function.
-///
-/// Usage:
-///   HPX_ACTION(app::compute, compute_action);
-///
-/// This replaces the three-step macro sequence:
-///   HPX_PLAIN_ACTION(app::compute, compute_action)
-///   HPX_REGISTER_ACTION_DECLARATION(compute_action)
-///   HPX_REGISTER_ACTION(compute_action)
-///
-/// The action name is extracted automatically from the function reflection.
-/// No manual registration is required.
-///
-/// \note Requires HPX_WITH_CXX26_REFLECTION=ON
-#define HPX_ACTION(func, name)                                                 \
-    using name = hpx::actions::reflect_action<^^func> /**/
-#endif    // HPX_HAVE_CXX26_REFLECTION
+#endif    // HPX_HAVE_CXX26_EXPERIMENTAL_META
