@@ -74,11 +74,11 @@ namespace hpx::execution::experimental {
     // Concept to match bulk sender types
     HPX_CXX_CORE_EXPORT template <typename Sender>
     concept bulk_chunked_or_unchunked_sender =
-        hpx::execution::experimental::stdexec_internal::__sender_for<Sender,
+        sender_invokes_algorithm_v<Sender,
             hpx::execution::experimental::bulk_t> ||
-        hpx::execution::experimental::stdexec_internal::__sender_for<Sender,
+        sender_invokes_algorithm_v<Sender,
             hpx::execution::experimental::bulk_chunked_t> ||
-        hpx::execution::experimental::stdexec_internal::__sender_for<Sender,
+        sender_invokes_algorithm_v<Sender,
             hpx::execution::experimental::bulk_unchunked_t>;
 
     template <typename Policy>
@@ -128,8 +128,8 @@ namespace hpx::execution::experimental {
             auto iota_shape = hpx::util::counting_shape(shape);
 
             constexpr bool is_chunked =
-                hpx::execution::experimental::stdexec_internal::__sender_for<
-                    Sender, hpx::execution::experimental::bulk_chunked_t>;
+                sender_invokes_algorithm_v<Sender,
+                    hpx::execution::experimental::bulk_chunked_t>;
 
             constexpr bool is_parallel =
                 !is_sequenced_policy_v<std::decay_t<decltype(pol.__get())>>;
@@ -234,6 +234,12 @@ namespace hpx::execution::experimental {
             thread_pool_policy_scheduler const& scheduler, Sender&& sender,
             Shape const& shape, F&& f)
         {
+            constexpr bool is_parallel =
+                !std::is_same_v<Policy, hpx::launch::sync_policy> &&
+                !is_sequenced_policy_v<Policy>;
+            constexpr bool is_unsequenced =
+                is_unsequenced_bulk_policy_v<Policy>;
+
             if constexpr (std::is_integral_v<std::decay_t<Shape>>)
             {
                 auto iota_shape = hpx::util::counting_shape(shape);
@@ -253,7 +259,8 @@ namespace hpx::execution::experimental {
 
                     return detail::thread_pool_bulk_sender<Policy,
                         std::decay_t<Sender>, decltype(iota_shape),
-                        decltype(wrapped_f), true>{scheduler,
+                        decltype(wrapped_f), true, is_parallel,
+                        is_unsequenced>{scheduler,
                         HPX_FORWARD(Sender, sender), iota_shape,
                         HPX_MOVE(wrapped_f)};
                 }
@@ -261,7 +268,8 @@ namespace hpx::execution::experimental {
                 {
                     return detail::thread_pool_bulk_sender<Policy,
                         std::decay_t<Sender>, decltype(iota_shape),
-                        std::decay_t<F>, false>{scheduler,
+                        std::decay_t<F>, false, is_parallel,
+                        is_unsequenced>{scheduler,
                         HPX_FORWARD(Sender, sender), iota_shape,
                         HPX_FORWARD(F, f)};
                 }
@@ -280,7 +288,8 @@ namespace hpx::execution::experimental {
 
                     return detail::thread_pool_bulk_sender<Policy,
                         std::decay_t<Sender>, std::decay_t<Shape>,
-                        decltype(wrapped_f), true>{scheduler,
+                        decltype(wrapped_f), true, is_parallel,
+                        is_unsequenced>{scheduler,
                         HPX_FORWARD(Sender, sender), shape,
                         HPX_MOVE(wrapped_f)};
                 }
@@ -288,7 +297,8 @@ namespace hpx::execution::experimental {
                 {
                     return detail::thread_pool_bulk_sender<Policy,
                         std::decay_t<Sender>, std::decay_t<Shape>,
-                        std::decay_t<F>, false>{scheduler,
+                        std::decay_t<F>, false, is_parallel,
+                        is_unsequenced>{scheduler,
                         HPX_FORWARD(Sender, sender), shape, HPX_FORWARD(F, f)};
                 }
             }
