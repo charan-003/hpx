@@ -374,21 +374,6 @@ namespace hpx::execution::experimental {
     }    // namespace stdexec_internal
 }    // namespace hpx::execution::experimental
 
-// stdexec-specific customizations for HPX senders
-namespace stdexec {
-    // Explicit customization for sends_stopped to ensure as_sender_sender
-    // returns false since the operation state never calls set_stopped()
-    template <typename T, typename Env>
-    constexpr bool sends_stopped<
-        hpx::execution::experimental::detail::as_sender_sender<hpx::future<T>>,
-        Env> = false;
-
-    template <typename T, typename Env>
-    constexpr bool sends_stopped<hpx::execution::experimental::detail::
-                                     as_sender_sender<hpx::shared_future<T>>,
-        Env> = false;
-}    // namespace stdexec
-
 // Leaving this as a placeholder
 namespace hpx::this_thread {
 }
