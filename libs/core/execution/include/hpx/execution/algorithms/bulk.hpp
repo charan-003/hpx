@@ -82,7 +82,8 @@ namespace hpx::execution::experimental {
                             hpx::execution::experimental::
                                 completion_signatures_of_t<Sender, Env>{},
                             default_set_value_fn{}, default_set_error_fn{},
-                            hpx::execution::experimental::ignore_completion{},
+                            hpx::execution::experimental::keep_completion<
+                                hpx::execution::experimental::set_stopped_t>{},
                             hpx::execution::experimental::completion_signatures<
                                 hpx::execution::experimental::set_error_t(
                                     std::exception_ptr)>{}))

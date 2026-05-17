@@ -79,11 +79,6 @@ namespace hpx::execution::experimental {
             {
                 return sched.get_underlying_scheduler()->policy();
             }
-            static auto pu_mask(parallel_scheduler const& sched)
-            {
-                return hpx::execution::experimental::get_processing_units_mask(
-                    sched);
-            }
         };
 
         template <typename Policy>
@@ -110,12 +105,6 @@ namespace hpx::execution::experimental {
             {
                 return sched.policy();
             }
-            static auto pu_mask(
-                thread_pool_policy_scheduler<Policy> const& sched)
-            {
-                return hpx::execution::experimental::get_processing_units_mask(
-                    sched);
-            }
         };
 
         // Bundle pool / affinity parameters for index_queue_bulk_* fast paths.
@@ -128,7 +117,8 @@ namespace hpx::execution::experimental {
             std::size_t first_core;
             std::size_t num_cores;
             decltype(PT::policy(std::declval<Scheduler const&>())) policy;
-            decltype(PT::pu_mask(std::declval<Scheduler const&>())) mask;
+            decltype(hpx::execution::experimental::get_processing_units_mask(
+                std::declval<Scheduler const&>())) mask;
         };
 
         template <typename Scheduler>
@@ -141,7 +131,7 @@ namespace hpx::execution::experimental {
                 PT::first_core(sched),
                 PT::num_cores(sched),
                 PT::policy(sched),
-                PT::pu_mask(sched),
+                hpx::execution::experimental::get_processing_units_mask(sched),
             };
         }
 
@@ -500,68 +490,14 @@ namespace hpx::execution::experimental {
 
             if constexpr (std::is_void_v<result_type>)
             {
-                // Fast path: wait on predecessor, then direct dispatch
-                if constexpr (detail::has_thread_pool_backend<
-                                  std::decay_t<BaseScheduler>>::value)
-                {
-                    return hpx::async(
-                        [&exec, f = HPX_FORWARD(F, f), &shape,
-                            ... ts = HPX_FORWARD(Ts, ts)](
-                            Future&& pred) mutable {
-                            pred.get();    // wait for predecessor
-                            detail::scheduler_bulk_sync_via_thread_pool(
-                                exec.sched_, HPX_FORWARD(decltype(f), f), shape,
-                                HPX_FORWARD(decltype(ts), ts)...);
-                        },
-                        HPX_FORWARD(Future, predecessor));
-                }
-                else if constexpr (requires {
-                                       exec.sched_.get_underlying_scheduler();
-                                   })
-                {
-                    using underlying_type = std::decay_t<
-                        decltype(exec.sched_.get_underlying_scheduler())>;
-                    if constexpr (detail::has_thread_pool_backend<
-                                      underlying_type>::value)
-                    {
-                        return hpx::async(
-                            [&exec, f = HPX_FORWARD(F, f), &shape,
-                                ... ts = HPX_FORWARD(Ts, ts)](
-                                Future&& pred) mutable {
-                                pred.get();
-                                auto const& underlying =
-                                    exec.sched_.get_underlying_scheduler();
-                                detail::scheduler_bulk_sync_via_thread_pool(
-                                    underlying, HPX_FORWARD(decltype(f), f),
-                                    shape, HPX_FORWARD(decltype(ts), ts)...);
-                            },
-                            HPX_FORWARD(Future, predecessor));
-                    }
-                    else
-                    {
-                        auto pre_req = when_all(
-                            keep_future(HPX_FORWARD(Future, predecessor)));
+                auto pre_req =
+                    when_all(keep_future(HPX_FORWARD(Future, predecessor)));
 
-                        auto loop = bulk(
-                            continues_on(HPX_MOVE(pre_req), exec.sched_), shape,
-                            hpx::bind_back(
-                                HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...));
+                auto loop = bulk(continues_on(HPX_MOVE(pre_req), exec.sched_),
+                    shape,
+                    hpx::bind_back(HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...));
 
-                        return make_future(HPX_MOVE(loop));
-                    }
-                }
-                else
-                {
-                    auto pre_req =
-                        when_all(keep_future(HPX_FORWARD(Future, predecessor)));
-
-                    auto loop = bulk(
-                        continues_on(HPX_MOVE(pre_req), exec.sched_), shape,
-                        hpx::bind_back(
-                            HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...));
-
-                    return make_future(HPX_MOVE(loop));
-                }
+                return make_future(HPX_MOVE(loop));
             }
             else
             {

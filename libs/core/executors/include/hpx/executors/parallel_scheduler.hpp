@@ -85,8 +85,8 @@ namespace hpx::execution::experimental {
         // receiver. When the child completes with values, constructs a
         // concrete_proxy in inline aligned storage (no heap allocation) and
         // calls backend->schedule_bulk_chunked() or schedule_bulk_unchunked().
-        HPX_CXX_CORE_EXPORT template <typename F, bool IsChunked, bool IsParallel,
-            typename ChildSender, typename Receiver>
+        HPX_CXX_CORE_EXPORT template <typename F, bool IsChunked,
+            bool IsParallel, typename ChildSender, typename Receiver>
         struct virtual_parallel_bulk_op final : base_parallel_bulk_op
         {
             std::shared_ptr<parallel_scheduler_backend> backend_;
@@ -269,8 +269,7 @@ namespace hpx::execution::experimental {
 
                 void set_error(std::exception_ptr ep) && noexcept
                 {
-                    static_cast<child_receiver&>(*this).set_error(
-                        HPX_MOVE(ep));
+                    static_cast<child_receiver&>(*this).set_error(HPX_MOVE(ep));
                 }
 
                 void set_stopped() & noexcept
@@ -379,19 +378,19 @@ namespace hpx::execution::experimental {
 
             template <typename Self, typename Env>
             static consteval auto get_completion_signatures() noexcept
-                -> decltype(
-                    hpx::execution::experimental::transform_completion_signatures(
-                        hpx::execution::experimental::completion_signatures_of_t<
-                            ChildSender, Env>{},
-                        hpx::execution::experimental::keep_completion<
-                            hpx::execution::experimental::set_value_t>{},
-                        hpx::execution::experimental::keep_completion<
-                            hpx::execution::experimental::set_error_t>{},
-                        hpx::execution::experimental::keep_completion<
-                            hpx::execution::experimental::set_stopped_t>{},
-                        hpx::execution::experimental::completion_signatures<
-                            hpx::execution::experimental::set_error_t(
-                                std::exception_ptr)>{}))
+                -> decltype(hpx::execution::experimental::
+                        transform_completion_signatures(
+                            hpx::execution::experimental::
+                                completion_signatures_of_t<ChildSender, Env>{},
+                            hpx::execution::experimental::keep_completion<
+                                hpx::execution::experimental::set_value_t>{},
+                            hpx::execution::experimental::keep_completion<
+                                hpx::execution::experimental::set_error_t>{},
+                            hpx::execution::experimental::keep_completion<
+                                hpx::execution::experimental::set_stopped_t>{},
+                            hpx::execution::experimental::completion_signatures<
+                                hpx::execution::experimental::set_error_t(
+                                    std::exception_ptr)>{}))
             {
                 return {};
             }
@@ -620,8 +619,8 @@ namespace hpx::execution::experimental {
         // when present so callers use get_processing_units_mask(sched),
         // get_first_core(sched), processing_units_count(..., sched), etc.,
         // consistent with thread_pool_policy_scheduler.
-        friend std::size_t tag_invoke(get_first_core_t,
-            parallel_scheduler const& sched) noexcept
+        friend std::size_t tag_invoke(
+            get_first_core_t, parallel_scheduler const& sched) noexcept
         {
             if (auto const* u = sched.get_underlying_scheduler())
                 return get_first_core(*u);
@@ -629,15 +628,14 @@ namespace hpx::execution::experimental {
         }
 
         template <hpx::executor_parameters Parameters>
-        friend std::size_t tag_invoke(processing_units_count_t,
-            Parameters&&, parallel_scheduler const& sched,
-            hpx::chrono::steady_duration const& =
-                hpx::chrono::null_duration,
+        friend std::size_t tag_invoke(processing_units_count_t, Parameters&&,
+            parallel_scheduler const& sched,
+            hpx::chrono::steady_duration const& = hpx::chrono::null_duration,
             std::size_t = 0)
         {
             if (auto const* u = sched.get_underlying_scheduler())
-                return processing_units_count(null_parameters, *u,
-                    hpx::chrono::null_duration, 0);
+                return processing_units_count(
+                    null_parameters, *u, hpx::chrono::null_duration, 0);
             return 1;
         }
 
@@ -754,14 +752,14 @@ namespace hpx::execution::experimental {
             Scheduler sched_;
 
             using sender_concept = sender_t;
-            using completion_signatures = ::hpx::execution::experimental::
-                completion_signatures<set_value_t(),
-                    set_error_t(std::exception_ptr), set_stopped_t()>;
+            using completion_signatures =
+                ::hpx::execution::experimental::completion_signatures<
+                    set_value_t(), set_error_t(std::exception_ptr),
+                    set_stopped_t()>;
 
             template <typename Receiver>
             friend operation_state<std::decay_t<Receiver>> tag_invoke(
-                connect_t, sender const& s,
-                Receiver&& receiver) noexcept(std::
+                connect_t, sender const& s, Receiver&& receiver) noexcept(std::
                     is_nothrow_constructible_v<std::decay_t<Receiver>,
                         Receiver>)
             {
@@ -770,11 +768,10 @@ namespace hpx::execution::experimental {
             }
 
             template <typename Receiver>
-            friend operation_state<std::decay_t<Receiver>> tag_invoke(
-                connect_t, sender&& s,
-                Receiver&& receiver) noexcept(std::
-                    is_nothrow_constructible_v<std::decay_t<Receiver>,
-                        Receiver>)
+            friend operation_state<std::decay_t<Receiver>>
+            tag_invoke(connect_t, sender&& s, Receiver&& receiver) noexcept(
+                std::is_nothrow_constructible_v<std::decay_t<Receiver>,
+                    Receiver>)
             {
                 return {
                     HPX_FORWARD(Receiver, receiver), s.sched_.get_backend()};
@@ -786,7 +783,8 @@ namespace hpx::execution::experimental {
 
                 // P2079R10: expose completion scheduler for set_value_t
                 // and set_stopped_t
-                auto query(get_completion_scheduler_t<set_value_t>) const noexcept
+                auto query(
+                    get_completion_scheduler_t<set_value_t>) const noexcept
                 {
                     return sched_;
                 }

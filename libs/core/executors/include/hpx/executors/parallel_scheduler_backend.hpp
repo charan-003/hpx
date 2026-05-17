@@ -84,8 +84,7 @@ namespace hpx::execution::experimental {
     HPX_CXX_CORE_EXPORT inline constexpr std::size_t
         parallel_scheduler_storage_size = 256;
     HPX_CXX_CORE_EXPORT inline constexpr std::size_t
-        parallel_scheduler_storage_alignment =
-        alignof(std::max_align_t);
+        parallel_scheduler_storage_alignment = alignof(std::max_align_t);
 
     // P2079R10 / P3927R2: Abstract backend interface
     HPX_CXX_CORE_EXPORT struct parallel_scheduler_backend
@@ -116,7 +115,7 @@ namespace hpx::execution::experimental {
             std::span<std::byte> storage) noexcept = 0;
 
         // custom equality for backends.
-        // P2079R10 §6.4 defines parallel_scheduler equality purely by
+        // P2079R10 section 6.4 defines parallel_scheduler equality purely by
         // shared_ptr target identity (pointer equality), so this method is
         // NOT called by parallel_scheduler::operator==.
         // Custom backends may implement it for their own comparisons.

@@ -162,7 +162,7 @@ int hpx_main(int, char*[])
         bool caught_error = false;
 
         auto snd = ex::schedule(sched) |
-            ex::then([] -> int { throw std::runtime_error("test error"); });
+            ex::then([]() -> int { throw std::runtime_error("test error"); });
 
         try
         {
@@ -198,8 +198,8 @@ int hpx_main(int, char*[])
         std::thread::id pool_ids[num_tasks]{};
         ex::parallel_scheduler sched = ex::get_parallel_scheduler();
 
-        auto bulk_snd = ex::schedule(sched) | ex::bulk_unchunked(
-            ex::par, num_tasks, [&](unsigned long id) {
+        auto bulk_snd = ex::schedule(sched) |
+            ex::bulk_unchunked(ex::par, num_tasks, [&](unsigned long id) {
                 pool_ids[id] = std::this_thread::get_id();
             });
 
@@ -226,11 +226,12 @@ int hpx_main(int, char*[])
             return pool_id;
         });
 
-        auto bulk_snd = std::move(snd) | ex::bulk_unchunked(ex::par, num_tasks,
-            [&](unsigned long id, std::thread::id propagated_pool_id) {
-                propagated_pool_ids[id] = propagated_pool_id;
-                pool_ids[id] = std::this_thread::get_id();
-            });
+        auto bulk_snd = std::move(snd) |
+            ex::bulk_unchunked(ex::par, num_tasks,
+                [&](unsigned long id, std::thread::id propagated_pool_id) {
+                    propagated_pool_ids[id] = propagated_pool_id;
+                    pool_ids[id] = std::this_thread::get_id();
+                });
 
         std::optional<std::tuple<std::thread::id>> res =
             ex::sync_wait(std::move(bulk_snd));
@@ -257,8 +258,8 @@ int hpx_main(int, char*[])
         ex::parallel_scheduler sched = ex::get_parallel_scheduler();
         bool caught_error = false;
 
-        auto bulk_snd =
-            ex::schedule(sched) | ex::bulk_unchunked(ex::par, 20, [](std::size_t i) {
+        auto bulk_snd = ex::schedule(sched) |
+            ex::bulk_unchunked(ex::par, 20, [](std::size_t i) {
                 if (i == 10)
                     throw std::runtime_error("Bulk error");
             });
@@ -403,8 +404,8 @@ int hpx_main(int, char*[])
         std::atomic<std::size_t> count{0};
         ex::parallel_scheduler sched = ex::get_parallel_scheduler();
 
-        auto bulk_snd = ex::schedule(sched) | ex::bulk_unchunked(
-            ex::par_unseq, num_tasks, [&](std::size_t) {
+        auto bulk_snd = ex::schedule(sched) |
+            ex::bulk_unchunked(ex::par_unseq, num_tasks, [&](std::size_t) {
                 count.fetch_add(1, std::memory_order_relaxed);
             });
 
@@ -465,7 +466,7 @@ int hpx_main(int, char*[])
         auto sched = ex::get_parallel_scheduler();
         std::vector<int> v(10, 0);
 
-        auto snd = ex::schedule(sched) | ex::then([&v]() { return 77; }) |
+        auto snd = ex::schedule(sched) | ex::then([]() { return 77; }) |
             ex::bulk_unchunked(
                 ex::par, 10, [&v](std::size_t i, int val) { v[i] = val; });
 
@@ -502,7 +503,7 @@ int hpx_main(int, char*[])
         std::vector<int> v(5, 0);
         std::set<std::thread::id> thread_ids;
 
-        auto snd = ex::schedule(sched) | ex::then([&v]() { return 55; }) |
+        auto snd = ex::schedule(sched) | ex::then([]() { return 55; }) |
             ex::bulk_chunked(ex::seq, 5,
                 [&v, &thread_ids](std::size_t begin, std::size_t end, int val) {
                     for (std::size_t i = begin; i < end; ++i)
@@ -569,8 +570,8 @@ int hpx_main(int, char*[])
         for (auto& f : flags)
             f.store(0, std::memory_order_relaxed);
 
-        auto snd =
-            ex::schedule(sched) | ex::bulk_unchunked(ex::par, n, [&](std::size_t i) {
+        auto snd = ex::schedule(sched) |
+            ex::bulk_unchunked(ex::par, n, [&](std::size_t i) {
                 flags[i].fetch_add(1, std::memory_order_relaxed);
             });
 
@@ -593,10 +594,11 @@ int hpx_main(int, char*[])
         for (auto& p : phase2)
             p.store(0, std::memory_order_relaxed);
 
-        auto snd = ex::schedule(sched) | ex::bulk_unchunked(ex::par, n,
-                       [&](std::size_t i) {
-                           phase1[i].store(1, std::memory_order_relaxed);
-                       }) |
+        auto snd = ex::schedule(sched) |
+            ex::bulk_unchunked(ex::par, n,
+                [&](std::size_t i) {
+                    phase1[i].store(1, std::memory_order_relaxed);
+                }) |
             ex::bulk_unchunked(ex::par, n, [&](std::size_t i) {
                 phase2[i].store(phase1[i].load(std::memory_order_relaxed) + 1,
                     std::memory_order_relaxed);
@@ -884,8 +886,8 @@ int hpx_main(int, char*[])
         // Bulk operation through virtual dispatch
         std::vector<int> results(10, 0);
         auto bulk_snd = ex::schedule(sched) |
-            ex::bulk_unchunked(ex::par, 10,
-                [&results](std::size_t i) { results[i] = 42; });
+            ex::bulk_unchunked(
+                ex::par, 10, [&results](std::size_t i) { results[i] = 42; });
         ex::sync_wait(std::move(bulk_snd));
 
         // Verify: schedule was called (for the child sender) and

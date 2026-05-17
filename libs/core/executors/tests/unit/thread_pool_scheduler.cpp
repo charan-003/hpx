@@ -60,9 +60,9 @@ struct is_thread_pool_bulk_sender : std::false_type
 
 template <typename Policy, typename Sender, typename Shape, typename F,
     bool IsChunked, bool IsParallel, bool IsUnsequenced>
-struct is_thread_pool_bulk_sender<hpx::execution::experimental::detail::
-        thread_pool_bulk_sender<Policy, Sender, Shape, F, IsChunked, IsParallel,
-            IsUnsequenced>>
+struct is_thread_pool_bulk_sender<
+    hpx::execution::experimental::detail::thread_pool_bulk_sender<Policy,
+        Sender, Shape, F, IsChunked, IsParallel, IsUnsequenced>>
   : std::true_type
 {
 };
@@ -1794,7 +1794,7 @@ void test_stdexec_domain_queries()
 
     // 1. Verify domain derives from ex::default_domain
     static_assert(std::is_base_of_v<ex::default_domain,
-                      ex::thread_pool_domain>,
+                      ex::thread_pool_domain<hpx::launch>>,
         "thread_pool_domain should derive from default_domain");
     // 2. Verify domain is accessible via ex::get_domain (forwarded from stdexec)
     static_assert(
@@ -1804,7 +1804,7 @@ void test_stdexec_domain_queries()
 
     // 3. Verify the domain type is thread_pool_domain
     static_assert(
-        std::is_same_v<decltype(domain), ex::thread_pool_domain>,
+        std::is_same_v<decltype(domain), ex::thread_pool_domain<hpx::launch>>,
         "scheduler domain should be thread_pool_domain");
     // 4. Verify transform_sender produces thread_pool_bulk_sender for
     //    bulk_chunked (proves the domain customization is picked up)

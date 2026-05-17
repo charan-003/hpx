@@ -146,7 +146,8 @@ namespace hpx::execution::experimental {
                     typename set_value_void_checked<std::is_void_v<result_type>,
                         result_type>::type,
                     hpx::execution::experimental::set_error_t(
-                        std::exception_ptr)>;
+                        std::exception_ptr),
+                    hpx::execution::experimental::set_stopped_t()>;
         };
 
         HPX_CXX_CORE_EXPORT template <typename Future>

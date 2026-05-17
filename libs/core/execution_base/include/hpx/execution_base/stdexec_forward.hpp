@@ -201,6 +201,10 @@ namespace hpx::execution::experimental {
     // Execution policies
     HPX_CXX_CORE_EXPORT using stdexec::is_execution_policy;
     HPX_CXX_CORE_EXPORT using stdexec::is_execution_policy_v;
+    HPX_CXX_CORE_EXPORT using stdexec::sequenced_policy;
+    HPX_CXX_CORE_EXPORT using stdexec::parallel_policy;
+    HPX_CXX_CORE_EXPORT using stdexec::parallel_unsequenced_policy;
+    HPX_CXX_CORE_EXPORT using stdexec::unsequenced_policy;
     HPX_CXX_CORE_EXPORT inline constexpr stdexec::parallel_policy par{};
     HPX_CXX_CORE_EXPORT inline constexpr stdexec::parallel_unsequenced_policy
         par_unseq{};
@@ -338,8 +342,8 @@ namespace hpx::execution::experimental {
     HPX_CXX_CORE_EXPORT using stdexec::operation_state;
 
     // sender invokes
-    template <typename Sender, typename AlgorithmTag>
-    HPX_CXX_CORE_EXPORT inline constexpr bool sender_invokes_algorithm_v =
+    HPX_CXX_CORE_EXPORT template <typename Sender, typename AlgorithmTag>
+    inline constexpr bool sender_invokes_algorithm_v =
         stdexec::__sender_for<Sender, AlgorithmTag>;
 
     namespace stdexec_non_standard_tag_invoke {

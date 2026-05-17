@@ -81,27 +81,24 @@ namespace hpx::execution::experimental {
         sender_invokes_algorithm_v<Sender,
             hpx::execution::experimental::bulk_unchunked_t>;
 
-    template <typename Policy>
-    HPX_CXX_CORE_EXPORT inline constexpr bool is_sequenced_policy_v = false;
+    HPX_CXX_CORE_EXPORT template <typename Policy>
+    inline constexpr bool is_sequenced_policy_v = false;
 
     template <>
-    HPX_CXX_CORE_EXPORT inline constexpr bool
-        is_sequenced_policy_v<sequenced_policy> = true;
+    inline constexpr bool is_sequenced_policy_v<sequenced_policy> = true;
 
     template <>
-    HPX_CXX_CORE_EXPORT inline constexpr bool
-        is_sequenced_policy_v<unsequenced_policy> = true;
+    inline constexpr bool is_sequenced_policy_v<unsequenced_policy> = true;
 
-    template <typename Policy>
-    HPX_CXX_CORE_EXPORT inline constexpr bool is_unsequenced_bulk_policy_v =
-        false;
+    HPX_CXX_CORE_EXPORT template <typename Policy>
+    inline constexpr bool is_unsequenced_bulk_policy_v = false;
 
     template <>
-    HPX_CXX_CORE_EXPORT inline constexpr bool
-        is_unsequenced_bulk_policy_v<unsequenced_policy> = true;
+    inline constexpr bool is_unsequenced_bulk_policy_v<unsequenced_policy> =
+        true;
 
     template <>
-    HPX_CXX_CORE_EXPORT inline constexpr bool
+    inline constexpr bool
         is_unsequenced_bulk_policy_v<parallel_unsequenced_policy> = true;
 
     // Domain customization for stdexec bulk operations and sync_wait,
@@ -127,9 +124,8 @@ namespace hpx::execution::experimental {
 
             auto iota_shape = hpx::util::counting_shape(shape);
 
-            constexpr bool is_chunked =
-                sender_invokes_algorithm_v<Sender,
-                    hpx::execution::experimental::bulk_chunked_t>;
+            constexpr bool is_chunked = sender_invokes_algorithm_v<Sender,
+                hpx::execution::experimental::bulk_chunked_t>;
 
             constexpr bool is_parallel =
                 !is_sequenced_policy_v<std::decay_t<decltype(pol.__get())>>;
@@ -259,18 +255,16 @@ namespace hpx::execution::experimental {
 
                     return detail::thread_pool_bulk_sender<Policy,
                         std::decay_t<Sender>, decltype(iota_shape),
-                        decltype(wrapped_f), true, is_parallel,
-                        is_unsequenced>{scheduler,
-                        HPX_FORWARD(Sender, sender), iota_shape,
+                        decltype(wrapped_f), true, is_parallel, is_unsequenced>{
+                        scheduler, HPX_FORWARD(Sender, sender), iota_shape,
                         HPX_MOVE(wrapped_f)};
                 }
                 else
                 {
                     return detail::thread_pool_bulk_sender<Policy,
                         std::decay_t<Sender>, decltype(iota_shape),
-                        std::decay_t<F>, false, is_parallel,
-                        is_unsequenced>{scheduler,
-                        HPX_FORWARD(Sender, sender), iota_shape,
+                        std::decay_t<F>, false, is_parallel, is_unsequenced>{
+                        scheduler, HPX_FORWARD(Sender, sender), iota_shape,
                         HPX_FORWARD(F, f)};
                 }
             }
@@ -288,18 +282,17 @@ namespace hpx::execution::experimental {
 
                     return detail::thread_pool_bulk_sender<Policy,
                         std::decay_t<Sender>, std::decay_t<Shape>,
-                        decltype(wrapped_f), true, is_parallel,
-                        is_unsequenced>{scheduler,
-                        HPX_FORWARD(Sender, sender), shape,
+                        decltype(wrapped_f), true, is_parallel, is_unsequenced>{
+                        scheduler, HPX_FORWARD(Sender, sender), shape,
                         HPX_MOVE(wrapped_f)};
                 }
                 else
                 {
                     return detail::thread_pool_bulk_sender<Policy,
                         std::decay_t<Sender>, std::decay_t<Shape>,
-                        std::decay_t<F>, false, is_parallel,
-                        is_unsequenced>{scheduler,
-                        HPX_FORWARD(Sender, sender), shape, HPX_FORWARD(F, f)};
+                        std::decay_t<F>, false, is_parallel, is_unsequenced>{
+                        scheduler, HPX_FORWARD(Sender, sender), shape,
+                        HPX_FORWARD(F, f)};
                 }
             }
         }
