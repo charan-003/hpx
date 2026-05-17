@@ -272,7 +272,9 @@ namespace hpx::parallel {
             static decltype(auto) parallel(ExPolicy&& policy, RandomIt first,
                 RandomIt nth, Sent last, Pred&& pred, Proj&& proj)
             {
-                using value_type = std::iterator_traits<RandomIt>::value_type;
+                using wrapped_comp_type =
+                    hpx::parallel::util::compare_projected<std::decay_t<Pred>,
+                        std::decay_t<Proj>>;
 
                 constexpr bool has_scheduler_executor =
                     hpx::execution_policy_has_scheduler_executor_v<ExPolicy>;
@@ -282,8 +284,9 @@ namespace hpx::parallel {
                     namespace ex = hpx::execution::experimental;
                     return ex::just(first, nth, last) |
                         ex::then([policy = HPX_FORWARD(ExPolicy, policy),
-                                     pred = HPX_FORWARD(Pred, pred),
-                                     proj = HPX_FORWARD(Proj, proj)](
+                                     comp = wrapped_comp_type(
+                                         HPX_FORWARD(Pred, pred),
+                                         HPX_FORWARD(Proj, proj))](
                                      RandomIt begin, RandomIt nth_it,
                                      RandomIt end) mutable -> RandomIt {
                             auto last_iter =
@@ -291,19 +294,19 @@ namespace hpx::parallel {
 
                             while (begin != last_iter)
                             {
-                                detail::pivot9(begin, last_iter, pred);
+                                detail::pivot9(begin, last_iter, comp);
 
                                 RandomIt partition_iter =
                                     hpx::parallel::detail::partition<RandomIt>()
                                         .sequential(
                                             hpx::execution::seq, begin + 1,
                                             last_iter,
-                                            [val = HPX_INVOKE(proj, *begin),
-                                                &pred](value_type const& elem) {
+                                            [val = *begin, &comp](
+                                                auto const& elem) {
                                                 return HPX_INVOKE(
-                                                    pred, elem, val);
+                                                    comp, elem, val);
                                             },
-                                            proj);
+                                            hpx::identity_v);
 
                                 --partition_iter;
 
@@ -334,8 +337,6 @@ namespace hpx::parallel {
                 }
                 else
                 {
-                    RandomIt partition_iter, return_last;
-
                     if (first == last)
                     {
                         return util::detail::algorithm_result<ExPolicy,
@@ -348,26 +349,30 @@ namespace hpx::parallel {
                             RandomIt>::get(HPX_MOVE(nth));
                     }
 
+                    RandomIt partition_iter, return_last;
+
                     try
                     {
                         RandomIt last_iter =
                             detail::advance_to_sentinel(first, last);
                         return_last = last_iter;
 
+                        auto comp = wrapped_comp_type(
+                            HPX_FORWARD(Pred, pred), HPX_FORWARD(Proj, proj));
                         while (first != last_iter)
                         {
-                            detail::pivot9(first, last_iter, pred);
+                            detail::pivot9(first, last_iter, comp);
 
                             partition_iter =
                                 hpx::parallel::detail::partition<RandomIt>()
                                     .call(
                                         policy(hpx::execution::non_task),
                                         first + 1, last_iter,
-                                        [val = HPX_INVOKE(proj, *first), &pred](
-                                            value_type const& elem) {
-                                            return HPX_INVOKE(pred, elem, val);
+                                        [val = *first, &comp](
+                                            auto const& elem) {
+                                            return HPX_INVOKE(comp, elem, val);
                                         },
-                                        proj);
+                                        hpx::identity_v);
 
                             --partition_iter;
 

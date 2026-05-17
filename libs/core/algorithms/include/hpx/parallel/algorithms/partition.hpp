@@ -1371,7 +1371,7 @@ namespace hpx::parallel {
         }
 
         HPX_CXX_CORE_EXPORT template <typename FwdIter>
-        struct partition : public algorithm<partition<FwdIter>, FwdIter>
+        struct partition : algorithm<partition<FwdIter>, FwdIter>
         {
             constexpr partition() noexcept
               : algorithm<partition, FwdIter>("partition")
@@ -1379,7 +1379,7 @@ namespace hpx::parallel {
             }
 
             template <typename ExPolicy, typename Sent, typename Pred,
-                typename Proj = hpx::identity>
+                typename Proj>
             static constexpr FwdIter sequential(
                 ExPolicy, FwdIter first, Sent last, Pred&& pred, Proj&& proj)
             {
@@ -1389,7 +1389,7 @@ namespace hpx::parallel {
             }
 
             template <typename ExPolicy, typename Sent, typename Pred,
-                typename Proj = hpx::identity>
+                typename Proj>
             static util::detail::algorithm_result_t<ExPolicy, FwdIter> parallel(
                 ExPolicy&& policy, FwdIter first, Sent last, Pred&& pred,
                 Proj&& proj)
@@ -1444,8 +1444,7 @@ namespace hpx::parallel {
         }
 
         HPX_CXX_CORE_EXPORT template <typename IterTuple>
-        struct partition_copy
-          : public algorithm<partition_copy<IterTuple>, IterTuple>
+        struct partition_copy : algorithm<partition_copy<IterTuple>, IterTuple>
         {
             constexpr partition_copy() noexcept
               : algorithm<partition_copy, IterTuple>("partition_copy")
