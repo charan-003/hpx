@@ -19,9 +19,6 @@
 @parcelport_export_declarations@
 namespace hpx::parcelset
 {
-    // force linking with this module
-    HPX_EXPORT void init_parcel_ports();
-
     inline void init_static_parcelport_factories_impl(
         std::vector<plugins::parcelport_factory_base *>& factories)
     {
