@@ -11,7 +11,7 @@
 
 #include <cstddef>
 
-#if defined(HPX_HAVE_MODULE_TRACY)
+#if defined(HPX_HAVE_TRACY)
 #include <hpx/modules/tracy.hpp>
 
 namespace hpx::tracing {

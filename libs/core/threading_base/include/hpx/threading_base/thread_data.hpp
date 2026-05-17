@@ -288,7 +288,7 @@ namespace hpx::threads {
             threads::thread_description value);
 #endif
 
-#if defined(HPX_HAVE_MODULE_TRACY)
+#if defined(HPX_HAVE_TRACY)
     private:
         mutable char tracy_fiber_name_[64];
 
@@ -671,7 +671,7 @@ namespace hpx::threads {
         return static_cast<thread_data*>(tid.get());
     }
 
-#if defined(HPX_HAVE_MODULE_TRACY)
+#if defined(HPX_HAVE_TRACY)
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT tracing::region_init_data
     get_region_init_data(thread_data const* thrdptr);
 

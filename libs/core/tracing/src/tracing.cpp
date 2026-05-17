@@ -10,7 +10,7 @@
 #include <cstddef>
 #include <string>
 
-#if defined(HPX_HAVE_MODULE_TRACY)
+#if defined(HPX_HAVE_TRACY)
 
 namespace hpx::tracing {
 
