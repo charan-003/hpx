@@ -83,7 +83,6 @@ void test_uninitialized_fill_exception_sender(
     test::count_instances::instance_count.store(0);
 
     bool caught_exception = false;
-    bool returned_from_algorithm = false;
     try
     {
         tt::sync_wait(

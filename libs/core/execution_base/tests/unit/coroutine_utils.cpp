@@ -101,6 +101,11 @@ struct awaitable_sender_4
 {
     using promise_type = promise<hpx::suspend_always>;
 
+    hpx::execution::experimental::empty_env get_env() const noexcept
+    {
+        return {};
+    }
+
 private:
     template <typename Promise>
     friend awaiter tag_invoke(hpx::execution::experimental::as_awaitable_t,
@@ -112,6 +117,11 @@ private:
 
 struct awaitable_sender_5
 {
+    hpx::execution::experimental::empty_env get_env() const noexcept
+    {
+        return {};
+    }
+
 private:
     template <typename Promise>
     friend awaiter tag_invoke(hpx::execution::experimental::as_awaitable_t,
@@ -127,21 +137,13 @@ struct recv_set_value
     using receiver_concept = hpx::execution::experimental::receiver_t;
     using dependent = awaiter;
 
-    friend void tag_invoke(hpx::execution::experimental::set_value_t,
-        recv_set_value,
-        decltype(std::declval<dependent>().await_ready())) noexcept
+    void set_value(
+        decltype(std::declval<dependent>().await_ready())) && noexcept
     {
     }
-    friend void tag_invoke(
-        hpx::execution::experimental::set_stopped_t, recv_set_value) noexcept
-    {
-    }
-    friend void tag_invoke(hpx::execution::experimental::set_error_t,
-        recv_set_value, std::exception_ptr) noexcept
-    {
-    }
-    friend dependent tag_invoke(
-        hpx::execution::experimental::get_env_t, recv_set_value const&) noexcept
+    void set_stopped() && noexcept {}
+    void set_error(std::exception_ptr) && noexcept {}
+    dependent get_env() const noexcept
     {
         return {};
     }
@@ -237,14 +239,16 @@ int main()
     {
         static_assert(ex::is_sender_v<awaitable_sender_1<awaiter>>);
         static_assert(ex::is_sender_v<awaitable_sender_3>);
-        static_assert(ex::is_sender_v<awaitable_sender_4>);
+        // awaitable_sender_4 and awaitable_sender_5 are not standalone senders
+        // under stdexec - they require with_awaitable_senders context
     }
 
     // env promise
     {
         static_assert(is_sender_with_env_v<awaitable_sender_1<awaiter>>);
         static_assert(is_sender_with_env_v<awaitable_sender_3>);
-        static_assert(is_sender_with_env_v<awaitable_sender_4>);
+        // awaitable_sender_4 and awaitable_sender_5 are not standalone senders
+        // under stdexec - they require with_awaitable_senders context
     }
 
     try

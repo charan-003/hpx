@@ -73,7 +73,7 @@ namespace hpx::execution::experimental {
         HPX_CXX_CORE_EXPORT template <typename Future>
         struct keep_future_sender;
 
-        HPX_CXX_CORE_EXPORT template <typename T>
+        template <typename T>
         struct keep_future_sender<hpx::future<T>>
           : public keep_future_sender_base<hpx::future<T>>
         {
@@ -95,10 +95,12 @@ namespace hpx::execution::experimental {
             keep_future_sender(keep_future_sender const&) = delete;
             keep_future_sender& operator=(keep_future_sender const&) = delete;
 
-            template <typename Env>
-            friend auto tag_invoke(
-                get_completion_signatures_t, keep_future_sender const&, Env&&)
-                -> typename base_type::completion_signatures;
+            template <typename Self, typename... Env>
+            static consteval auto get_completion_signatures() noexcept ->
+                typename base_type::completion_signatures
+            {
+                return {};
+            }
 
             template <typename Receiver>
             operation_state<Receiver, future_type> connect(
@@ -108,7 +110,7 @@ namespace hpx::execution::experimental {
             }
         };
 
-        HPX_CXX_CORE_EXPORT template <typename T>
+        template <typename T>
         struct keep_future_sender<hpx::shared_future<T>>
           : keep_future_sender_base<hpx::shared_future<T>>
         {
@@ -130,10 +132,12 @@ namespace hpx::execution::experimental {
             keep_future_sender(keep_future_sender const&) = default;
             keep_future_sender& operator=(keep_future_sender const&) = default;
 
-            template <typename Env>
-            friend auto tag_invoke(
-                get_completion_signatures_t, keep_future_sender const&, Env&&)
-                -> typename base_type::completion_signatures;
+            template <typename Self, typename... Env>
+            static consteval auto get_completion_signatures() noexcept ->
+                typename base_type::completion_signatures
+            {
+                return {};
+            }
 
             template <typename Receiver>
             operation_state<Receiver, future_type> connect(

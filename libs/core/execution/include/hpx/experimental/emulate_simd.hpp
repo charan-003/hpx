@@ -153,7 +153,7 @@ namespace hpx::datapar::experimental {
     {
     };
 
-    HPX_CXX_CORE_EXPORT template <typename T, typename Abi>
+    template <typename T, typename Abi>
     struct is_simd<simd<T, Abi>> : std::true_type
     {
     };
@@ -163,7 +163,7 @@ namespace hpx::datapar::experimental {
     {
     };
 
-    HPX_CXX_CORE_EXPORT template <typename T, typename Abi>
+    template <typename T, typename Abi>
     struct is_simd_mask<simd_mask<T, Abi>> : std::true_type
     {
     };

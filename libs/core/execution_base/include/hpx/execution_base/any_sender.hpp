@@ -378,9 +378,7 @@ namespace hpx::execution::experimental::detail {
         any_operation_state& operator=(any_operation_state&&) = delete;
         any_operation_state& operator=(any_operation_state const&) = delete;
 
-        HPX_CORE_EXPORT friend void tag_invoke(
-            hpx::execution::experimental::start_t,
-            any_operation_state& os) noexcept;
+        void start() & noexcept;
     };
 
     HPX_CXX_CORE_EXPORT template <typename... Ts>
@@ -432,7 +430,7 @@ namespace hpx::execution::experimental::detail {
     };
 }    // namespace hpx::execution::experimental::detail
 
-HPX_CXX_CORE_EXPORT template <typename... Ts>
+template <typename... Ts>
 struct hpx::detail::empty_vtable_type<
     hpx::execution::experimental::detail::any_receiver_base<Ts...>>
 {
@@ -475,7 +473,7 @@ namespace hpx::execution::experimental::detail {
 
         void set_stopped() && noexcept override
         {
-            hpx::execution::experimental::set_stopped(HPX_MOVE(receiver));
+            HPX_UNREACHABLE;
         }
     };
 
@@ -520,14 +518,13 @@ namespace hpx::execution::experimental::detail {
         any_receiver& operator=(any_receiver&&) = default;
         any_receiver& operator=(any_receiver const&) = delete;
 
-        friend void tag_invoke(hpx::execution::experimental::set_value_t,
-            any_receiver&& r, Ts&&... ts) noexcept
+        void set_value(Ts&&... ts) && noexcept
         {
             // We first move the storage to a temporary variable so that this
             // any_receiver is empty after this set_value. Doing
             // HPX_MOVE(storage.get()).set_value(...) would leave us with a
             // non-empty any_receiver holding a moved-from receiver.
-            auto moved_storage = HPX_MOVE(r.storage);
+            auto moved_storage = HPX_MOVE(storage);
 
             // the caller of set_value needs to forward errors to set_error
             try
@@ -541,9 +538,16 @@ namespace hpx::execution::experimental::detail {
             }
         }
 
-        friend void tag_invoke(hpx::execution::experimental::set_error_t,
-            any_receiver&& /*r*/, std::exception_ptr /*ep*/) noexcept
+        void set_error(std::exception_ptr ep) && noexcept
         {
+            auto moved_storage = HPX_MOVE(storage);
+            HPX_MOVE(moved_storage.get()).set_error(HPX_MOVE(ep));
+        }
+
+        void set_stopped() && noexcept
+        {
+            auto moved_storage = HPX_MOVE(storage);
+            HPX_MOVE(moved_storage.get()).set_stopped();
         }
     };
 

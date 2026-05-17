@@ -682,7 +682,7 @@ namespace hpx::execution::experimental {
         Wrapping wrapping;
     };
 
-    HPX_CXX_CORE_EXPORT template <typename Wrapped, typename Wrapping>
+    template <typename Wrapped, typename Wrapping>
     struct is_executor_parameters<wrapped_params<Wrapped, Wrapping>>
       : std::true_type
     {

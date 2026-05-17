@@ -13,6 +13,7 @@ set(segmented_algorithms_headers
     hpx/parallel/segmented_algorithms/adjacent_difference.hpp
     hpx/parallel/segmented_algorithms/adjacent_find.hpp
     hpx/parallel/segmented_algorithms/all_any_none.hpp
+    hpx/parallel/segmented_algorithms/copy.hpp
     hpx/parallel/segmented_algorithms/count.hpp
     hpx/parallel/segmented_algorithms/detail/dispatch.hpp
     hpx/parallel/segmented_algorithms/detail/is_partitioned.hpp

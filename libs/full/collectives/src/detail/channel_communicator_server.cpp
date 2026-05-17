@@ -11,7 +11,7 @@
 #include <hpx/assert.hpp>
 #include <hpx/collectives/channel_communicator.hpp>
 #include <hpx/collectives/detail/channel_communicator.hpp>
-#include <hpx/components/basename_registration.hpp>
+#include <hpx/modules/components.hpp>
 #include <hpx/modules/components_base.hpp>
 #include <hpx/runtime_components/component_factory.hpp>
 

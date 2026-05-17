@@ -19,13 +19,6 @@
 
 namespace ex = hpx::execution::experimental;
 
-// This overload is only used to check dispatching. It is not a useful
-// implementation.
-void tag_invoke(ex::start_detached_t, custom_sender2 s)
-{
-    s.tag_invoke_overload_called = true;
-}
-
 int main()
 {
     {
@@ -78,18 +71,6 @@ int main()
 
     // operator| overload
     {
-    }
-
-    // tag_invoke overload
-    {
-        std::atomic<bool> start_called{false};
-        std::atomic<bool> connect_called{false};
-        std::atomic<bool> tag_invoke_overload_called{false};
-        ex::start_detached(custom_sender2{custom_sender{
-            start_called, connect_called, tag_invoke_overload_called}});
-        HPX_TEST(!start_called);
-        HPX_TEST(!connect_called);
-        HPX_TEST(tag_invoke_overload_called);
     }
 
     return hpx::util::report_errors();

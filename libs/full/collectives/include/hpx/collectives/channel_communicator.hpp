@@ -126,8 +126,8 @@ namespace hpx { namespace collectives {
 #include <hpx/async_distributed/async.hpp>
 #include <hpx/collectives/argument_types.hpp>
 #include <hpx/collectives/detail/channel_communicator.hpp>
-#include <hpx/components/client.hpp>
 #include <hpx/modules/async_base.hpp>
+#include <hpx/modules/components.hpp>
 #include <hpx/modules/futures.hpp>
 
 #include <cstddef>

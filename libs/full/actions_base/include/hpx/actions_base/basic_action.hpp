@@ -210,7 +210,7 @@ namespace hpx::actions {
         }
     }    // namespace detail
 
-    HPX_CXX_EXPORT template <typename Component, typename R, typename... Args,
+    template <typename Component, typename R, typename... Args,
         typename Derived>
     struct basic_action<Component, R(Args...), Derived>
     {
@@ -462,7 +462,7 @@ namespace hpx::actions {
             using type = Derived;
         };
 
-        HPX_CXX_EXPORT template <typename Action>
+        template <typename Action>
         struct action_type<Action, void>
         {
             using type = Action;
@@ -506,7 +506,7 @@ namespace hpx::actions {
         using type = action<TF, F, Derived>;
     };
 
-    HPX_CXX_EXPORT template <typename TF, TF F, typename Derived>
+    template <typename TF, TF F, typename Derived>
     struct make_action<TF, F, Derived, std::true_type>
     {
         using type = direct_action<TF, F, Derived>;

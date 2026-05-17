@@ -19,9 +19,9 @@
 #include <hpx/modules/functional.hpp>
 #include <hpx/modules/futures.hpp>
 #include <hpx/modules/naming_base.hpp>
+#include <hpx/modules/parcelset.hpp>
 #include <hpx/modules/runtime_configuration.hpp>
 #include <hpx/modules/synchronization.hpp>
-#include <hpx/parcelset/parcelset_fwd.hpp>
 
 #include <atomic>
 #include <cstddef>

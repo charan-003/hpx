@@ -25,8 +25,16 @@
 #include "test_utils.hpp"
 
 ///////////////////////////////////////////////////////////////////////////////
-unsigned int seed = std::random_device{}();
-std::mt19937 g(seed);
+// Deterministic default; mains call remove_tests_seed_rng so --seed matches
+// std::srand and this generator (random_fill / user_defined_type).
+inline unsigned int remove_test_rng_seed = 4242424242u;
+inline std::mt19937 g(remove_test_rng_seed);
+
+inline void remove_tests_seed_rng(unsigned int s)
+{
+    remove_test_rng_seed = s;
+    g.seed(s);
+}
 
 struct throw_always
 {
@@ -710,7 +718,7 @@ void test_remove_sender(LnPolicy ln_policy, ExPolicy&& ex_policy, IteratorTag)
     using scheduler_t = ex::thread_pool_policy_scheduler<LnPolicy>;
 
     std::size_t rand_base = g();
-    std::size_t value = rand_base + 2;
+    int value = static_cast<int>(rand_base + 2);
 
     std::size_t const size = 10007;
     std::vector<int> c(size), d;
@@ -723,7 +731,7 @@ void test_remove_sender(LnPolicy ln_policy, ExPolicy&& ex_policy, IteratorTag)
         ex::just(iterator(std::begin(c)), iterator(std::end(c)), value) |
         hpx::remove(ex_policy.on(exec)));
 
-    auto result = hpx::get<0>(*snd_result);
+    auto result = hpx::get<0>(snd_result.value());
 
     auto solution = std::remove(std::begin(d), std::end(d), value);
 
@@ -748,7 +756,9 @@ void test_remove_if_sender(
     using scheduler_t = ex::thread_pool_policy_scheduler<LnPolicy>;
 
     std::size_t rand_base = g();
-    auto pred = [rand_base](int const a) -> bool { return a == rand_base; };
+    auto pred = [rand_base](int const a) -> bool {
+        return static_cast<std::size_t>(a) == rand_base;
+    };
 
     std::size_t const size = 10007;
     std::vector<int> c(size), d;
@@ -760,7 +770,7 @@ void test_remove_if_sender(
     auto snd_result = tt::sync_wait(
         ex::just(iterator(std::begin(c)), iterator(std::end(c)), pred) |
         hpx::remove_if(ex_policy.on(exec)));
-    auto result = hpx::get<0>(*snd_result);
+    auto result = hpx::get<0>(snd_result.value());
 
     auto solution = std::remove_if(std::begin(d), std::end(d), pred);
 

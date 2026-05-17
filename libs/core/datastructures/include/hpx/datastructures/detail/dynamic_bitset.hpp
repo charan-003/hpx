@@ -2013,7 +2013,7 @@ namespace hpx::detail {
 // std::hash support
 #include <functional>
 
-HPX_CXX_CORE_EXPORT template <typename Block, typename Allocator>
+template <typename Block, typename Allocator>
 struct std::hash<::hpx::detail::dynamic_bitset<Block, Allocator>>
 {
     using argument_type = hpx::detail::dynamic_bitset<Block, Allocator>;

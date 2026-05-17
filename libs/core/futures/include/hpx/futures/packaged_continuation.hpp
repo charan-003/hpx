@@ -385,8 +385,7 @@ namespace hpx::lcos::detail {
     };
 }    // namespace hpx::lcos::detail
 
-HPX_CXX_CORE_EXPORT template <typename Future, typename F, typename ContResult,
-    typename Allocator>
+template <typename Future, typename F, typename ContResult, typename Allocator>
 struct hpx::traits::detail::shared_state_allocator<
     hpx::lcos::detail::continuation<Future, F, ContResult>, Allocator>
 {
@@ -526,7 +525,7 @@ namespace hpx::lcos::detail {
     };
 }    // namespace hpx::lcos::detail
 
-HPX_CXX_CORE_EXPORT template <typename ContResult, typename Allocator>
+template <typename ContResult, typename Allocator>
 struct hpx::traits::detail::shared_state_allocator<
     hpx::lcos::detail::unwrap_continuation<ContResult>, Allocator>
 {

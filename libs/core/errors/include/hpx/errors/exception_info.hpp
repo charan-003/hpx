@@ -21,6 +21,8 @@
 #undef exception_info
 #endif
 
+#include <hpx/config/warnings_prefix.hpp>
+
 namespace hpx {
 
     ///////////////////////////////////////////////////////////////////////////
@@ -252,3 +254,5 @@ namespace hpx {
             detail::access_exception(ec), HPX_FORWARD(F, f));
     }
 }    // namespace hpx
+
+#include <hpx/config/warnings_suffix.hpp>

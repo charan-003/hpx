@@ -22,15 +22,6 @@
 namespace ex = hpx::execution::experimental;
 namespace tt = hpx::this_thread::experimental;
 
-// NOTE: This is not a conforming sync_wait_with_variant implementation.
-// It only exists to check that the tag_invoke overload is called.
-std::optional<std::variant<std::tuple<>>> tag_invoke(
-    tt::sync_wait_with_variant_t, custom_sender2 s)
-{
-    s.tag_invoke_overload_called = true;
-    return {};
-}
-
 // NOLINTBEGIN(bugprone-unchecked-optional-access)
 int hpx_main()
 {
@@ -254,18 +245,6 @@ int hpx_main()
         static_assert(std::is_same_v<decltype(i), int>);
 
         HPX_TEST(i == 3);
-    }
-
-    // tag_invoke overload
-    {
-        std::atomic<bool> start_called{false};
-        std::atomic<bool> connect_called{false};
-        std::atomic<bool> tag_invoke_overload_called{false};
-        tt::sync_wait_with_variant(custom_sender2{custom_sender{
-            start_called, connect_called, tag_invoke_overload_called}});
-        HPX_TEST(!start_called);
-        HPX_TEST(!connect_called);
-        HPX_TEST(tag_invoke_overload_called);
     }
 
     // Failure path

@@ -148,8 +148,8 @@ namespace hpx { namespace collectives {
 #if !defined(HPX_COMPUTE_DEVICE_CODE)
 #include <hpx/collectives/argument_types.hpp>
 #include <hpx/collectives/detail/communicator.hpp>
-#include <hpx/components/client_base.hpp>
 #include <hpx/modules/async_base.hpp>
+#include <hpx/modules/components.hpp>
 #include <hpx/modules/datastructures.hpp>
 #include <hpx/modules/type_support.hpp>
 

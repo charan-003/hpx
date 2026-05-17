@@ -25,7 +25,7 @@ namespace hpx::execution::experimental {
         {
         };
 
-        HPX_CXX_CORE_EXPORT template <typename Scheduler>
+        template <typename Scheduler>
         struct exposes_policy_aware_scheduler_types<Scheduler,
             std::void_t<typename Scheduler::policy_type,
                 typename Scheduler::base_scheduler_type>> : std::true_type
@@ -39,7 +39,7 @@ namespace hpx::execution::experimental {
         };
 
         // clang-format off
-        HPX_CXX_CORE_EXPORT template <typename Scheduler>
+        template <typename Scheduler>
         struct exposes_get_policy<Scheduler,
             std::enable_if_t<hpx::is_execution_policy_v<
                 decltype(std::declval<Scheduler>().get_policy())>>>
@@ -55,6 +55,13 @@ namespace hpx::execution::experimental {
     {
         using base_scheduler_type = std::decay_t<Scheduler>;
         using policy_type = std::decay_t<ExPolicy>;
+
+        scheduler_and_policy(scheduler_and_policy const&) = default;
+        scheduler_and_policy(scheduler_and_policy&&) noexcept = default;
+        scheduler_and_policy& operator=(scheduler_and_policy const&) = default;
+        scheduler_and_policy& operator=(
+            scheduler_and_policy&&) noexcept = default;
+        ~scheduler_and_policy() = default;
 
         template <typename Scheduler_, typename ExPolicy_>
         scheduler_and_policy(Scheduler_&& sched, ExPolicy_&& policy)
@@ -74,18 +81,10 @@ namespace hpx::execution::experimental {
         }
 
         // Needed for this to be a scheduler under the p2300 definition
-        friend constexpr
-            typename Scheduler::template sender<scheduler_and_policy>
-            tag_invoke(schedule_t, scheduler_and_policy const& sp)
+        constexpr typename Scheduler::template sender<scheduler_and_policy>
+        schedule() const
         {
-            return {sp};
-        }
-
-        friend constexpr
-            typename Scheduler::template sender<scheduler_and_policy>
-            tag_invoke(schedule_t, scheduler_and_policy&& sp)
-        {
-            return {HPX_MOVE(sp)};
+            return {*this};
         }
 
         policy_type policy;
@@ -150,7 +149,7 @@ namespace hpx::execution::experimental {
         {
         };
 
-        HPX_CXX_CORE_EXPORT template <typename Scheduler>
+        template <typename Scheduler>
         struct is_policy_aware_scheduler<Scheduler,
             std::enable_if_t<is_scheduler_v<Scheduler> &&
                 detail::exposes_policy_aware_scheduler_types<

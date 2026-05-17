@@ -12,8 +12,7 @@
 #include <hpx/modules/actions_base.hpp>
 #include <hpx/modules/futures.hpp>
 #include <hpx/modules/naming_base.hpp>
-#include <hpx/parcelset/parcel.hpp>
-#include <hpx/parcelset/parcelset_fwd.hpp>
+#include <hpx/modules/parcelset.hpp>
 
 #include <memory>
 #include <type_traits>

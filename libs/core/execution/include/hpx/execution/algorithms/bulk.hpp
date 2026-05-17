@@ -41,27 +41,60 @@ namespace hpx::execution::experimental {
 
             using sender_concept = hpx::execution::experimental::sender_t;
 
-            template <typename Env>
-            friend auto tag_invoke(get_completion_signatures_t,
-                bulk_sender const&, Env) noexcept -> decltype(
-                hpx::execution::experimental::transform_completion_signatures(
-                    hpx::execution::experimental::completion_signatures_of_t<
-                        Sender, Env>{},
-                    hpx::execution::experimental::keep_completion<
-                        hpx::execution::experimental::set_value_t>{},
-                    hpx::execution::experimental::keep_completion<
-                        hpx::execution::experimental::set_error_t>{},
-                    hpx::execution::experimental::ignore_completion{},
-                    hpx::execution::experimental::completion_signatures<
-                        hpx::execution::experimental::set_error_t(
-                            std::exception_ptr)>{}));
+            template <typename... Args>
+            using default_set_value =
+                hpx::execution::experimental::completion_signatures<
+                    hpx::execution::experimental::set_value_t(Args...)>;
 
-            friend constexpr auto tag_invoke(
-                hpx::execution::experimental::get_env_t,
-                bulk_sender const& s) noexcept
+            template <typename Arg>
+            using default_set_error =
+                hpx::execution::experimental::completion_signatures<
+                    hpx::execution::experimental::set_error_t(Arg)>;
+
+            using disable_set_stopped =
+                hpx::execution::experimental::completion_signatures<>;
+
+            struct default_set_value_fn
             {
-                return hpx::execution::experimental::get_env(s.sender);
+                template <class... Args>
+                consteval auto operator()() const noexcept
+                {
+                    return hpx::execution::experimental::completion_signatures<
+                        hpx::execution::experimental::set_value_t(Args...)>{};
+                }
+            };
+
+            struct default_set_error_fn
+            {
+                template <class Err>
+                consteval auto operator()() const noexcept
+                {
+                    return hpx::execution::experimental::completion_signatures<
+                        hpx::execution::experimental::set_error_t(
+                            std::decay_t<Err>)>{};
+                }
+            };
+
+            template <typename Self, typename Env>
+            static consteval auto get_completion_signatures() noexcept
+                -> decltype(hpx::execution::experimental::
+                        transform_completion_signatures(
+                            hpx::execution::experimental::
+                                completion_signatures_of_t<Sender, Env>{},
+                            default_set_value_fn{}, default_set_error_fn{},
+                            hpx::execution::experimental::ignore_completion{},
+                            hpx::execution::experimental::completion_signatures<
+                                hpx::execution::experimental::set_error_t(
+                                    std::exception_ptr)>{}))
+            {
+                return {};
             }
+
+            constexpr auto get_env() const noexcept
+            {
+                return hpx::execution::experimental::get_env(sender);
+            };
+
             template <typename Receiver>
             struct bulk_receiver
             {
@@ -167,7 +200,7 @@ namespace hpx::execution::experimental {
                 is_sender_v<Sender> &&
                 experimental::detail::is_completion_scheduler_tag_invocable_v<
                     hpx::execution::experimental::set_value_t, Sender,
-                    bulk_t, Shape, F
+                    bulk_t, Shape, F&&
                 >
             )>
         // clang-format on

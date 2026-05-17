@@ -258,7 +258,7 @@ namespace hpx::execution::experimental {
     // the args should be the same as those that would be called
     // for an async function or continuation. This makes it possible to
     // guide a lambda rather than a full function.
-    HPX_CXX_CORE_EXPORT template <typename Tag>
+    template <typename Tag>
     struct guided_pool_executor<pool_numa_hint<Tag>>
     {
         template <typename Executor, typename NumaFunction>
@@ -629,25 +629,25 @@ namespace hpx::execution::experimental {
         guided_pool_executor<H> guided_exec_;
     };
 
-    HPX_CXX_CORE_EXPORT template <typename Hint>
+    template <typename Hint>
     struct executor_execution_category<guided_pool_executor<Hint>>
     {
         using type = hpx::execution::parallel_execution_tag;
     };
 
-    HPX_CXX_CORE_EXPORT template <typename Hint>
+    template <typename Hint>
     struct is_two_way_executor<guided_pool_executor<Hint>> : std::true_type
     {
     };
 
     // ----------------------------
-    HPX_CXX_CORE_EXPORT template <typename Hint>
+    template <typename Hint>
     struct executor_execution_category<guided_pool_executor_shim<Hint>>
     {
         using type = hpx::execution::parallel_execution_tag;
     };
 
-    HPX_CXX_CORE_EXPORT template <typename Hint>
+    template <typename Hint>
     struct is_two_way_executor<guided_pool_executor_shim<Hint>> : std::true_type
     {
     };

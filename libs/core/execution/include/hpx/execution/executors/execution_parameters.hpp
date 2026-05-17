@@ -996,7 +996,7 @@ namespace hpx::execution::experimental {
 
     ///////////////////////////////////////////////////////////////////////////
     // specialize trait for the type-combiner
-    HPX_CXX_CORE_EXPORT template <typename... Parameters>
+    template <typename... Parameters>
     struct is_executor_parameters<detail::executor_parameters<Parameters...>>
       : hpx::util::all_of<hpx::traits::is_executor_parameters<Parameters>...>
     {
@@ -1018,7 +1018,7 @@ namespace hpx::execution::experimental {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT template <typename Param>
+    template <typename Param>
     struct executor_parameters_join<Param>
     {
         using type = Param;

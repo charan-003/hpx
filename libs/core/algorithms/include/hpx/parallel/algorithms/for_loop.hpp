@@ -811,8 +811,7 @@ namespace hpx::parallel {
             typename S = void, typename Tuple = hpx::tuple<>>
         struct part_iterations;
 
-        HPX_CXX_CORE_EXPORT template <typename ExPolicy, typename F, typename S,
-            typename... Ts>
+        template <typename ExPolicy, typename F, typename S, typename... Ts>
         struct part_iterations<ExPolicy, F, S, hpx::tuple<Ts...>>
         {
             using fun_type = std::decay_t<F>;
@@ -915,7 +914,7 @@ namespace hpx::parallel {
             }
         };
 
-        HPX_CXX_CORE_EXPORT template <typename ExPolicy, typename F, typename S>
+        template <typename ExPolicy, typename F, typename S>
         struct part_iterations<ExPolicy, F, S, hpx::tuple<>>
         {
             using fun_type = std::decay_t<F>;
@@ -1016,8 +1015,7 @@ namespace hpx::parallel {
             }
         };
 
-        HPX_CXX_CORE_EXPORT template <typename ExPolicy, typename F,
-            typename... Ts>
+        template <typename ExPolicy, typename F, typename... Ts>
         struct part_iterations<ExPolicy, F, void, hpx::tuple<Ts...>>
         {
             using fun_type = std::decay_t<F>;
@@ -1097,7 +1095,7 @@ namespace hpx::parallel {
             }
         };
 
-        HPX_CXX_CORE_EXPORT template <typename ExPolicy, typename F>
+        template <typename ExPolicy, typename F>
         struct part_iterations<ExPolicy, F, void, hpx::tuple<>>
         {
             using fun_type = std::decay_t<F>;

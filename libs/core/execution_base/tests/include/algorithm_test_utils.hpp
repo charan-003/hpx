@@ -224,7 +224,10 @@ struct stopped_sender
     template <typename Self, typename... Env>
     static consteval auto get_completion_signatures() noexcept
         -> hpx::execution::experimental::completion_signatures<
-            hpx::execution::experimental::set_stopped_t()>;
+            hpx::execution::experimental::set_stopped_t()>
+    {
+        return {};
+    }
 };
 
 struct stopped_sender_with_value_type
@@ -259,7 +262,10 @@ struct stopped_sender_with_value_type
     static consteval auto get_completion_signatures() noexcept
         -> hpx::execution::experimental::completion_signatures<
             hpx::execution::experimental::set_stopped_t(),
-            hpx::execution::experimental::set_value_t()>;
+            hpx::execution::experimental::set_value_t()>
+    {
+        return {};
+    }
 };
 
 template <typename F>
@@ -288,6 +294,10 @@ struct callback_receiver
         set_value_called = true;
     }
 };
+
+// Deduction guide for callback_receiver
+template <typename F>
+callback_receiver(F, std::atomic<bool>&) -> callback_receiver<F>;
 
 template <typename F>
 struct error_callback_receiver
@@ -397,7 +407,10 @@ struct error_typed_sender
     static consteval auto get_completion_signatures() noexcept
         -> hpx::execution::experimental::completion_signatures<
             hpx::execution::experimental::set_value_t(T),
-            hpx::execution::experimental::set_error_t(std::exception_ptr)>;
+            hpx::execution::experimental::set_error_t(std::exception_ptr)>
+    {
+        return {};
+    }
 };
 
 template <typename T>
@@ -436,7 +449,10 @@ struct const_reference_sender
     static consteval auto get_completion_signatures() noexcept
         -> hpx::execution::experimental::completion_signatures<
             hpx::execution::experimental::set_value_t(std::decay_t<T>&),
-            hpx::execution::experimental::set_error_t(std::exception_ptr)>;
+            hpx::execution::experimental::set_error_t(std::exception_ptr)>
+    {
+        return {};
+    }
 };
 
 struct const_reference_error_sender
@@ -473,7 +489,10 @@ struct const_reference_error_sender
         -> hpx::execution::experimental::completion_signatures<
             hpx::execution::experimental::set_value_t(),
             hpx::execution::experimental::set_error_t(
-                std::exception_ptr const&)>;
+                std::exception_ptr const&)>
+    {
+        return {};
+    }
 };
 
 struct check_exception_ptr
@@ -496,12 +515,27 @@ struct check_exception_ptr
     }
 };
 
+// Tag struct used as a copyable first member so that stdexec's structured
+// binding-based sender introspection (which extracts the sender's tag by
+// passing the first member by value into __get_desc) does not require
+// copying non-copyable members like std::atomic<bool>&.
+struct custom_sender_descriptor_tag
+{
+};
+
 struct custom_sender_tag_invoke
 {
     using is_sender = void;
     using sender_concept = hpx::execution::experimental::sender_t;
 
+    [[no_unique_address]] custom_sender_descriptor_tag __desc_tag{};
     std::atomic<bool>& tag_invoke_overload_called;
+
+    explicit custom_sender_tag_invoke(
+        std::atomic<bool>& tag_invoke_overload_called_) noexcept
+      : tag_invoke_overload_called(tag_invoke_overload_called_)
+    {
+    }
 
     template <typename R>
     struct operation_state
@@ -522,29 +556,45 @@ struct custom_sender_tag_invoke
         return {std::forward<R>(r)};
     }
 
-    template <typename Env>
-    friend auto tag_invoke(
-        hpx::execution::experimental::get_completion_signatures_t,
-        custom_sender_tag_invoke const&, Env)
+    template <typename Self, typename... Env>
+    static consteval auto get_completion_signatures() noexcept
         -> hpx::execution::experimental::completion_signatures<
-            hpx::execution::experimental::set_value_t()>;
+            hpx::execution::experimental::set_value_t()>
+    {
+        return {};
+    }
 };
 
 struct custom_sender
 {
     using is_sender = void;
     using sender_concept = hpx::execution::experimental::sender_t;
+
+    [[no_unique_address]] custom_sender_descriptor_tag __desc_tag{};
     std::atomic<bool>& start_called;
     std::atomic<bool>& connect_called;
     std::atomic<bool>& tag_invoke_overload_called;
 
-    template <typename Env>
-    friend auto tag_invoke(
-        hpx::execution::experimental::get_completion_signatures_t,
-        custom_sender const&, Env&&)
+    custom_sender(std::atomic<bool>& start_called_,
+        std::atomic<bool>& connect_called_,
+        std::atomic<bool>& tag_invoke_overload_called_) noexcept
+      : start_called(start_called_)
+      , connect_called(connect_called_)
+      , tag_invoke_overload_called(tag_invoke_overload_called_)
+    {
+    }
+
+    custom_sender(custom_sender const&) = default;
+    custom_sender(custom_sender&&) = default;
+
+    template <typename Self, typename... Env>
+    static consteval auto get_completion_signatures() noexcept
         -> hpx::execution::experimental::completion_signatures<
             hpx::execution::experimental::set_value_t(),
-            hpx::execution::experimental::set_error_t(std::exception_ptr)>;
+            hpx::execution::experimental::set_error_t(std::exception_ptr)>
+    {
+        return {};
+    }
 
     template <typename R>
     struct operation_state
@@ -572,20 +622,37 @@ struct custom_sender_multi_tuple
 {
     using is_sender = void;
     using sender_concept = hpx::execution::experimental::sender_t;
+
+    [[no_unique_address]] custom_sender_descriptor_tag __desc_tag{};
     std::atomic<bool>& start_called;
     std::atomic<bool>& connect_called;
     std::atomic<bool>& tag_invoke_overload_called;
 
     bool expect_set_value = true;
 
-    template <typename Env>
-    friend auto tag_invoke(
-        hpx::execution::experimental::get_completion_signatures_t,
-        custom_sender_multi_tuple const&, Env&&)
+    custom_sender_multi_tuple(std::atomic<bool>& start_called_,
+        std::atomic<bool>& connect_called_,
+        std::atomic<bool>& tag_invoke_overload_called_,
+        bool expect_set_value_ = true) noexcept
+      : start_called(start_called_)
+      , connect_called(connect_called_)
+      , tag_invoke_overload_called(tag_invoke_overload_called_)
+      , expect_set_value(expect_set_value_)
+    {
+    }
+
+    custom_sender_multi_tuple(custom_sender_multi_tuple const&) = default;
+    custom_sender_multi_tuple(custom_sender_multi_tuple&&) = default;
+
+    template <typename Self, typename... Env>
+    static consteval auto get_completion_signatures() noexcept
         -> hpx::execution::experimental::completion_signatures<
             hpx::execution::experimental::set_value_t(int),
             hpx::execution::experimental::set_value_t(std::string),
-            hpx::execution::experimental::set_error_t(std::exception_ptr)>;
+            hpx::execution::experimental::set_error_t(std::exception_ptr)>
+    {
+        return {};
+    }
 
     template <typename R>
     struct operation_state
@@ -603,7 +670,8 @@ struct custom_sender_multi_tuple
             }
             else
             {
-                hpx::execution::experimental::set_value(std::move(r), "err");
+                hpx::execution::experimental::set_value(
+                    std::move(r), std::string("err"));
             }
         }
     };
@@ -622,11 +690,27 @@ struct custom_typed_sender
 {
     using is_sender = void;
     using sender_concept = hpx::execution::experimental::sender_t;
+
+    [[no_unique_address]] custom_sender_descriptor_tag __desc_tag{};
     std::decay_t<T> x;
 
     std::atomic<bool>& start_called;
     std::atomic<bool>& connect_called;
     std::atomic<bool>& tag_invoke_overload_called;
+
+    template <typename U>
+    custom_typed_sender(U&& x_, std::atomic<bool>& start_called_,
+        std::atomic<bool>& connect_called_,
+        std::atomic<bool>& tag_invoke_overload_called_) noexcept
+      : x(std::forward<U>(x_))
+      , start_called(start_called_)
+      , connect_called(connect_called_)
+      , tag_invoke_overload_called(tag_invoke_overload_called_)
+    {
+    }
+
+    custom_typed_sender(custom_typed_sender const&) = default;
+    custom_typed_sender(custom_typed_sender&&) = default;
 
     template <typename R>
     struct operation_state
@@ -651,13 +735,14 @@ struct custom_typed_sender
             std::move(s.x), s.start_called, std::forward<R>(r)};
     }
 
-    template <typename Env>
-    friend auto tag_invoke(
-        hpx::execution::experimental::get_completion_signatures_t,
-        custom_typed_sender const&, Env&&)
+    template <typename Self, typename... Env>
+    static consteval auto get_completion_signatures() noexcept
         -> hpx::execution::experimental::completion_signatures<
             hpx::execution::experimental::set_value_t(T),
-            hpx::execution::experimental::set_error_t(std::exception_ptr)>;
+            hpx::execution::experimental::set_error_t(std::exception_ptr)>
+    {
+        return {};
+    }
 };
 
 struct custom_sender2 : custom_sender
@@ -858,11 +943,10 @@ namespace my_namespace {
             {
                 std::decay_t<R> r;
 
-                friend void tag_invoke(hpx::execution::experimental::start_t,
-                    operation_state& os) noexcept
+                void start() & noexcept
                 {
-                    hpx::execution::experimental::set_value(std::move(os.r));
-                };
+                    hpx::execution::experimental::set_value(std::move(r));
+                }
             };
 
             template <typename R>
@@ -871,23 +955,21 @@ namespace my_namespace {
             {
                 return operation_state<R>{std::forward<R>(r)};
             }
-            friend env_with_scheduler<my_scheduler_template> tag_invoke(
-                hpx::execution::experimental::get_env_t,
-                my_sender const&) noexcept
+            env_with_scheduler<my_scheduler_template> get_env() const noexcept
             {
                 return {};
             }
 
-            template <typename Env>
-            friend auto tag_invoke(
-                hpx::execution::experimental::get_completion_signatures_t,
-                my_sender const&, Env)
+            template <typename Self, typename... Env>
+            static consteval auto get_completion_signatures() noexcept
                 -> hpx::execution::experimental::completion_signatures<
-                    hpx::execution::experimental::set_value_t()>;
+                    hpx::execution::experimental::set_value_t()>
+            {
+                return {};
+            }
         };
 
-        friend my_sender tag_invoke(
-            hpx::execution::experimental::schedule_t, my_scheduler_template)
+        my_sender schedule() const noexcept
         {
             return {};
         }
@@ -927,12 +1009,13 @@ namespace my_namespace {
             return {std::forward<R>(r)};
         }
 
-        template <typename Env>
-        friend auto tag_invoke(
-            hpx::execution::experimental::get_completion_signatures_t,
-            my_sender const&, Env)
+        template <typename Self, typename... Env>
+        static consteval auto get_completion_signatures() noexcept
             -> hpx::execution::experimental::completion_signatures<
-                hpx::execution::experimental::set_value_t()>;
+                hpx::execution::experimental::set_value_t()>
+        {
+            return {};
+        }
     };
 
     // This overload should not be chosen by test_adl_isolation below. We make

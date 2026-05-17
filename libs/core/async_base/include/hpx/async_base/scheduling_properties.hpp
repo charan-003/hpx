@@ -52,7 +52,7 @@ namespace hpx::execution::experimental {
     }    // namespace detail
 
     ///////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT template <typename Property>
+    template <typename Property>
     struct is_scheduling_property<Property,
         std::enable_if_t<
             std::is_base_of_v<detail::property_base<Property>, Property>>>

@@ -398,7 +398,29 @@ namespace hpx::parallel::util::detail {
 
                 scoped_params.mark_end_of_scheduling();
 
-                return reduce(HPX_MOVE(items), HPX_FORWARD(F2, f2));
+                if constexpr (hpx::execution_policy_has_scheduler_executor_v<
+                                  ExPolicy_>)
+                {
+                    namespace ex = hpx::execution::experimental;
+                    namespace tt = hpx::this_thread::experimental;
+                    auto sender =
+                        ex::then(HPX_MOVE(items), HPX_FORWARD(F2, f2));
+                    auto result = tt::sync_wait(HPX_MOVE(sender));
+                    if constexpr (hpx::tuple_size_v<
+                                      std::decay_t<decltype(*result)>> == 0)
+                    {
+                        return;
+                    }
+                    else
+                    {
+                        auto value = hpx::get<0>(HPX_MOVE(*result));
+                        return value;
+                    }
+                }
+                else
+                {
+                    return reduce(HPX_MOVE(items), HPX_FORWARD(F2, f2));
+                }
             }
             catch (...)
             {

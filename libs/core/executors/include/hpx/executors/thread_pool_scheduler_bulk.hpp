@@ -8,32 +8,17 @@
 #pragma once
 
 #include <hpx/config.hpp>
-#include <hpx/execution_base/stdexec_forward.hpp>
-
 #include <hpx/assert.hpp>
-#include <hpx/concepts/concepts.hpp>
-#include <hpx/concurrency/cache_line_data.hpp>
-#include <hpx/concurrency/detail/non_contiguous_index_queue.hpp>
-#include <hpx/coroutines/thread_enums.hpp>
-#include <hpx/datastructures/tuple.hpp>
-#include <hpx/datastructures/variant.hpp>
-#include <hpx/errors/exception.hpp>
-#include <hpx/errors/exception_list.hpp>
-#include <hpx/errors/try_catch_exception_ptr.hpp>
-#include <hpx/execution/algorithms/bulk.hpp>
-#include <hpx/execution/executors/execution_parameters.hpp>
-#include <hpx/execution_base/completion_scheduler.hpp>
-#include <hpx/execution_base/completion_signatures.hpp>
-#include <hpx/execution_base/receiver.hpp>
-#include <hpx/execution_base/sender.hpp>
 #include <hpx/executors/thread_pool_scheduler.hpp>
-#include <hpx/functional/bind_front.hpp>
-#include <hpx/functional/detail/tag_fallback_invoke.hpp>
-#include <hpx/functional/tag_invoke.hpp>
-#include <hpx/iterator_support/counting_iterator.hpp>
-#include <hpx/iterator_support/traits/is_iterator.hpp>
-#include <hpx/iterator_support/traits/is_range.hpp>
+#include <hpx/modules/concepts.hpp>
+#include <hpx/modules/concurrency.hpp>
+#include <hpx/modules/coroutines.hpp>
+#include <hpx/modules/datastructures.hpp>
 #include <hpx/modules/errors.hpp>
+#include <hpx/modules/execution.hpp>
+#include <hpx/modules/execution_base.hpp>
+#include <hpx/modules/functional.hpp>
+#include <hpx/modules/iterator_support.hpp>
 #include <hpx/modules/resource_partitioner.hpp>
 #include <hpx/modules/tag_invoke.hpp>
 #include <hpx/modules/threading_base.hpp>
@@ -717,7 +702,7 @@ namespace hpx::execution::experimental::detail {
                 [&]() { this->execute(HPX_FORWARD(Ts, ts)...); },
                 [&](std::exception_ptr ep) {
                     hpx::execution::experimental::set_error(
-                        HPX_MOVE(this->op_state->receiver), HPX_MOVE(ep));
+                        HPX_MOVE(op_state->receiver), HPX_MOVE(ep));
                 });
         }
 
@@ -868,11 +853,9 @@ namespace hpx::execution::experimental::detail {
 
         // It may also be correct to forward the entire env of the
         // pred. sender.
-        friend constexpr auto tag_invoke(
-            hpx::execution::experimental::get_env_t,
-            thread_pool_bulk_sender const& s) noexcept
+        constexpr auto get_env() const noexcept
         {
-            return env{s.sender, s.scheduler};
+            return env{sender, scheduler};
         }
 
     private:
@@ -940,9 +923,8 @@ namespace hpx::execution::experimental::detail {
                 HPX_ASSERT(hpx::threads::count(pu_mask) == num_worker_threads);
             }
 
-            void start() noexcept
+            void start() & noexcept
             {
-                // Check stop token before starting work
                 auto stop_token =
                     stdexec::get_stop_token(stdexec::get_env(receiver));
                 if (stop_token.stop_requested())

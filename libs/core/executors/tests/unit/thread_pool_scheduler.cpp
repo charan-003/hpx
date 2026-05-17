@@ -7,9 +7,8 @@
 
 #include <hpx/config.hpp>
 
-// Clang V11 ICE's on this test, Clang V8 reports a bogus constexpr problem
-#if !defined(HPX_CLANG_VERSION) ||                                             \
-    ((HPX_CLANG_VERSION / 10000) != 11 && (HPX_CLANG_VERSION / 10000) != 8)
+// Clang fails compiling this test if the version is less than 22
+#if !defined(HPX_CLANG_VERSION) || ((HPX_CLANG_VERSION / 10000) > 22)
 
 #include <hpx/condition_variable.hpp>
 #include <hpx/execution.hpp>

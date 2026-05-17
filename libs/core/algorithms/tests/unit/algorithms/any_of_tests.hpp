@@ -95,8 +95,7 @@ void test_any_of_sender(LnPolicy ln_policy, ExPolicy&& ex_policy, IteratorTag)
             ex::just(iterator(std::begin(c)), iterator(std::end(c)),
                 [](auto v) { return v != 0; }) |
             hpx::any_of(ex_policy.on(exec)));
-        // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-        bool result = hpx::get<0>(*snd_result);
+        bool result = hpx::get<0>(snd_result.value());
 
         // verify values
         bool expected = std::any_of(

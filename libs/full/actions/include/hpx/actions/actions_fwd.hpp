@@ -15,14 +15,14 @@ namespace hpx::actions {
 
     /// \cond NOINTERNAL
 
-    struct base_action;
-    struct HPX_EXPORT base_action_data;
+    HPX_CXX_EXPORT struct base_action;
+    HPX_CXX_EXPORT struct HPX_EXPORT base_action_data;
 
     ///////////////////////////////////////////////////////////////////////////
-    template <typename Action>
+    HPX_CXX_EXPORT template <typename Action>
     struct transfer_action;
 
-    template <typename Action>
+    HPX_CXX_EXPORT template <typename Action>
     struct transfer_continuation_action;
     /// \endcond
 }    // namespace hpx::actions

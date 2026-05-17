@@ -303,9 +303,7 @@ namespace hpx::threads {
             spinlock_pool::spinlock_for(this));
         std::swap(description_, value);
 
-#if defined(HPX_HAVE_MODULE_TRACY)
-        tracy::detail::rename_region(description_.get_description());
-#endif
+        hpx::tracing::rename_region(description_.get_description());
 
         return value;
     }
@@ -553,6 +551,19 @@ namespace hpx::threads {
     {
         return {thrdptr->get_description().get_description(),
             thrdptr->get_tracy_fiber_name(), thrdptr->is_stackless()};
+    }
+#elif defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0
+    tracing::region_init_data get_region_init_data(thread_data const* thrdptr)
+    {
+        threads::thread_description const desc = thrdptr->get_description();
+        if (desc.kind() == threads::thread_description::data_type::description)
+        {
+            return {desc.get_description(), thrdptr->get_thread_phase(),
+                thrdptr, thrdptr->is_stackless(), 0, false,
+                desc.get_description_itt().handle_};
+        }
+        return {"address", thrdptr->get_thread_phase(), thrdptr,
+            thrdptr->is_stackless(), desc.get_address(), true, nullptr};
     }
 #endif
 

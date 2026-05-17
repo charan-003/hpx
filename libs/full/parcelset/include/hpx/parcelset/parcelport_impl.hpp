@@ -1,5 +1,5 @@
 //  Copyright (c) 2014 Thomas Heller
-//  Copyright (c) 2007-2025 Hartmut Kaiser
+//  Copyright (c) 2007-2026 Hartmut Kaiser
 //  Copyright (c) 2007 Richard D Guidry Jr
 //  Copyright (c) 2011 Bryce Lelbach
 //  Copyright (c) 2011 Katelyn Kufahl
@@ -52,10 +52,10 @@
 namespace hpx::parcelset {
 
     ///////////////////////////////////////////////////////////////////////////
-    template <typename ConnectionHandler>
+    HPX_CXX_EXPORT template <typename ConnectionHandler>
     struct connection_handler_traits;
 
-    template <typename ConnectionHandler>
+    HPX_CXX_EXPORT template <typename ConnectionHandler>
     class HPX_EXPORT parcelport_impl : public parcelport
     {
         using connection = typename connection_handler_traits<

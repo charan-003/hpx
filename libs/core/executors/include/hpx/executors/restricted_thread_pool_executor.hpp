@@ -241,7 +241,7 @@ namespace hpx::execution::experimental {
 
     ///////////////////////////////////////////////////////////////////////////
     /// \cond NOINTERNAL
-    HPX_CXX_CORE_EXPORT template <typename Policy>
+    template <typename Policy>
     struct is_never_blocking_one_way_executor<
         restricted_policy_executor<Policy>>
       : is_never_blocking_one_way_executor<
@@ -249,20 +249,20 @@ namespace hpx::execution::experimental {
     {
     };
 
-    HPX_CXX_CORE_EXPORT template <typename Policy>
+    template <typename Policy>
     struct is_two_way_executor<restricted_policy_executor<Policy>>
       : is_two_way_executor<hpx::execution::parallel_policy_executor<Policy>>
     {
     };
 
-    HPX_CXX_CORE_EXPORT template <typename Policy>
+    template <typename Policy>
     struct is_bulk_two_way_executor<restricted_policy_executor<Policy>>
       : is_bulk_two_way_executor<
             hpx::execution::parallel_policy_executor<Policy>>
     {
     };
 
-    HPX_CXX_CORE_EXPORT template <typename Policy>
+    template <typename Policy>
     struct is_scheduler_executor<restricted_policy_executor<Policy>>
       : is_scheduler_executor<hpx::execution::parallel_policy_executor<Policy>>
     {
