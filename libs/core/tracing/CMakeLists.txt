@@ -9,7 +9,7 @@ set(tracing_headers hpx/tracing/tracing.hpp)
 set(tracing_sources tracing.cpp)
 
 set(tracing_module_dependencies hpx_config)
-if(HPX_TRACY_WITH_TRACY)
+if(HPX_WITH_TRACY)
   list(APPEND tracing_module_dependencies hpx_tracy)
 endif()
 if(HPX_WITH_ITTNOTIFY)

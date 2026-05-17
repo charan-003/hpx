@@ -62,7 +62,7 @@ set(synchronization_sources
     detail/sliding_semaphore.cpp local_barrier.cpp mutex.cpp stop_token.cpp
 )
 
-if(HPX_TRACY_WITH_TRACY)
+if(HPX_WITH_TRACY)
   set(additional_dependencies hpx_tracy)
 endif()
 

@@ -14,14 +14,14 @@ endif()
 if(HPX_WITH_ITTNOTIFY)
   list(APPEND _hpx_tracing_backends "HPX_WITH_ITTNOTIFY")
 endif()
-if(HPX_TRACY_WITH_TRACY)
-  list(APPEND _hpx_tracing_backends "HPX_TRACY_WITH_TRACY")
+if(HPX_WITH_TRACY)
+  list(APPEND _hpx_tracing_backends "HPX_WITH_TRACY")
 endif()
 
 list(LENGTH _hpx_tracing_backends _hpx_tracing_backends_count)
 if(_hpx_tracing_backends_count GREATER 1)
   hpx_error(
-    "Only one tracing backend can be active. Disable all but one of: HPX_WITH_APEX, HPX_WITH_ITTNOTIFY, HPX_TRACY_WITH_TRACY."
+    "Only one tracing backend can be active. Disable all but one of: HPX_WITH_APEX, HPX_WITH_ITTNOTIFY, HPX_WITH_TRACY."
   )
 endif()
 unset(_hpx_tracing_backends)
@@ -43,9 +43,13 @@ if(HPX_WITH_ITTNOTIFY)
   hpx_add_config_define(HPX_HAVE_ITTNOTIFY 1)
 endif()
 
+if(HPX_WITH_TRACY)
+  hpx_add_config_define(HPX_HAVE_TRACY)
+endif()
+
 if(HPX_WITH_APEX
    OR HPX_WITH_ITTNOTIFY
-   OR HPX_TRACY_WITH_TRACY
+   OR HPX_WITH_TRACY
 )
   hpx_add_config_define(HPX_HAVE_TRACING)
 endif()

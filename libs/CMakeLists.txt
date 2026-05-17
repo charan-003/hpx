@@ -433,7 +433,7 @@ foreach(lib ${HPX_LIBS})
     )
 
     # Clang emits DWARF-5 records while compiling the TracyClient library
-    if(HPX_TRACY_WITH_TRACY
+    if(HPX_WITH_TRACY
        AND (NOT MSVC)
        AND (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID
                                                      MATCHES "AppleClang")

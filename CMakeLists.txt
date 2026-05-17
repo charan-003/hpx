@@ -1152,7 +1152,7 @@ hpx_option(
 )
 
 hpx_option(
-  HPX_TRACY_WITH_TRACY BOOL "Enable Tracy instrumentation support." OFF
+  HPX_WITH_TRACY BOOL "Enable Tracy instrumentation support." OFF
   CATEGORY "Profiling"
 )
 
