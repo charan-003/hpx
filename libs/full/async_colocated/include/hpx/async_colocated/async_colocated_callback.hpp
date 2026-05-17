@@ -7,12 +7,14 @@
 #pragma once
 
 #include <hpx/assert.hpp>
-#include <hpx/async_colocated/async_colocated.hpp>
-#include <hpx/async_colocated/async_colocated_callback_fwd.hpp>
 #include <hpx/modules/actions_base.hpp>
+#include <hpx/modules/agas_base.hpp>
 #include <hpx/modules/async_base.hpp>
 #include <hpx/modules/async_distributed.hpp>
 #include <hpx/modules/futures.hpp>
+
+#include <hpx/async_colocated/async_colocated.hpp>
+#include <hpx/async_colocated/async_colocated_callback_fwd.hpp>
 
 #include <utility>
 

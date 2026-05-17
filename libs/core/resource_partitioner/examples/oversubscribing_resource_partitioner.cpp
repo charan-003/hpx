@@ -6,11 +6,6 @@
 
 #include <hpx/config.hpp>
 
-// MSVC V19.44 (VS2022) ICE's when compiling this test if C++20 modules are
-// enabled
-#if !defined(HPX_HAVE_CXX_MODULES) ||                                          \
-    !(defined(HPX_MSVC) && HPX_MSVC_VERSION <= 1944)
-
 // make available M_PI
 #if !defined(_USE_MATH_DEFINES)
 #define _USE_MATH_DEFINES
@@ -295,15 +290,6 @@ int main(int argc, char* argv[])
     iparams.rp_callback = init_resource_partitioner_handler;
 
     return hpx::local::init(hpx_main, argc, argv, iparams);
-}
-
-#endif
-
-#else
-
-int main(int argc, char* argv[])
-{
-    return 0;
 }
 
 #endif
