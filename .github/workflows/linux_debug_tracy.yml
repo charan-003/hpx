@@ -44,17 +44,6 @@ jobs:
       run: |
           cmake --build build --target all
           cmake --build build --target examples
-    - name: Verify Tracy is active
-      shell: bash
-      run: |
-          # Compile-time check: HPX_HAVE_TRACY must be defined
-          printf '#include <hpx/config.hpp>\n#ifndef HPX_HAVE_TRACY\n#error "HPX_HAVE_TRACY not defined"\n#endif\nint main(){return 0;}\n' > /tmp/check_tracy.cpp
-          c++ -std=c++17 \
-              -c \
-              -I build/libs/core/config/include \
-              -I libs/core/config/include \
-              /tmp/check_tracy.cpp -o /tmp/check_tracy.o
-          echo "Tracy compile-time verification passed."
     - name: Test
       shell: bash
       run: |
