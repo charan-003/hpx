@@ -689,7 +689,7 @@
 
 #endif
 
-#if defined(HPX_HAVE_CXX26_EXPERIMENTAL_META)
+#if defined(HPX_HAVE_CXX26_REFLECTION)
 /// \brief Define a reflection-based HPX action for a free function.
 ///
 /// Usage:
@@ -706,4 +706,4 @@
 /// \note Requires HPX_WITH_CXX26_REFLECTION=ON
 #define HPX_ACTION(func, name)                                                 \
     using name = hpx::actions::reflect_action<^^func> /**/
-#endif    // HPX_HAVE_CXX26_EXPERIMENTAL_META
+#endif    // HPX_HAVE_CXX26_REFLECTION

@@ -20,7 +20,7 @@
 
 #include <hpx/config.hpp>
 
-#if defined(HPX_HAVE_CXX26_EXPERIMENTAL_META)
+#if defined(HPX_HAVE_CXX26_REFLECTION)
 
 #include <hpx/serialization/detail/refl_qualified_name_of.hpp>
 
@@ -44,7 +44,6 @@ namespace hpx::actions {
     template <std::meta::info F>
     struct reflect_action
     {
-        /// The function pointer type (e.g. int(*)(double, double))
         /// The function type (e.g. int(double, double))
         using func_type = [:std::meta::type_of(F):];
 
@@ -73,4 +72,4 @@ namespace hpx::actions {
 
 }    // namespace hpx::actions
 
-#endif    // HPX_HAVE_CXX26_EXPERIMENTAL_META
+#endif    // HPX_HAVE_CXX26_REFLECTION
