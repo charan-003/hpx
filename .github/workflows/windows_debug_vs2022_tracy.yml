@@ -45,8 +45,8 @@ jobs:
               -DHPX_WITH_VERIFY_LOCKS=ON \
               -DHPX_WITH_VERIFY_LOCKS_BACKTRACE=ON \
               -DHPX_WITH_CHECK_MODULE_DEPENDENCIES=On \
-              -DHPX_TRACY_WITH_TRACY=ON \
-              -DHPX_TRACY_WITH_FETCH_TRACY=ON
+              -DHPX_WITH_TRACY=ON \
+              -DHPX_WITH_FETCH_TRACY=ON
     - name: Build
       shell: bash
       run: |
@@ -57,6 +57,11 @@ jobs:
       shell: bash
       run: |
           cmake --install build --config Debug
+    - name: Verify Tracy is active
+      shell: bash
+      run: |
+          grep "#define HPX_HAVE_TRACY" build/libs/core/config/include/hpx/config/defines.hpp
+          echo "Tracy CMake verification passed."
     - name: Test
       run: |
           $exclude_regex = & "$env:GITHUB_WORKSPACE/.github/ci-scripts/generate_ctest_exclude_regex.ps1" `
