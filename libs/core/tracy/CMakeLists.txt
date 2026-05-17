@@ -29,5 +29,5 @@ add_hpx_module(
   HEADERS ${tracy_headers}
   MODULE_DEPENDENCIES hpx_config
   PRIVATE_DEPENDENCIES tracy::tracy
-  CMAKE_SUBDIRS
+  CMAKE_SUBDIRS tests
 )
