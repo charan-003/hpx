@@ -107,34 +107,42 @@ namespace hpx::when_all_vector_detail {
         using set_value_transform_to_vector =
             typename set_value_completion_helper<element_value_type>::type;
 
-        template <typename...>
-        using transformed_comp_sigs_identity =
-            hpx::execution::experimental::completion_signatures<
-                set_value_transform_to_vector>;
+        struct transform_value_to_vector_fn
+        {
+            template <typename...>
+            consteval auto operator()() const noexcept
+            {
+                return hpx::execution::experimental::completion_signatures<
+                    set_value_transform_to_vector>{};
+            }
+        };
 
-        template <typename Err>
-        using decay_set_error =
-            hpx::execution::experimental::completion_signatures<
-                hpx::execution::experimental::set_error_t(std::decay_t<Err>)>;
+        struct decay_set_error_fn
+        {
+            template <typename Err>
+            consteval auto operator()() const noexcept
+            {
+                return hpx::execution::experimental::completion_signatures<
+                    hpx::execution::experimental::set_error_t(
+                        std::decay_t<Err>)>{};
+            }
+        };
 
         template <typename Env>
-#if defined(HPX_CLANG_VERSION)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#endif
         friend auto tag_invoke(
             hpx::execution::experimental::get_completion_signatures_t,
             when_all_vector_sender_type const&, Env const&) noexcept
-            -> hpx::execution::experimental::transform_completion_signatures<
-                hpx::execution::experimental::completion_signatures_of_t<Sender,
-                    Env>,
-                hpx::execution::experimental::completion_signatures<
-                    hpx::execution::experimental::set_error_t(
-                        std::exception_ptr)>,
-                transformed_comp_sigs_identity, decay_set_error>;
-#if defined(HPX_CLANG_VERSION)
-#pragma clang diagnostic pop
-#endif
+            -> decltype(
+                hpx::execution::experimental::transform_completion_signatures(
+                    hpx::execution::experimental::completion_signatures_of_t<
+                        Sender, Env>{},
+                    transform_value_to_vector_fn{},
+                    decay_set_error_fn{},
+                    hpx::execution::experimental::keep_completion<
+                        hpx::execution::experimental::set_stopped_t>{},
+                    hpx::execution::experimental::completion_signatures<
+                        hpx::execution::experimental::set_error_t(
+                            std::exception_ptr)>{}));
 
         template <typename Receiver>
         struct operation_state

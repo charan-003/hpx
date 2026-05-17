@@ -603,7 +603,6 @@ int hpx_main(hpx::program_options::variables_map& vm)
             timing = run_benchmark<>(warmup_iterations, iterations, vector_size,
                 std::move(alloc), std::move(policy));
         }
-#if defined(HPX_HAVE_STDEXEC)
         else if (executor == 6)
         {
             // parallel_scheduler natively.
@@ -622,7 +621,6 @@ int hpx_main(hpx::program_options::variables_map& vm)
             timing = run_benchmark<>(warmup_iterations, iterations, vector_size,
                 std::move(alloc), std::move(policy));
         }
-#endif
         else
         {
             HPX_THROW_EXCEPTION(hpx::error::commandline_option_error,

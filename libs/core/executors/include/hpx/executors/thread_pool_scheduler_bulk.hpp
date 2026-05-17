@@ -397,33 +397,27 @@ namespace hpx::execution::experimental::detail {
         OperationState* op_state;
 
         template <typename E>
-        void set_error(E&& e) && noexcept
+        void set_error(E&& e) & noexcept
         {
             hpx::execution::experimental::set_error(
                 HPX_MOVE(op_state->receiver), HPX_FORWARD(E, e));
         }
 
-        void set_stopped() && noexcept
+        template <typename E>
+        void set_error(E&& e) && noexcept
+        {
+            static_cast<bulk_receiver&>(*this).set_error(HPX_FORWARD(E, e));
+        }
+
+        void set_stopped() & noexcept
         {
             hpx::execution::experimental::set_stopped(
                 HPX_MOVE(op_state->receiver));
         }
-        template <typename Receiver, typename E>
-            requires std::same_as<std::remove_cvref_t<Receiver>, bulk_receiver>
-        friend void tag_invoke(hpx::execution::experimental::set_error_t,
-            Receiver&& r, E&& e) noexcept
-        {
-            hpx::execution::experimental::set_error(
-                HPX_MOVE(r.op_state->receiver), HPX_FORWARD(E, e));
-        }
 
-        template <typename Receiver>
-            requires std::same_as<std::remove_cvref_t<Receiver>, bulk_receiver>
-        friend void tag_invoke(
-            hpx::execution::experimental::set_stopped_t, Receiver&& r) noexcept
+        void set_stopped() && noexcept
         {
-            hpx::execution::experimental::set_stopped(
-                HPX_MOVE(r.op_state->receiver));
+            static_cast<bulk_receiver&>(*this).set_stopped();
         }
 
         // Initialize a queue for a worker thread.
@@ -717,7 +711,7 @@ namespace hpx::execution::experimental::detail {
                 (!OperationState::is_chunked &&
                     std::invocable<F, range_value_type,
                         std::add_lvalue_reference_t<Ts>...>) )
-        void set_value(Ts&&... ts) && noexcept
+        void set_value(Ts&&... ts) & noexcept
         {
             hpx::detail::try_catch_exception_ptr(
                 [&]() { this->execute(HPX_FORWARD(Ts, ts)...); },
@@ -727,23 +721,17 @@ namespace hpx::execution::experimental::detail {
                 });
         }
 
-        template <typename Receiver, typename... Ts>
-            requires std::same_as<std::remove_cvref_t<Receiver>, bulk_receiver> &&
-                ((OperationState::is_chunked &&
-                     std::invocable<F, range_value_type, range_value_type,
-                         std::add_lvalue_reference_t<Ts>...>) ||
-                    (!OperationState::is_chunked &&
-                        std::invocable<F, range_value_type,
-                            std::add_lvalue_reference_t<Ts>...>))
-        friend void tag_invoke(hpx::execution::experimental::set_value_t,
-            Receiver&& r, Ts&&... ts) noexcept
+        template <typename... Ts>
+            requires((OperationState::is_chunked &&
+                         std::invocable<F, range_value_type, range_value_type,
+                             std::add_lvalue_reference_t<Ts>...>) ||
+                (!OperationState::is_chunked &&
+                    std::invocable<F, range_value_type,
+                        std::add_lvalue_reference_t<Ts>...>) )
+        void set_value(Ts&&... ts) && noexcept
         {
-            hpx::detail::try_catch_exception_ptr(
-                [&]() { r.execute(HPX_FORWARD(Ts, ts)...); },
-                [&](std::exception_ptr ep) {
-                    hpx::execution::experimental::set_error(
-                        HPX_MOVE(r.op_state->receiver), HPX_MOVE(ep));
-                });
+            static_cast<bulk_receiver&>(*this).set_value(
+                HPX_FORWARD(Ts, ts)...);
         }
     };
 
@@ -811,14 +799,24 @@ namespace hpx::execution::experimental::detail {
 
         using sender_concept = hpx::execution::experimental::sender_t;
 
-        template <typename Env>
-        friend auto tag_invoke(
-            hpx::execution::experimental::get_completion_signatures_t,
-            thread_pool_bulk_sender const&, Env const&)
-            -> stdexec::__transform_completion_signatures_of_t<Sender, Env,
-                hpx::execution::experimental::completion_signatures<
-                    hpx::execution::experimental::set_error_t(
-                        std::exception_ptr)>>;
+        template <typename Self, typename Env>
+        static consteval auto get_completion_signatures() noexcept
+            -> decltype(hpx::execution::experimental::
+                    transform_completion_signatures(
+                        hpx::execution::experimental::
+                            completion_signatures_of_t<Sender, Env>{},
+                        hpx::execution::experimental::keep_completion<
+                            hpx::execution::experimental::set_value_t>{},
+                        hpx::execution::experimental::keep_completion<
+                            hpx::execution::experimental::set_error_t>{},
+                        hpx::execution::experimental::keep_completion<
+                            hpx::execution::experimental::set_stopped_t>{},
+                        hpx::execution::experimental::completion_signatures<
+                            hpx::execution::experimental::set_error_t(
+                                std::exception_ptr)>{}))
+        {
+            return {};
+        }
 
         struct env
         {
@@ -858,13 +856,17 @@ namespace hpx::execution::experimental::detail {
 
             // P3826R5: report the completion domain for this bulk sender
             template <typename CPO>
-            auto query(stdexec::get_completion_domain_t<CPO>) const noexcept
+            auto query(
+                hpx::execution::experimental::get_completion_domain_t<CPO>)
+                const noexcept
             {
-                return sch.query(stdexec::get_completion_domain_t<CPO>{});
+                return sch.query(
+                    hpx::execution::experimental::get_completion_domain_t<
+                        CPO>{});
             }
         };
 
-        // It may be also be correct to forward the entire env of the
+        // It may also be correct to forward the entire env of the
         // pred. sender.
         friend constexpr auto tag_invoke(
             hpx::execution::experimental::get_env_t,
@@ -938,17 +940,17 @@ namespace hpx::execution::experimental::detail {
                 HPX_ASSERT(hpx::threads::count(pu_mask) == num_worker_threads);
             }
 
-            friend void tag_invoke(start_t, operation_state& os) noexcept
+            void start() noexcept
             {
                 // Check stop token before starting work
                 auto stop_token =
-                    stdexec::get_stop_token(stdexec::get_env(os.receiver));
+                    stdexec::get_stop_token(stdexec::get_env(receiver));
                 if (stop_token.stop_requested())
                 {
-                    stdexec::set_stopped(HPX_MOVE(os.receiver));
+                    stdexec::set_stopped(HPX_MOVE(receiver));
                     return;
                 }
-                hpx::execution::experimental::start(os.op_state);
+                hpx::execution::experimental::start(op_state);
             }
         };
 

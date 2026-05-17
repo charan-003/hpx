@@ -199,6 +199,10 @@ namespace hpx::execution::experimental {
     // Execution policies
     HPX_CXX_CORE_EXPORT using stdexec::is_execution_policy;
     HPX_CXX_CORE_EXPORT using stdexec::is_execution_policy_v;
+    HPX_CXX_CORE_EXPORT using stdexec::parallel_policy;
+    HPX_CXX_CORE_EXPORT using stdexec::parallel_unsequenced_policy;
+    HPX_CXX_CORE_EXPORT using stdexec::sequenced_policy;
+    HPX_CXX_CORE_EXPORT using stdexec::unsequenced_policy;
     using stdexec::par;
     using stdexec::par_unseq;
     using stdexec::seq;
@@ -290,8 +294,9 @@ namespace hpx::execution::experimental {
     HPX_CXX_CORE_EXPORT using stdexec::sends_stopped;
     HPX_CXX_CORE_EXPORT using stdexec::value_types_of_t;
 
-    HPX_CXX_CORE_EXPORT using stdexec::transform_completion_signatures;
-    HPX_CXX_CORE_EXPORT using stdexec::transform_completion_signatures_of;
+    // Callable consteval API
+    HPX_CXX_CORE_EXPORT using exec::transform_completion_signatures;
+    HPX_CXX_CORE_EXPORT using exec::ignore_completion;
     HPX_CXX_CORE_EXPORT using exec::keep_completion;
 
     // Transform sender
@@ -340,6 +345,11 @@ namespace hpx::execution::experimental {
 
     HPX_CXX_CORE_EXPORT using stdexec::operation_state;
 
+    // sender invokes
+    template <typename Sender, typename AlgorithmTag>
+    HPX_CXX_CORE_EXPORT inline constexpr bool sender_invokes_algorithm_v =
+        stdexec::__sender_for<Sender, AlgorithmTag>;
+
     namespace stdexec_non_standard_tag_invoke {
 
         // Presently, the stdexec repository implements tag invoke,
@@ -365,7 +375,6 @@ namespace hpx::execution::experimental {
 
         // Additional stdexec concepts and utilities needed for domain customization
         HPX_CXX_CORE_EXPORT using stdexec::__completes_on;
-        HPX_CXX_CORE_EXPORT using stdexec::__sender_for;
     }    // namespace stdexec_internal
 }    // namespace hpx::execution::experimental
 

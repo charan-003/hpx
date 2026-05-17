@@ -41,36 +41,20 @@ namespace hpx::execution::experimental {
 
             using sender_concept = hpx::execution::experimental::sender_t;
 
-            template <typename... Args>
-            using default_set_value =
-                hpx::execution::experimental::completion_signatures<
-                    hpx::execution::experimental::set_value_t(Args...)>;
-
-            template <typename Arg>
-            using default_set_error =
-                hpx::execution::experimental::completion_signatures<
-                    hpx::execution::experimental::set_error_t(Arg)>;
-
-            using disable_set_stopped =
-                hpx::execution::experimental::completion_signatures<>;
-
             template <typename Env>
-#if defined(HPX_CLANG_VERSION)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#endif
             friend auto tag_invoke(get_completion_signatures_t,
-                bulk_sender const&, Env) noexcept -> hpx::execution::
-                experimental::transform_completion_signatures<
+                bulk_sender const&, Env) noexcept -> decltype(
+                hpx::execution::experimental::transform_completion_signatures(
                     hpx::execution::experimental::completion_signatures_of_t<
-                        Sender, Env>,
+                        Sender, Env>{},
+                    hpx::execution::experimental::keep_completion<
+                        hpx::execution::experimental::set_value_t>{},
+                    hpx::execution::experimental::keep_completion<
+                        hpx::execution::experimental::set_error_t>{},
+                    hpx::execution::experimental::ignore_completion{},
                     hpx::execution::experimental::completion_signatures<
                         hpx::execution::experimental::set_error_t(
-                            std::exception_ptr)>,
-                    default_set_value, default_set_error, disable_set_stopped>;
-#if defined(HPX_CLANG_VERSION)
-#pragma clang diagnostic pop
-#endif
+                            std::exception_ptr)>{}));
 
             friend constexpr auto tag_invoke(
                 hpx::execution::experimental::get_env_t,

@@ -1,5 +1,5 @@
 //  Copyright (c) 2020 ETH Zurich
-//  Copyright (c) 2022-2025 Hartmut Kaiser
+//  Copyright (c) 2022-2026 Hartmut Kaiser
 //
 //  SPDX-License-Identifier: BSL-1.0
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -15,6 +15,7 @@
 #include <hpx/execution.hpp>
 #include <hpx/functional.hpp>
 #include <hpx/init.hpp>
+#include <hpx/modules/execution_base.hpp>
 #include <hpx/modules/testing.hpp>
 #include <hpx/mutex.hpp>
 #include <hpx/thread.hpp>
@@ -59,9 +60,10 @@ struct is_thread_pool_bulk_sender : std::false_type
 };
 
 template <typename Policy, typename Sender, typename Shape, typename F,
-    bool IsChunked>
+    bool IsChunked, bool IsParallel, bool IsUnsequenced>
 struct is_thread_pool_bulk_sender<hpx::execution::experimental::detail::
-        thread_pool_bulk_sender<Policy, Sender, Shape, F, IsChunked>>
+        thread_pool_bulk_sender<Policy, Sender, Shape, F, IsChunked, IsParallel,
+            IsUnsequenced>>
   : std::true_type
 {
 };
@@ -72,8 +74,9 @@ void test_execute()
     hpx::thread::id parent_id = hpx::this_thread::get_id();
 
     ex::thread_pool_scheduler sched{};
-    ex::execute(sched,
-        [parent_id]() { HPX_TEST_NEQ(hpx::this_thread::get_id(), parent_id); });
+    ex::start_detached(ex::schedule(sched) | ex::then([parent_id]() {
+        HPX_TEST_NEQ(hpx::this_thread::get_id(), parent_id);
+    }));
 }
 
 struct check_context_receiver
@@ -84,27 +87,25 @@ struct check_context_receiver
     bool& executed;
     using receiver_concept = ex::receiver_t;
     template <typename E>
-    friend void tag_invoke(
-        ex::set_error_t, check_context_receiver&&, E&&) noexcept
+    void set_error(E&&) && noexcept
     {
         HPX_TEST(false);
     }
 
-    friend void tag_invoke(ex::set_stopped_t, check_context_receiver&&) noexcept
+    void set_stopped() && noexcept
     {
         HPX_TEST(false);
     }
 
     template <typename... Ts>
-    friend void tag_invoke(
-        ex::set_value_t, check_context_receiver&& r, Ts&&...) noexcept
+    void set_value(Ts&&...) && noexcept
     {
-        HPX_TEST_NEQ(r.parent_id, hpx::this_thread::get_id());
+        HPX_TEST_NEQ(parent_id, hpx::this_thread::get_id());
         HPX_TEST_NEQ(hpx::thread::id(hpx::threads::invalid_thread_id),
             hpx::this_thread::get_id());
-        std::lock_guard l{r.mtx};
-        r.executed = true;
-        r.cond.notify_one();
+        std::lock_guard l{mtx};
+        executed = true;
+        cond.notify_one();
     }
 };
 
@@ -249,24 +250,23 @@ struct callback_receiver
     using receiver_concept = ex::receiver_t;
 
     template <typename E>
-    friend void tag_invoke(ex::set_error_t, callback_receiver&&, E&&) noexcept
+    void set_error(E&&) && noexcept
     {
         HPX_TEST(false);
     }
 
-    friend void tag_invoke(ex::set_stopped_t, callback_receiver&&) noexcept
+    void set_stopped() && noexcept
     {
         HPX_TEST(false);
     }
 
     template <typename... Ts>
-    friend void tag_invoke(
-        ex::set_value_t, callback_receiver&& r, Ts&&...) noexcept
+    void set_value(Ts&&...) && noexcept
     {
-        HPX_INVOKE(r.f, );
-        std::lock_guard l{r.mtx};
-        r.executed = true;
-        r.cond.notify_one();
+        HPX_INVOKE(f, );
+        std::lock_guard l{mtx};
+        executed = true;
+        cond.notify_one();
     }
 };
 
@@ -553,8 +553,8 @@ void test_bulk_starts_on()
         hpx::thread::id parent_id = hpx::this_thread::get_id();
 
         // Test starts_on pattern: bulk operation with scheduler in environment
-        // Use start_on to provide scheduler through environment
-        auto bulk_sender = ex::continues_on(
+        // Use starts_on to schedule bulk on the thread pool
+        auto bulk_sender = ex::starts_on(
             ex::thread_pool_scheduler{}, ex::just() | ex::bulk(n, [&](int i) {
                 ++v[i];
                 HPX_TEST_NEQ(parent_id, hpx::this_thread::get_id());
@@ -865,7 +865,7 @@ void test_future_sender()
     }
 
     {
-        auto s = ex::just(ex::thread_pool_scheduler{}, 3);
+        auto s = ex::starts_on(ex::thread_pool_scheduler{}, ex::just(3));
         auto f = ex::make_future(std::move(s));
         HPX_TEST_EQ(f.get(), 3);
     }
@@ -876,7 +876,8 @@ void test_future_sender()
     }
 
     {
-        auto f = ex::just(ex::thread_pool_scheduler{}, 3) | ex::make_future();
+        auto f = ex::starts_on(ex::thread_pool_scheduler{}, ex::just(3)) |
+            ex::make_future();
         HPX_TEST_EQ(f.get(), 3);
     }
 
@@ -890,9 +891,11 @@ void test_future_sender()
     }
 
     {
-        auto s1 = ex::just(ex::thread_pool_scheduler{}, std::size_t(42));
-        auto s2 = ex::just(ex::thread_pool_scheduler{}, 3.14);
-        auto s3 = ex::just(ex::thread_pool_scheduler{}, std::string("hello"));
+        auto s1 = ex::starts_on(
+            ex::thread_pool_scheduler{}, ex::just(std::size_t(42)));
+        auto s2 = ex::starts_on(ex::thread_pool_scheduler{}, ex::just(3.14));
+        auto s3 = ex::starts_on(
+            ex::thread_pool_scheduler{}, ex::just(std::string("hello")));
         auto f = ex::make_future(ex::then(
             ex::when_all(std::move(s1), std::move(s2), std::move(s3)),
             [](std::size_t x, double, std::string z) { return z.size() + x; }));
@@ -901,8 +904,9 @@ void test_future_sender()
 
     // mixing senders and futures
     {
-        HPX_TEST_EQ(hpx::get<0>(*tt::sync_wait(ex::as_sender(ex::make_future(
-                        ex::just(ex::thread_pool_scheduler{}, 42))))),
+        HPX_TEST_EQ(
+            hpx::get<0>(*tt::sync_wait(ex::as_sender(ex::make_future(
+                ex::starts_on(ex::thread_pool_scheduler{}, ex::just(42)))))),
             42);
     }
 
@@ -916,9 +920,11 @@ void test_future_sender()
     }
 
     {
-        auto s1 = ex::just(ex::thread_pool_scheduler{}, std::size_t(42));
-        auto s2 = ex::just(ex::thread_pool_scheduler{}, 3.14);
-        auto s3 = ex::just(ex::thread_pool_scheduler{}, std::string("hello"));
+        auto s1 = ex::starts_on(
+            ex::thread_pool_scheduler{}, ex::just(std::size_t(42)));
+        auto s2 = ex::starts_on(ex::thread_pool_scheduler{}, ex::just(3.14));
+        auto s3 = ex::starts_on(
+            ex::thread_pool_scheduler{}, ex::just(std::string("hello")));
         auto f = ex::make_future(ex::then(
             ex::when_all(std::move(s1), std::move(s2), std::move(s3)),
             [](std::size_t x, double, std::string z) { return z.size() + x; }));
@@ -945,18 +951,19 @@ void test_ensure_started()
     }
 
     {
-        auto s = ex::just(sched, 42) | ex::ensure_started();
+        auto s = ex::starts_on(sched, ex::just(42)) | ex::ensure_started();
         HPX_TEST_EQ(hpx::get<0>(*tt::sync_wait(std::move(s))), 42);
     }
 
     {
-        auto s = ex::just(sched, 42) | ex::ensure_started() |
+        auto s = ex::starts_on(sched, ex::just(42)) | ex::ensure_started() |
             ex::continues_on(sched);
         HPX_TEST_EQ(hpx::get<0>(*tt::sync_wait(std::move(s))), 42);
     }
 
     {
-        auto s = ex::just(sched, 42) | ex::ensure_started() | ex::split();
+        auto s = ex::starts_on(sched, ex::just(42)) | ex::ensure_started() |
+            ex::split();
         HPX_TEST_EQ(hpx::get<0>(*tt::sync_wait(s)), 42);
         HPX_TEST_EQ(hpx::get<0>(*tt::sync_wait(s)), 42);
         HPX_TEST_EQ(hpx::get<0>(*tt::sync_wait(s)), 42);
@@ -1081,17 +1088,18 @@ void test_split()
     }
 
     {
-        auto s = ex::just(sched, 42) | ex::split();
+        auto s = ex::starts_on(sched, ex::just(42)) | ex::split();
         HPX_TEST_EQ(hpx::get<0>(*tt::sync_wait(std::move(s))), 42);
     }
 
     {
-        auto s = ex::just(sched, 42) | ex::split() | ex::continues_on(sched);
+        auto s = ex::starts_on(sched, ex::just(42)) | ex::split() |
+            ex::continues_on(sched);
         HPX_TEST_EQ(hpx::get<0>(*tt::sync_wait(std::move(s))), 42);
     }
 
     {
-        auto s = ex::just(sched, 42) | ex::split();
+        auto s = ex::starts_on(sched, ex::just(42)) | ex::split();
         HPX_TEST_EQ(hpx::get<0>(*tt::sync_wait(s)), 42);
         HPX_TEST_EQ(hpx::get<0>(*tt::sync_wait(s)), 42);
         HPX_TEST_EQ(hpx::get<0>(*tt::sync_wait(s)), 42);
@@ -1183,40 +1191,49 @@ void test_let_value()
     }
 
     {
-        auto result = hpx::get<0>(*(tt::sync_wait(ex::schedule(sched) |
-            ex::let_value([=]() { return ex::just(sched, 42); }))));
+        auto result = hpx::get<0>(
+            *(tt::sync_wait(ex::schedule(sched) | ex::let_value([=]() {
+                return ex::starts_on(sched, ex::just(42));
+            }))));
         HPX_TEST_EQ(result, 42);
     }
 
     {
-        auto result = hpx::get<0>(*tt::sync_wait((ex::just() |
-            ex::let_value([=]() { return ex::just(sched, 42); }))));
+        auto result =
+            hpx::get<0>(*tt::sync_wait((ex::just() | ex::let_value([=]() {
+                return ex::starts_on(sched, ex::just(42));
+            }))));
         HPX_TEST_EQ(result, 42);
     }
 
     // int predecessor, value ignored
     {
-        auto result = hpx::get<0>(*(tt::sync_wait(ex::just(sched, 43) |
-            ex::let_value([](int&) { return ex::just(42); }))));
+        auto result =
+            hpx::get<0>(*(tt::sync_wait(ex::starts_on(sched, ex::just(43)) |
+                ex::let_value([](int&) { return ex::just(42); }))));
         HPX_TEST_EQ(result, 42);
     }
 
     {
-        auto result = hpx::get<0>(*(tt::sync_wait(ex::just(sched, 43) |
-            ex::let_value([=](int&) { return ex::just(sched, 42); }))));
+        auto result = hpx::get<0>(*(tt::sync_wait(
+            ex::starts_on(sched, ex::just(43)) | ex::let_value([=](int&) {
+                return ex::starts_on(sched, ex::just(42));
+            }))));
         HPX_TEST_EQ(result, 42);
     }
 
     {
-        auto result = hpx::get<0>(*(tt::sync_wait(ex::just(43) |
-            ex::let_value([=](int&) { return ex::just(sched, 42); }))));
+        auto result =
+            hpx::get<0>(*(tt::sync_wait(ex::just(43) | ex::let_value([=](int&) {
+                return ex::starts_on(sched, ex::just(42));
+            }))));
         HPX_TEST_EQ(result, 42);
     }
 
     // int predecessor, value used
     {
-        auto result = hpx::get<0>(
-            *(tt::sync_wait(ex::just(sched, 43) | ex::let_value([](int& x) {
+        auto result = hpx::get<0>(*(tt::sync_wait(
+            ex::starts_on(sched, ex::just(43)) | ex::let_value([](int& x) {
                 return ex::just(42) | ex::then([&](int y) { return x + y; });
             }))));
 
@@ -1224,9 +1241,9 @@ void test_let_value()
     }
 
     {
-        auto result = hpx::get<0>(
-            *(tt::sync_wait(ex::just(sched, 43) | ex::let_value([=](int& x) {
-                return ex::just(sched, 42) |
+        auto result = hpx::get<0>(*(tt::sync_wait(
+            ex::starts_on(sched, ex::just(43)) | ex::let_value([=](int& x) {
+                return ex::starts_on(sched, ex::just(42)) |
                     ex::then([&](int y) { return x + y; });
             }))));
         HPX_TEST_EQ(result, 85);
@@ -1235,7 +1252,7 @@ void test_let_value()
     {
         auto result = hpx::get<0>(
             *(tt::sync_wait(ex::just(43) | ex::let_value([=](int& x) {
-                return ex::just(sched, 42) |
+                return ex::starts_on(sched, ex::just(42)) |
                     ex::then([&](int y) { return x + y; });
             }))));
         HPX_TEST_EQ(result, 85);
@@ -1247,13 +1264,15 @@ void test_let_value()
 
         try
         {
-            tt::sync_wait(ex::just(sched, 43) | ex::then([](int x) {
-                throw std::runtime_error("error");
-                return x;
-            }) | ex::let_value([](int&) {
-                HPX_TEST(false);
-                return ex::just(0);
-            }));
+            tt::sync_wait(ex::starts_on(sched, ex::just(43)) |
+                ex::then([](int x) {
+                    throw std::runtime_error("error");
+                    return x;
+                }) |
+                ex::let_value([](int&) {
+                    HPX_TEST(false);
+                    return ex::just(0);
+                }));
             HPX_TEST(false);
         }
         catch (std::runtime_error const& e)
@@ -1306,7 +1325,7 @@ void test_let_error()
         }) | ex::let_error([=, &called](std::exception_ptr& ep) {
             called = true;
             check_exception_ptr_message(ep, "error");
-            return ex::just(sched);
+            return ex::just();
         }));
         HPX_TEST(called);
     }
@@ -1318,7 +1337,7 @@ void test_let_error()
         }) | ex::let_error([=, &called](std::exception_ptr& ep) {
             called = true;
             check_exception_ptr_message(ep, "error");
-            return ex::just(sched);
+            return ex::just();
         }));
         HPX_TEST(called);
     }
@@ -1343,7 +1362,7 @@ void test_let_error()
                 return 43;
             }) | ex::let_error([=](std::exception_ptr& ep) {
                 check_exception_ptr_message(ep, "error");
-                return ex::just(sched, 42);
+                return ex::starts_on(sched, ex::just(42));
             }))));
         HPX_TEST_EQ(result, 42);
     }
@@ -1354,27 +1373,29 @@ void test_let_error()
             return 43;
         }) | ex::let_error([=](std::exception_ptr& ep) {
             check_exception_ptr_message(ep, "error");
-            return ex::just(sched, 42);
+            return ex::starts_on(sched, ex::just(42));
         }))));
         HPX_TEST_EQ(result, 42);
     }
 
     // predecessor doesn't throw, let sender is ignored
     {
-        auto result = hpx::get<0>(*(tt::sync_wait(
-            ex::just(sched, 42) | ex::let_error([](std::exception_ptr) {
-                HPX_TEST(false);
-                return ex::just(43);
-            }))));
+        auto result =
+            hpx::get<0>(*(tt::sync_wait(ex::starts_on(sched, ex::just(42)) |
+                ex::let_error([](std::exception_ptr) {
+                    HPX_TEST(false);
+                    return ex::just(43);
+                }))));
         HPX_TEST_EQ(result, 42);
     }
 
     {
-        auto result = hpx::get<0>(*(tt::sync_wait(
-            ex::just(sched, 42) | ex::let_error([=](std::exception_ptr) {
-                HPX_TEST(false);
-                return ex::just(sched, 43);
-            }))));
+        auto result =
+            hpx::get<0>(*(tt::sync_wait(ex::starts_on(sched, ex::just(42)) |
+                ex::let_error([=](std::exception_ptr) {
+                    HPX_TEST(false);
+                    return ex::starts_on(sched, ex::just(43));
+                }))));
         HPX_TEST_EQ(result, 42);
     }
 
@@ -1382,7 +1403,7 @@ void test_let_error()
         auto result = hpx::get<0>(*(
             tt::sync_wait(ex::just(42) | ex::let_error([=](std::exception_ptr) {
                 HPX_TEST(false);
-                return ex::just(sched, 43);
+                return ex::starts_on(sched, ex::just(43));
             }))));
         HPX_TEST_EQ(result, 42);
     }
@@ -1683,12 +1704,12 @@ void test_bulk()
         std::vector<int> v(n, -1);
         hpx::thread::id parent_id = hpx::this_thread::get_id();
 
-        auto v_out = hpx::get<0>(*(
-            tt::sync_wait(ex::just(ex::thread_pool_scheduler{}, std::move(v)) |
-                ex::bulk(n, [&parent_id](int i, std::vector<int>& v) {
-                    v[i] = i;
-                    HPX_TEST_NEQ(parent_id, hpx::this_thread::get_id());
-                }))));
+        auto v_out = hpx::get<0>(*(tt::sync_wait(
+            ex::starts_on(ex::thread_pool_scheduler{}, ex::just(std::move(v))) |
+            ex::bulk(n, [&parent_id](int i, std::vector<int>& v) {
+                v[i] = i;
+                HPX_TEST_NEQ(parent_id, hpx::this_thread::get_id());
+            }))));
 
         // In chunked mode, only chunk begin indices are processed
         // So we check that at least some elements were set correctly
@@ -1710,65 +1731,50 @@ void test_bulk()
     }
 
     {
-        std::unordered_set<std::string> string_map;
-        std::vector<std::string> v = {"hello", "brave", "new", "world"};
-        std::vector<std::string> v_ref = v;
-
-        hpx::mutex mtx;
-        tt::sync_wait(ex::schedule(ex::thread_pool_scheduler{}) |
-            ex::bulk(std::move(v), [&](std::string const& s) {
-                std::lock_guard lk(mtx);
-                string_map.insert(s);
-            }));
-
-        for (auto const& s : v_ref)
+        for (auto n : ns)
         {
-            HPX_TEST(string_map.find(s) != string_map.end());
-        }
-    }
+            int i_fail = 3;
 
-    for (auto n : ns)
-    {
-        int i_fail = 3;
+            std::vector<int> v(n, -1);
+            bool const expect_exception = n > i_fail;
 
-        std::vector<int> v(n, -1);
-        bool const expect_exception = n > i_fail;
+            try
+            {
+                tt::sync_wait(
+                    ex::starts_on(ex::thread_pool_scheduler{}, ex::just()) |
+                    ex::bulk(n, [&v, i_fail](int i) {
+                        if (i == i_fail)
+                        {
+                            throw std::runtime_error("error");
+                        }
+                        v[i] = i;
+                    }));
 
-        try
-        {
-            tt::sync_wait(ex::just(ex::thread_pool_scheduler{}) |
-                ex::bulk(n, [&v, i_fail](int i) {
-                    if (i == i_fail)
-                    {
-                        throw std::runtime_error("error");
-                    }
-                    v[i] = i;
-                }));
+                if (expect_exception)
+                {
+                    HPX_TEST(false);
+                }
+            }
+            catch (std::runtime_error const& e)
+            {
+                if (!expect_exception)
+                {
+                    HPX_TEST(false);
+                }
+
+                HPX_TEST(std::string(e.what()).find("error") == 0);
+            }
 
             if (expect_exception)
             {
-                HPX_TEST(false);
+                HPX_TEST_EQ(v[i_fail], -1);
             }
-        }
-        catch (std::runtime_error const& e)
-        {
-            if (!expect_exception)
+            else
             {
-                HPX_TEST(false);
-            }
-
-            HPX_TEST(std::string(e.what()).find("error") == 0);
-        }
-
-        if (expect_exception)
-        {
-            HPX_TEST_EQ(v[i_fail], -1);
-        }
-        else
-        {
-            for (int i = 0; i < n; ++i)
-            {
-                HPX_TEST_EQ(v[i], i);
+                for (int i = 0; i < n; ++i)
+                {
+                    HPX_TEST_EQ(v[i], i);
+                }
             }
         }
     }
@@ -1788,7 +1794,8 @@ void test_stdexec_domain_queries()
     auto scheduler = ex::thread_pool_scheduler{};
 
     // 1. Verify domain derives from ex::default_domain
-    static_assert(std::is_base_of_v<ex::default_domain, ex::thread_pool_domain>,
+    static_assert(std::is_base_of_v<ex::default_domain,
+                      ex::thread_pool_domain>,
         "thread_pool_domain should derive from default_domain");
     // 2. Verify domain is accessible via ex::get_domain (forwarded from stdexec)
     static_assert(
@@ -1797,19 +1804,13 @@ void test_stdexec_domain_queries()
     auto domain = ex::get_domain(scheduler);
 
     // 3. Verify the domain type is thread_pool_domain
-    static_assert(std::is_same_v<decltype(domain), ex::thread_pool_domain>,
+    static_assert(
+        std::is_same_v<decltype(domain), ex::thread_pool_domain>,
         "scheduler domain should be thread_pool_domain");
     // 4. Verify transform_sender produces thread_pool_bulk_sender for
     //    bulk_chunked (proves the domain customization is picked up)
     {
-#if defined(HPX_GCC_VERSION)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmissing-braces"
-#endif
-        auto env = ex::env{ex::prop{ex::get_scheduler, scheduler}};
-#if defined(HPX_GCC_VERSION)
-#pragma GCC diagnostic pop
-#endif
+        auto env = ex::make_env(ex::prop(ex::get_scheduler, scheduler));
 
         auto chunked_sndr = ex::bulk_chunked(
             ex::schedule(scheduler), ex::par, 10, [](int, int) {});
@@ -1832,14 +1833,7 @@ void test_stdexec_domain_queries()
     // 5. Verify transform_sender produces thread_pool_bulk_sender for
     //    bulk_unchunked (proves the domain customization is picked up)
     {
-#if defined(HPX_GCC_VERSION)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmissing-braces"
-#endif
-        auto env = ex::env{ex::prop{ex::get_scheduler, scheduler}};
-#if defined(HPX_GCC_VERSION)
-#pragma GCC diagnostic pop
-#endif
+        auto env = ex::make_env(ex::prop(ex::get_scheduler, scheduler));
 
         auto unchunked_sndr = ex::bulk_unchunked(
             ex::schedule(scheduler), ex::par, 10, [](int) {});
@@ -1987,16 +1981,16 @@ void test_stdexec_bulk_unchunked_customization()
 void test_stdexec_thread_distribution()
 {
     auto scheduler = ex::thread_pool_scheduler{};
-    std::thread::id main_thread_id = std::this_thread::get_id();
+    hpx::thread::id main_id = hpx::this_thread::get_id();
 
     // Test that bulk operations run on worker threads
-    std::set<std::thread::id> worker_threads;
+    std::set<hpx::thread::id> worker_threads;
     std::atomic<int> task_count{0};
 
     auto bulk_sender =
         ex::bulk_chunked(ex::schedule(scheduler) | ex::then([]() { return 0; }),
             ex::par, 8, [&](int start, int end, int value) {
-                worker_threads.insert(std::this_thread::get_id());
+                worker_threads.insert(hpx::this_thread::get_id());
                 for (int idx = start; idx < end; ++idx)
                 {
                     (void) value;
@@ -2012,10 +2006,10 @@ void test_stdexec_thread_distribution()
     HPX_TEST(task_count.load() > 0);     // Should have at least 1 call
     HPX_TEST(!worker_threads.empty());
 
-    // Verify tasks didn't run on main thread (they use HPX thread pool)
+    // Verify bulk work ran on different HPX threads than the caller
     for (auto const& thread_id : worker_threads)
     {
-        HPX_TEST_NEQ(thread_id, main_thread_id);
+        HPX_TEST_NEQ(thread_id, main_id);
     }
 }
 
@@ -2102,7 +2096,8 @@ void test_completion_scheduler()
     }
 
     {
-        auto sender = ex::just(ex::thread_pool_scheduler{}, 42);
+        auto sender =
+            ex::continues_on(ex::just(42), ex::thread_pool_scheduler{});
         auto completion_scheduler =
             ex::get_completion_scheduler<ex::set_value_t>(ex::get_env(sender));
         static_assert(
@@ -2124,8 +2119,8 @@ void test_completion_scheduler()
 
     {
         auto sender = ex::then(
-            ex::bulk(ex::just(ex::thread_pool_scheduler{}, 42), 10,
-                [](int, int) {}),
+            ex::bulk(ex::continues_on(ex::just(42), ex::thread_pool_scheduler{}),
+                10, [](int, int) {}),
             [](int) {});
         auto completion_scheduler =
             ex::get_completion_scheduler<ex::set_value_t>(ex::get_env(sender));
@@ -2147,8 +2142,20 @@ void test_completion_scheduler()
     }
 
     {
+        auto sender = ex::bulk(
+            ex::schedule(ex::thread_pool_scheduler{}),
+            hpx::execution::parallel_task_policy{}, 10, [](int) {});
+        auto completion_scheduler =
+            ex::get_completion_scheduler<ex::set_value_t>(ex::get_env(sender));
+        static_assert(
+            std::is_same_v<std::decay_t<decltype(completion_scheduler)>,
+                ex::thread_pool_scheduler>,
+            "the completion scheduler should be a thread_pool_scheduler");
+    }
+
+    {
         auto sender = ex::then(
-            ex::bulk(ex::just(ex::thread_pool_scheduler{}, 42),
+            ex::bulk(ex::continues_on(ex::just(42), ex::thread_pool_scheduler{}),
                 ex::par, 10, [](int, int) {}),
             [](int) {});
         auto completion_scheduler =
@@ -2161,7 +2168,7 @@ void test_completion_scheduler()
 
     {
         auto sender = ex::bulk(
-            ex::then(ex::just(ex::thread_pool_scheduler{}, 42),
+            ex::then(ex::continues_on(ex::just(42), ex::thread_pool_scheduler{}),
                 [](int i) { return i; }),
             ex::par, 10, [](int idx, int val) {});
         auto completion_scheduler =
@@ -2332,10 +2339,6 @@ int main(int argc, char* argv[])
 
     return hpx::util::report_errors();
 }
-
-#if defined(HPX_CLANG_VERSION)
-#pragma clang diagnostic pop
-#endif
 #else
 int main()
 {

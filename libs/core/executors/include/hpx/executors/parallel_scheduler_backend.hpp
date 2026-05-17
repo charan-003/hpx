@@ -8,17 +8,20 @@
 
 #include <hpx/config.hpp>
 
-#if defined(HPX_HAVE_STDEXEC)
+#include <hpx/modules/async_base.hpp>
+#include <hpx/modules/errors.hpp>
+#include <hpx/modules/execution.hpp>
+#include <hpx/modules/execution_base.hpp>
+#include <hpx/modules/threading_base.hpp>
+#include <hpx/modules/timing.hpp>
+#include <hpx/modules/topology.hpp>
 
-#include <hpx/async_base/launch_policy.hpp>
-#include <hpx/errors/try_catch_exception_ptr.hpp>
-#include <hpx/execution_base/stdexec_forward.hpp>
 #include <hpx/executors/thread_pool_scheduler.hpp>
 #include <hpx/executors/thread_pool_scheduler_bulk.hpp>
-#include <hpx/threading_base/detail/get_default_pool.hpp>
 
 #include <atomic>
 #include <cstddef>
+#include <cstdint>
 #include <exception>
 #include <functional>
 #include <memory>
@@ -47,7 +50,7 @@ namespace hpx::execution::experimental {
     //
     // P3804R2: No virtual destructor - objects are never destroyed polymorphically.
     // The frontend knows the concrete type and destroys it directly.
-    struct parallel_scheduler_receiver_proxy
+    HPX_CXX_CORE_EXPORT struct parallel_scheduler_receiver_proxy
     {
         virtual void set_value() noexcept = 0;
         virtual void set_error(std::exception_ptr) noexcept = 0;
@@ -68,7 +71,7 @@ namespace hpx::execution::experimental {
 
     // P2079R10 bulk_item_receiver_proxy: extends receiver_proxy with
     // execute(begin, end) for bulk work items.
-    struct parallel_scheduler_bulk_item_receiver_proxy
+    HPX_CXX_CORE_EXPORT struct parallel_scheduler_bulk_item_receiver_proxy
       : parallel_scheduler_receiver_proxy
     {
         virtual void execute(std::size_t begin, std::size_t end) noexcept = 0;
@@ -78,12 +81,14 @@ namespace hpx::execution::experimental {
     // The frontend provides a std::span<std::byte> of this size to each
     // backend method so the backend can avoid heap allocation.
     // Backends that need more can fall back to their own allocation.
-    static constexpr std::size_t parallel_scheduler_storage_size = 256;
-    static constexpr std::size_t parallel_scheduler_storage_alignment =
+    HPX_CXX_CORE_EXPORT inline constexpr std::size_t
+        parallel_scheduler_storage_size = 256;
+    HPX_CXX_CORE_EXPORT inline constexpr std::size_t
+        parallel_scheduler_storage_alignment =
         alignof(std::max_align_t);
 
     // P2079R10 / P3927R2: Abstract backend interface
-    struct parallel_scheduler_backend
+    HPX_CXX_CORE_EXPORT struct parallel_scheduler_backend
     {
         virtual ~parallel_scheduler_backend() = default;
 
@@ -142,7 +147,7 @@ namespace hpx::execution::experimental {
         // Default HPX backend: wraps the existing thread_pool_policy_scheduler.
         // This is the backend returned by query_parallel_scheduler_backend()
         // unless the user provides a replacement via weak linking.
-        class hpx_parallel_scheduler_backend final
+        HPX_CXX_CORE_EXPORT class hpx_parallel_scheduler_backend final
           : public parallel_scheduler_backend
         {
         public:
@@ -419,7 +424,7 @@ namespace hpx::execution::experimental {
     // pointer that can be replaced at runtime via
     // set_parallel_scheduler_backend_factory(). This avoids platform-specific
     // weak-linking issues while providing the same replaceability.
-    using parallel_scheduler_backend_factory_t =
+    HPX_CXX_CORE_EXPORT using parallel_scheduler_backend_factory_t =
         std::shared_ptr<parallel_scheduler_backend> (*)();
 
     namespace detail {
@@ -468,7 +473,7 @@ namespace hpx::execution::experimental {
     // P2079R10: Get the current parallel_scheduler_backend.
     // Thread-safe. Creates the default backend on first call via the factory.
     // Can be replaced at any time via set_parallel_scheduler_backend().
-    inline std::shared_ptr<parallel_scheduler_backend>
+    HPX_CXX_CORE_EXPORT inline std::shared_ptr<parallel_scheduler_backend>
     query_parallel_scheduler_backend()
     {
         std::lock_guard<std::mutex> lock(detail::get_backend_mutex());
@@ -484,7 +489,7 @@ namespace hpx::execution::experimental {
     // The new factory is used the next time query_parallel_scheduler_backend()
     // creates a backend (only if no backend has been created yet, or after
     // set_parallel_scheduler_backend() clears the current one).
-    inline parallel_scheduler_backend_factory_t
+    HPX_CXX_CORE_EXPORT inline parallel_scheduler_backend_factory_t
     set_parallel_scheduler_backend_factory(
         parallel_scheduler_backend_factory_t new_factory) noexcept
     {
@@ -500,7 +505,7 @@ namespace hpx::execution::experimental {
     // returns a scheduler backed by new_backend.
     // Thread-safe, but must not be called while active operations are
     // in-flight on the current backend.
-    inline void set_parallel_scheduler_backend(
+    HPX_CXX_CORE_EXPORT inline void set_parallel_scheduler_backend(
         std::shared_ptr<parallel_scheduler_backend> new_backend)
     {
         std::lock_guard<std::mutex> lock(detail::get_backend_mutex());
@@ -508,5 +513,3 @@ namespace hpx::execution::experimental {
     }
 
 }    // namespace hpx::execution::experimental
-
-#endif    // HPX_HAVE_STDEXEC

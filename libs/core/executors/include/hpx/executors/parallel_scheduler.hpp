@@ -6,28 +6,35 @@
 
 #pragma once
 
-#include <hpx/async_base/launch_policy.hpp>
-#include <hpx/errors/throw_exception.hpp>
-#include <hpx/errors/try_catch_exception_ptr.hpp>
-#include <hpx/execution_base/stdexec_forward.hpp>
+#include <hpx/config.hpp>
+
+#include <hpx/modules/async_base.hpp>
+#include <hpx/modules/concepts.hpp>
+#include <hpx/modules/errors.hpp>
+#include <hpx/modules/execution.hpp>
+#include <hpx/modules/execution_base.hpp>
+#include <hpx/modules/threading_base.hpp>
+#include <hpx/modules/timing.hpp>
+#include <hpx/modules/topology.hpp>
+
 #include <hpx/executors/parallel_scheduler_backend.hpp>
 #include <hpx/executors/thread_pool_scheduler.hpp>
 #include <hpx/executors/thread_pool_scheduler_bulk.hpp>
-#include <hpx/threading_base/detail/get_default_pool.hpp>
+
 #include <cstddef>
 #include <exception>
 #include <memory>
 #include <tuple>
 #include <type_traits>
+#include <utility>
 #include <variant>
 
 namespace hpx::execution::experimental {
 
-#if defined(HPX_HAVE_STDEXEC)
     // Forward declaration for parallel_scheduler_domain
-    class parallel_scheduler;
+    HPX_CXX_CORE_EXPORT class parallel_scheduler;
 
-    inline parallel_scheduler get_parallel_scheduler();
+    HPX_CXX_CORE_EXPORT inline parallel_scheduler get_parallel_scheduler();
 
     // Virtual bulk dispatch infrastructure for P2079R10.
     //
@@ -45,7 +52,7 @@ namespace hpx::execution::experimental {
     namespace detail {
 
         // Virtual base for type-erased bulk operation states.
-        struct base_parallel_bulk_op
+        HPX_CXX_CORE_EXPORT struct base_parallel_bulk_op
         {
             virtual ~base_parallel_bulk_op() = default;
             virtual void start() noexcept = 0;
@@ -53,7 +60,7 @@ namespace hpx::execution::experimental {
 
         // Fast path: wraps thread_pool_bulk_sender's connected
         // operation state. Zero overhead beyond the heap allocation.
-        template <typename FastSender, typename Receiver>
+        HPX_CXX_CORE_EXPORT template <typename FastSender, typename Receiver>
         struct fast_parallel_bulk_op final : base_parallel_bulk_op
         {
             using inner_op_t =
@@ -78,7 +85,7 @@ namespace hpx::execution::experimental {
         // receiver. When the child completes with values, constructs a
         // concrete_proxy in inline aligned storage (no heap allocation) and
         // calls backend->schedule_bulk_chunked() or schedule_bulk_unchunked().
-        template <typename F, bool IsChunked, bool IsParallel,
+        HPX_CXX_CORE_EXPORT template <typename F, bool IsChunked, bool IsParallel,
             typename ChildSender, typename Receiver>
         struct virtual_parallel_bulk_op final : base_parallel_bulk_op
         {
@@ -184,8 +191,7 @@ namespace hpx::execution::experimental {
 
                 bool stop_requested() const noexcept override
                 {
-                    return stdexec::get_stop_token(
-                        stdexec::get_env(op_.receiver_))
+                    return get_stop_token(get_env(op_.receiver_))
                         .stop_requested();
                 }
             };
@@ -194,15 +200,15 @@ namespace hpx::execution::experimental {
             // Derive the concrete_proxy specialisation from ChildSender's
             // value completion type.  Bulk chains always have exactly one
             // value completion signature (static_assert below enforces this).
-            using value_env_t = stdexec::env_of_t<std::decay_t<Receiver>>;
+            using value_env_t = env_of_t<std::decay_t<Receiver>>;
 
             // mk_decayed_tuple<T1,T2,...> = std::tuple<decay_t<T1>,...>
             template <typename... Ts>
             using mk_decayed_tuple = std::tuple<std::decay_t<Ts>...>;
 
             // std::variant<std::tuple<decay_t<Ts>...>> for each value sig
-            using value_variant_t = stdexec::value_types_of_t<ChildSender,
-                value_env_t, mk_decayed_tuple, std::variant>;
+            using value_variant_t = value_types_of_t<ChildSender, value_env_t,
+                mk_decayed_tuple, std::variant>;
 
             static_assert(std::variant_size_v<value_variant_t> == 1,
                 "virtual_parallel_bulk_op: child sender must have exactly "
@@ -243,34 +249,45 @@ namespace hpx::execution::experimental {
                 virtual_parallel_bulk_op* self_;
 
                 template <typename... Vs>
-                friend void tag_invoke(
-                    hpx::execution::experimental::set_value_t,
-                    child_receiver&& r, Vs&&... vs) noexcept
+                void set_value(Vs&&... vs) & noexcept
                 {
-                    r.self_->do_bulk(HPX_FORWARD(Vs, vs)...);
+                    self_->do_bulk(HPX_FORWARD(Vs, vs)...);
                 }
 
-                friend void tag_invoke(
-                    hpx::execution::experimental::set_error_t,
-                    child_receiver&& r, std::exception_ptr ep) noexcept
+                template <typename... Vs>
+                void set_value(Vs&&... vs) && noexcept
+                {
+                    static_cast<child_receiver&>(*this).set_value(
+                        HPX_FORWARD(Vs, vs)...);
+                }
+
+                void set_error(std::exception_ptr ep) & noexcept
                 {
                     hpx::execution::experimental::set_error(
-                        HPX_MOVE(r.self_->receiver_), HPX_MOVE(ep));
+                        HPX_MOVE(self_->receiver_), HPX_MOVE(ep));
                 }
 
-                friend void tag_invoke(
-                    hpx::execution::experimental::set_stopped_t,
-                    child_receiver&& r) noexcept
+                void set_error(std::exception_ptr ep) && noexcept
+                {
+                    static_cast<child_receiver&>(*this).set_error(
+                        HPX_MOVE(ep));
+                }
+
+                void set_stopped() & noexcept
                 {
                     hpx::execution::experimental::set_stopped(
-                        HPX_MOVE(r.self_->receiver_));
+                        HPX_MOVE(self_->receiver_));
                 }
 
-                friend auto tag_invoke(hpx::execution::experimental::get_env_t,
-                    child_receiver const& r) noexcept
+                void set_stopped() && noexcept
+                {
+                    static_cast<child_receiver&>(*this).set_stopped();
+                }
+
+                auto get_env() const noexcept
                 {
                     return hpx::execution::experimental::get_env(
-                        r.self_->receiver_);
+                        self_->receiver_);
                 }
             };
 
@@ -338,11 +355,11 @@ namespace hpx::execution::experimental {
         // Unified sender returned by parallel_scheduler_domain's
         // transform_sender. Holds either the fast-path
         // thread_pool_bulk_sender or virtual dispatch data.
-        template <typename FastSender, typename ChildSender, typename F,
-            bool IsChunked, bool IsParallel>
+        HPX_CXX_CORE_EXPORT template <typename FastSender, typename ChildSender,
+            typename F, bool IsChunked, bool IsParallel>
         struct parallel_bulk_dispatch_sender
         {
-            using sender_concept = stdexec::sender_t;
+            using sender_concept = sender_t;
 
             struct fast_path_data
             {
@@ -360,17 +377,24 @@ namespace hpx::execution::experimental {
 
             std::variant<fast_path_data, virtual_path_data> data_;
 
-            // Completion signatures: same as the child sender's,
-            // with set_error(exception_ptr) added (bulk can fail).
-            template <typename Env>
-            friend auto tag_invoke(
-                hpx::execution::experimental::get_completion_signatures_t,
-                parallel_bulk_dispatch_sender const&, Env const&)
-                -> stdexec::__transform_completion_signatures_of_t<ChildSender,
-                    Env,
-                    hpx::execution::experimental::completion_signatures<
-                        hpx::execution::experimental::set_error_t(
-                            std::exception_ptr)>>;
+            template <typename Self, typename Env>
+            static consteval auto get_completion_signatures() noexcept
+                -> decltype(
+                    hpx::execution::experimental::transform_completion_signatures(
+                        hpx::execution::experimental::completion_signatures_of_t<
+                            ChildSender, Env>{},
+                        hpx::execution::experimental::keep_completion<
+                            hpx::execution::experimental::set_value_t>{},
+                        hpx::execution::experimental::keep_completion<
+                            hpx::execution::experimental::set_error_t>{},
+                        hpx::execution::experimental::keep_completion<
+                            hpx::execution::experimental::set_stopped_t>{},
+                        hpx::execution::experimental::completion_signatures<
+                            hpx::execution::experimental::set_error_t(
+                                std::exception_ptr)>{}))
+            {
+                return {};
+            }
 
             // Unified operation state: holds type-erased op via
             // unique_ptr<base_parallel_bulk_op>.
@@ -389,10 +413,9 @@ namespace hpx::execution::experimental {
                 dispatch_op& operator=(dispatch_op&&) = delete;
                 dispatch_op& operator=(dispatch_op const&) = delete;
 
-                friend void tag_invoke(hpx::execution::experimental::start_t,
-                    dispatch_op& os) noexcept
+                void start() noexcept
                 {
-                    os.impl_->start();
+                    impl_->start();
                 }
             };
 
@@ -432,7 +455,7 @@ namespace hpx::execution::experimental {
     // This domain bridges the gap by extracting the underlying
     // thread_pool_policy_scheduler and delegating to HPX's optimized
     // thread_pool_bulk_sender.
-    struct parallel_scheduler_domain : stdexec::default_domain
+    HPX_CXX_CORE_EXPORT struct parallel_scheduler_domain : default_domain
     {
         template <bulk_chunked_or_unchunked_sender Sender, typename Env>
         auto transform_sender(hpx::execution::experimental::set_value_t,
@@ -468,8 +491,8 @@ namespace hpx::execution::experimental {
                 // that HPX's bulk users pass. Treating bulk_t as chunked here
                 // would force f(begin, end, ...) on user lambdas that take a
                 // single index, causing a template instantiation failure.
-                constexpr bool is_chunked = stdexec::__sender_for<Sender,
-                    hpx::execution::experimental::bulk_chunked_t>;
+                constexpr bool is_chunked =
+                    sender_invokes_algorithm_v<Sender, bulk_chunked_t>;
 
                 // Determine parallelism at compile time from policy type
                 // (pol is a __policy_wrapper, use __get() to unwrap)
@@ -498,8 +521,12 @@ namespace hpx::execution::experimental {
 
                 // Fast path: default HPX backend with underlying scheduler
                 // available. Create optimized thread_pool_bulk_sender
-                // with work-stealing, NUMA awareness, etc.
-                if (underlying_ptr != nullptr && pu_mask_ptr != nullptr)
+                // with work-stealing, NUMA awareness, etc. Use the same
+                // processing-unit mask as thread_pool_domain (pool-derived)
+                // rather than the backend's cached full_mask so mask and
+                // worker-thread cardinality stay aligned (fixes P2079 / small
+                // --hpx:threads counts).
+                if (underlying_ptr != nullptr)
                 {
                     auto underlying = *underlying_ptr;
                     hpx::threads::mask_type pu_mask = *pu_mask_ptr;
@@ -550,7 +577,7 @@ namespace hpx::execution::experimental {
     // P2079R10 parallel_scheduler implementation.
     // Stores a shared_ptr<parallel_scheduler_backend> for replaceability.
     // The default backend wraps HPX's thread_pool_policy_scheduler.
-    class parallel_scheduler
+    HPX_CXX_CORE_EXPORT class parallel_scheduler
     {
     public:
         parallel_scheduler() = delete;
@@ -587,6 +614,49 @@ namespace hpx::execution::experimental {
             get_forward_progress_guarantee_t) const noexcept
         {
             return forward_progress_guarantee::parallel;
+        }
+
+        // Scheduling properties: forward to the wrapped thread_pool_policy_scheduler
+        // when present so callers use get_processing_units_mask(sched),
+        // get_first_core(sched), processing_units_count(..., sched), etc.,
+        // consistent with thread_pool_policy_scheduler.
+        friend std::size_t tag_invoke(get_first_core_t,
+            parallel_scheduler const& sched) noexcept
+        {
+            if (auto const* u = sched.get_underlying_scheduler())
+                return get_first_core(*u);
+            return 0;
+        }
+
+        template <hpx::executor_parameters Parameters>
+        friend std::size_t tag_invoke(processing_units_count_t,
+            Parameters&&, parallel_scheduler const& sched,
+            hpx::chrono::steady_duration const& =
+                hpx::chrono::null_duration,
+            std::size_t = 0)
+        {
+            if (auto const* u = sched.get_underlying_scheduler())
+                return processing_units_count(null_parameters, *u,
+                    hpx::chrono::null_duration, 0);
+            return 1;
+        }
+
+        friend auto tag_invoke(
+            get_processing_units_mask_t, parallel_scheduler const& sched)
+        {
+            if (auto const* cached = sched.get_pu_mask())
+                return *cached;
+            if (auto const* u = sched.get_underlying_scheduler())
+                return get_processing_units_mask(*u);
+            return hpx::threads::create_topology().get_machine_affinity_mask();
+        }
+
+        friend auto tag_invoke(
+            get_cores_mask_t, parallel_scheduler const& sched)
+        {
+            if (auto const* u = sched.get_underlying_scheduler())
+                return get_cores_mask(*u);
+            return hpx::threads::create_topology().get_machine_affinity_mask();
         }
 
         // P2079R10: operation_state owns the receiver and manages the
@@ -630,8 +700,7 @@ namespace hpx::execution::experimental {
                 // Forwards the stop token state of the actual receiver.
                 bool stop_requested() const noexcept override
                 {
-                    return stdexec::get_stop_token(stdexec::get_env(receiver_))
-                        .stop_requested();
+                    return get_stop_token(get_env(receiver_)).stop_requested();
                 }
             };
 
@@ -661,22 +730,20 @@ namespace hpx::execution::experimental {
             operation_state& operator=(operation_state&&) = delete;
             operation_state& operator=(operation_state const&) = delete;
 
-            friend void tag_invoke(start_t, operation_state& os) noexcept
+            void start() noexcept
             {
                 // P2079R10 4.1: if stop_token is stopped, complete
                 // with set_stopped as soon as is practical.
-                auto stop_token =
-                    stdexec::get_stop_token(stdexec::get_env(os.receiver_));
+                auto stop_token = get_stop_token(get_env(receiver_));
                 if (stop_token.stop_requested())
                 {
-                    stdexec::set_stopped(HPX_MOVE(os.receiver_));
+                    set_stopped(HPX_MOVE(receiver_));
                     return;
                 }
 
                 // Delegate to the backend via the member proxy,
                 // passing pre-allocated storage per P2079R10 / P3927R2.
-                os.backend_->schedule(
-                    os.proxy_, std::span<std::byte>(os.storage_));
+                backend_->schedule(proxy_, std::span<std::byte>(storage_));
             }
         };
 
@@ -686,15 +753,14 @@ namespace hpx::execution::experimental {
         {
             Scheduler sched_;
 
-            using sender_concept = stdexec::sender_t;
-            using completion_signatures =
-                stdexec::completion_signatures<stdexec::set_value_t(),
-                    stdexec::set_error_t(std::exception_ptr),
-                    stdexec::set_stopped_t()>;
+            using sender_concept = sender_t;
+            using completion_signatures = ::hpx::execution::experimental::
+                completion_signatures<set_value_t(),
+                    set_error_t(std::exception_ptr), set_stopped_t()>;
 
             template <typename Receiver>
             friend operation_state<std::decay_t<Receiver>> tag_invoke(
-                stdexec::connect_t, sender const& s,
+                connect_t, sender const& s,
                 Receiver&& receiver) noexcept(std::
                     is_nothrow_constructible_v<std::decay_t<Receiver>,
                         Receiver>)
@@ -705,7 +771,7 @@ namespace hpx::execution::experimental {
 
             template <typename Receiver>
             friend operation_state<std::decay_t<Receiver>> tag_invoke(
-                stdexec::connect_t, sender&& s,
+                connect_t, sender&& s,
                 Receiver&& receiver) noexcept(std::
                     is_nothrow_constructible_v<std::decay_t<Receiver>,
                         Receiver>)
@@ -720,33 +786,27 @@ namespace hpx::execution::experimental {
 
                 // P2079R10: expose completion scheduler for set_value_t
                 // and set_stopped_t
-                auto query(
-                    stdexec::get_completion_scheduler_t<stdexec::set_value_t>)
-                    const noexcept
+                auto query(get_completion_scheduler_t<set_value_t>) const noexcept
                 {
                     return sched_;
                 }
 
                 auto query(
-                    stdexec::get_completion_scheduler_t<stdexec::set_stopped_t>)
-                    const noexcept
+                    get_completion_scheduler_t<set_stopped_t>) const noexcept
                 {
                     return sched_;
                 }
 
-#if defined(HPX_HAVE_STDEXEC)
                 // Domain query
-                parallel_scheduler_domain query(
-                    stdexec::get_domain_t) const noexcept
+                parallel_scheduler_domain query(get_domain_t) const noexcept
                 {
                     return {};
                 }
-#endif
             };
 
-            friend env tag_invoke(stdexec::get_env_t, sender const& s) noexcept
+            env get_env() const noexcept
             {
-                return {s.sched_};
+                return {sched_};
             }
         };
 
@@ -756,9 +816,8 @@ namespace hpx::execution::experimental {
             return {*this};
         }
 
-#if defined(HPX_HAVE_STDEXEC)
         // Domain customization for bulk operations
-        parallel_scheduler_domain query(stdexec::get_domain_t) const noexcept
+        parallel_scheduler_domain query(get_domain_t) const noexcept
         {
             return {};
         }
@@ -769,12 +828,10 @@ namespace hpx::execution::experimental {
         // this, the resolution falls to default_domain and our
         // parallel_scheduler_domain::transform_sender is never called.
         parallel_scheduler_domain query(
-            stdexec::get_completion_domain_t<stdexec::set_value_t>)
-            const noexcept
+            get_completion_domain_t<set_value_t>) const noexcept
         {
             return {};
         }
-#endif
 
         // Access the backend (for connect and domain transform).
         std::shared_ptr<parallel_scheduler_backend> const& get_backend()
@@ -803,7 +860,8 @@ namespace hpx::execution::experimental {
     };
 
     // Stream output operator for parallel_scheduler
-    inline std::ostream& operator<<(std::ostream& os, parallel_scheduler const&)
+    HPX_CXX_CORE_EXPORT inline std::ostream& operator<<(
+        std::ostream& os, parallel_scheduler const&)
     {
         return os << "parallel_scheduler";
     }
@@ -811,7 +869,7 @@ namespace hpx::execution::experimental {
     // P2079R10 get_parallel_scheduler function.
     // Uses query_parallel_scheduler_backend() to obtain the backend,
     // which can be replaced via set_parallel_scheduler_backend_factory().
-    inline parallel_scheduler get_parallel_scheduler()
+    HPX_CXX_CORE_EXPORT inline parallel_scheduler get_parallel_scheduler()
     {
         auto backend = query_parallel_scheduler_backend();
         if (!backend)
@@ -821,7 +879,5 @@ namespace hpx::execution::experimental {
         }
         return parallel_scheduler(HPX_MOVE(backend));
     }
-
-#endif    // HPX_HAVE_STDEXEC
 
 }    // namespace hpx::execution::experimental
