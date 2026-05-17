@@ -1,5 +1,5 @@
 //  Copyright (c) 2011 Bryce Lelbach
-//  Copyright (c) 2012-2021 Hartmut Kaiser
+//  Copyright (c) 2012-2026 Hartmut Kaiser
 //  Copyright (c) 2016 Thomas Heller
 //
 //  SPDX-License-Identifier: BSL-1.0
@@ -24,7 +24,7 @@
 #include <string>
 #include <vector>
 
-namespace hpx { namespace agas { namespace detail {
+namespace hpx::agas::detail {
 
     struct hosted_locality_namespace : locality_namespace
     {
@@ -68,7 +68,7 @@ namespace hpx { namespace agas { namespace detail {
         hpx::id_type gid_;
         naming::address addr_;
     };
-}}}    // namespace hpx::agas::detail
+}    // namespace hpx::agas::detail
 
 HPX_REGISTER_BASE_LCO_WITH_VALUE_DECLARATION(
     hpx::parcelset::endpoints_type, parcelset_endpoints_type)

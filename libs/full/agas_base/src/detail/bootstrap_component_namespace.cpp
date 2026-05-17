@@ -4,9 +4,10 @@
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-#include <hpx/agas_base/detail/bootstrap_component_namespace.hpp>
 #include <hpx/assert.hpp>
 #include <hpx/modules/components_base.hpp>
+
+#include <hpx/agas_base/detail/bootstrap_component_namespace.hpp>
 
 #include <cstdint>
 #include <string>

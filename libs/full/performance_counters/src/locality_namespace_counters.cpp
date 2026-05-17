@@ -9,9 +9,9 @@
 #include <hpx/config.hpp>
 #include <hpx/agas/addressing_service.hpp>
 #include <hpx/agas/agas_fwd.hpp>
-#include <hpx/agas_base/server/locality_namespace.hpp>
 #include <hpx/assert.hpp>
 #include <hpx/format.hpp>
+#include <hpx/modules/async_base.hpp>
 #include <hpx/modules/errors.hpp>
 #include <hpx/modules/functional.hpp>
 #include <hpx/modules/naming.hpp>

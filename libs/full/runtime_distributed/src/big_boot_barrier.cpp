@@ -10,11 +10,10 @@
 
 #if defined(HPX_HAVE_NETWORKING)
 #include <hpx/agas/addressing_service.hpp>
-#include <hpx/agas_base/detail/hosted_component_namespace.hpp>
-#include <hpx/agas_base/detail/hosted_locality_namespace.hpp>
 #include <hpx/assert.hpp>
 #include <hpx/modules/actions_base.hpp>
 #include <hpx/modules/agas_base.hpp>
+#include <hpx/modules/async_base.hpp>
 #include <hpx/modules/async_distributed.hpp>
 #include <hpx/modules/components_base.hpp>
 #include <hpx/modules/errors.hpp>

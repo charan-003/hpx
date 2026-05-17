@@ -1,4 +1,4 @@
-//  Copyright (c) 2007-2021 Hartmut Kaiser
+//  Copyright (c) 2007-2026 Hartmut Kaiser
 //  Copyright (c) 2011      Bryce Lelbach
 //
 //  SPDX-License-Identifier: BSL-1.0
@@ -8,9 +8,10 @@
 #pragma once
 
 #include <hpx/config.hpp>
-#include <hpx/agas_base/agas_fwd.hpp>
+#include <hpx/modules/agas_base.hpp>
 
 namespace hpx {
+
     namespace agas {
 
         struct HPX_EXPORT addressing_service;
