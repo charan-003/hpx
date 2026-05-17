@@ -24,7 +24,7 @@
 
 namespace hpx::lcos::detail {
 
-    template <typename Result>
+    HPX_CXX_EXPORT template <typename Result>
     struct promise_data : task_base<Result>
     {
         using init_no_addref = typename task_base<Result>::init_no_addref;

@@ -1,4 +1,4 @@
-//  Copyright (c) 2007-2023 Hartmut Kaiser
+//  Copyright (c) 2007-2026 Hartmut Kaiser
 //  Copyright (c)      2011 Bryce Lelbach
 //  Copyright (c)      2011 Thomas Heller
 //
@@ -34,7 +34,7 @@ namespace hpx::actions {
     /// \cond NOINTERNAL
 
     ///////////////////////////////////////////////////////////////////////////
-    template <typename Action>
+    HPX_CXX_EXPORT template <typename Action>
     struct transfer_continuation_action final : transfer_base_action<Action>
     {
     public:
@@ -48,7 +48,7 @@ namespace hpx::actions {
 
     public:
         using base_type = transfer_base_action<Action>;
-        using continuation_type = typename base_type::continuation_type;
+        using continuation_type = base_type::continuation_type;
 
         // construct an empty transfer_continuation_action to avoid serialization
         // overhead
@@ -280,12 +280,15 @@ namespace hpx::actions {
 }    // namespace hpx::actions
 
 /// \cond NOINTERNAL
-template <typename Action>
-struct hpx::traits::needs_automatic_registration<
-    hpx::actions::transfer_continuation_action<Action>>
-  : needs_automatic_registration<Action>
-{
-};
+namespace hpx::traits {
+
+    template <typename Action>
+    struct needs_automatic_registration<
+        hpx::actions::transfer_continuation_action<Action>>
+      : needs_automatic_registration<Action>
+    {
+    };
+}    // namespace hpx::traits
 /// \endcond
 
 #include <hpx/config/warnings_suffix.hpp>

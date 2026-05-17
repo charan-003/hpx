@@ -19,9 +19,10 @@
 
 namespace hpx::detail {
 
-    template <typename Action, typename Continuation, typename... Ts>
-    std::enable_if_t<traits::is_continuation_v<Continuation>, bool> post_impl(
-        Continuation&& c, hpx::id_type const& id, hpx::launch policy,
+    HPX_CXX_EXPORT template <typename Action, typename Continuation,
+        typename... Ts>
+        requires(traits::is_continuation_v<Continuation>)
+    bool post_impl(Continuation&& c, hpx::id_type const& id, hpx::launch policy,
         Ts&&... vs)
     {
         using action_type = hpx::traits::extract_action_t<Action>;
@@ -81,10 +82,11 @@ namespace hpx::detail {
 #endif
     }
 
-    template <typename Action, typename Continuation, typename... Ts>
-    std::enable_if_t<traits::is_continuation_v<Continuation>, bool> post_impl(
-        Continuation&& c, hpx::id_type const& id, naming::address&& addr,
-        hpx::launch policy, Ts&&... vs)
+    HPX_CXX_EXPORT template <typename Action, typename Continuation,
+        typename... Ts>
+        requires(traits::is_continuation_v<Continuation>)
+    bool post_impl(Continuation&& c, hpx::id_type const& id,
+        naming::address&& addr, hpx::launch policy, Ts&&... vs)
     {
         if (!addr)
         {
@@ -133,7 +135,7 @@ namespace hpx::detail {
 #endif
     }
 
-    template <typename Action, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename... Ts>
     bool post_impl(hpx::id_type const& id, hpx::launch policy, Ts&&... vs)
     {
         using action_type = hpx::traits::extract_action_t<Action>;
@@ -191,7 +193,7 @@ namespace hpx::detail {
 #endif
     }
 
-    template <typename Action, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename... Ts>
     bool post_impl(hpx::id_type const& id, naming::address&& addr,
         hpx::launch policy, Ts&&... vs)
     {
@@ -240,11 +242,11 @@ namespace hpx::detail {
 #endif
     }
 
-    template <typename Action, typename Continuation, typename Callback,
-        typename... Ts>
-    std::enable_if_t<traits::is_continuation_v<Continuation>, bool>
-    post_cb_impl(Continuation&& c, hpx::id_type const& id, hpx::launch policy,
-        Callback&& cb, Ts&&... vs)
+    HPX_CXX_EXPORT template <typename Action, typename Continuation,
+        typename Callback, typename... Ts>
+        requires(traits::is_continuation_v<Continuation>)
+    bool post_cb_impl(Continuation&& c, hpx::id_type const& id,
+        hpx::launch policy, Callback&& cb, Ts&&... vs)
     {
         using action_type = hpx::traits::extract_action_t<Action>;
         using component_type = typename action_type::component_type;
@@ -311,7 +313,7 @@ namespace hpx::detail {
 #endif
     }
 
-    template <typename Action, typename Callback, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename Callback, typename... Ts>
     bool post_cb_impl(
         hpx::id_type const& id, hpx::launch policy, Callback&& cb, Ts&&... vs)
     {

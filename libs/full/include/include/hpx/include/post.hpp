@@ -7,8 +7,7 @@
 #pragma once
 
 #include <hpx/config.hpp>
-#include <hpx/modules/async_local.hpp>
-
 #include <hpx/async_colocated/post_colocated.hpp>
 #include <hpx/async_colocated/post_colocated_callback.hpp>
-#include <hpx/async_distributed/post.hpp>
+#include <hpx/modules/async_distributed.hpp>
+#include <hpx/modules/async_local.hpp>

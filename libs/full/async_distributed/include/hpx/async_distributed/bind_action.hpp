@@ -27,7 +27,7 @@ namespace hpx {
     namespace detail {
 
         ///////////////////////////////////////////////////////////////////////
-        template <typename Action, typename Is, typename... Ts>
+        HPX_CXX_EXPORT template <typename Action, typename Is, typename... Ts>
         class bound_action;
 
         template <typename Action, std::size_t... Is, typename... Ts>
@@ -132,9 +132,8 @@ namespace hpx {
     }    // namespace detail
 
     ///////////////////////////////////////////////////////////////////////////
-    template <typename Action, typename... Ts,
-        typename Enable =
-            std::enable_if_t<traits::is_action_v<std::decay_t<Action>>>>
+    HPX_CXX_EXPORT template <typename Action, typename... Ts>
+        requires(traits::is_action_v<std::decay_t<Action>>)
     detail::bound_action<std::decay_t<Action>,
         util::make_index_pack_t<sizeof...(Ts)>,
         hpx::util::decay_unwrap_t<Ts>...>
@@ -147,8 +146,8 @@ namespace hpx {
         return result_type(Action(), HPX_FORWARD(Ts, vs)...);
     }
 
-    template <typename Component, typename Signature, typename Derived,
-        typename... Ts>
+    HPX_CXX_EXPORT template <typename Component, typename Signature,
+        typename Derived, typename... Ts>
     detail::bound_action<Derived, util::make_index_pack_t<sizeof...(Ts)>,
         std::decay_t<Ts>...>
     bind(hpx::actions::basic_action<Component, Signature, Derived> action,
@@ -184,7 +183,7 @@ namespace hpx {
 namespace hpx::serialization {
 
     // serialization of the bound action object
-    template <typename Archive, typename F, typename... Ts>
+    HPX_CXX_EXPORT template <typename Archive, typename F, typename... Ts>
     void serialize(Archive& ar, ::hpx::detail::bound_action<F, Ts...>& bound,
         unsigned int const version = 0)
     {

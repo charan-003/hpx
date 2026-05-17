@@ -15,8 +15,8 @@
 
 #pragma once
 
-#include <hpx/async_distributed/dataflow.hpp>
 #include <hpx/modules/actions_base.hpp>
+#include <hpx/modules/async_distributed.hpp>
 #include <hpx/modules/checkpoint_base.hpp>
 #include <hpx/modules/components.hpp>
 #include <hpx/modules/components_base.hpp>

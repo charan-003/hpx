@@ -13,10 +13,9 @@
 #include <hpx/async_colocated/async_colocated_callback.hpp>
 #include <hpx/async_colocated/post_colocated_callback_fwd.hpp>
 #include <hpx/async_colocated/post_colocated_fwd.hpp>
-#include <hpx/async_distributed/detail/async_implementations.hpp>
-#include <hpx/async_distributed/detail/post.hpp>
 #include <hpx/modules/actions_base.hpp>
 #include <hpx/modules/async_base.hpp>
+#include <hpx/modules/async_distributed.hpp>
 #include <hpx/modules/components.hpp>
 #include <hpx/modules/components_base.hpp>
 #include <hpx/modules/futures.hpp>

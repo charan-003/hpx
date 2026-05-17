@@ -21,22 +21,21 @@ namespace hpx::components {
     namespace detail {
 
         HPX_CXX_EXPORT template <typename Component>
-        struct component_heap_impl;
+        struct HPX_ALWAYS_EXPORT component_heap_impl;
 
         HPX_CXX_EXPORT template <typename Component>
-        typename Component::heap_type& component_heap_helper(
+        Component::heap_type& component_heap_helper(
             typename detail::component_heap_impl<Component>::valid*)
         {
             return detail::component_heap_impl<Component>::call();
         }
 
         HPX_CXX_EXPORT template <typename Component>
-        HPX_ALWAYS_EXPORT typename Component::heap_type& component_heap_helper(
-            ...);
+        HPX_ALWAYS_EXPORT Component::heap_type& component_heap_helper(...);
     }    // namespace detail
 
     HPX_CXX_EXPORT template <typename Component>
-    typename Component::heap_type& component_heap()
+    Component::heap_type& component_heap()
     {
         return detail::component_heap_helper<Component>(nullptr);
     }

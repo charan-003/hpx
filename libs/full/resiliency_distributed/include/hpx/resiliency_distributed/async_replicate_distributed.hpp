@@ -16,7 +16,7 @@
 #include <hpx/modules/resiliency.hpp>
 
 #include <hpx/assert.hpp>
-#include <hpx/async_distributed/async.hpp>
+#include <hpx/modules/async_distributed.hpp>
 #include <hpx/modules/async_local.hpp>
 #include <hpx/modules/futures.hpp>
 

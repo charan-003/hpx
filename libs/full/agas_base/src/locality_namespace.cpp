@@ -9,8 +9,8 @@
 #include <hpx/config.hpp>
 #include <hpx/agas_base/locality_namespace.hpp>
 #include <hpx/agas_base/server/locality_namespace.hpp>
-#include <hpx/async_distributed/base_lco_with_value.hpp>
 #include <hpx/modules/actions_base.hpp>
+#include <hpx/modules/async_distributed.hpp>
 #include <hpx/modules/serialization.hpp>
 
 #include <hpx/config/warnings_prefix.hpp>

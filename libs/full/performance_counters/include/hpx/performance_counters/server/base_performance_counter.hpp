@@ -7,10 +7,9 @@
 #pragma once
 
 #include <hpx/config.hpp>
-#include <hpx/async_distributed/base_lco_with_value.hpp>
-#include <hpx/async_distributed/transfer_continuation_action.hpp>
 #include <hpx/modules/actions.hpp>
 #include <hpx/modules/actions_base.hpp>
+#include <hpx/modules/async_distributed.hpp>
 #include <hpx/modules/components_base.hpp>
 #include <hpx/modules/thread_support.hpp>
 #include <hpx/performance_counters/counters.hpp>

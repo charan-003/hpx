@@ -9,9 +9,9 @@
 #include <hpx/config.hpp>
 #if !defined(HPX_COMPUTE_DEVICE_CODE)
 #include <hpx/assert.hpp>
-#include <hpx/async_distributed/post.hpp>
 #include <hpx/lcos_distributed/server/channel.hpp>
 #include <hpx/modules/async_base.hpp>
+#include <hpx/modules/async_distributed.hpp>
 #include <hpx/modules/components.hpp>
 #include <hpx/modules/futures.hpp>
 #include <hpx/modules/naming.hpp>

@@ -25,7 +25,8 @@ namespace hpx {
     ///////////////////////////////////////////////////////////////////////////
     namespace detail {
 
-        template <typename Action, typename Callback, typename... Ts>
+        HPX_CXX_EXPORT template <typename Action, typename Callback,
+            typename... Ts>
         bool post_r_p_cb(naming::address&& addr, hpx::id_type const& id,
             hpx::launch policy, Callback&& cb, Ts&&... vs)
         {
@@ -35,7 +36,8 @@ namespace hpx {
                 HPX_FORWARD(Callback, cb), HPX_FORWARD(Ts, vs)...);
         }
 
-        template <typename Action, typename Callback, typename... Ts>
+        HPX_CXX_EXPORT template <typename Action, typename Callback,
+            typename... Ts>
         bool post_r_cb(naming::address&& addr, hpx::id_type const& gid,
             Callback&& cb, Ts&&... vs)
         {
@@ -49,7 +51,7 @@ namespace hpx {
 #endif
 
     ///////////////////////////////////////////////////////////////////////////
-    template <typename Action, typename Callback, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename Callback, typename... Ts>
     bool post_p_cb(
         hpx::id_type const& gid, hpx::launch policy, Callback&& cb, Ts&&... vs)
     {
@@ -57,7 +59,7 @@ namespace hpx {
             gid, policy, HPX_FORWARD(Callback, cb), HPX_FORWARD(Ts, vs)...);
     }
 
-    template <typename Action, typename Callback, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename Callback, typename... Ts>
     bool post_cb(hpx::id_type const& gid, Callback&& cb, Ts&&... vs)
     {
         constexpr launch::async_policy policy(
@@ -67,8 +69,8 @@ namespace hpx {
             gid, policy, HPX_FORWARD(Callback, cb), HPX_FORWARD(Ts, vs)...);
     }
 
-    template <typename Component, typename Signature, typename Derived,
-        typename Callback, typename... Ts>
+    HPX_CXX_EXPORT template <typename Component, typename Signature,
+        typename Derived, typename Callback, typename... Ts>
     bool post_cb(
         hpx::actions::basic_action<Component, Signature, Derived> /*act*/,
         hpx::id_type const& gid, Callback&& cb, Ts&&... vs)
@@ -80,10 +82,10 @@ namespace hpx {
             gid, policy, HPX_FORWARD(Callback, cb), HPX_FORWARD(Ts, vs)...);
     }
 
-    template <typename Action, typename DistPolicy, typename Callback,
-        typename... Ts>
-    std::enable_if_t<traits::is_distribution_policy_v<DistPolicy>, bool>
-    post_p_cb(DistPolicy const& policy, hpx::launch launch_policy,
+    HPX_CXX_EXPORT template <typename Action, typename DistPolicy,
+        typename Callback, typename... Ts>
+        requires(traits::is_distribution_policy_v<DistPolicy>)
+    bool post_p_cb(DistPolicy const& policy, hpx::launch launch_policy,
         Callback&& cb, Ts&&... vs)
     {
         return policy.template apply_cb<Action>(
@@ -92,8 +94,8 @@ namespace hpx {
 
     template <typename Action, typename DistPolicy, typename Callback,
         typename... Ts>
-    std::enable_if_t<traits::is_distribution_policy_v<DistPolicy>, bool>
-    post_cb(DistPolicy const& policy, Callback&& cb, Ts&&... vs)
+        requires(traits::is_distribution_policy_v<DistPolicy>)
+    bool post_cb(DistPolicy const& policy, Callback&& cb, Ts&&... vs)
     {
         constexpr launch::async_policy launch_policy(
             actions::action_priority<Action>(),
@@ -104,8 +106,9 @@ namespace hpx {
 
     template <typename Component, typename Signature, typename Derived,
         typename DistPolicy, typename Callback, typename... Ts>
-    std::enable_if_t<traits::is_distribution_policy_v<DistPolicy>, bool>
-    post_cb(hpx::actions::basic_action<Component, Signature, Derived> /*act*/,
+        requires(traits::is_distribution_policy_v<DistPolicy>)
+    bool post_cb(
+        hpx::actions::basic_action<Component, Signature, Derived> /*act*/,
         DistPolicy const& policy, Callback&& cb, Ts&&... vs)
     {
         constexpr launch::async_policy launch_policy(
@@ -119,8 +122,8 @@ namespace hpx {
     ///////////////////////////////////////////////////////////////////////////
     namespace detail {
 
-        template <typename Action, typename Continuation, typename Callback,
-            typename... Ts>
+        HPX_CXX_EXPORT template <typename Action, typename Continuation,
+            typename Callback, typename... Ts>
         bool post_r_p_cb(naming::address&& addr, Continuation&& c,
             hpx::id_type const& id, hpx::launch policy, Callback&& cb,
             Ts&&... vs)
@@ -132,8 +135,8 @@ namespace hpx {
                 HPX_FORWARD(Ts, vs)...);
         }
 
-        template <typename Action, typename Continuation, typename Callback,
-            typename... Ts>
+        HPX_CXX_EXPORT template <typename Action, typename Continuation,
+            typename Callback, typename... Ts>
         bool post_r_cb(naming::address&& addr, Continuation&& c,
             hpx::id_type const& gid, Callback&& cb, Ts&&... vs)
         {
@@ -148,8 +151,8 @@ namespace hpx {
 #endif
 
     ///////////////////////////////////////////////////////////////////////////
-    template <typename Action, typename Continuation, typename Callback,
-        typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename Continuation,
+        typename Callback, typename... Ts>
     bool post_p_cb(Continuation&& c, naming::address&& addr,
         hpx::id_type const& gid, hpx::launch policy, Callback&& cb, Ts&&... vs)
     {
@@ -185,8 +188,8 @@ namespace hpx {
 #endif
     }
 
-    template <typename Action, typename Continuation, typename Callback,
-        typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename Continuation,
+        typename Callback, typename... Ts>
     bool post_p_cb(Continuation&& c, hpx::id_type const& gid,
         hpx::launch policy, Callback&& cb, Ts&&... vs)
     {
@@ -194,8 +197,8 @@ namespace hpx {
             gid, policy, HPX_FORWARD(Callback, cb), HPX_FORWARD(Ts, vs)...);
     }
 
-    template <typename Action, typename Continuation, typename Callback,
-        typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename Continuation,
+        typename Callback, typename... Ts>
     bool post_cb(
         Continuation&& c, hpx::id_type const& gid, Callback&& cb, Ts&&... vs)
     {
@@ -206,8 +209,8 @@ namespace hpx {
             HPX_FORWARD(Callback, cb), HPX_FORWARD(Ts, vs)...);
     }
 
-    template <typename Component, typename Continuation, typename Signature,
-        typename Derived, typename Callback, typename... Ts>
+    HPX_CXX_EXPORT template <typename Component, typename Continuation,
+        typename Signature, typename Derived, typename Callback, typename... Ts>
     bool post_cb(Continuation&& c,
         hpx::actions::basic_action<Component, Signature, Derived> /*act*/,
         hpx::id_type const& gid, Callback&& cb, Ts&&... vs)
@@ -219,24 +222,22 @@ namespace hpx {
             HPX_FORWARD(Callback, cb), HPX_FORWARD(Ts, vs)...);
     }
 
-    template <typename Action, typename Continuation, typename DistPolicy,
-        typename Callback, typename... Ts>
-    std::enable_if_t<traits::is_continuation<Continuation>::value &&
-            traits::is_distribution_policy_v<DistPolicy>,
-        bool>
-    post_p_cb(Continuation&& c, DistPolicy const& policy,
+    HPX_CXX_EXPORT template <typename Action, typename Continuation,
+        typename DistPolicy, typename Callback, typename... Ts>
+        requires(traits::is_continuation<Continuation>::value &&
+            traits::is_distribution_policy_v<DistPolicy>)
+    bool post_p_cb(Continuation&& c, DistPolicy const& policy,
         hpx::launch launch_policy, Callback&& cb, Ts&&... vs)
     {
         return policy.template apply_cb<Action>(HPX_FORWARD(Continuation, c),
             launch_policy, HPX_FORWARD(Callback, cb), HPX_FORWARD(Ts, vs)...);
     }
 
-    template <typename Action, typename Continuation, typename DistPolicy,
-        typename Callback, typename... Ts>
-    std::enable_if_t<traits::is_continuation<Continuation>::value &&
-            traits::is_distribution_policy_v<DistPolicy>,
-        bool>
-    post_cb(
+    HPX_CXX_EXPORT template <typename Action, typename Continuation,
+        typename DistPolicy, typename Callback, typename... Ts>
+        requires(traits::is_continuation<Continuation>::value &&
+            traits::is_distribution_policy_v<DistPolicy>)
+    bool post_cb(
         Continuation&& c, DistPolicy const& policy, Callback&& cb, Ts&&... vs)
     {
         constexpr launch::async_policy launch_policy(
@@ -246,11 +247,11 @@ namespace hpx {
             launch_policy, HPX_FORWARD(Callback, cb), HPX_FORWARD(Ts, vs)...);
     }
 
-    template <typename Component, typename Continuation, typename Signature,
-        typename Derived, typename DistPolicy, typename Callback,
-        typename... Ts>
-    std::enable_if_t<traits::is_distribution_policy_v<DistPolicy>, bool>
-    post_cb(Continuation&& c,
+    HPX_CXX_EXPORT template <typename Component, typename Continuation,
+        typename Signature, typename Derived, typename DistPolicy,
+        typename Callback, typename... Ts>
+        requires(traits::is_distribution_policy_v<DistPolicy>)
+    bool post_cb(Continuation&& c,
         hpx::actions::basic_action<Component, Signature, Derived> /*act*/,
         DistPolicy const& policy, Callback&& cb, Ts&&... vs)
     {
@@ -265,7 +266,8 @@ namespace hpx {
     ///////////////////////////////////////////////////////////////////////////
     namespace detail {
 
-        template <typename Action, typename Callback, typename... Ts>
+        HPX_CXX_EXPORT template <typename Action, typename Callback,
+            typename... Ts>
         bool post_c_p_cb(naming::address&& addr, hpx::id_type const& contgid,
             hpx::id_type const& gid, hpx::launch policy, Callback&& cb,
             Ts&&... vs)
@@ -281,7 +283,8 @@ namespace hpx {
                 gid, policy, HPX_FORWARD(Callback, cb), HPX_FORWARD(Ts, vs)...);
         }
 
-        template <typename Action, typename Callback, typename... Ts>
+        HPX_CXX_EXPORT template <typename Action, typename Callback,
+            typename... Ts>
         bool post_c_cb(naming::address&& addr, hpx::id_type const& contgid,
             hpx::id_type const& gid, Callback&& cb, Ts&&... vs)
         {
@@ -302,7 +305,7 @@ namespace hpx {
 #endif
 
     ///////////////////////////////////////////////////////////////////////////
-    template <typename Action, typename Callback, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename Callback, typename... Ts>
     bool post_c_p_cb(hpx::id_type const& contgid, hpx::id_type const& gid,
         hpx::launch policy, Callback&& cb, Ts&&... vs)
     {
@@ -317,7 +320,7 @@ namespace hpx {
             gid, policy, HPX_FORWARD(Callback, cb), HPX_FORWARD(Ts, vs)...);
     }
 
-    template <typename Action, typename Callback, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename Callback, typename... Ts>
     bool post_c_cb(hpx::id_type const& contgid, hpx::id_type const& gid,
         Callback&& cb, Ts&&... vs)
     {
@@ -335,7 +338,7 @@ namespace hpx {
             gid, policy, HPX_FORWARD(Callback, cb), HPX_FORWARD(Ts, vs)...);
     }
 
-    template <typename Action, typename Callback, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename Callback, typename... Ts>
     bool post_c_p_cb(hpx::id_type const& contgid, naming::address&& addr,
         hpx::id_type const& gid, hpx::launch policy, Callback&& cb, Ts&&... vs)
     {
@@ -351,7 +354,7 @@ namespace hpx {
             HPX_FORWARD(Ts, vs)...);
     }
 
-    template <typename Action, typename Callback, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename Callback, typename... Ts>
     bool post_c_cb(hpx::id_type const& contgid, naming::address&& addr,
         hpx::id_type const& gid, Callback&& cb, Ts&&... vs)
     {
@@ -372,7 +375,8 @@ namespace hpx {
 
     namespace functional {
 
-        template <typename Action, typename Callback, typename... Ts>
+        HPX_CXX_EXPORT template <typename Action, typename Callback,
+            typename... Ts>
         struct post_c_p_cb_impl
         {
         public:

@@ -267,8 +267,9 @@ function(hpx_setup_target target)
 
       # If modules are enabled, Clang emits DWARF v5, which requires using lld
       # instead of ld.
-      if((NOT MSVC) AND (CMAKE_CXX_COMPILER_ID MATCHES "Clang"
-                         OR CMAKE_CXX_COMPILER_ID MATCHES "AppleClang")
+      if((NOT MSVC)
+         AND (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+         AND (NOT (CMAKE_CXX_COMPILER_ID MATCHES "AppleClang"))
       )
         get_target_property(_type ${target} TYPE)
         if((_type STREQUAL "SHARED_LIBRARY") OR (_type STREQUAL "EXECUTABLE"))

@@ -9,6 +9,13 @@
 // thread stealing for the duration of the execution of a parallel algorithm
 // it is used with.
 
+#include <hpx/config.hpp>
+
+// MSVC V19.44 (VS2022) ICE's when compiling this test if C++20 modules are
+// enabled
+#if !defined(HPX_HAVE_CXX_MODULES) ||                                          \
+    !(defined(HPX_MSVC) && HPX_MSVC_VERSION <= 1944)
+
 #include <hpx/algorithm.hpp>
 #include <hpx/assert.hpp>
 #include <hpx/execution.hpp>
@@ -74,12 +81,8 @@ namespace executor_example {
     };
 
     // support all properties exposed by the wrapped executor
-    // clang-format off
-    template <typename Tag, typename BaseExecutor, typename Property,
-        HPX_CONCEPT_REQUIRES_(
-            hpx::execution::experimental::is_scheduling_property_v<Tag>
-        )>
-    // clang-format on
+    template <typename Tag, typename BaseExecutor, typename Property>
+        requires(hpx::execution::experimental::is_scheduling_property_v<Tag>)
     auto tag_invoke(Tag tag,
         disable_thread_stealing_executor<BaseExecutor> const& exec,
         Property&& prop)
@@ -92,12 +95,8 @@ namespace executor_example {
                 HPX_FORWARD(Property, prop)));
     }
 
-    // clang-format off
-    template <typename Tag, typename BaseExecutor,
-        HPX_CONCEPT_REQUIRES_(
-            hpx::execution::experimental::is_scheduling_property_v<Tag>
-        )>
-    // clang-format on
+    template <typename Tag, typename BaseExecutor>
+        requires(hpx::execution::experimental::is_scheduling_property_v<Tag>)
     auto tag_invoke(
         Tag tag, disable_thread_stealing_executor<BaseExecutor> const& exec)
         -> decltype(std::declval<Tag>()(std::declval<BaseExecutor const&>()))
@@ -180,3 +179,12 @@ int main(int argc, char* argv[])
 {
     return hpx::local::init(hpx_main, argc, argv);
 }
+
+#else
+
+int main(int argc, char* argv[])
+{
+    return 0;
+}
+
+#endif

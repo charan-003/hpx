@@ -9,7 +9,6 @@
 
 #include <hpx/agas/addressing_service.hpp>
 #include <hpx/assert.hpp>
-#include <hpx/async_distributed/continuation.hpp>
 #include <hpx/modules/actions_base.hpp>
 #include <hpx/modules/async_combinators.hpp>
 #include <hpx/modules/async_distributed.hpp>

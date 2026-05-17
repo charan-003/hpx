@@ -23,6 +23,6 @@ add_hpx_module(
   SOURCES ${resiliency_distributed_sources}
   HEADERS ${resiliency_distributed_headers}
   DEPENDENCIES hpx_core
-  MODULE_DEPENDENCIES hpx_actions_base hpx_naming
+  MODULE_DEPENDENCIES hpx_actions_base hpx_async_distributed hpx_naming
   CMAKE_SUBDIRS examples tests
 )

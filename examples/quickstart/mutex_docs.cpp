@@ -6,6 +6,13 @@
 
 // This example is meant for inclusion in the documentation.
 
+#include <hpx/config.hpp>
+
+// MSVC V19.44 (VS2022) ICE's when compiling this test if C++20 modules are
+// enabled
+#if !defined(HPX_HAVE_CXX_MODULES) ||                                          \
+    !(defined(HPX_MSVC) && HPX_MSVC_VERSION <= 1944)
+
 //[mutex_docs
 #include <hpx/future.hpp>
 #include <hpx/init.hpp>
@@ -37,3 +44,12 @@ int main(int argc, char* argv[])
     return hpx::local::init(hpx_main, argc, argv);
 }
 //]
+
+#else
+
+int main(int argc, char* argv[])
+{
+    return 0;
+}
+
+#endif

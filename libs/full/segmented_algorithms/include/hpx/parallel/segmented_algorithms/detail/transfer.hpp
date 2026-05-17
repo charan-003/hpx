@@ -8,8 +8,8 @@
 
 #include <hpx/config.hpp>
 #include <hpx/assert.hpp>
-#include <hpx/async_distributed/dataflow.hpp>
 #include <hpx/modules/algorithms.hpp>
+#include <hpx/modules/async_distributed.hpp>
 #include <hpx/modules/executors.hpp>
 #include <hpx/parallel/segmented_algorithms/detail/dispatch.hpp>
 

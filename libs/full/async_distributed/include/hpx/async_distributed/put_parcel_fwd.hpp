@@ -21,10 +21,10 @@ namespace hpx::parcelset {
 
     namespace detail {
 
-        struct create_parcel
+        HPX_CXX_EXPORT struct create_parcel
         {
             template <typename... Args>
-            static inline parcelset::parcel call(naming::gid_type&& dest,
+            static parcelset::parcel call(naming::gid_type&& dest,
                 naming::address&& addr, Args&&... args);
 
             static inline parcelset::parcel call_with_action(
@@ -32,7 +32,7 @@ namespace hpx::parcelset {
                 std::unique_ptr<actions::base_action>&& action);
         };
 
-        template <typename PutParcel>
+        HPX_CXX_EXPORT template <typename PutParcel>
         struct put_parcel_cont
         {
             std::decay_t<PutParcel> pp;
@@ -43,17 +43,17 @@ namespace hpx::parcelset {
             void operator()(hpx::future<naming::gid_type> f);
         };
 
-        template <typename PutParcel>
+        HPX_CXX_EXPORT template <typename PutParcel>
         void put_parcel_impl(PutParcel&& pp, hpx::id_type const& dest,
             naming::address&& addr,
             std::unique_ptr<actions::base_action>&& action);
     }    // namespace detail
 
-    template <typename... Args>
+    HPX_CXX_EXPORT template <typename... Args>
     void put_parcel(
         hpx::id_type const& dest, naming::address&& addr, Args&&... args);
 
-    template <typename Callback, typename... Args>
+    HPX_CXX_EXPORT template <typename Callback, typename... Args>
     void put_parcel_cb(Callback&& cb, hpx::id_type const& dest,
         naming::address&& addr, Args&&... args);
 }    // namespace hpx::parcelset

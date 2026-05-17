@@ -18,7 +18,7 @@
 namespace hpx {
 
     ///////////////////////////////////////////////////////////////////////////
-    template <typename Action, typename Cont, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename Cont, typename... Ts>
     bool post_continue(Cont&& cont, id_type const& gid, Ts&&... vs)
     {
         using action_type = typename hpx::traits::extract_action<Action>::type;
@@ -30,8 +30,8 @@ namespace hpx {
             gid, HPX_FORWARD(Ts, vs)...);
     }
 
-    template <typename Component, typename Signature, typename Derived,
-        typename Cont, typename... Ts>
+    HPX_CXX_EXPORT template <typename Component, typename Signature,
+        typename Derived, typename Cont, typename... Ts>
     bool post_continue(
         hpx::actions::basic_action<Component, Signature, Derived> /*act*/,
         Cont&& cont, id_type const& gid, Ts&&... vs)
@@ -41,7 +41,7 @@ namespace hpx {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    template <typename Action, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename... Ts>
     bool post_continue(id_type const& cont, id_type const& gid, Ts&&... vs)
     {
         using action_type = typename hpx::traits::extract_action<Action>::type;
@@ -54,8 +54,8 @@ namespace hpx {
             gid, HPX_FORWARD(Ts, vs)...);
     }
 
-    template <typename Component, typename Signature, typename Derived,
-        typename... Ts>
+    HPX_CXX_EXPORT template <typename Component, typename Signature,
+        typename Derived, typename... Ts>
     bool post_continue(
         hpx::actions::basic_action<Component, Signature, Derived> /*act*/,
         id_type const& cont, id_type const& gid, Ts&&... vs)

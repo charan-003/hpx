@@ -11,8 +11,8 @@
 #include <hpx/assert.hpp>
 #include <hpx/async_colocated/async_colocated.hpp>
 #include <hpx/async_colocated/async_colocated_callback_fwd.hpp>
-#include <hpx/async_distributed/async_continue_callback.hpp>
 #include <hpx/modules/actions_base.hpp>
+#include <hpx/modules/async_distributed.hpp>
 #include <hpx/modules/futures.hpp>
 
 #include <utility>

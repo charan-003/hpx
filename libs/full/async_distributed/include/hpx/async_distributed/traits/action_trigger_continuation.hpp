@@ -1,4 +1,4 @@
-//  Copyright (c) 2020-2021 Hartmut Kaiser
+//  Copyright (c) 2020-2026 Hartmut Kaiser
 //
 //  SPDX-License-Identifier: BSL-1.0
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -12,7 +12,7 @@
 
 #include <utility>
 
-namespace hpx { namespace traits {
+namespace hpx::traits {
 
     ///////////////////////////////////////////////////////////////////////////
     // Trait to determine the continuation type for an action
@@ -29,4 +29,4 @@ namespace hpx { namespace traits {
                 HPX_MOVE(cont), HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...);
         }
     };
-}}    // namespace hpx::traits
+}    // namespace hpx::traits

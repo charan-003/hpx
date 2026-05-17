@@ -258,12 +258,14 @@ namespace hpx::actions {
 }    // namespace hpx::actions
 
 /// \cond NOINTERNAL
-template <typename Action>
-struct hpx::traits::needs_automatic_registration<
-    hpx::actions::transfer_action<Action>>
-  : needs_automatic_registration<Action>
-{
-};
+namespace hpx::traits {
+
+    template <typename Action>
+    struct needs_automatic_registration<hpx::actions::transfer_action<Action>>
+      : needs_automatic_registration<Action>
+    {
+    };
+}    // namespace hpx::traits
 /// \endcond
 
 #include <hpx/config/warnings_suffix.hpp>

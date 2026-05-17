@@ -18,7 +18,8 @@
 namespace hpx {
 
     ///////////////////////////////////////////////////////////////////////////
-    template <typename Action, typename Cont, typename Callback, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename Cont, typename Callback,
+        typename... Ts>
     bool post_continue_cb(
         Cont&& cont, id_type const& gid, Callback&& cb, Ts&&... vs)
     {
@@ -32,8 +33,8 @@ namespace hpx {
             gid, HPX_FORWARD(Callback, cb), HPX_FORWARD(Ts, vs)...);
     }
 
-    template <typename Component, typename Signature, typename Derived,
-        typename Cont, typename Callback, typename... Ts>
+    HPX_CXX_EXPORT template <typename Component, typename Signature,
+        typename Derived, typename Cont, typename Callback, typename... Ts>
     bool post_continue_cb(
         hpx::actions::basic_action<Component, Signature, Derived> /*act*/,
         Cont&& cont, id_type const& gid, Callback&& cb, Ts&&... vs)
@@ -43,7 +44,7 @@ namespace hpx {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    template <typename Action, typename Callback, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename Callback, typename... Ts>
     bool post_continue_cb(
         id_type const& cont, id_type const& gid, Callback&& cb, Ts&&... vs)
     {
@@ -57,8 +58,8 @@ namespace hpx {
             gid, HPX_FORWARD(Callback, cb), HPX_FORWARD(Ts, vs)...);
     }
 
-    template <typename Component, typename Signature, typename Derived,
-        typename Callback, typename... Ts>
+    HPX_CXX_EXPORT template <typename Component, typename Signature,
+        typename Derived, typename Callback, typename... Ts>
     bool post_continue_cb(
         hpx::actions::basic_action<Component, Signature, Derived> /*act*/,
         id_type const& cont, id_type const& gid, Callback&& cb, Ts&&... vs)

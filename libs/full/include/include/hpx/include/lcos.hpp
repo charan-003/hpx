@@ -13,12 +13,10 @@
 #include <hpx/include/lcos_local.hpp>
 #include <hpx/modules/async_combinators.hpp>
 
-#include <hpx/async_distributed/base_lco.hpp>
-#include <hpx/async_distributed/base_lco_with_value.hpp>
-#include <hpx/async_distributed/packaged_action.hpp>
 #include <hpx/collectives/barrier.hpp>
 #include <hpx/collectives/gather.hpp>
 #include <hpx/collectives/latch.hpp>
 #include <hpx/collectives/reduce.hpp>
 #include <hpx/include/actions.hpp>
 #include <hpx/lcos_distributed/channel.hpp>
+#include <hpx/modules/async_distributed.hpp>

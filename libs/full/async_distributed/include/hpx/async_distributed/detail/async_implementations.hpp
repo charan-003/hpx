@@ -139,7 +139,7 @@ namespace hpx::detail {
         {
             try
             {
-                using remote_result_type = typename Action::remote_result_type;
+                using remote_result_type = Action::remote_result_type;
                 using get_remote_result_type =
                     traits::get_remote_result<Result, remote_result_type>;
 
@@ -215,14 +215,14 @@ namespace hpx::detail {
     };
 
     ///////////////////////////////////////////////////////////////////////////
-    template <typename Action, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename... Ts>
     hpx::future<
         typename hpx::traits::extract_action_t<Action>::local_result_type>
     async_remote_impl(launch::sync_policy, hpx::id_type const& id,
         naming::address&& addr, Ts&&... vs)
     {
         using action_type = hpx::traits::extract_action_t<Action>;
-        using result_type = typename action_type::local_result_type;
+        using result_type = action_type::local_result_type;
 
         future<result_type> f;
         {
@@ -241,14 +241,14 @@ namespace hpx::detail {
         return f;
     }
 
-    template <typename Action, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename... Ts>
     hpx::future<
         typename hpx::traits::extract_action_t<Action>::local_result_type>
     async_remote_impl(launch::async_policy policy, hpx::id_type const& id,
         naming::address&& addr, Ts&&... vs)
     {
         using action_type = hpx::traits::extract_action_t<Action>;
-        using result_type = typename action_type::local_result_type;
+        using result_type = action_type::local_result_type;
 
         hpx::future<result_type> f;
         {
@@ -267,14 +267,14 @@ namespace hpx::detail {
         return f;
     }
 
-    template <typename Action, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename... Ts>
     hpx::future<
         typename hpx::traits::extract_action_t<Action>::local_result_type>
     async_remote_impl(launch::deferred_policy policy, hpx::id_type const& id,
         naming::address&& addr, Ts&&... vs)
     {
         using action_type = hpx::traits::extract_action_t<Action>;
-        using result_type = typename action_type::local_result_type;
+        using result_type = action_type::local_result_type;
 
         hpx::future<result_type> f;
         {
@@ -294,7 +294,7 @@ namespace hpx::detail {
     }
 
     // generic function for dynamic launch policy
-    template <typename Action, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename... Ts>
     hpx::future<
         typename hpx::traits::extract_action_t<Action>::local_result_type>
     async_remote_impl(launch policy, hpx::id_type const& id,
@@ -325,8 +325,8 @@ namespace hpx::detail {
     template <typename Action>
     struct action_invoker
     {
-        using remote_result_type = typename Action::remote_result_type;
-        using result_type = typename Action::local_result_type;
+        using remote_result_type = Action::remote_result_type;
+        using result_type = Action::local_result_type;
         using get_remote_result_type =
             traits::get_remote_result<result_type, remote_result_type>;
 
@@ -382,7 +382,7 @@ namespace hpx::traits {
 namespace hpx::detail {
 
     ///////////////////////////////////////////////////////////////////////////
-    template <typename Action, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename... Ts>
     hpx::future<
         typename hpx::traits::extract_action_t<Action>::local_result_type>
     async_local_impl(launch policy, hpx::id_type const& id,
@@ -390,7 +390,7 @@ namespace hpx::detail {
         Ts&&... vs)
     {
         using action_type = hpx::traits::extract_action_t<Action>;
-        using result_type = typename action_type::local_result_type;
+        using result_type = action_type::local_result_type;
 
         if (policy == launch::sync || action_type::direct_execution::value)
         {
@@ -414,13 +414,13 @@ namespace hpx::detail {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    template <typename Action, typename Launch, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename Launch, typename... Ts>
     hpx::future<
         typename hpx::traits::extract_action_t<Action>::local_result_type>
     async_impl(Launch&& policy, hpx::id_type const& id, Ts&&... vs)
     {
         using action_type = hpx::traits::extract_action_t<Action>;
-        using component_type = typename action_type::component_type;
+        using component_type = action_type::component_type;
 
         [[maybe_unused]] std::pair<bool, components::pinned_ptr> r;
         naming::address addr;
@@ -473,15 +473,15 @@ namespace hpx::detail {
     ///////////////////////////////////////////////////////////////////////////
     /// \note This function is part of the invocation policy implemented by
     ///       this class
-    template <typename Action, typename Callback, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename Callback, typename... Ts>
     hpx::future<
         typename hpx::traits::extract_action_t<Action>::local_result_type>
     async_cb_impl(
         launch policy, hpx::id_type const& id, Callback&& cb, Ts&&... vs)
     {
         using action_type = hpx::traits::extract_action_t<Action>;
-        using result_type = typename action_type::local_result_type;
-        using component_type = typename action_type::component_type;
+        using result_type = action_type::local_result_type;
+        using component_type = action_type::component_type;
 
         [[maybe_unused]] std::pair<bool, components::pinned_ptr> r;
         naming::address addr;
@@ -578,15 +578,15 @@ namespace hpx::detail {
         return f;
     }
 
-    template <typename Action, typename Callback, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename Callback, typename... Ts>
     hpx::future<
         typename hpx::traits::extract_action_t<Action>::local_result_type>
     async_cb_impl(hpx::launch::sync_policy policy, hpx::id_type const& id,
         Callback&& cb, Ts&&... vs)
     {
         using action_type = hpx::traits::extract_action_t<Action>;
-        using result_type = typename action_type::local_result_type;
-        using component_type = typename action_type::component_type;
+        using result_type = action_type::local_result_type;
+        using component_type = action_type::component_type;
 
         [[maybe_unused]] std::pair<bool, components::pinned_ptr> r;
         naming::address addr;
@@ -642,15 +642,15 @@ namespace hpx::detail {
         return f;
     }
 
-    template <typename Action, typename Callback, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename Callback, typename... Ts>
     hpx::future<
         typename hpx::traits::extract_action_t<Action>::local_result_type>
     async_cb_impl(hpx::launch::async_policy async_policy,
         hpx::id_type const& id, Callback&& cb, Ts&&... vs)
     {
         using action_type = hpx::traits::extract_action_t<Action>;
-        using result_type = typename action_type::local_result_type;
-        using component_type = typename action_type::component_type;
+        using result_type = action_type::local_result_type;
+        using component_type = action_type::component_type;
 
         [[maybe_unused]] std::pair<bool, components::pinned_ptr> r;
         naming::address addr;
@@ -721,14 +721,14 @@ namespace hpx::detail {
         return f;
     }
 
-    template <typename Action, typename Callback, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename Callback, typename... Ts>
     hpx::future<
         typename hpx::traits::extract_action_t<Action>::local_result_type>
     async_cb_impl(hpx::launch::deferred_policy policy, hpx::id_type const& id,
         Callback&& cb, Ts&&... vs)
     {
         using action_type = hpx::traits::extract_action_t<Action>;
-        using result_type = typename action_type::local_result_type;
+        using result_type = action_type::local_result_type;
 
         naming::address addr;
         [[maybe_unused]] bool result = agas::is_local_address_cached(id, addr);
