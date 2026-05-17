@@ -144,7 +144,6 @@ namespace hpx {
 #include <hpx/parallel/algorithms/detail/advance_to_sentinel.hpp>
 #include <hpx/parallel/algorithms/detail/dispatch.hpp>
 #include <hpx/parallel/algorithms/detail/pivot.hpp>
-#include <hpx/parallel/algorithms/make_heap.hpp>
 #include <hpx/parallel/algorithms/minmax.hpp>
 #include <hpx/parallel/algorithms/partial_sort.hpp>
 #include <hpx/parallel/algorithms/partition.hpp>
@@ -241,7 +240,7 @@ namespace hpx::parallel {
         }
 
         HPX_CXX_CORE_EXPORT template <typename Iter>
-        struct nth_element : public algorithm<nth_element<Iter>, Iter>
+        struct nth_element : algorithm<nth_element<Iter>, Iter>
         {
             constexpr nth_element() noexcept
               : algorithm<nth_element, Iter>("nth_element")
@@ -254,10 +253,10 @@ namespace hpx::parallel {
                 RandomIt nth, Sent last, Pred&& pred, Proj&& proj)
             {
                 auto end = detail::advance_to_sentinel(first, last);
-
                 auto nelem = end - first;
                 if (nelem == 0)
                     return first;
+
                 HPX_ASSERT(nelem >= 0 && nth - first + 1 > 0 &&
                     nth - first + 1 <= nelem);
 
@@ -273,33 +272,33 @@ namespace hpx::parallel {
             static decltype(auto) parallel(ExPolicy&& policy, RandomIt first,
                 RandomIt nth, Sent last, Pred&& pred, Proj&& proj)
             {
-                using value_type =
-                    typename std::iterator_traits<RandomIt>::value_type;
+                using value_type = std::iterator_traits<RandomIt>::value_type;
 
                 constexpr bool has_scheduler_executor =
                     hpx::execution_policy_has_scheduler_executor_v<ExPolicy>;
 
                 if constexpr (has_scheduler_executor)
                 {
-                    return stdexec::just(first, nth, last) |
-                        stdexec::then([policy = HPX_FORWARD(ExPolicy, policy),
-                                          pred = HPX_FORWARD(Pred, pred),
-                                          proj = HPX_FORWARD(Proj, proj)](
-                                          RandomIt first, RandomIt nth,
-                                          RandomIt last) mutable -> RandomIt {
+                    namespace ex = hpx::execution::experimental;
+                    return ex::just(first, nth, last) |
+                        ex::then([policy = HPX_FORWARD(ExPolicy, policy),
+                                     pred = HPX_FORWARD(Pred, pred),
+                                     proj = HPX_FORWARD(Proj, proj)](
+                                     RandomIt begin, RandomIt nth_it,
+                                     RandomIt end) mutable -> RandomIt {
                             auto last_iter =
-                                detail::advance_to_sentinel(first, last);
+                                detail::advance_to_sentinel(begin, end);
 
-                            while (first != last_iter)
+                            while (begin != last_iter)
                             {
-                                detail::pivot9(first, last_iter, pred);
+                                detail::pivot9(begin, last_iter, pred);
 
                                 RandomIt partition_iter =
                                     hpx::parallel::detail::partition<RandomIt>()
                                         .sequential(
-                                            hpx::execution::seq, first + 1,
+                                            hpx::execution::seq, begin + 1,
                                             last_iter,
-                                            [val = HPX_INVOKE(proj, *first),
+                                            [val = HPX_INVOKE(proj, *begin),
                                                 &pred](value_type const& elem) {
                                                 return HPX_INVOKE(
                                                     pred, elem, val);
@@ -310,22 +309,22 @@ namespace hpx::parallel {
 
                                 // swap first element and partitionIter
                                 // (ending element of first group)
-                                std::ranges::iter_swap(first, partition_iter);
+                                std::ranges::iter_swap(begin, partition_iter);
 
                                 // if nth element < partitioned index,
                                 // it lies in [first, partitionIter)
-                                if (partition_iter < nth)
+                                if (partition_iter < nth_it)
                                 {
-                                    first = partition_iter + 1;
+                                    begin = partition_iter + 1;
                                 }
                                 // else it lies in [partitionIter + 1, last)
-                                else if (partition_iter > nth)
+                                else if (partition_iter > nth_it)
                                 {
                                     last_iter = partition_iter;
                                 }
-                                // partitionIter == nth
                                 else
                                 {
+                                    // partitionIter == nth
                                     break;
                                 }
                             }
@@ -387,9 +386,9 @@ namespace hpx::parallel {
                             {
                                 last_iter = partition_iter;
                             }
-                            // partitionIter == nth
                             else
                             {
+                                // partitionIter == nth
                                 break;
                             }
                         }
