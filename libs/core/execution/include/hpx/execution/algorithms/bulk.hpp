@@ -9,8 +9,6 @@
 
 #include <hpx/config.hpp>
 
-#include <hpx/execution_base/stdexec_forward.hpp>
-
 #include <hpx/execution/algorithms/detail/partial_algorithm.hpp>
 #include <hpx/functional/detail/tag_priority_invoke.hpp>
 #include <hpx/modules/concepts.hpp>

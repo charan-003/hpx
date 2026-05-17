@@ -548,7 +548,8 @@ namespace hpx::execution::experimental {
                 // When seq policy, backend receives count=1 and proxy
                 // will execute all work in a single call:
                 //   - chunked: proxy.execute(0, shape) -> f(0, shape, args...)
-                //   - unchunked: proxy.execute(0, shape) -> for(i=0; i<shape; ++i) f(i, args...)
+                //   - unchunked: proxy.execute(0, shape) ->
+                //     for(i=0; i<shape; ++i) f(i, args...)
                 return dispatch_sender_t{
                     typename dispatch_sender_t::virtual_path_data{
                         par_sched.get_backend(),

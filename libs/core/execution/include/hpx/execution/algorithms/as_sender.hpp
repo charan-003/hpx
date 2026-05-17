@@ -146,8 +146,7 @@ namespace hpx::execution::experimental {
                     typename set_value_void_checked<std::is_void_v<result_type>,
                         result_type>::type,
                     hpx::execution::experimental::set_error_t(
-                        std::exception_ptr),
-                    hpx::execution::experimental::set_stopped_t()>;
+                        std::exception_ptr)>;
         };
 
         HPX_CXX_CORE_EXPORT template <typename Future>
@@ -233,6 +232,17 @@ namespace hpx::execution::experimental {
                     HPX_FORWARD(Receiver, receiver), future_};
             }
         };
+
+        // Explicit customization for sends_stopped to ensure as_sender_sender
+        // returns false since the operation state never calls set_stopped()
+        template <typename T, typename Env>
+        constexpr bool
+            sends_stopped<detail::as_sender_sender<hpx::future<T>>, Env> =
+                false;
+
+        template <typename T, typename Env>
+        constexpr bool sends_stopped<
+            detail::as_sender_sender<hpx::shared_future<T>>, Env> = false;
     }    // namespace detail
 
     // The as_sender CPO can be used to adapt any HPX future as a sender. The
