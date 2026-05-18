@@ -217,10 +217,48 @@ namespace hpx::execution::experimental {
             }
         };
 
+        // Detects whether a sender's set_value completion scheduler is
+        // run_loop_scheduler. Used by detail::make_future to reject -- at
+        // compile time -- the 1-argument form make_future(sender) when the
+        // sender's completion path runs on a run_loop scheduler. That call
+        // would silently hang at runtime because the 1-argument overload
+        // constructs a future_data that never drives loop.run().
+        template <typename Sender, typename = void>
+        struct sender_completion_is_run_loop_scheduler : std::false_type
+        {
+        };
+
+        template <typename Sender>
+        struct sender_completion_is_run_loop_scheduler<Sender,
+            std::void_t<
+                decltype(hpx::execution::experimental::get_completion_scheduler<
+                    hpx::execution::experimental::set_value_t>(hpx::execution::
+                        experimental::get_env(std::declval<Sender>())))>>
+          : std::is_same<std::decay_t<decltype(hpx::execution::experimental::
+                                 get_completion_scheduler<
+                                     hpx::execution::experimental::set_value_t>(
+                                     hpx::execution::experimental::get_env(
+                                         std::declval<Sender>())))>,
+                hpx::execution::experimental::run_loop_scheduler>
+        {
+        };
+
         ///////////////////////////////////////////////////////////////////////
         HPX_CXX_CORE_EXPORT template <typename Sender, typename Allocator>
         auto make_future(Sender&& sender, Allocator const& allocator)
         {
+            // The 1-argument make_future(sender) overload constructs a
+            // future_data that never calls loop.run(), so passing a sender
+            // whose set_value completion scheduler is a run_loop_scheduler
+            // produces a future that silently hangs. Reject at compile time
+            // and direct the user to make_future(sched, sender).
+            static_assert(!sender_completion_is_run_loop_scheduler<
+                              std::decay_t<Sender>>::value,
+                "make_future(sender) cannot drive the parent run_loop when "
+                "the sender's completion scheduler is a run_loop_scheduler. "
+                "Use make_future(loop.get_scheduler(), sender) so the "
+                "resulting future can drive the loop in its get().");
+
             using allocator_type = Allocator;
 
             using value_types = hpx::execution::experimental::value_types_of_t<
