@@ -1215,32 +1215,11 @@ namespace hpx::parallel {
                     if constexpr (hpx::is_async_execution_policy_v<ExPolicy> ||
                         is_scheduler_policy)
                     {
-                        // Check if partitioner::call returns void
-                        if constexpr (std::is_void_v<decltype(util::partitioner<
-                                          ExPolicy>::call(HPX_FORWARD(ExPolicy,
-                                                              policy),
-                                          iter_or_r, size,
-                                          part_iterations<ExPolicy, F>{
-                                              HPX_FORWARD(F, f)},
-                                          hpx::util::empty_function{}))>)
-                        {
-                            util::partitioner<ExPolicy>::call(
+                        return util::partitioner<ExPolicy>::
+                            call_with_algorithm_result(
                                 HPX_FORWARD(ExPolicy, policy), iter_or_r, size,
                                 part_iterations<ExPolicy, F>{HPX_FORWARD(F, f)},
                                 hpx::util::empty_function{});
-                            return util::detail::algorithm_result<
-                                ExPolicy>::get();
-                        }
-                        else
-                        {
-                            return util::detail::algorithm_result<ExPolicy>::
-                                get(util::partitioner<ExPolicy>::call(
-                                    HPX_FORWARD(ExPolicy, policy), iter_or_r,
-                                    size,
-                                    part_iterations<ExPolicy, F>{
-                                        HPX_FORWARD(F, f)},
-                                    hpx::util::empty_function{}));
-                        }
                     }
                     else
                     {

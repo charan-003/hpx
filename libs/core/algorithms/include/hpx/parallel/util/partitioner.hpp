@@ -698,5 +698,26 @@ namespace hpx::parallel::util {
             detail::static_partitioner,
             detail::task_static_partitioner>::template apply<R, Result>
     {
+        // Helper to call partitioner and wrap the result with
+        // algorithm_result::get(). Handles both void and non-void return types.
+        template <typename ExPolicy_, typename... Args>
+        static decltype(auto) call_with_algorithm_result(
+            ExPolicy_&& policy, Args&&... args)
+        {
+            if constexpr (std::is_void_v<decltype(partitioner<ExPolicy_>::call(
+                              HPX_FORWARD(ExPolicy_, policy),
+                              HPX_FORWARD(Args, args)...))>)
+            {
+                partitioner<ExPolicy_>::call(
+                    HPX_FORWARD(ExPolicy_, policy), HPX_FORWARD(Args, args)...);
+                return detail::algorithm_result<ExPolicy_>::get();
+            }
+            else
+            {
+                return detail::algorithm_result<ExPolicy_>::get(
+                    partitioner<ExPolicy_>::call(HPX_FORWARD(ExPolicy_, policy),
+                        HPX_FORWARD(Args, args)...));
+            }
+        }
     };
 }    // namespace hpx::parallel::util
