@@ -75,8 +75,7 @@ namespace hpx::parallel::util::detail {
             // We attempt to perform some optimizations in case of non-task
             // execution.
             if constexpr (Optimize &&
-                !hpx::is_async_execution_policy_v<ExPolicy> &&
-                !hpx::execution_policy_has_scheduler_executor_v<ExPolicy>)
+                !hpx::is_async_execution_policy_v<ExPolicy>)
             {
                 // Switch to sequential execution for one-core, one-chunk case
                 // if the executor supports it.
