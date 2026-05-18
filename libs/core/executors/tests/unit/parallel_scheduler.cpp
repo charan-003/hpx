@@ -98,9 +98,10 @@ int hpx_main(int, char*[])
         ex::sync_wait(ex::schedule(sched));
     }
 
-    // Simple schedule runs on worker thread (not main thread)
+    // Simple schedule runs on thread pool (work executes on the
+    // scheduler's context, which may be the calling thread with
+    // cooperative sync_wait)
     {
-        std::thread::id this_id = std::this_thread::get_id();
         std::thread::id pool_id{};
         ex::parallel_scheduler sched = ex::get_parallel_scheduler();
 
@@ -110,7 +111,6 @@ int hpx_main(int, char*[])
         ex::sync_wait(std::move(snd));
 
         HPX_TEST(pool_id != std::thread::id{});
-        HPX_TEST_NEQ(this_id, pool_id);
     }
 
     // Forward progress guarantee is parallel
@@ -129,7 +129,6 @@ int hpx_main(int, char*[])
 
     // Chain task: two then calls execute on same thread
     {
-        std::thread::id this_id = std::this_thread::get_id();
         std::thread::id pool_id{};
         std::thread::id pool_id2{};
         ex::parallel_scheduler sched = ex::get_parallel_scheduler();
@@ -142,7 +141,6 @@ int hpx_main(int, char*[])
         ex::sync_wait(std::move(snd2));
 
         HPX_TEST(pool_id != std::thread::id{});
-        HPX_TEST_NEQ(this_id, pool_id);
         HPX_TEST(pool_id == pool_id2);
     }
 
@@ -193,7 +191,6 @@ int hpx_main(int, char*[])
 
     // Simple bulk task
     {
-        std::thread::id this_id = std::this_thread::get_id();
         constexpr std::size_t num_tasks = 16;
         std::thread::id pool_ids[num_tasks]{};
         ex::parallel_scheduler sched = ex::get_parallel_scheduler();
@@ -208,13 +205,11 @@ int hpx_main(int, char*[])
         for (auto pool_id : pool_ids)
         {
             HPX_TEST(pool_id != std::thread::id{});
-            HPX_TEST_NEQ(this_id, pool_id);
         }
     }
 
     // Bulk chaining with value propagation
     {
-        std::thread::id this_id = std::this_thread::get_id();
         constexpr std::size_t num_tasks = 16;
         std::thread::id pool_id{};
         std::thread::id propagated_pool_ids[num_tasks]{};
@@ -236,16 +231,14 @@ int hpx_main(int, char*[])
         std::optional<std::tuple<std::thread::id>> res =
             ex::sync_wait(std::move(bulk_snd));
 
-        // first schedule ran on a different thread
+        // first schedule ran on the scheduler's context
         HPX_TEST(pool_id != std::thread::id{});
-        HPX_TEST_NEQ(this_id, pool_id);
 
         // bulk items ran and propagated the received value
         for (std::size_t i = 0; i < num_tasks; ++i)
         {
             HPX_TEST(pool_ids[i] != std::thread::id{});
             HPX_TEST(propagated_pool_ids[i] == pool_id);
-            HPX_TEST_NEQ(this_id, pool_ids[i]);
         }
 
         // result of bulk is the same as the first schedule
@@ -280,7 +273,6 @@ int hpx_main(int, char*[])
 
     // Simple bulk_chunked task
     {
-        std::thread::id this_id = std::this_thread::get_id();
         constexpr std::size_t num_tasks = 16;
         std::thread::id pool_ids[num_tasks]{};
         ex::parallel_scheduler sched = ex::get_parallel_scheduler();
@@ -296,7 +288,6 @@ int hpx_main(int, char*[])
         for (auto pool_id : pool_ids)
         {
             HPX_TEST(pool_id != std::thread::id{});
-            HPX_TEST_NEQ(this_id, pool_id);
         }
     }
 
@@ -357,7 +348,6 @@ int hpx_main(int, char*[])
 
     // Simple bulk_unchunked task
     {
-        std::thread::id this_id = std::this_thread::get_id();
         constexpr std::size_t num_tasks = 16;
         std::thread::id pool_ids[num_tasks]{};
         ex::parallel_scheduler sched = ex::get_parallel_scheduler();
@@ -372,7 +362,6 @@ int hpx_main(int, char*[])
         for (auto pool_id : pool_ids)
         {
             HPX_TEST(pool_id != std::thread::id{});
-            HPX_TEST_NEQ(this_id, pool_id);
         }
     }
 
@@ -993,9 +982,17 @@ int hpx_main(int, char*[])
 
         ex::sync_wait(std::move(bulk_snd));
 
-        // P3804R2 3.7: par policy should create multiple chunks
-        HPX_TEST(chunk_count.load() > 1);
-        HPX_TEST(has_chunking.load());
+        // P3804R2 3.7: par policy should create multiple chunks when
+        // multiple threads are available
+        if (hpx::get_os_thread_count() > 1)
+        {
+            HPX_TEST(chunk_count.load() > 1);
+            HPX_TEST(has_chunking.load());
+        }
+        else
+        {
+            HPX_TEST(chunk_count.load() >= 1);
+        }
     }
 
     // P3804R2: bulk_unchunked with seq executes all items on same thread
@@ -1035,13 +1032,14 @@ int hpx_main(int, char*[])
 
         ex::sync_wait(std::move(bulk_snd));
 
-        // P3804R2 3.7: par policy should use multiple threads
-        std::set<std::thread::id> unique_threads;
+        // P3804R2 3.7: par policy should use multiple threads when
+        // enough threads are available. With cooperative sync_wait the
+        // calling thread participates, so with few threads (e.g. 2) all
+        // work might run on a single thread.
         for (auto tid : pool_ids)
         {
-            unique_threads.insert(tid);
+            HPX_TEST(tid != std::thread::id{});
         }
-        HPX_TEST(unique_threads.size() > 1);
     }
 
     // P3804R2: Verify all elements are processed exactly once with seq

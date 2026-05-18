@@ -17,6 +17,7 @@
 #include <hpx/modules/timing.hpp>
 #include <hpx/modules/topology.hpp>
 
+#include <hpx/execution/algorithms/detail/sync_wait_domain.hpp>
 #include <hpx/executors/parallel_scheduler_backend.hpp>
 #include <hpx/executors/thread_pool_scheduler.hpp>
 #include <hpx/executors/thread_pool_scheduler_bulk.hpp>
@@ -454,7 +455,8 @@ namespace hpx::execution::experimental {
     // This domain bridges the gap by extracting the underlying
     // thread_pool_policy_scheduler and delegating to HPX's optimized
     // thread_pool_bulk_sender.
-    HPX_CXX_CORE_EXPORT struct parallel_scheduler_domain : default_domain
+    HPX_CXX_CORE_EXPORT struct parallel_scheduler_domain
+      : hpx::execution::experimental::detail::sync_wait_domain
     {
         template <bulk_chunked_or_unchunked_sender Sender, typename Env>
         auto transform_sender(hpx::execution::experimental::set_value_t,
