@@ -179,11 +179,17 @@ namespace hpx::execution::experimental {
             auto query(
                 get_completion_scheduler_t<set_stopped_t>) const noexcept;
 
-            //[[nodiscard]]
-            //static auto query(get_completion_domain_t<set_value_t>) noexcept;
-
-            //[[nodiscard]]
-            //static auto query(get_completion_domain_t<set_stopped_t>) noexcept;
+            // P3826R5: advertise the HPX-aware sync_wait domain on this
+            // env so that stdexec::sync_wait routes through
+            // detail::sync_wait_domain instead of default_domain. The body
+            // is defined in detail/sync_wait_domain.hpp after sync_wait_domain
+            // is complete; this header only forward-declares it (see top of
+            // file). Templating on CPO defers instantiation until the
+            // domain type is fully visible to the caller.
+            template <typename CPO>
+            [[nodiscard]]
+            static auto query(get_completion_domain_t<CPO>) noexcept
+                -> detail::sync_wait_domain;
 
             run_loop* loop;
         };
@@ -378,16 +384,8 @@ namespace hpx::execution::experimental {
         return query(get_completion_scheduler<set_value_t>);
     }
 
-    //auto run_loop::env_t::query(get_completion_domain_t<set_value_t>) noexcept
-    //{
-    //    return hpx::execution::experimental::detail::sync_wait_domain{};
-    //}
-
-    //inline auto run_loop::env_t::query(
-    //    get_completion_domain_t<set_stopped_t>) noexcept
-    //{
-    //    return query(get_completion_domain<set_value_t>);
-    //}
+    // run_loop::env_t::query(get_completion_domain_t<CPO>) is defined in
+    // detail/sync_wait_domain.hpp once sync_wait_domain is complete.
 
     ///////////////////////////////////////////////////////////////////////////
     HPX_CXX_CORE_EXPORT using run_loop_scheduler = run_loop::run_loop_scheduler;
