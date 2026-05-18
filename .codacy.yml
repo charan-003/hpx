@@ -7,7 +7,8 @@
 
 ---
 exclude_paths:
-  - "tools/perftests_ci/**"
+  - "tools/**"
+  - ".github/**"
 
 tools:
   duplication:
