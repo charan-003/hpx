@@ -21,7 +21,7 @@
 
 namespace hpx::agas {
 
-    struct gva
+    HPX_CXX_EXPORT struct gva
     {
         using component_type = std::int32_t;
         using lva_type = void*;
@@ -130,5 +130,6 @@ namespace hpx::agas {
         HPX_SERIALIZATION_SPLIT_MEMBER()
     };
 
-    HPX_EXPORT std::ostream& operator<<(std::ostream& os, gva const& addr);
+    HPX_CXX_EXPORT HPX_EXPORT std::ostream& operator<<(
+        std::ostream& os, gva const& addr);
 }    // namespace hpx::agas

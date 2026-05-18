@@ -7,12 +7,10 @@
 #pragma once
 
 #include <hpx/config.hpp>
-#include <hpx/agas_base/primary_namespace.hpp>
-#include <hpx/agas_base/server/primary_namespace.hpp>
 #include <hpx/assert.hpp>
-#include <hpx/async_colocated/async_colocated_fwd.hpp>
-#include <hpx/async_colocated/functional/colocated_helpers.hpp>
 #include <hpx/modules/actions_base.hpp>
+#include <hpx/modules/agas_base.hpp>
+#include <hpx/modules/async_base.hpp>
 #include <hpx/modules/async_distributed.hpp>
 #include <hpx/modules/async_local.hpp>
 #include <hpx/modules/datastructures.hpp>
@@ -20,6 +18,9 @@
 #include <hpx/modules/futures.hpp>
 #include <hpx/modules/naming_base.hpp>
 #include <hpx/modules/type_support.hpp>
+
+#include <hpx/async_colocated/async_colocated_fwd.hpp>
+#include <hpx/async_colocated/functional/colocated_helpers.hpp>
 
 #include <type_traits>
 #include <utility>

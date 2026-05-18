@@ -8,11 +8,9 @@
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 #include <hpx/config.hpp>
-#include <hpx/agas/addressing_service.hpp>
-#include <hpx/agas_base/detail/bootstrap_component_namespace.hpp>
-#include <hpx/agas_base/detail/bootstrap_locality_namespace.hpp>
 #include <hpx/assert.hpp>
 #include <hpx/modules/actions_base.hpp>
+#include <hpx/modules/agas_base.hpp>
 #include <hpx/modules/async_base.hpp>
 #include <hpx/modules/async_combinators.hpp>
 #include <hpx/modules/async_distributed.hpp>
@@ -32,6 +30,8 @@
 #include <hpx/modules/thread_support.hpp>
 #include <hpx/modules/type_support.hpp>
 #include <hpx/modules/util.hpp>
+
+#include <hpx/agas/addressing_service.hpp>
 
 #include <cstddef>
 #include <cstdint>

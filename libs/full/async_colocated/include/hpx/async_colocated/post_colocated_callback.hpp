@@ -9,15 +9,15 @@
 #include <hpx/config.hpp>
 
 #if !defined(HPX_COMPUTE_DEVICE_CODE)
-#include <hpx/agas_base/primary_namespace.hpp>
-#include <hpx/agas_base/server/primary_namespace.hpp>
-#include <hpx/async_colocated/functional/colocated_helpers.hpp>
-#include <hpx/async_colocated/post_colocated_callback_fwd.hpp>
-#include <hpx/async_colocated/register_post_colocated.hpp>
 #include <hpx/modules/actions_base.hpp>
+#include <hpx/modules/agas_base.hpp>
 #include <hpx/modules/async_base.hpp>
 #include <hpx/modules/async_distributed.hpp>
 #include <hpx/modules/functional.hpp>
+
+#include <hpx/async_colocated/functional/colocated_helpers.hpp>
+#include <hpx/async_colocated/post_colocated_callback_fwd.hpp>
+#include <hpx/async_colocated/register_post_colocated.hpp>
 
 #include <utility>
 

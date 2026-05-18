@@ -9,8 +9,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <hpx/config.hpp>
-#include <hpx/agas_base/server/symbol_namespace.hpp>
-#include <hpx/agas_base/symbol_namespace.hpp>
 #include <hpx/assert.hpp>
 #include <hpx/modules/actions_base.hpp>
 #include <hpx/modules/async_distributed.hpp>
@@ -18,6 +16,9 @@
 #include <hpx/modules/errors.hpp>
 #include <hpx/modules/format.hpp>
 #include <hpx/modules/hashing.hpp>
+
+#include <hpx/agas_base/server/symbol_namespace.hpp>
+#include <hpx/agas_base/symbol_namespace.hpp>
 
 #include <cctype>
 #include <cstdint>

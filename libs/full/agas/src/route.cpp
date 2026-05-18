@@ -8,11 +8,9 @@
 #include <hpx/config.hpp>
 
 #if defined(HPX_HAVE_NETWORKING)
-#include <hpx/agas/addressing_service.hpp>
-#include <hpx/agas_base/route.hpp>
-#include <hpx/agas_base/server/primary_namespace.hpp>
 #include <hpx/assert.hpp>
 #include <hpx/modules/actions_base.hpp>
+#include <hpx/modules/async_base.hpp>
 #include <hpx/modules/async_distributed.hpp>
 #include <hpx/modules/components_base.hpp>
 #include <hpx/modules/errors.hpp>
@@ -20,6 +18,8 @@
 #include <hpx/modules/parcelset_base.hpp>
 #include <hpx/modules/runtime_local.hpp>
 #include <hpx/modules/timing.hpp>
+
+#include <hpx/agas/addressing_service.hpp>
 
 #include <atomic>
 #include <cstddef>
