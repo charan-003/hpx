@@ -1,6 +1,6 @@
 //  Copyright (c) 2018 Christopher Ogle
 //  Copyright (c) 2020 Hartmut Kaiser
-//  Copyright (c) 2020 Francisco Jose Tapia (fjtapia@gmail.com )
+//  Copyright (c) 2020 Francisco Jose Tapia (fjtapia@gmail.com)
 //  Copyright (c) 2021 Akhil J Nair
 //
 //  SPDX-License-Identifier: BSL-1.0
