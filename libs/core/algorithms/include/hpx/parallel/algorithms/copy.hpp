@@ -614,13 +614,14 @@ namespace hpx::parallel {
                         });
                 };
 
-                auto f4 = [first, dest, flags](std::vector<std::size_t>&& items,
+                auto f4 = [first, count, dest, flags](
+                              std::vector<std::size_t>&& items,
                               std::vector<hpx::future<void>>&& data) mutable
                     -> util::in_out_result<FwdIter1, FwdIter3> {
                     HPX_UNUSED(flags);
 
                     auto dist = items.back();
-                    std::advance(first, dist);
+                    std::advance(first, count);
                     std::advance(dest, dist);
 
                     // make sure iterators embedded in function object that is

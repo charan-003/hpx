@@ -339,9 +339,8 @@ namespace hpx::parallel {
             if (first == last)
                 return first;
 
-            using element_type =
-                typename std::iterator_traits<FwdIter>::value_type;
-            using projected_type = std::invoke_result_t<Proj, element_type>;
+            using projected_type = std::decay_t<std::invoke_result_t<Proj,
+                typename std::iterator_traits<FwdIter>::reference>>;
 
             FwdIter result = first;
             projected_type result_projected = HPX_INVOKE(proj, *result);
@@ -501,9 +500,8 @@ namespace hpx::parallel {
                     HPX_MOVE(first), HPX_MOVE(dest)};
             }
 
-            using element_type =
-                typename std::iterator_traits<FwdIter>::value_type;
-            using projected_type = std::invoke_result_t<Proj, element_type>;
+            using projected_type = std::decay_t<std::invoke_result_t<Proj,
+                typename std::iterator_traits<FwdIter>::reference>>;
 
             FwdIter base = first;
             *dest++ = *first;
@@ -535,7 +533,8 @@ namespace hpx::parallel {
 
             using element_type =
                 typename std::iterator_traits<InIter>::value_type;
-            using projected_type = std::invoke_result_t<Proj, element_type>;
+            using projected_type = std::decay_t<std::invoke_result_t<Proj,
+                typename std::iterator_traits<InIter>::reference>>;
             element_type base_val = *first;
             projected_type base_projected = HPX_INVOKE(proj, base_val);
 
