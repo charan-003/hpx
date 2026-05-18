@@ -61,7 +61,7 @@ set(synchronization_sources
     detail/sliding_semaphore.cpp local_barrier.cpp mutex.cpp stop_token.cpp
 )
 
-if(HPX_TRACY_WITH_TRACY)
+if(HPX_WITH_TRACY)
   set(additional_dependencies hpx_tracy)
 endif()
 
@@ -94,6 +94,7 @@ add_hpx_module(
     hpx_thread_support
     hpx_timing
     hpx_topology
+    hpx_tracing
     hpx_type_support
     ${additional_dependencies}
   CMAKE_SUBDIRS examples tests

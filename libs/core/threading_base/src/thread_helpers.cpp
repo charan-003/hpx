@@ -433,7 +433,7 @@ namespace hpx::threads {
 namespace hpx::this_thread {
 
     namespace {
-#ifdef HPX_HAVE_MODULE_TRACY
+#ifdef HPX_HAVE_TRACY
         // Extract the suspend reason from the thread description so the fiber
         // track in Tracy shows a meaningful label (e.g. the LCO being waited
         // on) instead of a generic "this_thread::suspend" string.

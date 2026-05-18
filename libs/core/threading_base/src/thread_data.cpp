@@ -19,7 +19,7 @@
 #if defined(HPX_HAVE_APEX)
 #include <hpx/threading_base/external_timer.hpp>
 #endif
-#if defined(HPX_HAVE_MODULE_TRACY)
+#if defined(HPX_HAVE_TRACY)
 #include <hpx/modules/tracy.hpp>
 #endif
 
@@ -116,7 +116,7 @@ namespace hpx::threads {
 #if defined(HPX_HAVE_APEX)
         set_timer_data(init_data.timer_data);
 #endif
-#if defined(HPX_HAVE_MODULE_TRACY)
+#if defined(HPX_HAVE_TRACY)
         tracy_fiber_name_[0] = '\0';
 #endif
     }
@@ -260,7 +260,7 @@ namespace hpx::threads {
         backtrace_ = nullptr;
 #endif
 
-#if defined(HPX_HAVE_MODULE_TRACY)
+#if defined(HPX_HAVE_TRACY)
         tracy_fiber_name_[0] = '\0';
 #endif
 
@@ -325,7 +325,7 @@ namespace hpx::threads {
     }
 #endif
 
-#if defined(HPX_HAVE_MODULE_TRACY)
+#if defined(HPX_HAVE_TRACY)
     char const* thread_data::get_tracy_description_name(
         threads::thread_description const& description,
         char const* fallback) noexcept
@@ -539,7 +539,7 @@ namespace hpx::threads {
     }
 #endif
 
-#if defined(HPX_HAVE_MODULE_TRACY)
+#if defined(HPX_HAVE_TRACY)
     tracing::region_init_data get_region_init_data(thread_data const* thrdptr)
     {
         return {thrdptr->get_description().get_description(),

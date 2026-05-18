@@ -8,8 +8,9 @@
 #include <hpx/tracing/tracing.hpp>
 
 #include <cstddef>
+#include <string>
 
-#if defined(HPX_HAVE_MODULE_TRACY)
+#if defined(HPX_HAVE_TRACY)
 
 namespace hpx::tracing {
 
@@ -76,6 +77,44 @@ namespace hpx::tracing {
     }
 
     fiber_suspend_region::~fiber_suspend_region() = default;
+
+    ////////////////////////////////////////////////////////////////////////////
+    // lock_context
+
+    lock_context::lock_context(char const* name) noexcept
+      : impl(hpx::tracy::create(name))
+    {
+    }
+
+    lock_context::lock_context(char const* prefix, char const* suffix) noexcept
+      : impl(hpx::tracy::create(std::string(prefix) + suffix))
+    {
+    }
+
+    lock_context::~lock_context()
+    {
+        hpx::tracy::destroy(impl);
+    }
+
+    bool lock_context::before_lock() const noexcept
+    {
+        return hpx::tracy::lock_prepare(impl);
+    }
+
+    void lock_context::after_lock() const noexcept
+    {
+        hpx::tracy::lock_acquired(impl);
+    }
+
+    void lock_context::after_try_lock(bool acquired) const noexcept
+    {
+        hpx::tracy::lock_acquired(impl, acquired);
+    }
+
+    void lock_context::after_unlock() const noexcept
+    {
+        hpx::tracy::lock_released(impl);
+    }
 
     ////////////////////////////////////////////////////////////////////////////
     // set_thread_name

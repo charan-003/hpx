@@ -39,7 +39,7 @@
 #include <hpx/modules/itt_notify.hpp>
 #include <map>
 #endif
-#if defined(HPX_HAVE_MODULE_TRACY)
+#if defined(HPX_HAVE_TRACY)
 #include <hpx/modules/tracy.hpp>
 #include <set>
 #endif
@@ -108,7 +108,7 @@ namespace hpx::util {
             }
         }
 #endif
-#if defined(HPX_HAVE_MODULE_TRACY)
+#if defined(HPX_HAVE_TRACY)
         for (auto const& info : counters_.get_counter_infos())
         {
             std::string real_name =
@@ -212,7 +212,7 @@ namespace hpx::util {
                 }
             }
 #endif
-#if defined(HPX_HAVE_MODULE_TRACY)
+#if defined(HPX_HAVE_TRACY)
             if (tracy_counters_.find(name) != tracy_counters_.end())
             {
                 std::string real_name =
@@ -311,7 +311,7 @@ namespace hpx::util {
                 }
             }
 #endif
-#if defined(HPX_HAVE_MODULE_TRACY)
+#if defined(HPX_HAVE_TRACY)
             if (tracy_counters_.find(info.fullname_) != tracy_counters_.end())
             {
                 std::string real_name =
@@ -689,7 +689,7 @@ namespace hpx::util {
         if (!no_output && destination_is_cout && use_ittnotify_api)
             no_output = true;
 #endif
-#if defined(HPX_HAVE_MODULE_TRACY)
+#if defined(HPX_HAVE_TRACY)
         // don't generate any console-output if the Tracy API is used
         if (!no_output && destination_is_cout)
             no_output = true;

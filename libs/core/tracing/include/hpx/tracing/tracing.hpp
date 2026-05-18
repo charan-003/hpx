@@ -11,7 +11,7 @@
 
 #include <cstddef>
 
-#if defined(HPX_HAVE_MODULE_TRACY)
+#if defined(HPX_HAVE_TRACY)
 #include <hpx/modules/tracy.hpp>
 
 namespace hpx::tracing {
@@ -91,6 +91,26 @@ namespace hpx::tracing {
 
     private:
         hpx::tracy::fiber_suspend_region impl;
+    };
+
+    ////////////////////////////////////////////////////////////////////////////
+    HPX_CXX_CORE_EXPORT struct HPX_CORE_EXPORT [[maybe_unused]] lock_context
+    {
+        explicit lock_context(char const* name = nullptr) noexcept;
+        explicit lock_context(char const* prefix, char const* suffix) noexcept;
+
+        ~lock_context();
+
+        lock_context(lock_context const&) = delete;
+        lock_context& operator=(lock_context const&) = delete;
+
+        bool before_lock() const noexcept;
+        void after_lock() const noexcept;
+        void after_try_lock(bool acquired) const noexcept;
+        void after_unlock() const noexcept;
+
+    private:
+        hpx::tracy::lock_data impl;
     };
 
     ////////////////////////////////////////////////////////////////////////////
@@ -179,6 +199,24 @@ namespace hpx::tracing {
     };
 
     ////////////////////////////////////////////////////////////////////////////
+    HPX_CXX_CORE_EXPORT struct [[maybe_unused]] lock_context
+    {
+        constexpr explicit lock_context(char const* = nullptr) noexcept {}
+        constexpr explicit lock_context(char const*, char const*) noexcept {}
+
+        constexpr bool before_lock() const noexcept
+        {
+            return false;
+        }
+
+        constexpr void after_lock() const noexcept {}
+
+        constexpr void after_try_lock(bool) const noexcept {}
+
+        constexpr void after_unlock() const noexcept {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////
     HPX_CXX_CORE_EXPORT constexpr void set_thread_name(char const*) noexcept {}
 
     ////////////////////////////////////////////////////////////////////////////
@@ -243,6 +281,24 @@ namespace hpx::tracing {
     HPX_CXX_CORE_EXPORT struct [[maybe_unused]] fiber_suspend_region
     {
         constexpr explicit fiber_suspend_region(char const*) noexcept {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////
+    HPX_CXX_CORE_EXPORT struct [[maybe_unused]] lock_context
+    {
+        constexpr explicit lock_context(char const* = nullptr) noexcept {}
+        constexpr explicit lock_context(char const*, char const*) noexcept {}
+
+        constexpr bool before_lock() const noexcept
+        {
+            return false;
+        }
+
+        constexpr void after_lock() const noexcept {}
+
+        constexpr void after_try_lock(bool) const noexcept {}
+
+        constexpr void after_unlock() const noexcept {}
     };
 
     ////////////////////////////////////////////////////////////////////////////
