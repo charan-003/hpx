@@ -400,3 +400,18 @@ namespace hpx::execution::experimental::detail {
         return {};
     }
 }    // namespace hpx::execution::experimental::detail
+
+namespace hpx::execution::experimental {
+
+    // Out-of-class definition for run_loop::env_t::query declared in
+    // run_loop.hpp. Defined here (not there) because the body needs the
+    // complete sync_wait_domain type. Templating on CPO defers instantiation
+    // so the trailing-return forward decl in run_loop.hpp is sufficient
+    // at declaration site.
+    template <typename CPO>
+    auto run_loop::env_t::query(get_completion_domain_t<CPO>) noexcept
+        -> detail::sync_wait_domain
+    {
+        return {};
+    }
+}    // namespace hpx::execution::experimental
