@@ -21,7 +21,7 @@
 namespace hpx::util::functional {
 
     ///////////////////////////////////////////////////////////////////////////
-    struct extract_locality
+    HPX_CXX_EXPORT struct extract_locality
     {
         hpx::id_type operator()(
             hpx::id_type const& locality_id, hpx::id_type const& id) const
@@ -39,7 +39,7 @@ namespace hpx::util::functional {
     ///////////////////////////////////////////////////////////////////////////
     namespace detail {
 
-        template <typename Bound, typename Continuation>
+        HPX_CXX_EXPORT template <typename Bound, typename Continuation>
         struct post_continuation_impl
         {
             using bound_type = std::decay_t<Bound>;
@@ -160,7 +160,7 @@ namespace hpx::util::functional {
     ///////////////////////////////////////////////////////////////////////////
     namespace detail {
 
-        template <typename Bound, typename Continuation>
+        HPX_CXX_EXPORT template <typename Bound, typename Continuation>
         struct async_continuation_impl
         {
             using bound_type = std::decay_t<Bound>;

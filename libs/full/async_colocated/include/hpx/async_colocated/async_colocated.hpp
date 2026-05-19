@@ -21,13 +21,15 @@
 
 #include <hpx/async_colocated/async_colocated_fwd.hpp>
 #include <hpx/async_colocated/functional/colocated_helpers.hpp>
+#include <hpx/async_colocated/macros.hpp>
 
 #include <type_traits>
 #include <utility>
 
 namespace hpx::detail {
 
-    template <typename Action, typename Ts = Action::arguments_type>
+    HPX_CXX_EXPORT template <typename Action,
+        typename Ts = Action::arguments_type>
     struct async_colocated_bound_action;
 
     template <typename Action, typename... Ts>
@@ -42,7 +44,7 @@ namespace hpx::detail {
     };
 
     ///////////////////////////////////////////////////////////////////////////
-    template <typename Action, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename... Ts>
     hpx::future<traits::promise_local_result_t<
         typename hpx::traits::extract_action<Action>::remote_result_type>>
     async_colocated(
@@ -72,8 +74,8 @@ namespace hpx::detail {
 #endif
     }
 
-    template <typename Component, typename Signature, typename Derived,
-        typename... Ts>
+    HPX_CXX_EXPORT template <typename Component, typename Signature,
+        typename Derived, typename... Ts>
     hpx::future<traits::promise_local_result_t<
         typename hpx::traits::extract_action<Derived>::remote_result_type>>
     async_colocated(
@@ -84,7 +86,8 @@ namespace hpx::detail {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    template <typename Action, typename Continuation, typename... Ts>
+    HPX_CXX_EXPORT template <typename Action, typename Continuation,
+        typename... Ts>
         requires(traits::is_continuation_v<Continuation>)
     hpx::future<traits::promise_local_result_t<
         typename hpx::traits::extract_action<Action>::remote_result_type>>
@@ -115,8 +118,8 @@ namespace hpx::detail {
 #endif
     }
 
-    template <typename Continuation, typename Component, typename Signature,
-        typename Derived, typename... Ts>
+    HPX_CXX_EXPORT template <typename Continuation, typename Component,
+        typename Signature, typename Derived, typename... Ts>
         requires(traits::is_continuation_v<Continuation>)
     hpx::future<traits::promise_local_result_t<
         typename hpx::traits::extract_action<Derived>::remote_result_type>>
