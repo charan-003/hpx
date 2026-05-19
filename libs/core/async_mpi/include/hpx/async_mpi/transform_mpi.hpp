@@ -43,10 +43,38 @@ namespace hpx::mpi::experimental {
             }
         }
 
+        // Register a completion callback for an MPI request whose backing
+        // function returns void. The receiver `r` and the upstream
+        // arguments `ts...` are captured into a lambda whose lifetime is
+        // owned by the polling driver until `MPI_Test*` reports completion.
+        //
+        // Contract:
+        //   * `Ts...` must be passed by the caller in the same shape they
+        //     were forwarded into the user-supplied MPI function. The
+        //     lambda's pack-capture moves them once into `keep_alive`; if
+        //     the caller has already moved them, we'd capture moved-from
+        //     state. Callers in this file (`transform_mpi_receiver`) pass
+        //     them unforwarded into `f` and then forward into this helper
+        //     to satisfy the single-move invariant.
+        //   * The lambda fires on the polling thread (inside `poll()` in
+        //     `mpi_future.cpp`), not on the receiver's preferred completion
+        //     scheduler. Receivers must be safe to invoke on that thread.
+        //
+        // The `static_assert` below makes the receiver-shape requirement
+        // explicit at the helper boundary so misuse fails here with a clear
+        // message rather than deep inside the captured lambda's body.
         template <typename R, typename... Ts>
         void set_value_request_callback_void(
             MPI_Request request, R&& r, Ts&&... ts)
         {
+            static_assert(
+                std::is_invocable_v<hpx::execution::experimental::set_value_t,
+                    std::decay_t<R>&&>,
+                "set_value_request_callback_void: the receiver R must be "
+                "invocable as `set_value(receiver)` (no value args) for the "
+                "void MPI-return path. Did you mean to use the "
+                "_non_void variant?");
+
             detail::add_request_callback(
                 [r = HPX_FORWARD(R, r), ... keep_alive = HPX_FORWARD(Ts, ts)](
                     int status) mutable {
@@ -56,10 +84,26 @@ namespace hpx::mpi::experimental {
                 request);
         }
 
+        // Register a completion callback for an MPI request whose backing
+        // function returns a value `res` to forward to the receiver.
+        // Same contract as the void overload; additionally, `res` is
+        // captured separately so it can be forwarded to the receiver's
+        // `set_value` on completion.
         template <typename R, typename InvokeResult, typename... Ts>
         void set_value_request_callback_non_void(
             MPI_Request request, R&& r, InvokeResult&& res, Ts&&... ts)
         {
+            static_assert(!std::is_void_v<std::decay_t<InvokeResult>>,
+                "set_value_request_callback_non_void: InvokeResult must be "
+                "non-void; for void-returning MPI functions use the _void "
+                "variant.");
+            static_assert(
+                std::is_invocable_v<hpx::execution::experimental::set_value_t,
+                    std::decay_t<R>&&, std::decay_t<InvokeResult>&&>,
+                "set_value_request_callback_non_void: the receiver R must "
+                "be invocable as `set_value(receiver, result)` for the "
+                "non-void MPI-return path.");
+
             detail::add_request_callback(
                 [r = HPX_FORWARD(R, r), res = HPX_FORWARD(InvokeResult, res),
                     ... keep_alive = HPX_FORWARD(Ts, ts)](int status) mutable {
