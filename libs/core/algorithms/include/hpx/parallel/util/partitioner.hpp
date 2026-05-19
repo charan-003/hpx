@@ -19,6 +19,7 @@
 #include <hpx/modules/iterator_support.hpp>
 #include <hpx/modules/pack_traversal.hpp>
 #include <hpx/modules/type_support.hpp>
+#include <hpx/parallel/util/detail/algorithm_result.hpp>
 #include <hpx/parallel/util/detail/chunk_size.hpp>
 #include <hpx/parallel/util/detail/handle_local_exceptions.hpp>
 #include <hpx/parallel/util/detail/partitioner_iteration.hpp>
