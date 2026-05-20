@@ -864,8 +864,7 @@ namespace hpx::execution::experimental {
         {
         }
 
-        friend HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT parallel_scheduler
-        get_parallel_scheduler();
+        friend parallel_scheduler get_parallel_scheduler();
 
         std::shared_ptr<parallel_scheduler_backend> backend_;
     };
