@@ -47,29 +47,29 @@ int main()
     // Test: action name extraction for simple namespace function
     {
         HPX_ACTION(app::compute, compute_action);
-        HPX_TEST_EQ(std::string(compute_action::get_action_name()),
-            std::string("app::compute"));
+        HPX_TEST_EQ(std::string(compute_action::get_action_name(nullptr)),
+            std::string("plain action(app::compute)"));
     }
 
     // Test: action name extraction for void noexcept function
     {
         HPX_ACTION(app::broadcast, broadcast_action);
-        HPX_TEST_EQ(std::string(broadcast_action::get_action_name()),
-            std::string("app::broadcast"));
+        HPX_TEST_EQ(std::string(broadcast_action::get_action_name(nullptr)),
+            std::string("plain action(app::broadcast)"));
     }
 
     // Test: action name extraction for multiple parameters
     {
         HPX_ACTION(app::transform, transform_action);
-        HPX_TEST_EQ(std::string(transform_action::get_action_name()),
-            std::string("app::transform"));
+        HPX_TEST_EQ(std::string(transform_action::get_action_name(nullptr)),
+            std::string("plain action(app::transform)"));
     }
 
     // Test: action name extraction for nested namespace
     {
         HPX_ACTION(app::nested::deep_compute, deep_action);
-        HPX_TEST_EQ(std::string(deep_action::get_action_name()),
-            std::string("app::nested::deep_compute"));
+        HPX_TEST_EQ(std::string(deep_action::get_action_name(nullptr)),
+            std::string("plain action(app::nested::deep_compute)"));
     }
 
     // Test: arity extraction
