@@ -35,7 +35,8 @@ namespace hpx::execution::experimental {
     // Forward declaration for parallel_scheduler_domain
     HPX_CXX_CORE_EXPORT class parallel_scheduler;
 
-    HPX_CXX_CORE_EXPORT inline parallel_scheduler get_parallel_scheduler();
+    HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT parallel_scheduler
+    get_parallel_scheduler();
 
     // Virtual bulk dispatch infrastructure for P2079R10.
     //
@@ -584,14 +585,6 @@ namespace hpx::execution::experimental {
     public:
         parallel_scheduler() = delete;
 
-        // P2079R10: Construct from a backend shared_ptr.
-        // This is the primary constructor used by get_parallel_scheduler().
-        explicit parallel_scheduler(
-            std::shared_ptr<parallel_scheduler_backend> backend) noexcept
-          : backend_(HPX_MOVE(backend))
-        {
-        }
-
         parallel_scheduler(parallel_scheduler const& other) noexcept = default;
         parallel_scheduler(parallel_scheduler&& other) noexcept = default;
         parallel_scheduler& operator=(
@@ -608,6 +601,12 @@ namespace hpx::execution::experimental {
             parallel_scheduler const& rhs) noexcept
         {
             return lhs.backend_.get() == rhs.backend_.get();
+        }
+
+        friend bool operator!=(parallel_scheduler const& lhs,
+            parallel_scheduler const& rhs) noexcept
+        {
+            return !(lhs == rhs);
         }
 
         // P2079R10: query() member for forward progress guarantee
@@ -857,28 +856,22 @@ namespace hpx::execution::experimental {
         }
 
     private:
+        // P2079R10: Construct from a backend shared_ptr. Private; only
+        // get_parallel_scheduler() (and copy/move) may produce instances.
+        explicit parallel_scheduler(
+            std::shared_ptr<parallel_scheduler_backend> backend) noexcept
+          : backend_(HPX_MOVE(backend))
+        {
+        }
+
+        friend HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT parallel_scheduler
+        get_parallel_scheduler();
+
         std::shared_ptr<parallel_scheduler_backend> backend_;
     };
 
     // Stream output operator for parallel_scheduler
-    HPX_CXX_CORE_EXPORT inline std::ostream& operator<<(
-        std::ostream& os, parallel_scheduler const&)
-    {
-        return os << "parallel_scheduler";
-    }
-
-    // P2079R10 get_parallel_scheduler function.
-    // Uses query_parallel_scheduler_backend() to obtain the backend,
-    // which can be replaced via set_parallel_scheduler_backend_factory().
-    HPX_CXX_CORE_EXPORT inline parallel_scheduler get_parallel_scheduler()
-    {
-        auto backend = query_parallel_scheduler_backend();
-        if (!backend)
-        {
-            std::
-                terminate();    // As per P2079R10, terminate if backend is unavailable
-        }
-        return parallel_scheduler(HPX_MOVE(backend));
-    }
+    HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT std::ostream& operator<<(
+        std::ostream& os, parallel_scheduler const&);
 
 }    // namespace hpx::execution::experimental

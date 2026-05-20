@@ -708,13 +708,17 @@ int hpx_main(int, char*[])
 
         std::atomic<int> count{0};
         auto backend = std::make_shared<counting_backend>(count);
-        ex::parallel_scheduler sched(backend);
+        auto orig = ex::query_parallel_scheduler_backend();
+        ex::set_parallel_scheduler_backend(backend);
+        auto sched = ex::get_parallel_scheduler();
 
         // schedule through custom backend
         auto snd = ex::schedule(sched) | ex::then([] { return 99; });
         auto [val] = ex::sync_wait(std::move(snd)).value();
         HPX_TEST_EQ(val, 99);
         HPX_TEST(count.load() > 0);
+
+        ex::set_parallel_scheduler_backend(orig);
     }
 
     // Custom backend equality: same pointer => equal
@@ -748,12 +752,19 @@ int hpx_main(int, char*[])
         auto b1 = std::make_shared<dummy_backend>();
         auto b2 = std::make_shared<dummy_backend>();
 
-        ex::parallel_scheduler s1(b1);
-        ex::parallel_scheduler s2(b1);    // same backend
-        ex::parallel_scheduler s3(b2);    // different backend
+        auto orig = ex::query_parallel_scheduler_backend();
+
+        ex::set_parallel_scheduler_backend(b1);
+        auto s1 = ex::get_parallel_scheduler();
+        auto s2 = ex::get_parallel_scheduler();    // same backend
+
+        ex::set_parallel_scheduler_backend(b2);
+        auto s3 = ex::get_parallel_scheduler();    // different backend
 
         HPX_TEST(s1 == s2);
         HPX_TEST(!(s1 == s3));
+
+        ex::set_parallel_scheduler_backend(orig);
     }
 
     // Default backend: schedulers from different get_parallel_scheduler() calls
@@ -870,7 +881,9 @@ int hpx_main(int, char*[])
         std::atomic<int> sched_hits{0};
         std::atomic<int> bulk_hits{0};
         auto b = std::make_shared<bulk_counting_backend>(sched_hits, bulk_hits);
-        ex::parallel_scheduler sched(b);
+        auto orig = ex::query_parallel_scheduler_backend();
+        ex::set_parallel_scheduler_backend(b);
+        auto sched = ex::get_parallel_scheduler();
 
         // Bulk operation through virtual dispatch
         std::vector<int> results(10, 0);
@@ -887,6 +900,8 @@ int hpx_main(int, char*[])
         {
             HPX_TEST_EQ(results[i], 42);
         }
+
+        ex::set_parallel_scheduler_backend(orig);
     }
 
     // stop_requested() on the proxy: returns false when no stop is in flight.
@@ -929,9 +944,12 @@ int hpx_main(int, char*[])
         };
 
         auto b = std::make_shared<stop_check_backend>(proxy_saw_stop);
-        ex::parallel_scheduler sched(b);
+        auto orig = ex::query_parallel_scheduler_backend();
+        ex::set_parallel_scheduler_backend(b);
+        auto sched = ex::get_parallel_scheduler();
         ex::sync_wait(ex::schedule(sched));
         HPX_TEST(!proxy_saw_stop);
+        ex::set_parallel_scheduler_backend(orig);
     }
 
     // ========================================================================

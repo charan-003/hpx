@@ -158,9 +158,8 @@ namespace hpx::execution::experimental { namespace detail {
         using base_type = as_sender_sender_base<hpx::future<T>>;
         using base_type::future_;
 
-        template <typename Future,
-            typename = std::enable_if_t<
-                !std::is_same_v<std::decay_t<Future>, as_sender_sender>>>
+        template <typename Future>
+            requires(!std::is_same_v<std::decay_t<Future>, as_sender_sender>)
         explicit as_sender_sender(Future&& future)
           : base_type{HPX_FORWARD(Future, future)}
         {
@@ -187,16 +186,6 @@ namespace hpx::execution::experimental { namespace detail {
     };
 }}    // namespace hpx::execution::experimental::detail
 
-// stdexec customization for sends_stopped for hpx::future-based sender
-// Explicit customization to ensure as_sender_sender returns false since
-// the operation state never calls set_stopped()
-namespace stdexec {
-    template <typename T, typename Env>
-    constexpr bool sends_stopped<
-        hpx::execution::experimental::detail::as_sender_sender<hpx::future<T>>,
-        Env> = false;
-}    // namespace stdexec
-
 namespace hpx::execution::experimental { namespace detail {
     template <typename T>
     struct as_sender_sender<hpx::shared_future<T>>
@@ -207,9 +196,8 @@ namespace hpx::execution::experimental { namespace detail {
         using base_type = as_sender_sender_base<hpx::shared_future<T>>;
         using base_type::future_;
 
-        template <typename Future,
-            typename = std::enable_if_t<
-                !std::is_same_v<std::decay_t<Future>, as_sender_sender>>>
+        template <typename Future>
+            requires(!std::is_same_v<std::decay_t<Future>, as_sender_sender>)
         explicit as_sender_sender(Future&& future)
           : base_type{HPX_FORWARD(Future, future)}
         {
@@ -242,16 +230,6 @@ namespace hpx::execution::experimental { namespace detail {
         }
     };
 }}    // namespace hpx::execution::experimental::detail
-
-// stdexec customization for sends_stopped for hpx::shared_future-based sender
-// Explicit customization to ensure as_sender_sender returns false since
-// the operation state never calls set_stopped()
-namespace stdexec {
-    template <typename T, typename Env>
-    constexpr bool sends_stopped<hpx::execution::experimental::detail::
-                                     as_sender_sender<hpx::shared_future<T>>,
-        Env> = false;
-}    // namespace stdexec
 
 namespace hpx::execution::experimental {
     // The as_sender CPO can be used to adapt any HPX future as a sender. The
