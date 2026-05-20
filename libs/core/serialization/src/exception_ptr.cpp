@@ -182,7 +182,7 @@ namespace hpx::serialization {
 
             std::string throw_function_;
             std::string throw_file_;
-            int throw_line_ = 0;
+            long throw_line_ = 0;
 
             // clang-format off
             ar & type & what & throw_function_ & throw_file_ & throw_line_;
@@ -192,15 +192,13 @@ namespace hpx::serialization {
             {
                 // clang-format off
                 ar & err_value;
-                ar >> err_value;
                 // clang-format on
             }
             else if (hpx::util::exception_type::boost_system_error == type ||
                 hpx::util::exception_type::std_system_error == type)
             {
                 // clang-format off
-                ar & err_value& err_message;
-                ar >> err_value >> err_message;
+                ar & err_value & err_message;
                 // clang-format on
             }
 
