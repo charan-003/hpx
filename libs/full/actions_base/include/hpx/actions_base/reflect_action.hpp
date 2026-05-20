@@ -14,7 +14,7 @@
 
 #include <hpx/actions_base/basic_action.hpp>
 #include <hpx/actions_base/plain_action.hpp>
-#include <hpx/serialization/detail/refl_qualified_name_of.hpp>
+#include <hpx/modules/serialization.hpp>
 
 #include <cstddef>
 #include <meta>
