@@ -61,7 +61,7 @@ if(HPX_WITH_CXX_MODULES AND (CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
   # Clang (last tested version is v22) fails compiling the following tests when
   # C++ module support is enabled.
   set(failing_clang_tests explicit_scheduler_executor parallel_scheduler
-                          thread_pool_scheduler
+                          scheduler_executor thread_pool_scheduler
   )
   foreach(test ${failing_clang_tests})
     target_compile_definitions(

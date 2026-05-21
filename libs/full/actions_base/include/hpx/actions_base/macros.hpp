@@ -292,7 +292,7 @@
 /// The parameter \a action is the type of the action to define the
 /// boilerplate for.
 ///
-/// The parameter \a actionname specifies an unique name of the action to be
+/// The parameter \a actionname specifies a unique name of the action to be
 /// used for serialization purposes.
 /// The second parameter has to be usable as a plain (nonqualified) C++
 /// identifier, it should not contain special characters which cannot be part
@@ -483,7 +483,11 @@
     /**/
 
 #define HPX_DEFINE_PLAIN_ACTION_1(func)                                        \
-    HPX_DEFINE_PLAIN_ACTION_2(func, HPX_PP_CAT(func, _action))                 \
+    HPX_DEFINE_PLAIN_ACTION_3(HPX_PP_EMPTY(), func, HPX_PP_CAT(func, _action)) \
+    /**/
+
+#define HPX_DEFINE_PLAIN_ACTION_2(func, name)                                  \
+    HPX_DEFINE_PLAIN_ACTION_3(HPX_PP_EMPTY(), func, name)                      \
     /**/
 
 #if defined(HPX_HAVE_CXX26_REFLECTION)
@@ -491,13 +495,13 @@
 /// When C++26 reflection is available, HPX_DEFINE_PLAIN_ACTION_2 uses
 /// reflect_action<^^func> instead of make_action_t. This eliminates the
 /// need for HPX_REGISTER_ACTION while keeping the same user-facing syntax.
-#define HPX_DEFINE_PLAIN_ACTION_2(func, name)                                  \
-    using name = hpx::actions::reflect_action<^^func>                          \
+#define HPX_DEFINE_PLAIN_ACTION_3(Prefix, func, name)                          \
+    Prefix using name = hpx::actions::reflect_action<^^func>                   \
     /**/
 // clang-format on
 #elif defined(__NVCC__) || defined(__CUDACC__)
-#define HPX_DEFINE_PLAIN_ACTION_2(func, name)                                  \
-    struct name                                                                \
+#define HPX_DEFINE_PLAIN_ACTION_3(Prefix, func, name)                          \
+    Prefix struct name                                                         \
       : hpx::actions::make_action<                                             \
             typename std::add_pointer<                                         \
                 typename std::remove_pointer<decltype(&func)>::type>::type,    \
@@ -505,18 +509,24 @@
     {                                                                          \
     } /**/
 #else
-#define HPX_DEFINE_PLAIN_ACTION_2(func, name)                                  \
-    struct name : hpx::actions::make_action_t<decltype(&func), &func, name>    \
+#define HPX_DEFINE_PLAIN_ACTION_3(Prefix, func, name)                          \
+    Prefix struct name                                                         \
+      : hpx::actions::make_action_t<decltype(&func), &func, name>              \
     {                                                                          \
     } /**/
 #endif
 
 #define HPX_DEFINE_PLAIN_DIRECT_ACTION_1(func)                                 \
-    HPX_DEFINE_PLAIN_DIRECT_ACTION_2(func, HPX_PP_CAT(func, _action))          \
+    HPX_DEFINE_PLAIN_DIRECT_ACTION_3(                                          \
+        HPX_PP_EMPTY(), func, HPX_PP_CAT(func, _action))                       \
     /**/
 
 #define HPX_DEFINE_PLAIN_DIRECT_ACTION_2(func, name)                           \
-    struct name                                                                \
+    HPX_DEFINE_PLAIN_DIRECT_ACTION_3(HPX_PP_EMPTY(), func, name)               \
+    /**/
+
+#define HPX_DEFINE_PLAIN_DIRECT_ACTION_3(Prefix, func, name)                   \
+    Prefix struct name                                                         \
       : hpx::actions::make_direct_action_t<decltype(&func), &func, name>       \
     {                                                                          \
     } /**/
@@ -597,7 +607,7 @@
 /// be encapsulated into a plain action. The parameter \p name is the name of
 /// the action type defined by this macro.
 ///
-/// The second parameter has to be usable as a plain (non-qualified) C++
+/// The second parameter has to be usable as a plain (nonqualified) C++
 /// identifier, it should not contain special characters which cannot be part of
 /// a C++ identifier, such as '<', '>', or ':'.
 ///
