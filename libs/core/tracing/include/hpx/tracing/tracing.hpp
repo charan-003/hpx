@@ -14,6 +14,8 @@
 #if defined(HPX_HAVE_TRACY)
 #include <hpx/modules/tracy.hpp>
 
+#include <hpx/config/warnings_prefix.hpp>
+
 namespace hpx::tracing {
 
     ////////////////////////////////////////////////////////////////////////////
@@ -122,6 +124,8 @@ namespace hpx::tracing {
         char const* name) noexcept;
 
 }    // namespace hpx::tracing
+
+#include <hpx/config/warnings_suffix.hpp>
 
 #elif defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0
 #include <hpx/modules/itt_notify.hpp>
