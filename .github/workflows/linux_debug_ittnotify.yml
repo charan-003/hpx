@@ -26,13 +26,9 @@ jobs:
           git clone https://github.com/intel/ittapi.git
           cmake -S ittapi -B ittapi/build -GNinja \
               -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_INSTALL_PREFIX=$PWD/ittapi/install
+              -DCMAKE_INSTALL_PREFIX=$PWD/ittapi/install \
+              -DITT_API_REFERENCE_COLLECTOR=ON
           cmake --build ittapi/build --target install
-    - name: Build ref-collector
-      shell: bash
-      run: |
-          cd ittapi/src/ittnotify_refcol
-          make CC=gcc
     - name: Configure
       shell: bash
       env:
@@ -61,7 +57,7 @@ jobs:
     - name: Test
       shell: bash
       run: |
-          export INTEL_LIBITTNOTIFY64="${GITHUB_WORKSPACE}/ittapi/src/ittnotify_refcol/libittnotify_refcol.so"
+          export INTEL_LIBITTNOTIFY64="${GITHUB_WORKSPACE}/ittapi/build/bin/libittnotify_refcol.so"
           export INTEL_LIBITTNOTIFY_LOG_DIR="${GITHUB_WORKSPACE}/itt_logs"
           # Enable ITT bindings at runtime so the ref-collector is loaded
           export HPX_HAVE_ITTNOTIFY=1
