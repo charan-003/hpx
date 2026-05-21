@@ -4,8 +4,9 @@
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+#include <hpx/modules/performance_counters.hpp>
+
 #include <hpx/distribution_policies/binpacking_distribution_policy.hpp>
-#include <hpx/performance_counters/counters.hpp>
 
 #include <cstddef>
 #include <cstdint>

@@ -6,5 +6,5 @@
 
 #pragma once
 
-#include <hpx/lcos_distributed/channel.hpp>
+#include <hpx/modules/lcos_distributed.hpp>
 #include <hpx/modules/lcos_local.hpp>

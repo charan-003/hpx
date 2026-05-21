@@ -18,13 +18,13 @@
 #include <hpx/modules/errors.hpp>
 #include <hpx/modules/logging.hpp>
 #include <hpx/modules/parcelset_base.hpp>
+#include <hpx/modules/performance_counters.hpp>
 #include <hpx/modules/plugin.hpp>
 #include <hpx/modules/plugin_factories.hpp>
 #include <hpx/modules/program_options.hpp>
 #include <hpx/modules/runtime_components.hpp>
 #include <hpx/modules/runtime_configuration.hpp>
 #include <hpx/modules/synchronization.hpp>
-#include <hpx/performance_counters/counters.hpp>
 
 #include <hpx/runtime_distributed/find_here.hpp>
 

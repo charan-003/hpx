@@ -212,7 +212,7 @@ namespace performance_counters { namespace sine {
         using hpx::placeholders::_2;
 
         // define the counter types
-        generic_counter_type_data const counter_types[] = {
+        constexpr generic_counter_type_data counter_types[] = {
             // We assume that valid counter names have the following scheme:
             //
             //  /sine(locality#<locality_id>/instance#<instance_id>)/immediate/explicit
@@ -224,7 +224,8 @@ namespace performance_counters { namespace sine {
             {"/sine/immediate/explicit", counter_type::raw,
                 "returns the current value of a sine wave calculated over "
                 "an arbitrary time line (explicit, hand-rolled version)",
-                HPX_PERFORMANCE_COUNTER_V1, &explicit_sine_counter_creator,
+                hpx::performance_counters::HPX_PERFORMANCE_COUNTER_V1,
+                &explicit_sine_counter_creator,
                 &explicit_sine_counter_discoverer, ""},
             // We assume that valid counter names have the following scheme:
             //
@@ -237,7 +238,7 @@ namespace performance_counters { namespace sine {
                 "returns the current value of a sine wave calculated over "
                 "an arbitrary time line (implicit version, using HPX "
                 "facilities)",
-                HPX_PERFORMANCE_COUNTER_V1,
+                hpx::performance_counters::HPX_PERFORMANCE_COUNTER_V1,
                 hpx::bind(
                     &hpx::performance_counters::locality_raw_counter_creator,
                     _1, &immediate_sine, _2),
