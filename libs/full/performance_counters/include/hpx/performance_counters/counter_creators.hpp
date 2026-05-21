@@ -147,9 +147,10 @@ namespace hpx::performance_counters {
         discover_counters_mode, error_code&);
 
 #if defined(HPX_HAVE_NETWORKING)
-    HPX_CXX_EXPORT HPX_EXPORT
-        naming::gid_type remote_action_invocation_counter_creator(
-            counter_info const&, error_code&);
+    // clang-format off
+    HPX_CXX_EXPORT HPX_EXPORT naming::gid_type
+    remote_action_invocation_counter_creator(counter_info const&, error_code&);
+    // clang-format on
 
     // Discoverer function for action invocation counters.
     HPX_CXX_EXPORT HPX_EXPORT bool remote_action_invocation_counter_discoverer(

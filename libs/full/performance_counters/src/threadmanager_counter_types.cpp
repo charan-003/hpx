@@ -640,7 +640,8 @@ namespace hpx::performance_counters {
             {"/threads/count/stolen-from-pending",
                 counter_type::monotonically_increasing,
                 "returns the overall number of pending HPX-threads stolen by "
-                "neighboring schedulers from &tm scheduler for the referenced locality",
+                "neighboring schedulers from &tm scheduler for the referenced "
+                "locality",
                 HPX_PERFORMANCE_COUNTER_V1,
                 hpx::bind_front(&detail::locality_pool_thread_counter_creator,
                     &tm, &threads::threadmanager::get_num_stolen_from_pending,
@@ -649,7 +650,8 @@ namespace hpx::performance_counters {
             {"/threads/count/stolen-from-staged",
                 counter_type::monotonically_increasing,
                 "returns the overall number of task descriptions stolen by "
-                "neighboring schedulers from tm scheduler for the referenced locality",
+                "neighboring schedulers from tm scheduler for the referenced "
+                "locality",
                 HPX_PERFORMANCE_COUNTER_V1,
                 hpx::bind_front(&detail::locality_pool_thread_counter_creator,
                     &tm, &threads::threadmanager::get_num_stolen_from_staged,

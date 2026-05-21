@@ -117,4 +117,3 @@ namespace hpx::lcos::server {
         lcos::local::channel<result_type> channel_;
     };
 }    // namespace hpx::lcos::server
-

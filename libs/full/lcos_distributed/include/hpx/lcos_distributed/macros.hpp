@@ -7,6 +7,7 @@
 #pragma once
 
 #include <hpx/config.hpp>
+#include <hpx/modules/preprocessor.hpp>
 
 #include <hpx/actions/macros.hpp>
 #include <hpx/actions_base/macros.hpp>

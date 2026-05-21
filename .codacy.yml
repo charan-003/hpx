@@ -13,5 +13,6 @@ exclude_paths:
 tools:
   duplication:
     exclude:
+      - "examples/**"
       - "tests/**"
       - "**/tests/**"

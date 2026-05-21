@@ -212,7 +212,7 @@ namespace performance_counters { namespace sine {
         using hpx::placeholders::_2;
 
         // define the counter types
-        constexpr generic_counter_type_data counter_types[] = {
+        generic_counter_type_data const counter_types[] = {
             // We assume that valid counter names have the following scheme:
             //
             //  /sine(locality#<locality_id>/instance#<instance_id>)/immediate/explicit

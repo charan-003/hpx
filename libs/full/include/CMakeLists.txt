@@ -112,6 +112,7 @@ if(HPX_WITH_DISTRIBUTED_RUNTIME)
       hpx_async_colocated
       hpx_async_distributed
       hpx_components_base
+      hpx_distribution_policies
       hpx_runtime_components
       hpx_runtime_distributed
       hpx_lcos_distributed

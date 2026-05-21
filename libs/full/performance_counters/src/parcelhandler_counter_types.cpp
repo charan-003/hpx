@@ -132,7 +132,7 @@ namespace hpx::performance_counters {
                 hpx::bind_front(
                     &parcelhandler::get_zchunks_recv_size_max, &ph, pp_type));
 
-            constexpr performance_counters::generic_counter_type_data
+            performance_counters::generic_counter_type_data const
                 counter_types[] = {
                     {hpx::util::format("/parcels/count/{}/sent", pp_type),
                         performance_counters::counter_type::
@@ -550,7 +550,7 @@ namespace hpx::performance_counters {
                     &ph, pp_type,
                     parcelport::connection_cache_max_connections));
 
-            constexpr performance_counters::generic_counter_type_data
+            performance_counters::generic_counter_type_data const
                 connection_cache_types[] = {
                     {hpx::util::format(
                          "/parcelport/count/{}/cache-insertions", pp_type),
@@ -706,18 +706,16 @@ namespace hpx::performance_counters {
         hpx::function<std::int64_t(bool)> outgoing_routed_count(
             hpx::bind_front(&parcelhandler::get_parcel_routed_count, &ph));
 
-        constexpr performance_counters::generic_counter_type_data
-            counter_types[] = {
-                {"/parcelqueue/length/receive",
-                    performance_counters::counter_type::raw,
-                    "returns the number current length of the queue of "
-                    "incoming "
-                    "parcels",
-                    HPX_PERFORMANCE_COUNTER_V1,
-                    hpx::bind(
-                        &performance_counters::locality_raw_counter_creator, _1,
-                        incoming_queue_length, _2),
-                    &performance_counters::locality_counter_discoverer, ""},
+        performance_counters::generic_counter_type_data const counter_types[] =
+            {{"/parcelqueue/length/receive",
+                 performance_counters::counter_type::raw,
+                 "returns the number current length of the queue of "
+                 "incoming "
+                 "parcels",
+                 HPX_PERFORMANCE_COUNTER_V1,
+                 hpx::bind(&performance_counters::locality_raw_counter_creator,
+                     _1, incoming_queue_length, _2),
+                 &performance_counters::locality_counter_discoverer, ""},
                 {"/parcelqueue/length/send",
                     performance_counters::counter_type::raw,
                     "returns the number current length of the queue of "

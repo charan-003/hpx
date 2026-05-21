@@ -1,4 +1,4 @@
-//  Copyright (c) 2007-2023 Hartmut Kaiser
+//  Copyright (c) 2007-2026 Hartmut Kaiser
 //
 //  SPDX-License-Identifier: BSL-1.0
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -32,8 +32,9 @@
 
 namespace hpx::components {
 
-    inline constexpr char const* const default_binpacking_counter_name =
-        "/runtime{locality/total}/count/component@";
+    HPX_CXX_EXPORT inline constexpr char const* const
+        default_binpacking_counter_name =
+            "/runtime{locality/total}/count/component@";
 
     namespace detail {
 
@@ -150,7 +151,7 @@ namespace hpx::components {
     /// each of the localities will equalize the number of overall objects of
     /// this type based on a given criteria (by default this criteria is the
     /// overall number of objects of this type).
-    struct binpacking_distribution_policy
+    HPX_CXX_EXPORT struct binpacking_distribution_policy
     {
     public:
         /// Default-construct a new instance of a \a binpacking_distribution_policy.
@@ -372,14 +373,15 @@ namespace hpx::components {
 
     /// A predefined instance of the binpacking \a distribution_policy. It will
     /// represent the local locality and will place all items to create here.
-    static binpacking_distribution_policy const binpacked{};
+    HPX_CXX_EXPORT HPX_EXPORT extern binpacking_distribution_policy const
+        binpacked;
 }    // namespace hpx::components
 
 /// \cond NOINTERNAL
 namespace hpx {
 
-    using hpx::components::binpacked;
-    using hpx::components::binpacking_distribution_policy;
+    HPX_CXX_EXPORT using hpx::components::binpacked;
+    HPX_CXX_EXPORT using hpx::components::binpacking_distribution_policy;
 
     template <>
     struct traits::is_distribution_policy<
