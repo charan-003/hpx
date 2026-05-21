@@ -207,22 +207,6 @@ namespace hpx::threads::detail {
                                     threads::get_region_init_data(thrdptr),
                                     num_thread);
 
-                                // Dual-view Tracy instrumentation:
-                                //
-                                // rctx declared FIRST -> constructed first ->
-                                //   ZoneBegin fires with NO active fiber,
-                                //   so Tracy attributes it to the OS worker
-                                //   thread row (utilization view).
-                                //
-                                // fctx declared SECOND -> constructed second ->
-                                //   TracyFiberEnter fires INSIDE the open zone,
-                                //   so Tracy also shows this slice on the fiber
-                                //   track (M:N migration view).
-                                //
-                                // Destruction is C++ reverse order:
-                                //   ~fctx first -> TracyFiberLeave
-                                //   ~rctx last  -> ZoneEnd
-                                // Zone outlives the fiber context - correct.
                                 hpx::tracing::fiber_region fctx(
                                     threads::get_fiber_region_init_data(
                                         thrdptr),
