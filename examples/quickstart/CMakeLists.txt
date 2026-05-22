@@ -192,7 +192,16 @@ foreach(example_program ${example_programs})
 endforeach()
 
 if(HPX_WITH_CXX_MODULES AND MSVC)
-  foreach(example customize_async enumerate_threads mutex_docs)
+  foreach(
+    example
+    customize_async
+    component_ctors
+    component_in_executable
+    component_with_executor
+    custom_serialization
+    enumerate_threads
+    mutex_docs
+  )
     target_compile_definitions(${example} PRIVATE HPX_HAVE_FORCE_NO_CXX_MODULES)
   endforeach()
 endif()

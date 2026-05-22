@@ -12,6 +12,7 @@
 #include <hpx/modules/executors.hpp>
 
 #include <hpx/parallel/segmented_algorithms/detail/dispatch.hpp>
+#include <hpx/parallel/segmented_algorithms/detail/transfer.hpp>
 
 #include <algorithm>
 #include <cstddef>

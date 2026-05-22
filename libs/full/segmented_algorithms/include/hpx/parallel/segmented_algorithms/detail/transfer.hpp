@@ -226,8 +226,8 @@ namespace hpx::parallel::detail {
 
     ///////////////////////////////////////////////////////////////////////
     // segmented implementation
-    template <typename Algo, typename ExPolicy, typename FwdIter1,
-        typename Sent1, typename FwdIter2>
+    HPX_CXX_EXPORT template <typename Algo, typename ExPolicy,
+        typename FwdIter1, typename Sent1, typename FwdIter2>
     util::detail::algorithm_result_t<ExPolicy,
         util::in_out_result<FwdIter1, FwdIter2>>
     transfer_(ExPolicy&& policy, FwdIter1 first, Sent1 last, FwdIter2 dest,
