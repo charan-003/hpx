@@ -286,6 +286,8 @@ namespace hpx::execution::experimental {
                 }
 
                 auto get_env() const noexcept
+                    -> decltype(hpx::execution::experimental::get_env(
+                        std::declval<std::decay_t<Receiver> const&>()))
                 {
                     return hpx::execution::experimental::get_env(
                         self_->receiver_);
