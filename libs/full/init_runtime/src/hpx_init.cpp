@@ -55,9 +55,7 @@
 #include <hpx/parcelports/init_all_parcelports.hpp>
 #endif
 #include <hpx/modules/performance_counters.hpp>
-#include <hpx/runtime_distributed.hpp>
-#include <hpx/runtime_distributed/runtime_fwd.hpp>
-#include <hpx/runtime_distributed/runtime_support.hpp>
+#include <hpx/modules/runtime_distributed.hpp>
 #endif
 #if defined(HPX_HAVE_LOGGING)
 #include <hpx/init_runtime/detail/init_logging.hpp>

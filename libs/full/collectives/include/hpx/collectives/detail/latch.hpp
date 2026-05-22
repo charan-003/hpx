@@ -12,10 +12,10 @@
 #include <hpx/modules/async_distributed.hpp>
 #include <hpx/modules/components_base.hpp>
 #include <hpx/modules/errors.hpp>
+#include <hpx/modules/runtime_distributed.hpp>
 #include <hpx/modules/runtime_local.hpp>
 #include <hpx/modules/synchronization.hpp>
 #include <hpx/modules/threading_base.hpp>
-#include <hpx/runtime_distributed/server/runtime_support.hpp>
 
 #include <cstddef>
 #include <exception>

@@ -16,8 +16,4 @@
 #include <hpx/modules/components_base.hpp>
 #include <hpx/modules/distribution_policies.hpp>
 #include <hpx/modules/runtime_components.hpp>
-
-#include <hpx/runtime_distributed/copy_component.hpp>
-#include <hpx/runtime_distributed/migrate_component.hpp>
-#include <hpx/runtime_distributed/runtime_support.hpp>
-#include <hpx/runtime_distributed/stubs/runtime_support.hpp>
+#include <hpx/modules/runtime_distributed.hpp>

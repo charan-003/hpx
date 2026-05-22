@@ -11,6 +11,7 @@
 #include <hpx/modules/preprocessor.hpp>
 
 #include <hpx/components_base/macros.hpp>
+#include <hpx/runtime_configuration/macros.hpp>
 
 #if !defined(HPX_COMPUTE_DEVICE_CODE)
 

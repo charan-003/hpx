@@ -23,8 +23,8 @@
 #include <hpx/modules/futures.hpp>
 #include <hpx/modules/naming.hpp>
 #include <hpx/modules/runtime_components.hpp>
+#include <hpx/modules/runtime_distributed.hpp>
 #include <hpx/modules/serialization.hpp>
-#include <hpx/runtime_distributed/find_here.hpp>
 
 #include <cstddef>
 #include <cstdint>

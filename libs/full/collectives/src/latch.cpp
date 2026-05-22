@@ -12,9 +12,9 @@
 #include <hpx/modules/futures.hpp>
 #include <hpx/modules/performance_counters.hpp>
 #include <hpx/modules/runtime_components.hpp>
+#include <hpx/modules/runtime_distributed.hpp>
 #include <hpx/modules/runtime_local.hpp>
 #include <hpx/modules/type_support.hpp>
-#include <hpx/runtime_distributed/find_here.hpp>
 
 #include <hpx/collectives/latch.hpp>
 

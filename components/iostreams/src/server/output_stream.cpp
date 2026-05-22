@@ -9,9 +9,9 @@
 #include <hpx/config.hpp>
 #include <hpx/modules/functional.hpp>
 #include <hpx/modules/io_service.hpp>
+#include <hpx/modules/runtime_distributed.hpp>
 #include <hpx/modules/serialization.hpp>
 #include <hpx/modules/threading_base.hpp>
-#include <hpx/runtime_distributed/runtime_fwd.hpp>
 
 #include <hpx/components/iostreams/server/data_buffer.hpp>
 #include <hpx/components/iostreams/server/output_stream.hpp>

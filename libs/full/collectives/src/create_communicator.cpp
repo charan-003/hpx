@@ -20,9 +20,9 @@
 #include <hpx/modules/format.hpp>
 #include <hpx/modules/lock_registration.hpp>
 #include <hpx/modules/runtime_components.hpp>
+#include <hpx/modules/runtime_distributed.hpp>
 #include <hpx/modules/synchronization.hpp>
 #include <hpx/modules/type_support.hpp>
-#include <hpx/runtime_distributed/server/runtime_support.hpp>
 
 #include <algorithm>
 #include <cstddef>

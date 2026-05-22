@@ -17,7 +17,6 @@
 #include <hpx/modules/timing.hpp>
 #include <hpx/modules/topology.hpp>
 
-#include <hpx/execution/algorithms/detail/sync_wait_domain.hpp>
 #include <hpx/executors/parallel_scheduler_backend.hpp>
 #include <hpx/executors/thread_pool_scheduler.hpp>
 #include <hpx/executors/thread_pool_scheduler_bulk.hpp>
@@ -228,7 +227,7 @@ namespace hpx::execution::experimental {
             {
                 using type = concrete_proxy<Ts...>;
             };
-            using proxy_t = typename proxy_for_tuple<value_tuple_t>::type;
+            using proxy_t = proxy_for_tuple<value_tuple_t>::type;
 
             // ---- Inline proxy storage ------------------------------------
             // Eliminates the second heap allocation that make_unique<proxy>
@@ -866,7 +865,7 @@ namespace hpx::execution::experimental {
         {
         }
 
-        friend parallel_scheduler get_parallel_scheduler();
+        friend HPX_CORE_EXPORT parallel_scheduler get_parallel_scheduler();
 
         std::shared_ptr<parallel_scheduler_backend> backend_;
     };

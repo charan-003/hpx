@@ -14,9 +14,9 @@
 #include <hpx/compute/host/get_targets.hpp>
 #include <hpx/modules/compute_local.hpp>
 #include <hpx/modules/futures.hpp>
+#include <hpx/modules/runtime_distributed.hpp>
 #include <hpx/modules/serialization.hpp>
 #include <hpx/modules/topology.hpp>
-#include <hpx/runtime_distributed/find_here.hpp>
 
 #include <cstddef>
 #include <utility>

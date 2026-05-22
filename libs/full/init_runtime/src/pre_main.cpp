@@ -22,11 +22,8 @@
 #include <hpx/modules/performance_counters.hpp>
 #include <hpx/modules/runtime_components.hpp>
 #include <hpx/modules/runtime_configuration.hpp>
+#include <hpx/modules/runtime_distributed.hpp>
 #include <hpx/modules/runtime_local.hpp>
-#include <hpx/runtime_distributed.hpp>
-#include <hpx/runtime_distributed/applier.hpp>
-#include <hpx/runtime_distributed/runtime_fwd.hpp>
-#include <hpx/runtime_distributed/runtime_support.hpp>
 
 #include <hpx/init_runtime/pre_main.hpp>
 
