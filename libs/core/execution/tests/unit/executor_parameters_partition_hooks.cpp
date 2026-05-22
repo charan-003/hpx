@@ -102,8 +102,7 @@ void test_mark_partition_async()
         hpx::execution::par(hpx::execution::task).with(std::ref(params));
     auto f = hpx::merge(policy, left.begin(), left.end(), right.begin(),
         right.end(), out.begin());
-    auto result_iter = f.get();
-    HPX_UNUSED(result_iter);
+    [[maybe_unused]] auto result_iter = f.get();
 
     HPX_TEST(std::is_sorted(out.begin(), out.end()));
     HPX_TEST_LT(std::size_t(0), params.num_chunks_);

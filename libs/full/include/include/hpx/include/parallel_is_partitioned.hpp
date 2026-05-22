@@ -7,4 +7,4 @@
 #pragma once
 
 #include <hpx/modules/algorithms.hpp>
-#include <hpx/parallel/segmented_algorithms/is_partitioned.hpp>
+#include <hpx/modules/segmented_algorithms.hpp>

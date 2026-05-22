@@ -1,4 +1,4 @@
-//  Copyright (c) 2007-2024 Hartmut Kaiser
+//  Copyright (c) 2007-2026 Hartmut Kaiser
 //  Copyright (c) 2021 Giannis Gonidelis
 //
 //  SPDX-License-Identifier: BSL-1.0
@@ -297,9 +297,8 @@ namespace hpx::parallel::detail {
         id_type const& id, Algo&& algo, ExPolicy policy, IsSeq, Args&&... args)
     {
         using algo_type = std::decay_t<Algo>;
-        using result_type =
-            typename parallel::util::detail::algorithm_result<ExPolicy,
-                typename algo_type::result_type>::type;
+        using result_type = parallel::util::detail::algorithm_result_t<ExPolicy,
+            typename algo_type::result_type>;
 
         algorithm_invoker_action<algo_type, ExPolicy, typename IsSeq::type,
             result_type(hpx::util::decay_unwrap_t<Args>...)>

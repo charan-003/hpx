@@ -65,7 +65,7 @@ namespace hpx::components {
     /// \returns A future representing the global id of the newly (copied)
     ///          component instance.
     ///
-    template <typename Component>
+    HPX_CXX_EXPORT template <typename Component>
         requires(traits::is_component_v<Component>)
     future<hpx::id_type> copy(
         hpx::id_type const& to_copy, hpx::id_type const& target_locality)

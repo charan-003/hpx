@@ -8,4 +8,4 @@
 #pragma once
 
 #include <hpx/modules/algorithms.hpp>
-#include <hpx/parallel/segmented_algorithms/copy.hpp>
+#include <hpx/modules/segmented_algorithms.hpp>
