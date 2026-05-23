@@ -20,6 +20,7 @@
 #include <hpx/modules/futures.hpp>
 #include <hpx/modules/ini.hpp>
 #include <hpx/modules/logging.hpp>
+#include <hpx/modules/performance_counters.hpp>
 #include <hpx/modules/plugin_factories.hpp>
 #include <hpx/modules/prefix.hpp>
 #include <hpx/modules/runtime_components.hpp>
@@ -32,7 +33,6 @@
 #include <hpx/modules/threadmanager.hpp>
 #include <hpx/modules/timing.hpp>
 #include <hpx/modules/type_support.hpp>
-#include <hpx/performance_counters/counters.hpp>
 
 #include <hpx/runtime_distributed.hpp>
 #include <hpx/runtime_distributed/find_localities.hpp>

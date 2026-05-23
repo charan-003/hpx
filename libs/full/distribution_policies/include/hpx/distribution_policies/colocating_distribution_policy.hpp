@@ -1,4 +1,4 @@
-//  Copyright (c) 2014-2024 Hartmut Kaiser
+//  Copyright (c) 2014-2026 Hartmut Kaiser
 //
 //  SPDX-License-Identifier: BSL-1.0
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -31,7 +31,7 @@ namespace hpx::components {
     /// This class specifies the parameters for a distribution policy to use
     /// for creating a given number of items on the locality where a given
     /// object is currently placed.
-    struct colocating_distribution_policy
+    HPX_CXX_EXPORT struct colocating_distribution_policy
     {
         /// Default-construct a new instance of a \a colocating_distribution_policy.
         /// This policy will represent the local locality.
@@ -364,14 +364,15 @@ namespace hpx::components {
     /// A predefined instance of the co-locating \a distribution_policy. It
     /// will represent the local locality and will place all items to create
     /// here.
-    static colocating_distribution_policy const colocated{};
+    HPX_CXX_EXPORT HPX_EXPORT extern colocating_distribution_policy const
+        colocated;
 }    // namespace hpx::components
 
 /// \cond NOINTERNAL
 namespace hpx {
 
-    using hpx::components::colocated;
-    using hpx::components::colocating_distribution_policy;
+    HPX_CXX_EXPORT using hpx::components::colocated;
+    HPX_CXX_EXPORT using hpx::components::colocating_distribution_policy;
 
     template <>
     struct traits::is_distribution_policy<

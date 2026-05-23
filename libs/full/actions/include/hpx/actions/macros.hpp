@@ -7,8 +7,9 @@
 #pragma once
 
 #include <hpx/config.hpp>
-#include <hpx/actions_base/macros.hpp>
 #include <hpx/modules/preprocessor.hpp>
+
+#include <hpx/actions_base/macros.hpp>
 
 #include <type_traits>
 

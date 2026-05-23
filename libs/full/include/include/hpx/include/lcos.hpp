@@ -18,5 +18,5 @@
 #include <hpx/collectives/latch.hpp>
 #include <hpx/collectives/reduce.hpp>
 #include <hpx/include/actions.hpp>
-#include <hpx/lcos_distributed/channel.hpp>
 #include <hpx/modules/async_distributed.hpp>
+#include <hpx/modules/lcos_distributed.hpp>

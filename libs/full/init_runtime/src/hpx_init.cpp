@@ -54,8 +54,7 @@
 #include <hpx/modules/parcelset_base.hpp>
 #include <hpx/parcelports/init_all_parcelports.hpp>
 #endif
-#include <hpx/performance_counters/counters.hpp>
-#include <hpx/performance_counters/query_counters.hpp>
+#include <hpx/modules/performance_counters.hpp>
 #include <hpx/runtime_distributed.hpp>
 #include <hpx/runtime_distributed/runtime_fwd.hpp>
 #include <hpx/runtime_distributed/runtime_support.hpp>

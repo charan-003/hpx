@@ -1,5 +1,5 @@
 //  Copyright (c) 2011 Bryce Adelstein-Lelbach
-//  Copyright (c) 2012-2021 Hartmut Kaiser
+//  Copyright (c) 2012-2026 Hartmut Kaiser
 //  Copyright (c) 2016 Thomas Heller
 //
 //  SPDX-License-Identifier: BSL-1.0
@@ -73,7 +73,7 @@ namespace hpx::agas::server {
             performance_counters::install_counter_type(
                 agas::performance_counter_basename + name, type, help, creator,
                 &performance_counters::locality0_counter_discoverer,
-                HPX_PERFORMANCE_COUNTER_V1,
+                performance_counters::HPX_PERFORMANCE_COUNTER_V1,
                 detail::locality_namespace_services[i].uom_, ec);
             if (ec)
             {
@@ -122,7 +122,7 @@ namespace hpx::agas::server {
                     detail::locality_namespace_services[i].name_,
                 type, help, creator,
                 &performance_counters::locality0_counter_discoverer,
-                HPX_PERFORMANCE_COUNTER_V1,
+                performance_counters::HPX_PERFORMANCE_COUNTER_V1,
                 detail::locality_namespace_services[i].uom_, ec);
             if (ec)
             {

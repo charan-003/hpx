@@ -133,7 +133,7 @@ void register_counter_type()
         "reinit",
         &test_counter_creator,
         &hpx::performance_counters::locality_counter_discoverer,
-        HPX_PERFORMANCE_COUNTER_V1);
+        hpx::performance_counters::HPX_PERFORMANCE_COUNTER_V1);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
