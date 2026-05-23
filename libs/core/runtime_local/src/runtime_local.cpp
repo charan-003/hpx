@@ -24,6 +24,7 @@
 #include <hpx/modules/threadmanager.hpp>
 #include <hpx/modules/timing.hpp>
 #include <hpx/modules/topology.hpp>
+#include <hpx/modules/tracing.hpp>
 #include <hpx/modules/type_support.hpp>
 #include <hpx/modules/util.hpp>
 #include <hpx/runtime_local/config_entry.hpp>
@@ -1499,9 +1500,7 @@ namespace hpx {
 #endif
 
         // initialize instrumentation system
-#ifdef HPX_HAVE_APEX
-        util::external_timer::init(nullptr, 0, 1);
-#endif
+        hpx::tracing::tracing_init(nullptr, 0, nullptr);
 
         LRT_(info).format("cmd_line: {}", get_config().get_cmd_line());
 
@@ -1608,11 +1607,6 @@ namespace hpx {
         // set thread name as shown in Visual Studio
         util::set_thread_name(thread_name.c_str());
 
-#if defined(HPX_HAVE_APEX)
-        // not registering helper threads - for now
-        //util::external_timer::register_thread(thread_name.c_str());
-#endif
-
         wait_finalize();
 
         // stop main thread pool
@@ -1664,9 +1658,7 @@ namespace hpx {
         // stop runtime_local services (threads)
         thread_manager_->stop(false);    // just initiate shutdown
 
-#ifdef HPX_HAVE_APEX
-        util::external_timer::finalize();
-#endif
+        hpx::tracing::tracing_finalize();
 
         if (threads::get_self_ptr())
         {
@@ -1966,10 +1958,8 @@ namespace hpx {
         // set thread name as shown in Visual Studio
         util::set_thread_name(name);
 
-#if defined(HPX_HAVE_APEX)
         if (std::strstr(name, "worker") != nullptr)
-            util::external_timer::register_thread(name);
-#endif
+            hpx::tracing::register_thread(name);
 
         // call thread-specific user-supplied on_start handler
         if (on_start_func_)
