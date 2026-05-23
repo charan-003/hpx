@@ -51,5 +51,5 @@ if(HPX_WITH_APEX
    OR HPX_WITH_ITTNOTIFY
    OR HPX_WITH_TRACY
 )
-  hpx_add_config_define(HPX_HAVE_TRACING 1)
+  hpx_add_config_define(HPX_HAVE_TRACING)
 endif()

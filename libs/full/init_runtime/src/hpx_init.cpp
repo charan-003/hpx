@@ -38,6 +38,7 @@
 #include <hpx/modules/threading.hpp>
 #include <hpx/modules/threading_base.hpp>
 #include <hpx/modules/timing.hpp>
+#include <hpx/modules/tracing.hpp>
 #include <hpx/modules/type_support.hpp>
 
 #ifdef HPX_HAVE_MODULE_MPI_BASE
@@ -755,10 +756,8 @@ namespace hpx {
 
             hpx::assertion::set_assertion_handler(&detail::assertion_handler);
             hpx::util::set_test_failure_handler(&detail::test_failure_handler);
-#if defined(HPX_HAVE_APEX)
-            hpx::util::set_enable_parent_task_handler(
+            hpx::tracing::set_enable_parent_task_handler(
                 &detail::enable_parent_task_handler);
-#endif
             hpx::set_custom_exception_info_handler(
                 &detail::custom_exception_info);
             hpx::serialization::detail::set_save_custom_exception_handler(
