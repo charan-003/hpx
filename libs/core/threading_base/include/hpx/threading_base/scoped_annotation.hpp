@@ -13,14 +13,13 @@
 #include <hpx/config.hpp>
 
 #if defined(HPX_HAVE_THREAD_DESCRIPTION)
+#include <hpx/modules/tracing.hpp>
 #include <hpx/threading_base/thread_data.hpp>
 #include <hpx/threading_base/thread_description.hpp>
 #include <hpx/threading_base/thread_helpers.hpp>
 
 #if HPX_HAVE_ITTNOTIFY != 0
 #include <hpx/modules/itt_notify.hpp>
-#elif defined(HPX_HAVE_APEX)
-#include <hpx/modules/threading_base.hpp>
 #endif
 #endif
 
@@ -136,13 +135,11 @@ namespace hpx {
             {
                 desc_ = threads::get_thread_id_data(self->get_thread_id())
                             ->set_description(name);
-            }
 
-#if defined(HPX_HAVE_APEX)
-            /* update the task wrapper in APEX to use the specified name */
-            threads::set_self_timer_data(hpx::util::external_timer::update_task(
-                threads::get_self_timer_data(), std::string(name)));
-#endif
+                auto timer_data = threads::get_self_timer_data();
+                hpx::tracing::update_task_timer(timer_data, name);
+                threads::set_self_timer_data(HPX_MOVE(timer_data));
+            }
         }
 
         explicit scoped_annotation(std::string name)
@@ -151,20 +148,14 @@ namespace hpx {
             if (self != nullptr)
             {
                 char const* name_c_str =
-#if defined(HPX_HAVE_APEX)
-                    detail::store_function_annotation(name);
-#else
                     detail::store_function_annotation(HPX_MOVE(name));
-#endif
                 desc_ = threads::get_thread_id_data(self->get_thread_id())
                             ->set_description(name_c_str);
-            }
 
-#if defined(HPX_HAVE_APEX)
-            /* update the task wrapper in APEX to use the specified name */
-            threads::set_self_timer_data(hpx::util::external_timer::update_task(
-                threads::get_self_timer_data(), HPX_MOVE(name)));
-#endif
+                auto timer_data = threads::get_self_timer_data();
+                hpx::tracing::update_task_timer(timer_data, name_c_str);
+                threads::set_self_timer_data(HPX_MOVE(timer_data));
+            }
         }
 
         template <typename F,
@@ -179,11 +170,6 @@ namespace hpx {
                     threads::get_thread_id_data(self->get_thread_id())
                         ->set_description(hpx::threads::thread_description(f));
             }
-
-#if defined(HPX_HAVE_APEX)
-            /* no need to update the task description in APEX, because
-             * this same description was used when the task was created. */
-#endif
         }
 
         ~scoped_annotation()

@@ -21,8 +21,6 @@
 
 #if HPX_HAVE_ITTNOTIFY != 0
 #include <hpx/modules/itt_notify.hpp>
-#elif defined(HPX_HAVE_APEX)
-#include <hpx/threading_base/external_timer.hpp>
 #endif
 #endif
 

@@ -17,14 +17,10 @@
 #include <cstdint>
 #include <utility>
 
-#if defined(HPX_HAVE_APEX)
-#include <memory>
+namespace hpx::tracing {
 
-namespace hpx::util::external_timer {
-
-    HPX_CXX_CORE_EXPORT struct task_wrapper;
-}    // namespace hpx::util::external_timer
-#endif
+    HPX_CXX_CORE_EXPORT struct task_timer_data;
+}    // namespace hpx::tracing
 
 namespace hpx::threads {
 
@@ -63,13 +59,10 @@ namespace hpx::threads {
     HPX_CXX_CORE_EXPORT using thread_self_impl_type =
         coroutines::detail::coroutine_impl;
 
-#if defined(HPX_HAVE_APEX)
-    HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT
-        std::shared_ptr<hpx::util::external_timer::task_wrapper>
-        get_self_timer_data();
+    HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT tracing::task_timer_data
+    get_self_timer_data();
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT void set_self_timer_data(
-        std::shared_ptr<hpx::util::external_timer::task_wrapper> data);
-#endif
+        tracing::task_timer_data data);
     /// \endcond
 
     ////////////////////////////////////////////////////////////////////////////

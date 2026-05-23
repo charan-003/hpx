@@ -10,18 +10,13 @@
 #include <hpx/config.hpp>
 #include <hpx/modules/coroutines.hpp>
 #include <hpx/modules/errors.hpp>
+#include <hpx/modules/tracing.hpp>
 #include <hpx/threading_base/thread_description.hpp>
 #include <hpx/threading_base/threading_base_fwd.hpp>
-#if defined(HPX_HAVE_APEX)
-#include <hpx/threading_base/external_timer.hpp>
-#endif
 
 #include <cstddef>
 #include <cstdint>
 #include <utility>
-#ifdef HPX_HAVE_APEX
-#include <memory>
-#endif
 
 namespace hpx::threads {
 
@@ -39,9 +34,7 @@ namespace hpx::threads {
           , parent_id(nullptr)
           , parent_phase(0)
 #endif
-#ifdef HPX_HAVE_APEX
-          , timer_data(nullptr)
-#endif
+          , timer_data()
           , schedulehint()
           , priority(thread_priority::normal)
           , stacksize(thread_stacksize::default_)
@@ -75,11 +68,7 @@ namespace hpx::threads {
             parent_id = HPX_MOVE(rhs.parent_id);
             parent_phase = rhs.parent_phase;
 #endif
-#ifdef HPX_HAVE_APEX
-            // HPX_HAVE_APEX forces the HPX_HAVE_THREAD_DESCRIPTION
-            // and HPX_HAVE_THREAD_PARENT_REFERENCE settings to be on
             timer_data = rhs.timer_data;
-#endif
             return *this;
         }
 
@@ -94,11 +83,12 @@ namespace hpx::threads {
           , parent_id(HPX_MOVE(rhs.parent_id))
           , parent_phase(rhs.parent_phase)
 #endif
-#ifdef HPX_HAVE_APEX
-          // HPX_HAVE_APEX forces the HPX_HAVE_THREAD_DESCRIPTION and
-          // HPX_HAVE_THREAD_PARENT_REFERENCE settings to be on
-          , timer_data(util::external_timer::new_task(
+#if defined(HPX_HAVE_THREAD_DESCRIPTION) &&                                    \
+    defined(HPX_HAVE_THREAD_PARENT_REFERENCE)
+          , timer_data(hpx::tracing::create_task_timer(
                 description, parent_locality_id, parent_id))
+#else
+          , timer_data()
 #endif
           , schedulehint(rhs.schedulehint)
           , priority(rhs.priority)
@@ -128,11 +118,12 @@ namespace hpx::threads {
           , parent_id(nullptr)
           , parent_phase(0)
 #endif
-#ifdef HPX_HAVE_APEX
-          // HPX_HAVE_APEX forces the HPX_HAVE_THREAD_DESCRIPTION and
-          // HPX_HAVE_THREAD_PARENT_REFERENCE settings to be on
-          , timer_data(util::external_timer::new_task(
+#if defined(HPX_HAVE_THREAD_DESCRIPTION) &&                                    \
+    defined(HPX_HAVE_THREAD_PARENT_REFERENCE)
+          , timer_data(hpx::tracing::create_task_timer(
                 description, parent_locality_id, parent_id))
+#else
+          , timer_data()
 #endif
           , schedulehint(os_thread)
           , priority(priority_)
@@ -159,11 +150,7 @@ namespace hpx::threads {
         threads::thread_id_type parent_id;
         std::size_t parent_phase;
 #endif
-#ifdef HPX_HAVE_APEX
-        // HPX_HAVE_APEX forces the HPX_HAVE_THREAD_DESCRIPTION and
-        // HPX_HAVE_THREAD_PARENT_REFERENCE settings to be on
-        std::shared_ptr<util::external_timer::task_wrapper> timer_data;
-#endif
+        hpx::tracing::task_timer_data timer_data;
 
         thread_schedule_hint schedulehint;
         thread_priority priority;
