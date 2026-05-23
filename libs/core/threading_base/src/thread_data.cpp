@@ -16,9 +16,6 @@
 #include <hpx/modules/tracing.hpp>
 #include <hpx/threading_base/scheduler_base.hpp>
 #include <hpx/threading_base/thread_data.hpp>
-#if defined(HPX_HAVE_APEX)
-#include <hpx/threading_base/external_timer.hpp>
-#endif
 #if defined(HPX_HAVE_TRACY)
 #include <hpx/modules/tracy.hpp>
 #endif
@@ -113,9 +110,7 @@ namespace hpx::threads {
         if (0 == parent_locality_id_)
             parent_locality_id_ = detail::get_locality_id(hpx::throws);
 #endif
-#if defined(HPX_HAVE_APEX)
         set_timer_data(init_data.timer_data);
-#endif
 #if defined(HPX_HAVE_TRACY)
         tracy_fiber_name_[0] = '\0';
 #endif
@@ -283,9 +278,7 @@ namespace hpx::threads {
             parent_locality_id_ = detail::get_locality_id(hpx::throws);
         }
 #endif
-#if defined(HPX_HAVE_APEX)
         set_timer_data(init_data.timer_data);
-#endif
     }
 
 #if defined(HPX_HAVE_THREAD_DESCRIPTION)
@@ -516,28 +509,24 @@ namespace hpx::threads {
 #endif
     }
 
-#if defined(HPX_HAVE_APEX)
-    std::shared_ptr<hpx::util::external_timer::task_wrapper>
-    get_self_timer_data()
+    hpx::tracing::task_timer_data get_self_timer_data()
     {
         if (thread_data* thrd_data = get_self_id_data();
             HPX_LIKELY(nullptr != thrd_data))
         {
             return thrd_data->get_timer_data();
         }
-        return nullptr;
+        return {};
     }
 
-    void set_self_timer_data(
-        std::shared_ptr<hpx::util::external_timer::task_wrapper> data)
+    void set_self_timer_data(hpx::tracing::task_timer_data data)
     {
         if (thread_data* thrd_data = get_self_id_data();
             HPX_LIKELY(nullptr != thrd_data))
         {
-            thrd_data->set_timer_data(data);
+            thrd_data->set_timer_data(HPX_MOVE(data));
         }
     }
-#endif
 
 #if defined(HPX_HAVE_TRACY)
     tracing::region_init_data get_region_init_data(thread_data const* thrdptr)

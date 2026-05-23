@@ -222,14 +222,10 @@ namespace hpx::threads::detail {
                                             idle_rate.collect_exec_time(ts);
                                         });
 #endif
-#if defined(HPX_HAVE_APEX)
-                                // get the APEX data pointer, in case we are
+                                // get the tracing data, in case we are
                                 // resuming the thread and have to restore any
                                 // leaf timers from direct actions, etc.
-
-                                // the address of tmp_data is getting stored by
-                                // APEX during this call
-                                util::external_timer::scoped_timer profiler(
+                                hpx::tracing::scoped_task_timer profiler(
                                     thrdptr->get_timer_data());
 
                                 thrd_stat = (*thrdptr)(context_storage);
@@ -241,15 +237,12 @@ namespace hpx::threads::detail {
                                 {
                                     profiler.stop();
                                     // just in case, clean up the now dead pointer.
-                                    thrdptr->set_timer_data(nullptr);
+                                    thrdptr->set_timer_data({});
                                 }
                                 else
                                 {
                                     profiler.yield();
                                 }
-#else
-                                thrd_stat = (*thrdptr)(context_storage);
-#endif
                             }
 
                             detail::write_state_log(scheduler, num_thread, thrd,
