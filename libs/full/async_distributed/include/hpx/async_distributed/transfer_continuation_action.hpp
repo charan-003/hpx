@@ -21,6 +21,7 @@
 #include <hpx/modules/async_base.hpp>
 #include <hpx/modules/serialization.hpp>
 #include <hpx/modules/threading_base.hpp>
+#include <hpx/modules/tracing.hpp>
 #include <hpx/modules/type_support.hpp>
 
 #include <cstddef>
@@ -197,8 +198,9 @@ namespace hpx::actions {
         data.parent_id = this->parent_id_;
         data.parent_locality_id = this->parent_locality_;
 #endif
-#if defined(HPX_HAVE_APEX)
-        data.timer_data = hpx::util::external_timer::new_task(
+#if defined(HPX_HAVE_THREAD_DESCRIPTION) &&                                    \
+    defined(HPX_HAVE_THREAD_PARENT_REFERENCE)
+        data.timer_data = hpx::tracing::create_task_timer(
             data.description, data.parent_locality_id, data.parent_id);
 #endif
         data.priority = this->priority_;
