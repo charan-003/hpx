@@ -17,8 +17,8 @@
 #include <hpx/modules/thread_support.hpp>
 #include <hpx/modules/threading_base.hpp>
 #include <hpx/modules/timing.hpp>
+#include <hpx/modules/tracing.hpp>
 #include <hpx/modules/type_support.hpp>
-#include <hpx/performance_counters/apex_sample_value.hpp>
 #include <hpx/performance_counters/counters.hpp>
 #include <hpx/performance_counters/performance_counter.hpp>
 #include <hpx/performance_counters/query_counters.hpp>
@@ -38,10 +38,6 @@
 #include <hpx/itt_notify/detail/use_ittnotify_api.hpp>
 #include <hpx/modules/itt_notify.hpp>
 #include <map>
-#endif
-#if defined(HPX_HAVE_TRACY)
-#include <hpx/modules/tracy.hpp>
-#include <set>
 #endif
 #endif
 
@@ -108,16 +104,13 @@ namespace hpx::util {
             }
         }
 #endif
-#if defined(HPX_HAVE_TRACY)
+#endif
         for (auto const& info : counters_.get_counter_infos())
         {
             std::string real_name =
                 performance_counters::remove_counter_prefix(info.fullname_);
-            tracy::create_counter(real_name);
-            tracy_counters_.insert(info.fullname_);
+            hpx::tracing::create_counter(real_name);
         }
-#endif
-#endif
     }
 
     void query_counters::start()
@@ -199,9 +192,6 @@ namespace hpx::util {
 
         if (!ec)
         {
-#ifdef HPX_HAVE_APEX
-            external_timer::sample_value(info, val);
-#else
 #if HPX_HAVE_ITTNOTIFY != 0
             if (use_ittnotify_api)
             {
@@ -212,15 +202,9 @@ namespace hpx::util {
                 }
             }
 #endif
-#if defined(HPX_HAVE_TRACY)
-            if (tracy_counters_.find(name) != tracy_counters_.end())
-            {
-                std::string real_name =
-                    performance_counters::remove_counter_prefix(name);
-                tracy::sample_value(real_name, val);
-            }
-#endif
-#endif
+            std::string real_name =
+                performance_counters::remove_counter_prefix(name);
+            hpx::tracing::sample_counter(name, real_name, val);
 
             if (out == nullptr)
                 return;
@@ -298,9 +282,6 @@ namespace hpx::util {
 
         if (!ec)
         {
-#ifdef HPX_HAVE_APEX
-            external_timer::sample_value(info, val);
-#else
 #if HPX_HAVE_ITTNOTIFY != 0
             if (use_ittnotify_api)
             {
@@ -311,15 +292,9 @@ namespace hpx::util {
                 }
             }
 #endif
-#if defined(HPX_HAVE_TRACY)
-            if (tracy_counters_.find(info.fullname_) != tracy_counters_.end())
-            {
-                std::string real_name =
-                    performance_counters::remove_counter_prefix(info.fullname_);
-                tracy::sample_value(real_name, val);
-            }
-#endif
-#endif
+            std::string real_name =
+                performance_counters::remove_counter_prefix(info.fullname_);
+            hpx::tracing::sample_counter(info.fullname_, real_name, val);
             if (out == nullptr)
                 return;
 
