@@ -132,6 +132,20 @@ namespace hpx::tracing {
         return hpx::tracy::detail::rename_region(name);
     }
 
+    ////////////////////////////////////////////////////////////////////////////
+    // counters
+
+    void create_counter(std::string const& name) noexcept
+    {
+        hpx::tracy::create_counter(name);
+    }
+
+    void sample_counter(std::string const&, std::string const& short_name,
+        double value) noexcept
+    {
+        hpx::tracy::sample_value(short_name, value);
+    }
+
 }    // namespace hpx::tracing
 
 #elif defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0
@@ -181,5 +195,11 @@ namespace hpx::tracing {
     region::~region() = default;
 
 }    // namespace hpx::tracing
+
+#elif defined(HPX_HAVE_APEX)
+
+// APEX tracing implementations are provided in
+// libs/core/threading_base/src/external_timer.cpp to avoid a module dependency
+// cycle between tracing and threading_base.
 
 #endif
