@@ -5,12 +5,14 @@
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+#include <hpx/config.hpp>
+
+#if defined(HPX_HAVE_TRACY)
+
 #include <hpx/tracing/tracing.hpp>
 
 #include <cstddef>
 #include <string>
-
-#if defined(HPX_HAVE_TRACY)
 
 namespace hpx::tracing {
 
@@ -135,9 +137,10 @@ namespace hpx::tracing {
     ////////////////////////////////////////////////////////////////////////////
     // counters
 
-    void create_counter(std::string const& name) noexcept
+    void create_counter(
+        std::string const&, std::string const& short_name) noexcept
     {
-        hpx::tracy::create_counter(name);
+        hpx::tracy::create_counter(short_name);
     }
 
     void sample_counter(std::string const&, std::string const& short_name,
@@ -147,59 +150,5 @@ namespace hpx::tracing {
     }
 
 }    // namespace hpx::tracing
-
-#elif defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0
-
-namespace hpx::tracing {
-
-    ////////////////////////////////////////////////////////////////////////////
-    // loop_context
-
-    loop_context::loop_context() noexcept
-      : task_id("task_id")
-      , task_phase("task_phase")
-    {
-    }
-
-    loop_context::~loop_context() = default;
-
-    ////////////////////////////////////////////////////////////////////////////
-    // region
-
-    util::itt::task region::make_task(
-        loop_context& ctx, region_init_data const& data)
-    {
-        if (data.is_address_type)
-        {
-            return util::itt::task(ctx.thread_domain,
-                util::itt::string_handle("address"), data.address);
-        }
-        if (data.itt_string_handle != nullptr)
-        {
-            return util::itt::task(ctx.thread_domain,
-                util::itt::string_handle(static_cast<___itt_string_handle*>(
-                    data.itt_string_handle)));
-        }
-        return util::itt::task(
-            ctx.thread_domain, util::itt::string_handle(data.name));
-    }
-
-    region::region(loop_context& ctx, region_init_data const& data, std::size_t)
-      : cctx(ctx.stack_ctx, !data.is_stackless)
-      , task(make_task(ctx, data))
-    {
-        task.add_metadata(ctx.task_id, data.thread_ptr);
-        task.add_metadata(ctx.task_phase, data.thread_phase);
-    }
-
-    region::~region() = default;
-
-}    // namespace hpx::tracing
-
-#elif defined(HPX_HAVE_APEX)
-
-// APEX tracing implementations are provided in
-// libs/core/threading_base/src/external_timer.cpp to avoid a module dependency
-// cycle between tracing and threading_base.
 
 #endif

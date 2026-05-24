@@ -14,15 +14,6 @@
 #include <memory>
 #include <string>
 
-namespace hpx::threads {
-    struct thread_description;
-    struct thread_id;
-}    // namespace hpx::threads
-
-namespace hpx::util::external_timer {
-    struct task_wrapper;
-}    // namespace hpx::util::external_timer
-
 #include <hpx/modules/tracy.hpp>
 
 #include <hpx/config/warnings_prefix.hpp>
@@ -139,6 +130,10 @@ namespace hpx::tracing {
     ////////////////////////////////////////////////////////////////////////////
     HPX_CXX_CORE_EXPORT struct [[maybe_unused]] task_timer_data
     {
+        constexpr bool valid() const noexcept
+        {
+            return false;
+        }
     };
 
     HPX_CXX_CORE_EXPORT constexpr task_timer_data create_task_timer(
@@ -159,6 +154,15 @@ namespace hpx::tracing {
 
         constexpr void stop() noexcept {}
         constexpr void yield() noexcept {}
+
+        template <typename T, typename State>
+        constexpr void handle_post_execution(T* thrdptr, State s) noexcept
+        {
+            if (s == State::terminated || s == State::deleted)
+            {
+                thrdptr->set_timer_data({});
+            }
+        }
     };
 
     HPX_CXX_CORE_EXPORT constexpr void tracing_init(
@@ -171,7 +175,7 @@ namespace hpx::tracing {
     HPX_CXX_CORE_EXPORT constexpr void register_thread(char const*) noexcept {}
 
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT void create_counter(
-        std::string const& name) noexcept;
+        std::string const& full_name, std::string const& short_name) noexcept;
 
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT void sample_counter(
         std::string const& name, std::string const& short_name,

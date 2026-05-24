@@ -14,15 +14,6 @@
 #include <memory>
 #include <string>
 
-namespace hpx::threads {
-    struct thread_description;
-    struct thread_id;
-}    // namespace hpx::threads
-
-namespace hpx::util::external_timer {
-    struct task_wrapper;
-}    // namespace hpx::util::external_timer
-
 namespace hpx::tracing {
 
     HPX_CXX_CORE_EXPORT using enable_parent_task_handler_type = bool (*)();
@@ -123,6 +114,11 @@ namespace hpx::tracing {
         {
             return data;
         }
+
+        constexpr bool valid() const noexcept
+        {
+            return static_cast<bool>(data);
+        }
     };
 
     namespace detail {
@@ -157,6 +153,20 @@ namespace hpx::tracing {
         void stop() noexcept;
         void yield() noexcept;
 
+        template <typename T, typename State>
+        void handle_post_execution(T* thrdptr, State s) noexcept
+        {
+            if (s == State::terminated || s == State::deleted)
+            {
+                stop();
+                thrdptr->set_timer_data({});
+            }
+            else
+            {
+                yield();
+            }
+        }
+
     private:
         bool stopped_;
         task_timer_data data_;
@@ -170,7 +180,7 @@ namespace hpx::tracing {
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT void register_thread(char const* name);
 
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT void create_counter(
-        std::string const& name) noexcept;
+        std::string const& full_name, std::string const& short_name) noexcept;
 
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT void sample_counter(
         std::string const& name, std::string const& short_name,

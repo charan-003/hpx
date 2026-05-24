@@ -10,7 +10,9 @@ set(tracing_headers
     hpx/tracing/backends/ittnotify.hpp hpx/tracing/backends/tracy.hpp
     hpx/tracing/tracing.hpp
 )
-set(tracing_sources tracing.cpp)
+set(tracing_sources
+    backends/ittnotify.cpp backends/tracy.cpp
+)
 
 set(tracing_module_dependencies hpx_config)
 if(HPX_WITH_TRACY)
