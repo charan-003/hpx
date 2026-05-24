@@ -647,7 +647,7 @@ namespace hpx::threads {
 #endif
 
     public:
-        hpx::tracing::task_timer_data timer_data_;
+        HPX_NO_UNIQUE_ADDRESS hpx::tracing::task_timer_data timer_data_;
     };
 
     HPX_CXX_CORE_EXPORT HPX_FORCEINLINE constexpr thread_data*

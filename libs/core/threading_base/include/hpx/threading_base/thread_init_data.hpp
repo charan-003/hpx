@@ -150,7 +150,7 @@ namespace hpx::threads {
         threads::thread_id_type parent_id;
         std::size_t parent_phase;
 #endif
-        hpx::tracing::task_timer_data timer_data;
+        HPX_NO_UNIQUE_ADDRESS hpx::tracing::task_timer_data timer_data;
 
         thread_schedule_hint schedulehint;
         thread_priority priority;
