@@ -68,6 +68,16 @@ namespace hpx::parallel::execution::detail {
     struct then_bulk_function_result;
 }    // namespace hpx::parallel::execution::detail
 
+namespace hpx::execution::experimental {
+    template <typename Executor>
+    struct executor_scheduler;
+
+    namespace detail {
+        template <typename Executor>
+        struct executor_sender;
+    }    // namespace detail
+}    // namespace hpx::execution::experimental
+
 namespace hpx::execution {
 
     ///////////////////////////////////////////////////////////////////////////
@@ -156,7 +166,8 @@ namespace hpx::execution {
         }
 
     public:
-        parallel_policy_executor_base(parallel_policy_executor_base const& rhs)
+        parallel_policy_executor_base(
+            parallel_policy_executor_base const& rhs) noexcept
           : pool_(rhs.pool_)
           , policy_(rhs.policy_)
           , first_core_(rhs.first_core_)
@@ -169,7 +180,7 @@ namespace hpx::execution {
         // NOLINTEND(bugprone-crtp-constructor-accessibility)
 
         parallel_policy_executor_base& operator=(
-            parallel_policy_executor_base const& rhs)
+            parallel_policy_executor_base const& rhs) noexcept
         {
             if (this != &rhs)
             {
@@ -673,11 +684,15 @@ namespace hpx::execution {
 
     public:
         /// \cond NOINTERNAL
+        constexpr hpx::execution::experimental::executor_scheduler<
+            parallel_policy_executor>
+            query(hpx::execution::experimental::get_scheduler_t) const noexcept;
+
         constexpr bool operator==(
             parallel_policy_executor const& rhs) const noexcept
         {
             return base_type::policy_ == rhs.policy_ &&
-                base_type::pool_ == rhs.pool;
+                base_type::pool_ == rhs.pool_;
         }
 
         constexpr bool operator!=(
@@ -1021,6 +1036,10 @@ namespace hpx::execution {
             return *this;
         }
 
+        constexpr hpx::execution::experimental::executor_scheduler<
+            parallel_policy_executor>
+            query(hpx::execution::experimental::get_scheduler_t) const noexcept;
+
     private:
         /// \cond NOINTERNAL
         friend class hpx::serialization::access;
@@ -1192,3 +1211,19 @@ namespace hpx::execution::experimental {
     };
     /// \endcond
 }    // namespace hpx::execution::experimental
+
+// Break circular dependency: executor_scheduler.hpp includes post.hpp which
+// references parallel_executor. Include it here after the class is complete.
+#include <hpx/executors/executor_scheduler.hpp>
+
+namespace hpx::execution {
+    template <typename Policy, bool HierarchicalSpawning>
+    constexpr hpx::execution::experimental::executor_scheduler<
+        parallel_policy_executor<Policy, HierarchicalSpawning>>
+    parallel_policy_executor<Policy, HierarchicalSpawning>::query(
+        hpx::execution::experimental::get_scheduler_t) const noexcept
+    {
+        return hpx::execution::experimental::executor_scheduler<
+            parallel_policy_executor>(*this);
+    }
+}    // namespace hpx::execution
