@@ -9,6 +9,8 @@
 
 #if defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0
 
+#include <hpx/itt_notify/detail/use_ittnotify_api.hpp>
+#include <hpx/itt_notify/thread_name.hpp>
 #include <hpx/modules/itt_notify.hpp>
 #include <hpx/tracing/tracing.hpp>
 
@@ -80,7 +82,7 @@ namespace hpx::tracing {
             {
                 itt_counters_.insert(std::make_pair(full_name,
                     util::itt::counter(short_name.c_str(),
-                        hpx::get_thread_name().c_str(),
+                        hpx::detail::thread_name().c_str(),
                         __itt_metadata_double)));
             }
         }
