@@ -232,17 +232,7 @@ namespace hpx::threads::detail {
 
                                 thread_schedule_state s =
                                     thrd_stat.get_previous();
-                                if (s == thread_schedule_state::terminated ||
-                                    s == thread_schedule_state::deleted)
-                                {
-                                    profiler.stop();
-                                    // just in case, clean up the now dead pointer.
-                                    thrdptr->set_timer_data({});
-                                }
-                                else
-                                {
-                                    profiler.yield();
-                                }
+                                profiler.handle_post_execution(thrdptr, s);
                             }
 
                             detail::write_state_log(scheduler, num_thread, thrd,
