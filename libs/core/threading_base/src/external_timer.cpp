@@ -8,6 +8,8 @@
 
 #include <hpx/config.hpp>
 
+#include <string>
+
 #ifdef HPX_HAVE_APEX
 #include <hpx/assert.hpp>
 #include <hpx/modules/tracing.hpp>
