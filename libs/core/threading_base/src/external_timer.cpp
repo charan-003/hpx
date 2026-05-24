@@ -215,7 +215,7 @@ namespace hpx::tracing {
             std::string(name != nullptr ? name : ""));
     }
 
-    void create_counter(std::string const&) noexcept
+    void create_counter(std::string const&, std::string const&) noexcept
     {
         // APEX does not require explicit counter registration.
     }
