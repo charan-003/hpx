@@ -290,7 +290,7 @@ namespace hpx::parallel::detail {
     };
 
     ///////////////////////////////////////////////////////////////////////////
-    template <typename Algo, typename ExPolicy, typename IsSeq,
+    HPX_CXX_EXPORT template <typename Algo, typename ExPolicy, typename IsSeq,
         typename... Args>
     HPX_FORCEINLINE future<typename std::decay_t<Algo>::result_type>
     dispatch_async(
@@ -308,7 +308,7 @@ namespace hpx::parallel::detail {
             HPX_MOVE(policy), HPX_FORWARD(Args, args)...);
     }
 
-    template <typename Algo, typename ExPolicy, typename IsSeq,
+    HPX_CXX_EXPORT template <typename Algo, typename ExPolicy, typename IsSeq,
         typename... Args>
     HPX_FORCEINLINE typename std::decay_t<Algo>::result_type dispatch(
         id_type const& id, Algo&& algo, ExPolicy policy, IsSeq is_seq,
