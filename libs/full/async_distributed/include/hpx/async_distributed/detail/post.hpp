@@ -177,11 +177,7 @@ namespace hpx {
             data.parent_id = threads::get_self_id();
             data.parent_locality_id = get_locality_id();
 #endif
-#if defined(HPX_HAVE_THREAD_DESCRIPTION) &&                                    \
-    defined(HPX_HAVE_THREAD_PARENT_REFERENCE)
-            data.timer_data = hpx::tracing::create_task_timer(
-                data.description, data.parent_locality_id, data.parent_id);
-#endif
+            data.setup_timer_data();
             data.priority = policy.priority();
             data.stacksize = policy.stacksize();
 
@@ -208,11 +204,7 @@ namespace hpx {
             data.parent_id = threads::get_self_id();
             data.parent_locality_id = get_locality_id();
 #endif
-#if defined(HPX_HAVE_THREAD_DESCRIPTION) &&                                    \
-    defined(HPX_HAVE_THREAD_PARENT_REFERENCE)
-            data.timer_data = hpx::tracing::create_task_timer(
-                data.description, data.parent_locality_id, data.parent_id);
-#endif
+            data.setup_timer_data();
             data.priority = policy.priority();
             data.stacksize = policy.stacksize();
 
@@ -438,11 +430,7 @@ namespace hpx {
             data.parent_id = threads::get_self_id();
             data.parent_locality_id = get_locality_id();
 #endif
-#if defined(HPX_HAVE_THREAD_DESCRIPTION) &&                                    \
-    defined(HPX_HAVE_THREAD_PARENT_REFERENCE)
-            data.timer_data = hpx::tracing::create_task_timer(
-                data.description, data.parent_locality_id, data.parent_id);
-#endif
+            data.setup_timer_data();
             data.priority = policy.priority();
             data.stacksize = policy.stacksize();
 

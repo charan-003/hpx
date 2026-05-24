@@ -136,9 +136,12 @@ namespace hpx {
                 desc_ = threads::get_thread_id_data(self->get_thread_id())
                             ->set_description(name);
 
-                auto timer_data = threads::get_self_timer_data();
-                hpx::tracing::update_task_timer(timer_data, name);
-                threads::set_self_timer_data(HPX_MOVE(timer_data));
+                if (auto timer_data = threads::get_self_timer_data();
+                    timer_data.valid())
+                {
+                    hpx::tracing::update_task_timer(timer_data, name);
+                    threads::set_self_timer_data(HPX_MOVE(timer_data));
+                }
             }
         }
 
@@ -152,9 +155,12 @@ namespace hpx {
                 desc_ = threads::get_thread_id_data(self->get_thread_id())
                             ->set_description(name_c_str);
 
-                auto timer_data = threads::get_self_timer_data();
-                hpx::tracing::update_task_timer(timer_data, name_c_str);
-                threads::set_self_timer_data(HPX_MOVE(timer_data));
+                if (auto timer_data = threads::get_self_timer_data();
+                    timer_data.valid())
+                {
+                    hpx::tracing::update_task_timer(timer_data, name_c_str);
+                    threads::set_self_timer_data(HPX_MOVE(timer_data));
+                }
             }
         }
 

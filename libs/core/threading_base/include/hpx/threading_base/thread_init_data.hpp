@@ -83,13 +83,7 @@ namespace hpx::threads {
           , parent_id(HPX_MOVE(rhs.parent_id))
           , parent_phase(rhs.parent_phase)
 #endif
-#if defined(HPX_HAVE_THREAD_DESCRIPTION) &&                                    \
-    defined(HPX_HAVE_THREAD_PARENT_REFERENCE)
-          , timer_data(hpx::tracing::create_task_timer(
-                description, parent_locality_id, parent_id))
-#else
           , timer_data()
-#endif
           , schedulehint(rhs.schedulehint)
           , priority(rhs.priority)
           , stacksize(rhs.stacksize)
@@ -97,6 +91,7 @@ namespace hpx::threads {
           , run_now(rhs.run_now)
           , scheduler_base(rhs.scheduler_base)
         {
+            setup_timer_data();
         }
 
         template <typename F>
@@ -118,13 +113,7 @@ namespace hpx::threads {
           , parent_id(nullptr)
           , parent_phase(0)
 #endif
-#if defined(HPX_HAVE_THREAD_DESCRIPTION) &&                                    \
-    defined(HPX_HAVE_THREAD_PARENT_REFERENCE)
-          , timer_data(hpx::tracing::create_task_timer(
-                description, parent_locality_id, parent_id))
-#else
           , timer_data()
-#endif
           , schedulehint(os_thread)
           , priority(priority_)
           , stacksize(stacksize_)
@@ -132,6 +121,7 @@ namespace hpx::threads {
           , run_now(run_now_)
           , scheduler_base(scheduler_base_)
         {
+            setup_timer_data();
             if (initial_state == thread_schedule_state::staged)
             {
                 HPX_THROW_EXCEPTION(hpx::error::bad_parameter,
@@ -151,6 +141,15 @@ namespace hpx::threads {
         std::size_t parent_phase;
 #endif
         HPX_NO_UNIQUE_ADDRESS hpx::tracing::task_timer_data timer_data;
+
+        void setup_timer_data()
+        {
+#if defined(HPX_HAVE_THREAD_DESCRIPTION) &&                                    \
+    defined(HPX_HAVE_THREAD_PARENT_REFERENCE)
+            timer_data = hpx::tracing::create_task_timer(
+                description, parent_locality_id, parent_id);
+#endif
+        }
 
         thread_schedule_hint schedulehint;
         thread_priority priority;
