@@ -55,6 +55,7 @@ set(tests
     foreach
     foreach_executors
     foreach_prefetching
+    prefetching_iterator
     foreach_scheduler
     foreachn
     foreachn_exception
