@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <hpx/config.hpp>
 #include <hpx/collectives/all_gather.hpp>
 #include <hpx/collectives/all_reduce.hpp>
 #include <hpx/collectives/all_to_all.hpp>

@@ -58,7 +58,6 @@
 # undef exception_info
 #endif
 
-# include <asio.hpp>
 # include <hwloc.h>
 
 #if defined(HPX_HAVE_MODULE_LIKWID)

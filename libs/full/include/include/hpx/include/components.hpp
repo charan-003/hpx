@@ -8,8 +8,6 @@
 #pragma once
 
 #include <hpx/config.hpp>
-#include <hpx/include/actions.hpp>
-
 #include <hpx/modules/actions.hpp>
 #include <hpx/modules/async_colocated.hpp>
 #include <hpx/modules/components.hpp>

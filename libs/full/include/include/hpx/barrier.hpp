@@ -6,5 +6,6 @@
 
 #pragma once
 
+#include <hpx/config.hpp>
 #include <hpx/collectives/barrier.hpp>
 #include <hpx/modules/synchronization.hpp>

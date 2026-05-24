@@ -1,4 +1,4 @@
-//  Copyright (c) 2022 Gregor Daiﬂ
+//  Copyright (c) 2022 Gregor Daiss
 //  Copyright (c) 2024-2025 Hartmut Kaiser
 //
 //  SPDX-License-Identifier: BSL-1.0

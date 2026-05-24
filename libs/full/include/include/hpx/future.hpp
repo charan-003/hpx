@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <hpx/config.hpp>
 #include <hpx/modules/async_base.hpp>
 #include <hpx/modules/async_colocated.hpp>
 #include <hpx/modules/async_combinators.hpp>
