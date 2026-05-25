@@ -41,7 +41,7 @@
 namespace hpx::util::detail { namespace {
 
     /// A pool of io_service objects.
-    class io_service_pool : public io_service_pool_base
+    class io_service_pool final : public io_service_pool_base
     {
     public:
         io_service_pool(std::size_t pool_size,
@@ -166,7 +166,7 @@ namespace hpx::util::detail { namespace {
       , waiting_(false)
     {
         LPROGRESS_ << pool_name;
-        init(pool_size);
+        io_service_pool::init(pool_size);
     }
 
     void io_service_pool::init(std::size_t const pool_size)

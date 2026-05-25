@@ -35,7 +35,7 @@
 
 namespace hpx::util::detail { namespace {
 
-    struct batch_environment : batch_environment_base
+    struct batch_environment final : batch_environment_base
     {
         explicit batch_environment(std::vector<std::string>& nodelist,
             bool have_mpi = false, bool debug = false, bool enable = true);
