@@ -66,8 +66,10 @@ namespace hpx::parallel::util::detail {
                 // try to calculate chunk-size and maximum number of chunks
                 chunk_size = (count + cores_times_4 - 1) / cores_times_4;
 
+                max_chunks = (count + chunk_size - 1) / chunk_size;
+
                 // we should not consider more chunks than we have elements
-                max_chunks = (std::min) (cores_times_4, count);    // -V112
+                max_chunks = (std::min) (max_chunks, count);    // -V112
 
                 // we should not make chunks smaller than what's determined by
                 // the max chunk size
@@ -92,6 +94,8 @@ namespace hpx::parallel::util::detail {
         {
             // max_chunks != 0
             chunk_size = (count + max_chunks - 1) / max_chunks;
+
+            max_chunks = (count + chunk_size - 1) / chunk_size;
         }
         else
         {
@@ -105,6 +109,10 @@ namespace hpx::parallel::util::detail {
             if (calculated_max_chunks > max_chunks)
             {
                 chunk_size = (count + max_chunks - 1) / max_chunks;
+            }
+            else if (calculated_max_chunks < max_chunks)
+            {
+                max_chunks = calculated_max_chunks;
             }
         }
     }
