@@ -8,8 +8,10 @@
 #include <hpx/execution.hpp>
 #include <hpx/init.hpp>
 #include <hpx/modules/testing.hpp>
+#include <hpx/program_options.hpp>
 
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <numeric>
 #include <string>
