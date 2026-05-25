@@ -15,7 +15,7 @@
 ///
 /// The HPX tracing API provides a unified, zero-overhead interface for
 /// annotating HPX applications. Depending on the build configuration
-/// (`HPX_WITH_TRACY`, `HPX_WITH_ITTNOTIFY`, `HPX_WITH_APEX`), the
+/// (`HPX_HAVE_TRACY`, `HPX_HAVE_ITTNOTIFY`, `HPX_HAVE_APEX`), the
 /// corresponding backend is selected at compile-time. If no backend is
 /// selected, all tracing calls are optimized away as `constexpr` no-ops.
 ///
