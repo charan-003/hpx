@@ -577,11 +577,11 @@ namespace hpx::threads {
 
         hpx::tracing::task_timer_data get_timer_data() const noexcept
         {
-            return timer_data_;
+            return this->timer_data_;
         }
         void set_timer_data(hpx::tracing::task_timer_data data) noexcept
         {
-            timer_data_ = HPX_MOVE(data);
+            this->timer_data_ = HPX_MOVE(data);
         }
 
         // Construct a new \a thread
@@ -610,6 +610,8 @@ namespace hpx::threads {
 
         thread_stacksize stacksize_enum_;
         std::int32_t stacksize_;
+
+        hpx::tracing::task_timer_data timer_data_;
 
         mutable std::atomic<thread_state> current_state_;
 
@@ -647,7 +649,6 @@ namespace hpx::threads {
 #endif
 
     public:
-        HPX_NO_UNIQUE_ADDRESS hpx::tracing::task_timer_data timer_data_;
     };
 
     HPX_CXX_CORE_EXPORT HPX_FORCEINLINE constexpr thread_data*
