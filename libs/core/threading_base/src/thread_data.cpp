@@ -519,7 +519,7 @@ namespace hpx::threads {
         return {};
     }
 
-    void set_self_timer_data(hpx::tracing::task_timer_data&& data)
+    void set_self_timer_data(hpx::tracing::task_timer_data data)
     {
         if (thread_data* thrd_data = get_self_id_data();
             HPX_LIKELY(nullptr != thrd_data))

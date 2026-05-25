@@ -62,7 +62,7 @@ namespace hpx::threads {
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT tracing::task_timer_data
     get_self_timer_data();
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT void set_self_timer_data(
-        tracing::task_timer_data&& data);
+        tracing::task_timer_data data);
     /// \endcond
 
     ////////////////////////////////////////////////////////////////////////////
