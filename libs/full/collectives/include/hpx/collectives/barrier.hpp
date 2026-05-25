@@ -93,15 +93,15 @@ namespace hpx { namespace distributed {
 #include <hpx/config.hpp>
 
 #if !defined(HPX_COMPUTE_DEVICE_CODE)
-
 #include <hpx/assert.hpp>
-#include <hpx/collectives/argument_types.hpp>
-#include <hpx/collectives/create_communicator.hpp>
 #include <hpx/modules/async_base.hpp>
 #include <hpx/modules/async_distributed.hpp>
 #include <hpx/modules/components_base.hpp>
 #include <hpx/modules/errors.hpp>
 #include <hpx/modules/futures.hpp>
+
+#include <hpx/collectives/argument_types.hpp>
+#include <hpx/collectives/create_communicator.hpp>
 
 #include <atomic>
 #include <cstddef>
@@ -117,7 +117,7 @@ namespace hpx::traits {
 
     namespace communication {
 
-        struct barrier_tag;
+        HPX_CXX_EXPORT struct barrier_tag;
 
         template <>
         struct communicator_data<barrier_tag>
@@ -147,7 +147,7 @@ namespace hpx::traits {
 namespace hpx::collectives {
 
     // Flat barrier: synchronize all sites associated with a single communicator.
-    inline hpx::future<void> barrier(communicator fid,
+    HPX_CXX_EXPORT inline hpx::future<void> barrier(communicator fid,
         this_site_arg this_site = this_site_arg(),
         generation_arg const generation = generation_arg())
     {
@@ -191,14 +191,14 @@ namespace hpx::collectives {
         return fid.then(hpx::launch::sync, HPX_MOVE(barrier_data));
     }
 
-    inline hpx::future<void> barrier(communicator fid,
+    HPX_CXX_EXPORT inline hpx::future<void> barrier(communicator fid,
         generation_arg const generation,
         this_site_arg const this_site = this_site_arg())
     {
         return barrier(HPX_MOVE(fid), this_site, generation);
     }
 
-    inline hpx::future<void> barrier(char const* basename,
+    HPX_CXX_EXPORT inline hpx::future<void> barrier(char const* basename,
         num_sites_arg const num_sites = num_sites_arg(),
         this_site_arg const this_site = this_site_arg(),
         generation_arg const generation = generation_arg(),
@@ -209,22 +209,22 @@ namespace hpx::collectives {
             this_site);
     }
 
-    inline void barrier(hpx::launch::sync_policy, communicator fid,
-        this_site_arg const this_site = this_site_arg(),
+    HPX_CXX_EXPORT inline void barrier(hpx::launch::sync_policy,
+        communicator fid, this_site_arg const this_site = this_site_arg(),
         generation_arg const generation = generation_arg())
     {
         barrier(HPX_MOVE(fid), this_site, generation).get();
     }
 
-    inline void barrier(hpx::launch::sync_policy, communicator fid,
-        generation_arg const generation,
+    HPX_CXX_EXPORT inline void barrier(hpx::launch::sync_policy,
+        communicator fid, generation_arg const generation,
         this_site_arg const this_site = this_site_arg())
     {
         barrier(HPX_MOVE(fid), this_site, generation).get();
     }
 
-    inline void barrier(hpx::launch::sync_policy, char const* basename,
-        num_sites_arg const num_sites = num_sites_arg(),
+    HPX_CXX_EXPORT inline void barrier(hpx::launch::sync_policy,
+        char const* basename, num_sites_arg const num_sites = num_sites_arg(),
         this_site_arg const this_site = this_site_arg(),
         generation_arg const generation = generation_arg(),
         root_site_arg const root_site = root_site_arg())
@@ -236,12 +236,12 @@ namespace hpx::collectives {
     }
 
     ////////////////////////////////////////////////////////////////////////////
-    // Hierarchical barrier: reduce-phase + broadcast-phase no-op gates
-    // Uses the 2k-1 / 2k generation mapping: user generation k maps to
-    // internal generation 2k-1 (reduce phase) and 2k (broadcast phase). This
-    // allows the same sub-communicators to be used for both phases without
-    // generation collisions.
-    inline hpx::future<void> barrier(
+    // Hierarchical barrier: reduce-phase + broadcast-phase no-op gates Uses the
+    // 2k-1 / 2k generation mapping: user generation k maps to internal
+    // generation 2k-1 (reduce phase) and 2k (broadcast phase). This allows the
+    // same sub-communicators to be used for both phases without generation
+    // collisions.
+    HPX_CXX_EXPORT inline hpx::future<void> barrier(
         hierarchical_communicator const& communicators,
         this_site_arg this_site = this_site_arg(),
         generation_arg const generation = generation_arg(),
@@ -282,7 +282,6 @@ namespace hpx::collectives {
 
         // Broadcast phase: walk sub-communicators from shallowest to deepest.
         // Returning the final future lets the caller chain on completion.
-
         for (std::size_t i = 0; i + 1 < communicators.size(); ++i)
         {
             barrier(communicators.get(i), communicators.site(i), broadcast_gen)
@@ -293,7 +292,7 @@ namespace hpx::collectives {
             communicators.back(), communicators.last_site(), broadcast_gen);
     }
 
-    inline void barrier(hpx::launch::sync_policy,
+    HPX_CXX_EXPORT inline void barrier(hpx::launch::sync_policy,
         hierarchical_communicator const& communicators,
         this_site_arg const this_site = this_site_arg(),
         generation_arg const generation = generation_arg(),
@@ -306,7 +305,7 @@ namespace hpx::collectives {
 ////////////////////////////////////////////////////////////////////////////////
 namespace hpx::distributed {
 
-    class HPX_EXPORT barrier
+    HPX_CXX_EXPORT class HPX_EXPORT barrier
     {
     public:
         explicit barrier(std::string const& base_name);

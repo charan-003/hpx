@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include <hpx/collectives/spmd_block.hpp>
+#include <hpx/modules/collectives.hpp>
 #include <hpx/modules/runtime_distributed.hpp>
 #include <hpx/modules/type_support.hpp>
 

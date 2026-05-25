@@ -9,11 +9,8 @@
 
 #if defined(HPX_HAVE_DISTRIBUTED_RUNTIME)
 
-#include <hpx/collectives/barrier.hpp>
-#include <hpx/collectives/channel_communicator.hpp>
-#include <hpx/collectives/create_communicator.hpp>
-#include <hpx/collectives/latch.hpp>
 #include <hpx/modules/agas.hpp>
+#include <hpx/modules/collectives.hpp>
 #include <hpx/modules/components_base.hpp>
 #include <hpx/modules/datastructures.hpp>
 #include <hpx/modules/errors.hpp>

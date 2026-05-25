@@ -130,7 +130,8 @@ add_hpx_module(
   SOURCES ${include_sources}
   HEADERS ${include_headers}
   DEPENDENCIES hpx_core
-  MODULE_DEPENDENCIES hpx_command_line_handling hpx_compute hpx_naming_base
-                      hpx_parcelset_base ${include_optional_module_dependencies}
+  MODULE_DEPENDENCIES
+    hpx_command_line_handling hpx_collectives hpx_compute hpx_naming_base
+    hpx_parcelset_base ${include_optional_module_dependencies}
   CMAKE_SUBDIRS tests
 )

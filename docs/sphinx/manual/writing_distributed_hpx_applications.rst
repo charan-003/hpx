@@ -1085,7 +1085,7 @@ variables is prohibited, this parallel section is created via the RAII idiom.
 To define a parallel section, simply write an action taking a ``spmd_block``
 variable as a first parameter::
 
-    #include <hpx/collectives/spmd_block.hpp>
+    #include <hpx/modules/collectives.hpp>
 
     void bulk_function(hpx::lcos::spmd_block block /* , arg0, arg1, ... */)
     {
@@ -1109,7 +1109,7 @@ The ``spmd_block`` class contains the following methods:
 Here is a sample code summarizing the features offered by the ``spmd_block``
 class::
 
-    #include <hpx/collectives/spmd_block.hpp>
+    #include <hpx/modules/collectives.hpp>
 
     void bulk_function(hpx::lcos::spmd_block block /* , arg0, arg1, ... */)
     {
@@ -1448,7 +1448,7 @@ view. We illustrate below how a single constructor call can perform those two
 operations::
 
     #include <hpx/components/containers/coarray/coarray.hpp>
-    #include <hpx/collectives/spmd_block.hpp>
+    #include <hpx/modules/collectives.hpp>
 
     // The following code generates all necessary boiler plate to enable the
     // co-creation of 'coarray'
@@ -1516,7 +1516,7 @@ is possible.
 Here is an example of using local subscripts::
 
     #include <hpx/components/containers/coarray/coarray.hpp>
-    #include <hpx/collectives/spmd_block.hpp>
+    #include <hpx/modules/collectives.hpp>
 
     // The following code generates all necessary boiler plate to enable the
     // co-creation of 'coarray'

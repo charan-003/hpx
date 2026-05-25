@@ -1,4 +1,4 @@
-//  Copyright (c) 2019-2025 Hartmut Kaiser
+//  Copyright (c) 2019-2026 Hartmut Kaiser
 //
 //  SPDX-License-Identifier: BSL-1.0
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -136,8 +136,8 @@ namespace hpx { namespace collectives {
     ///             directly returns the result.
     ///
     template <typename T>
-    std::vector<T> all_to_all(hpx::launch::sync_policy, char const* basename,
-        std::vector<T>&& local_result,
+    std::vector<T> all_to_all(hpx::launch::sync_policy policy,
+        char const* basename, std::vector<T>&& local_result,
         num_sites_arg num_sites = num_sites_arg(),
         this_site_arg this_site = this_site_arg(),
         generation_arg generation = generation_arg(),
@@ -168,8 +168,8 @@ namespace hpx { namespace collectives {
     ///             directly returns the result.
     ///
     template <typename T>
-    std::vector<T> all_to_all(hpx::launch::sync_policy, communicator fid,
-        std::vector<T>&& local_result,
+    std::vector<T> all_to_all(hpx::launch::sync_policy policy,
+        communicator fid, std::vector<T>&& local_result,
         this_site_arg this_site = this_site_arg(),
         generation_arg generation = generation_arg());
 
@@ -198,9 +198,9 @@ namespace hpx { namespace collectives {
     ///             directly returns the result.
     ///
     template <typename T>
-    std::vector<T> all_to_all(hpx::launch::sync_policy, communicator fid,
-        std::vector<T>&& local_result, generation_arg generation,
-        this_site_arg this_site = this_site_arg());
+    std::vector<T> all_to_all(hpx::launch::sync_policy policy,
+        communicator fid, std::vector<T>&& local_result,
+        generation_arg generation, this_site_arg this_site = this_site_arg());
 }}    // namespace hpx::collectives
 
 // clang-format on
@@ -209,15 +209,15 @@ namespace hpx { namespace collectives {
 #include <hpx/config.hpp>
 
 #if !defined(HPX_COMPUTE_DEVICE_CODE)
-
-#include <hpx/collectives/argument_types.hpp>
-#include <hpx/collectives/create_communicator.hpp>
 #include <hpx/modules/async_base.hpp>
 #include <hpx/modules/async_distributed.hpp>
 #include <hpx/modules/components_base.hpp>
 #include <hpx/modules/errors.hpp>
 #include <hpx/modules/futures.hpp>
 #include <hpx/modules/type_support.hpp>
+
+#include <hpx/collectives/argument_types.hpp>
+#include <hpx/collectives/create_communicator.hpp>
 
 #include <cstddef>
 #include <type_traits>
@@ -228,7 +228,7 @@ namespace hpx::traits {
 
     namespace communication {
 
-        struct all_to_all_tag;
+        HPX_CXX_EXPORT struct all_to_all_tag;
 
         template <>
         struct communicator_data<all_to_all_tag>
@@ -283,7 +283,7 @@ namespace hpx::collectives {
 
     ///////////////////////////////////////////////////////////////////////////
     // all_to_all
-    template <typename T>
+    HPX_CXX_EXPORT template <typename T>
     hpx::future<std::vector<T>> all_to_all(communicator fid,
         std::vector<T>&& local_result,
         this_site_arg this_site = this_site_arg(),
@@ -340,7 +340,7 @@ namespace hpx::collectives {
         return fid.then(hpx::launch::sync, HPX_MOVE(all_to_all_data));
     }
 
-    template <typename T>
+    HPX_CXX_EXPORT template <typename T>
     hpx::future<std::vector<T>> all_to_all(communicator fid,
         std::vector<T>&& local_result, generation_arg const generation,
         this_site_arg const this_site = this_site_arg())
@@ -349,7 +349,7 @@ namespace hpx::collectives {
             HPX_MOVE(fid), HPX_MOVE(local_result), this_site, generation);
     }
 
-    template <typename T>
+    HPX_CXX_EXPORT template <typename T>
     hpx::future<std::vector<T>> all_to_all(char const* basename,
         std::vector<T>&& local_result,
         num_sites_arg const num_sites = num_sites_arg(),
@@ -363,7 +363,7 @@ namespace hpx::collectives {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    template <typename T>
+    HPX_CXX_EXPORT template <typename T>
     std::vector<T> all_to_all(hpx::launch::sync_policy, communicator fid,
         std::vector<T>&& local_result,
         this_site_arg const this_site = this_site_arg(),
@@ -374,7 +374,7 @@ namespace hpx::collectives {
             .get();
     }
 
-    template <typename T>
+    HPX_CXX_EXPORT template <typename T>
     std::vector<T> all_to_all(hpx::launch::sync_policy, communicator fid,
         std::vector<T>&& local_result, generation_arg const generation,
         this_site_arg const this_site = this_site_arg())
@@ -384,7 +384,7 @@ namespace hpx::collectives {
             .get();
     }
 
-    template <typename T>
+    HPX_CXX_EXPORT template <typename T>
     std::vector<T> all_to_all(hpx::launch::sync_policy, char const* basename,
         std::vector<T>&& local_result,
         num_sites_arg const num_sites = num_sites_arg(),

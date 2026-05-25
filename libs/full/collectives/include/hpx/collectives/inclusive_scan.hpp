@@ -1,4 +1,4 @@
-//  Copyright (c) 2019-2025 Hartmut Kaiser
+//  Copyright (c) 2019-2026 Hartmut Kaiser
 //
 //  SPDX-License-Identifier: BSL-1.0
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -219,9 +219,6 @@ namespace hpx { namespace collectives {
 #include <hpx/config.hpp>
 
 #if !defined(HPX_COMPUTE_DEVICE_CODE)
-
-#include <hpx/collectives/argument_types.hpp>
-#include <hpx/collectives/create_communicator.hpp>
 #include <hpx/modules/algorithms.hpp>
 #include <hpx/modules/async_base.hpp>
 #include <hpx/modules/async_distributed.hpp>
@@ -229,6 +226,9 @@ namespace hpx { namespace collectives {
 #include <hpx/modules/futures.hpp>
 #include <hpx/modules/tag_invoke.hpp>
 #include <hpx/modules/type_support.hpp>
+
+#include <hpx/collectives/argument_types.hpp>
+#include <hpx/collectives/create_communicator.hpp>
 
 #include <cstddef>
 #include <type_traits>
@@ -259,7 +259,7 @@ namespace hpx::traits {
 
     namespace communication {
 
-        struct inclusive_scan_tag;
+        HPX_CXX_EXPORT struct inclusive_scan_tag;
 
         template <>
         struct communicator_data<inclusive_scan_tag>
@@ -327,7 +327,7 @@ namespace hpx::collectives {
 
     ////////////////////////////////////////////////////////////////////////////
     // inclusive_scan plain values
-    template <typename T, typename F>
+    HPX_CXX_EXPORT template <typename T, typename F>
     hpx::future<std::decay_t<T>> inclusive_scan(communicator fid,
         T&& local_result, F&& op, this_site_arg this_site = this_site_arg(),
         generation_arg const generation = generation_arg())
@@ -387,7 +387,7 @@ namespace hpx::collectives {
         return fid.then(hpx::launch::sync, HPX_MOVE(inclusive_scan_data));
     }
 
-    template <typename T, typename F>
+    HPX_CXX_EXPORT template <typename T, typename F>
     hpx::future<std::decay_t<T>> inclusive_scan(communicator fid,
         T&& local_result, F&& op, generation_arg const generation,
         this_site_arg const this_site = this_site_arg())
@@ -396,7 +396,7 @@ namespace hpx::collectives {
             HPX_FORWARD(F, op), this_site, generation);
     }
 
-    template <typename T, typename F>
+    HPX_CXX_EXPORT template <typename T, typename F>
     hpx::future<std::decay_t<T>> inclusive_scan(char const* basename,
         T&& local_result, F&& op,
         num_sites_arg const num_sites = num_sites_arg(),
@@ -410,7 +410,7 @@ namespace hpx::collectives {
     }
 
     ////////////////////////////////////////////////////////////////////////////
-    template <typename T, typename F>
+    HPX_CXX_EXPORT template <typename T, typename F>
     decltype(auto) inclusive_scan(hpx::launch::sync_policy, communicator fid,
         T&& local_result, F&& op,
         this_site_arg const this_site = this_site_arg(),
@@ -421,7 +421,7 @@ namespace hpx::collectives {
             .get();
     }
 
-    template <typename T, typename F>
+    HPX_CXX_EXPORT template <typename T, typename F>
     decltype(auto) inclusive_scan(hpx::launch::sync_policy, communicator fid,
         T&& local_result, F&& op, generation_arg const generation,
         this_site_arg const this_site = this_site_arg())
@@ -431,7 +431,7 @@ namespace hpx::collectives {
             .get();
     }
 
-    template <typename T, typename F>
+    HPX_CXX_EXPORT template <typename T, typename F>
     decltype(auto) inclusive_scan(hpx::launch::sync_policy,
         char const* basename, T&& local_result, F&& op,
         num_sites_arg const num_sites = num_sites_arg(),
