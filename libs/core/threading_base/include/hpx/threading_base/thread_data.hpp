@@ -611,8 +611,6 @@ namespace hpx::threads {
         thread_stacksize stacksize_enum_;
         std::int32_t stacksize_;
 
-        hpx::tracing::task_timer_data timer_data_;
-
         mutable std::atomic<thread_state> current_state_;
 
         // Singly linked list (heap-allocated)
@@ -647,8 +645,7 @@ namespace hpx::threads {
         util::backtrace const* backtrace_ = nullptr;
 #endif
 #endif
-
-    public:
+        HPX_NO_UNIQUE_ADDRESS hpx::tracing::task_timer_data timer_data_;
     };
 
     HPX_CXX_CORE_EXPORT HPX_FORCEINLINE constexpr thread_data*
