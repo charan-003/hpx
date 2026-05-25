@@ -177,7 +177,7 @@ namespace hpx {
             data.parent_id = threads::get_self_id();
             data.parent_locality_id = get_locality_id();
 #endif
-            data.setup_timer_data();
+            data.timer_data = threads::thread_init_data::setup_timer_data(data);
             data.priority = policy.priority();
             data.stacksize = policy.stacksize();
 
@@ -204,7 +204,7 @@ namespace hpx {
             data.parent_id = threads::get_self_id();
             data.parent_locality_id = get_locality_id();
 #endif
-            data.setup_timer_data();
+            data.timer_data = threads::thread_init_data::setup_timer_data(data);
             data.priority = policy.priority();
             data.stacksize = policy.stacksize();
 
@@ -430,7 +430,7 @@ namespace hpx {
             data.parent_id = threads::get_self_id();
             data.parent_locality_id = get_locality_id();
 #endif
-            data.setup_timer_data();
+            data.timer_data = threads::thread_init_data::setup_timer_data(data);
             data.priority = policy.priority();
             data.stacksize = policy.stacksize();
 

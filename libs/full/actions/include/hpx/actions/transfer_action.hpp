@@ -181,7 +181,7 @@ namespace hpx::actions {
         data.parent_id = this->parent_id_;
         data.parent_locality_id = this->parent_locality_;
 #endif
-        data.setup_timer_data();
+        data.timer_data = threads::thread_init_data::setup_timer_data(data);
         data.priority = this->priority_;
         data.stacksize = this->stacksize_;
 
