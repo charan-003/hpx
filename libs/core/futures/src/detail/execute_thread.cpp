@@ -139,8 +139,8 @@ namespace hpx::threads::detail {
 
                 thrd_stat = handle_execute_thread(thrd.noref());
 
-                thread_schedule_state s = thrd_stat.get_previous();
-                profiler.handle_post_execution(thrdptr, s);
+                profiler.handle_post_execution(
+                    thrdptr, thrd_stat.get_previous());
             }
             else
             {

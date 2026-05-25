@@ -230,9 +230,8 @@ namespace hpx::threads::detail {
 
                                 thrd_stat = (*thrdptr)(context_storage);
 
-                                thread_schedule_state s =
-                                    thrd_stat.get_previous();
-                                profiler.handle_post_execution(thrdptr, s);
+                                profiler.handle_post_execution(
+                                    thrdptr, thrd_stat.get_previous());
                             }
 
                             detail::write_state_log(scheduler, num_thread, thrd,
