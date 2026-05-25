@@ -99,7 +99,7 @@ namespace hpx::tracing {
     ////////////////////////////////////////////////////////////////////////////
     HPX_CXX_CORE_EXPORT struct [[maybe_unused]] task_timer_data
     {
-        constexpr bool valid() const noexcept
+        constexpr static bool valid() noexcept
         {
             return false;
         }
