@@ -12,6 +12,7 @@
 #include <hpx/modules/async_combinators.hpp>
 #include <hpx/modules/async_distributed.hpp>
 #include <hpx/modules/async_local.hpp>
+#include <hpx/modules/errors.hpp>
 #include <hpx/modules/execution.hpp>
 #include <hpx/modules/futures.hpp>
 #include <hpx/modules/lcos_local.hpp>

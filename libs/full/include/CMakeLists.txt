@@ -131,7 +131,12 @@ add_hpx_module(
   HEADERS ${include_headers}
   DEPENDENCIES hpx_core
   MODULE_DEPENDENCIES
-    hpx_command_line_handling hpx_collectives hpx_compute hpx_naming_base
-    hpx_parcelset_base ${include_optional_module_dependencies}
+    hpx_command_line_handling
+    hpx_collectives
+    hpx_compute
+    hpx_init_runtime
+    hpx_naming_base
+    hpx_parcelset_base
+    ${include_optional_module_dependencies}
   CMAKE_SUBDIRS tests
 )

@@ -10,6 +10,7 @@
 #include <hpx/config.hpp>
 #include <hpx/include/resource_partitioner.hpp>
 #include <hpx/include/threadmanager.hpp>
+#include <hpx/modules/errors.hpp>
 #include <hpx/modules/runtime_local.hpp>
 
 #include <hpx/include/actions.hpp>

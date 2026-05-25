@@ -29,7 +29,7 @@
 
 #include <hpx/config/warnings_prefix.hpp>
 
-namespace hpx { namespace detail {
+namespace hpx::detail {
 
     static void garbage_collect_non_blocking()
     {
@@ -255,6 +255,6 @@ namespace hpx { namespace detail {
         hpx::distributed::barrier::get_global_barrier().detach();
 #endif
     }
-}}    // namespace hpx::detail
+}    // namespace hpx::detail
 
 #endif
