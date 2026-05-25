@@ -83,7 +83,7 @@ namespace hpx::threads {
           , parent_id(HPX_MOVE(rhs.parent_id))
           , parent_phase(rhs.parent_phase)
 #endif
-          , timer_data()
+          , timer_data(HPX_MOVE(rhs.timer_data))
           , schedulehint(rhs.schedulehint)
           , priority(rhs.priority)
           , stacksize(rhs.stacksize)
@@ -91,7 +91,6 @@ namespace hpx::threads {
           , run_now(rhs.run_now)
           , scheduler_base(rhs.scheduler_base)
         {
-            setup_timer_data();
         }
 
         template <typename F>
@@ -113,7 +112,7 @@ namespace hpx::threads {
           , parent_id(nullptr)
           , parent_phase(0)
 #endif
-          , timer_data()
+          , timer_data(setup_timer_data(desc, 0, threads::thread_id_type{}))
           , schedulehint(os_thread)
           , priority(priority_)
           , stacksize(stacksize_)
@@ -121,7 +120,6 @@ namespace hpx::threads {
           , run_now(run_now_)
           , scheduler_base(scheduler_base_)
         {
-            setup_timer_data();
             if (initial_state == thread_schedule_state::staged)
             {
                 HPX_THROW_EXCEPTION(hpx::error::bad_parameter,
@@ -142,12 +140,29 @@ namespace hpx::threads {
 #endif
         HPX_NO_UNIQUE_ADDRESS hpx::tracing::task_timer_data timer_data;
 
-        void setup_timer_data()
+        static hpx::tracing::task_timer_data setup_timer_data(
+            [[maybe_unused]] threads::thread_description const& desc,
+            [[maybe_unused]] std::uint32_t parent_locality_id,
+            [[maybe_unused]] threads::thread_id_type const& parent_id)
         {
 #if defined(HPX_HAVE_THREAD_DESCRIPTION) &&                                    \
     defined(HPX_HAVE_THREAD_PARENT_REFERENCE)
-            timer_data = hpx::tracing::create_task_timer(
-                description, parent_locality_id, parent_id);
+            return hpx::tracing::create_task_timer(
+                desc, parent_locality_id, parent_id);
+#else
+            return hpx::tracing::task_timer_data{};
+#endif
+        }
+
+        static hpx::tracing::task_timer_data setup_timer_data(
+            [[maybe_unused]] thread_init_data const& data)
+        {
+#if defined(HPX_HAVE_THREAD_DESCRIPTION) &&                                    \
+    defined(HPX_HAVE_THREAD_PARENT_REFERENCE)
+            return hpx::tracing::create_task_timer(
+                data.description, data.parent_locality_id, data.parent_id);
+#else
+            return hpx::tracing::task_timer_data{};
 #endif
         }
 
