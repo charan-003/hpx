@@ -68,7 +68,7 @@ namespace hpx::threads {
             parent_id = HPX_MOVE(rhs.parent_id);
             parent_phase = rhs.parent_phase;
 #endif
-            timer_data = rhs.timer_data;
+            timer_data = HPX_MOVE(rhs.timer_data);
             return *this;
         }
 
