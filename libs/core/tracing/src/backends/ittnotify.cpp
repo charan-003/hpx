@@ -17,17 +17,15 @@
 #include <cstddef>
 #include <map>
 #include <mutex>
-#include <shared_mutex>
 #include <string>
-#include <unordered_map>
 #include <utility>
 
 namespace hpx::tracing {
 
     ////////////////////////////////////////////////////////////////////////////
     // itt_counters map for caching counter metadata
-    static std::unordered_map<std::string, util::itt::counter> itt_counters_;
-    static std::shared_mutex itt_counters_mtx_;
+    static std::map<std::string, util::itt::counter> itt_counters_;
+    static std::mutex itt_counters_mtx_;
 
     ////////////////////////////////////////////////////////////////////////////
     // loop_context
@@ -79,7 +77,7 @@ namespace hpx::tracing {
     {
         if (use_ittnotify_api)
         {
-            std::unique_lock<std::shared_mutex> l(itt_counters_mtx_);
+            std::lock_guard<std::mutex> l(itt_counters_mtx_);
             // check if the counter name already exists
             if (itt_counters_.find(full_name) == itt_counters_.end())
             {
@@ -96,7 +94,7 @@ namespace hpx::tracing {
     {
         if (use_ittnotify_api)
         {
-            std::shared_lock<std::shared_mutex> l(itt_counters_mtx_);
+            std::lock_guard<std::mutex> l(itt_counters_mtx_);
             auto it = itt_counters_.find(full_name);
             if (it != itt_counters_.end())
             {
