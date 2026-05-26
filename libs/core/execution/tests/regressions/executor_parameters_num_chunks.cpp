@@ -73,8 +73,9 @@ void test_collect_execution_parameters_num_chunks_async()
     auto policy =
         hpx::execution::par(hpx::execution::task).with(std::ref(params));
 
-    hpx::for_each(
-        policy, data.begin(), data.end(), [](std::uint64_t& v) { v += 1; });
+    hpx::for_each(policy, data.begin(), data.end(), [](std::uint64_t& v) {
+        v += 1;
+    }).get();
 
     HPX_TEST_LT(std::size_t(0), params.count_);
     HPX_TEST_LT(std::size_t(0), params.num_chunks_);
