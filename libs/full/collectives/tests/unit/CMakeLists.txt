@@ -19,6 +19,7 @@ set(tests
     channel_communicator
     fold
     global_spmd_block
+    hierarchical_helpers
     reduce_direct
     remote_latch
 )

@@ -23,6 +23,7 @@ set(collectives_headers
     hpx/collectives/create_communicator.hpp
     hpx/collectives/detail/channel_communicator.hpp
     hpx/collectives/detail/communicator.hpp
+    hpx/collectives/detail/hierarchical_helpers.hpp
     hpx/collectives/detail/latch.hpp
     hpx/collectives/exclusive_scan.hpp
     hpx/collectives/fold.hpp
