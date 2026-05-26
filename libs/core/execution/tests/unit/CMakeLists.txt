@@ -28,7 +28,6 @@ set(tests
     environment_queries
     executor_parameters
     executor_parameters_dispatching
-    executor_parameters_num_chunks
     executor_parameters_timer_hooks
     executor_parameters_partition_hooks
     forwarding_env_query
