@@ -89,7 +89,7 @@ namespace hpx::actions {
             return func_ptr(HPX_FORWARD(Ts, vs)...);
         }
 
-        /// Automatic invocation count registration — eliminates the need
+        /// Automatic invocation count registration -- eliminates the need
         /// for HPX_REGISTER_ACTION for reflection-based plain actions.
         static detail::register_action_invocation_count<reflect_action<F>>
             invocation_count_registrar_;
