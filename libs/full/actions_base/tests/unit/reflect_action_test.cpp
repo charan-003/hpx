@@ -89,5 +89,15 @@ int main()
         HPX_TEST_EQ(compute_action::func_ptr(3.0, 4.0), 7);
     }
 
+    // Test: auto-registration static member exists (compile-time check)
+    // This verifies that reflect_action has the invocation_count_registrar_
+    // static member which enables automatic registration without HPX_REGISTER_ACTION
+    {
+        HPX_ACTION(app::compute, compute_action);
+        using registrar_type =
+            decltype(compute_action::invocation_count_registrar_);
+        static_assert(!std::is_void_v<registrar_type>,
+            "invocation_count_registrar_ must exist");
+    }
     return hpx::util::report_errors();
 }
