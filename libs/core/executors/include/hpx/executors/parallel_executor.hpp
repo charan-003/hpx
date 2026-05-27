@@ -1,5 +1,5 @@
 //  Copyright (c) 2019-2020 ETH Zurich
-//  Copyright (c) 2007-2025 Hartmut Kaiser
+//  Copyright (c) 2007-2026 Hartmut Kaiser
 //  Copyright (c) 2019 Agustin Berge
 //
 //  SPDX-License-Identifier: BSL-1.0
@@ -10,9 +10,6 @@
 
 #include <hpx/config.hpp>
 #include <hpx/assert.hpp>
-#include <hpx/executors/detail/hierarchical_spawning.hpp>
-#include <hpx/executors/detail/index_queue_spawning.hpp>
-#include <hpx/executors/execution_policy_mappings.hpp>
 #include <hpx/modules/allocator_support.hpp>
 #include <hpx/modules/async_base.hpp>
 #include <hpx/modules/concepts.hpp>
@@ -26,13 +23,16 @@
 #include <hpx/modules/timing.hpp>
 #include <hpx/modules/topology.hpp>
 
+#include <hpx/executors/detail/hierarchical_spawning.hpp>
+#include <hpx/executors/detail/index_queue_spawning.hpp>
+#include <hpx/executors/execution_policy_mappings.hpp>
+
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <string>
 #include <type_traits>
 #include <utility>
-#include <vector>
 
 namespace hpx::parallel::execution::detail {
 

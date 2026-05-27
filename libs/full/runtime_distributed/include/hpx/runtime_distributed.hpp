@@ -1,4 +1,4 @@
-//  Copyright (c) 2007-2023 Hartmut Kaiser
+//  Copyright (c) 2007-2026 Hartmut Kaiser
 //  Copyright (c)      2011 Bryce Lelbach
 //
 //  SPDX-License-Identifier: BSL-1.0
@@ -41,7 +41,7 @@ namespace hpx {
     /// The \a runtime class encapsulates the HPX runtime system in a simple to
     /// use way. It makes sure all required parts of the HPX runtime system are
     /// properly initialized.
-    class HPX_EXPORT runtime_distributed : public runtime
+    HPX_CXX_EXPORT class HPX_EXPORT runtime_distributed : public runtime
     {
     public:
         /// Construct a new HPX runtime instance

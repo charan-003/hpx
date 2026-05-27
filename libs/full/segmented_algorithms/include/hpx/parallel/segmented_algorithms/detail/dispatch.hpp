@@ -1,4 +1,4 @@
-//  Copyright (c) 2007-2024 Hartmut Kaiser
+//  Copyright (c) 2007-2026 Hartmut Kaiser
 //  Copyright (c) 2021 Giannis Gonidelis
 //
 //  SPDX-License-Identifier: BSL-1.0
@@ -290,16 +290,15 @@ namespace hpx::parallel::detail {
     };
 
     ///////////////////////////////////////////////////////////////////////////
-    template <typename Algo, typename ExPolicy, typename IsSeq,
+    HPX_CXX_EXPORT template <typename Algo, typename ExPolicy, typename IsSeq,
         typename... Args>
     HPX_FORCEINLINE future<typename std::decay_t<Algo>::result_type>
     dispatch_async(
         id_type const& id, Algo&& algo, ExPolicy policy, IsSeq, Args&&... args)
     {
         using algo_type = std::decay_t<Algo>;
-        using result_type =
-            typename parallel::util::detail::algorithm_result<ExPolicy,
-                typename algo_type::result_type>::type;
+        using result_type = parallel::util::detail::algorithm_result_t<ExPolicy,
+            typename algo_type::result_type>;
 
         algorithm_invoker_action<algo_type, ExPolicy, typename IsSeq::type,
             result_type(hpx::util::decay_unwrap_t<Args>...)>
@@ -309,7 +308,7 @@ namespace hpx::parallel::detail {
             HPX_MOVE(policy), HPX_FORWARD(Args, args)...);
     }
 
-    template <typename Algo, typename ExPolicy, typename IsSeq,
+    HPX_CXX_EXPORT template <typename Algo, typename ExPolicy, typename IsSeq,
         typename... Args>
     HPX_FORCEINLINE typename std::decay_t<Algo>::result_type dispatch(
         id_type const& id, Algo&& algo, ExPolicy policy, IsSeq is_seq,

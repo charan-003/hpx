@@ -1,4 +1,4 @@
-//  Copyright (c) 2019-2025 Hartmut Kaiser
+//  Copyright (c) 2019-2026 Hartmut Kaiser
 //  Copyright (c) 2025 Lukas Zeil
 //
 //  SPDX-License-Identifier: BSL-1.0
@@ -397,16 +397,16 @@ namespace hpx { namespace collectives {
 #include <hpx/config.hpp>
 
 #if !defined(HPX_COMPUTE_DEVICE_CODE)
-
 #include <hpx/assert.hpp>
-#include <hpx/collectives/argument_types.hpp>
-#include <hpx/collectives/create_communicator.hpp>
 #include <hpx/modules/algorithms.hpp>
 #include <hpx/modules/async_base.hpp>
 #include <hpx/modules/async_distributed.hpp>
 #include <hpx/modules/components_base.hpp>
 #include <hpx/modules/futures.hpp>
 #include <hpx/modules/type_support.hpp>
+
+#include <hpx/collectives/argument_types.hpp>
+#include <hpx/collectives/create_communicator.hpp>
 
 #include <cstddef>
 #include <type_traits>
@@ -416,7 +416,7 @@ namespace hpx::traits {
 
     namespace communication {
 
-        struct reduce_tag;
+        HPX_CXX_EXPORT struct reduce_tag;
 
         template <>
         struct communicator_data<reduce_tag>
@@ -496,8 +496,8 @@ namespace hpx::traits {
 namespace hpx::collectives {
 
     ///////////////////////////////////////////////////////////////////////////
-    // reduce plain values
-    template <typename T, typename F>
+    // reduce implementation
+    HPX_CXX_EXPORT template <typename T, typename F>
     hpx::future<std::decay_t<T>> reduce_here(communicator fid, T&& local_result,
         F&& op, this_site_arg this_site = this_site_arg(),
         generation_arg const generation = generation_arg())
@@ -558,7 +558,7 @@ namespace hpx::collectives {
     }
 
     ////////////////////////////////////////////////////////////////////////////
-    template <typename T, typename F>
+    HPX_CXX_EXPORT template <typename T, typename F>
     hpx::future<std::decay_t<T>> reduce_here(
         hierarchical_communicator const& communicators, T&& local_result,
         F&& op, this_site_arg this_site = this_site_arg(),
@@ -581,7 +581,7 @@ namespace hpx::collectives {
     }
 
     ////////////////////////////////////////////////////////////////////////////
-    template <typename Communicator, typename T, typename F>
+    HPX_CXX_EXPORT template <typename Communicator, typename T, typename F>
         requires(is_communicator_v<std::decay_t<Communicator>>)
     decltype(auto) reduce_here(Communicator&& comm, T&& local_result, F&& op,
         generation_arg const generation,
@@ -592,7 +592,7 @@ namespace hpx::collectives {
             generation);
     }
 
-    template <typename T, typename F>
+    HPX_CXX_EXPORT template <typename T, typename F>
     decltype(auto) reduce_here(char const* basename, T&& result, F&& op,
         num_sites_arg const num_sites = num_sites_arg(),
         this_site_arg const this_site = this_site_arg(),
@@ -604,7 +604,7 @@ namespace hpx::collectives {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    template <typename Communicator, typename T, typename F>
+    HPX_CXX_EXPORT template <typename Communicator, typename T, typename F>
         requires(is_communicator_v<std::decay_t<Communicator>>)
     decltype(auto) reduce_here(hpx::launch::sync_policy, Communicator&& comm,
         T&& local_result, F&& op,
@@ -617,7 +617,7 @@ namespace hpx::collectives {
             .get();
     }
 
-    template <typename Communicator, typename T, typename F>
+    HPX_CXX_EXPORT template <typename Communicator, typename T, typename F>
         requires(is_communicator_v<std::decay_t<Communicator>>)
     decltype(auto) reduce_here(hpx::launch::sync_policy, Communicator&& comm,
         T&& local_result, F&& op, generation_arg const generation,
@@ -629,7 +629,7 @@ namespace hpx::collectives {
             .get();
     }
 
-    template <typename T, typename F>
+    HPX_CXX_EXPORT template <typename T, typename F>
     decltype(auto) reduce_here(hpx::launch::sync_policy, char const* basename,
         T&& result, F&& op, num_sites_arg const num_sites = num_sites_arg(),
         this_site_arg const this_site = this_site_arg(),
@@ -643,7 +643,7 @@ namespace hpx::collectives {
 
     ///////////////////////////////////////////////////////////////////////////
     // reduce plain values
-    template <typename T>
+    HPX_CXX_EXPORT template <typename T>
     hpx::future<void> reduce_there(communicator fid, T&& local_result,
         this_site_arg this_site = this_site_arg(),
         generation_arg const generation = generation_arg())
@@ -685,7 +685,7 @@ namespace hpx::collectives {
     }
 
     ////////////////////////////////////////////////////////////////////////////
-    template <typename T, typename F>
+    HPX_CXX_EXPORT template <typename T, typename F>
     hpx::future<void> reduce_there(
         hierarchical_communicator const& communicators, T&& local_result,
         F&& op, this_site_arg this_site = this_site_arg(),
@@ -708,7 +708,7 @@ namespace hpx::collectives {
     }
 
     ////////////////////////////////////////////////////////////////////////////
-    template <typename Communicator, typename T>
+    HPX_CXX_EXPORT template <typename Communicator, typename T>
         requires(is_communicator_v<std::decay_t<Communicator>>)
     decltype(auto) reduce_there(Communicator&& comm, T&& local_result,
         generation_arg const generation,
@@ -718,7 +718,7 @@ namespace hpx::collectives {
             HPX_FORWARD(T, local_result), this_site, generation);
     }
 
-    template <typename T>
+    HPX_CXX_EXPORT template <typename T>
     decltype(auto) reduce_there(char const* basename, T&& local_result,
         this_site_arg const this_site = this_site_arg(),
         generation_arg const generation = generation_arg(),
@@ -731,7 +731,7 @@ namespace hpx::collectives {
     }
 
     ////////////////////////////////////////////////////////////////////////////
-    template <typename Communicator, typename T>
+    HPX_CXX_EXPORT template <typename Communicator, typename T>
         requires(is_communicator_v<std::decay_t<Communicator>>)
     void reduce_there(hpx::launch::sync_policy, Communicator&& comm,
         T&& local_result, this_site_arg const this_site = this_site_arg(),
@@ -742,7 +742,7 @@ namespace hpx::collectives {
             .get();
     }
 
-    template <typename Communicator, typename T>
+    HPX_CXX_EXPORT template <typename Communicator, typename T>
         requires(is_communicator_v<std::decay_t<Communicator>>)
     void reduce_there(hpx::launch::sync_policy, Communicator&& comm,
         T&& local_result, generation_arg const generation,
@@ -753,7 +753,7 @@ namespace hpx::collectives {
             .get();
     }
 
-    template <typename T>
+    HPX_CXX_EXPORT template <typename T>
     void reduce_there(hpx::launch::sync_policy, char const* basename,
         T&& local_result, this_site_arg const this_site = this_site_arg(),
         generation_arg const generation = generation_arg(),
@@ -767,7 +767,7 @@ namespace hpx::collectives {
     }
 
     ////////////////////////////////////////////////////////////////////////////
-    template <typename T, typename F>
+    HPX_CXX_EXPORT template <typename T, typename F>
     void reduce(communicator comm, T&& local_result, F&& op,
         this_site_arg this_site = this_site_arg(),
         generation_arg const generation = generation_arg())

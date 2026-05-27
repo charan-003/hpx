@@ -10,4 +10,4 @@
 #include <hpx/config.hpp>
 #include <hpx/modules/async_colocated.hpp>
 #include <hpx/modules/async_distributed.hpp>
-#include <hpx/runtime_distributed/applier.hpp>
+#include <hpx/modules/runtime_distributed.hpp>

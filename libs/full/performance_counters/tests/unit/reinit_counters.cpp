@@ -5,10 +5,12 @@
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 #include <hpx/config.hpp>
+
 #if !defined(HPX_COMPUTE_DEVICE_CODE)
 #include <hpx/hpx_init.hpp>
 #include <hpx/include/components.hpp>
 #include <hpx/include/performance_counters.hpp>
+#include <hpx/modules/errors.hpp>
 #include <hpx/modules/testing.hpp>
 #include <hpx/modules/timing.hpp>
 
@@ -189,4 +191,5 @@ int main(int argc, char* argv[])
 
     return hpx::util::report_errors();
 }
+
 #endif

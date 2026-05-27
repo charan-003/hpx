@@ -8,13 +8,7 @@
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 #include <hpx/config.hpp>
-#include <hpx/hpx_init.hpp>
-
 #include <hpx/assert.hpp>
-#include <hpx/hpx_finalize.hpp>
-#include <hpx/hpx_main_winsocket.hpp>
-#include <hpx/hpx_suspend.hpp>
-#include <hpx/hpx_user_main_config.hpp>
 #include <hpx/modules/algorithms.hpp>
 #include <hpx/modules/command_line_handling.hpp>
 #include <hpx/modules/coroutines.hpp>
@@ -40,6 +34,12 @@
 #include <hpx/modules/timing.hpp>
 #include <hpx/modules/type_support.hpp>
 
+#include <hpx/hpx_user_main_config.hpp>
+#include <hpx/init.hpp>
+#include <hpx/init_runtime/detail/main_winsocket.hpp>
+#include <hpx/init_runtime/finalize.hpp>
+#include <hpx/init_runtime/suspend.hpp>
+
 #ifdef HPX_HAVE_MODULE_MPI_BASE
 #include <hpx/modules/mpi_base.hpp>
 #endif
@@ -55,9 +55,7 @@
 #include <hpx/parcelports/init_all_parcelports.hpp>
 #endif
 #include <hpx/modules/performance_counters.hpp>
-#include <hpx/runtime_distributed.hpp>
-#include <hpx/runtime_distributed/runtime_fwd.hpp>
-#include <hpx/runtime_distributed/runtime_support.hpp>
+#include <hpx/modules/runtime_distributed.hpp>
 #endif
 #if defined(HPX_HAVE_LOGGING)
 #include <hpx/init_runtime/detail/init_logging.hpp>

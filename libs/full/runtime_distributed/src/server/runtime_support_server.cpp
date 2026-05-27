@@ -115,12 +115,14 @@ HPX_DEFINE_GET_COMPONENT_TYPE_STATIC(hpx::components::server::runtime_support,
     to_int(hpx::components::component_enum_type::runtime_support))
 
 namespace hpx {
+
     // helper function to stop evaluating counters during shutdown
     void stop_evaluating_counters(bool terminate = false);
 }    // namespace hpx
 
 ///////////////////////////////////////////////////////////////////////////////
-namespace hpx { namespace components { namespace server {
+namespace hpx::components::server {
+
     ///////////////////////////////////////////////////////////////////////////
     runtime_support::runtime_support(hpx::util::runtime_configuration& cfg)
       : stop_called_(false)
@@ -184,7 +186,7 @@ namespace hpx { namespace components { namespace server {
 #endif
         std::abort();
     }
-}}}    // namespace hpx::components::server
+}    // namespace hpx::components::server
 
 ///////////////////////////////////////////////////////////////////////////////
 namespace hpx { namespace components { namespace server {

@@ -11,9 +11,6 @@
 #include <hpx/config.hpp>
 
 #if !defined(HPX_COMPUTE_DEVICE_CODE)
-#include <hpx/collectives/all_gather.hpp>
-#include <hpx/collectives/all_reduce.hpp>
-#include <hpx/collectives/barrier.hpp>
 #include <hpx/hpx.hpp>
 #include <hpx/hpx_init.hpp>
 #include <hpx/modules/collectives.hpp>

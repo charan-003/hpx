@@ -74,7 +74,7 @@ namespace hpx::execution::experimental::detail {
     inline constexpr bool sync_wait_can_query_attrs_completion_scheduler_v =
         false;
 
-    HPX_CXX_CORE_EXPORT template <typename Sender>
+    template <typename Sender>
     inline constexpr bool sync_wait_can_query_attrs_completion_scheduler_v<
         Sender,
         std::enable_if_t<
@@ -89,7 +89,7 @@ namespace hpx::execution::experimental::detail {
                     .get_scheduler())>;
     };
 
-    HPX_CXX_CORE_EXPORT template <typename Sender>
+    template <typename Sender>
     struct sync_wait_rcv_scheduler_impl<Sender,
         std::enable_if_t<
             sync_wait_detail::can_attrs_completion_scheduler<Sender>::value>>
@@ -100,7 +100,7 @@ namespace hpx::execution::experimental::detail {
 
     HPX_CXX_CORE_EXPORT template <typename Sender>
     using sync_wait_rcv_scheduler_t =
-        typename sync_wait_rcv_scheduler_impl<Sender>::type;
+        sync_wait_rcv_scheduler_impl<Sender>::type;
 
     // Receiver env: exposes a stdexec run_loop scheduler via the standard
     // get_scheduler / get_delegation_scheduler queries so dependent senders
@@ -188,7 +188,7 @@ namespace hpx::execution::experimental::detail {
     HPX_CXX_CORE_EXPORT template <typename Variant>
     struct first_alternative;
 
-    HPX_CXX_CORE_EXPORT template <typename T>
+    template <typename T>
     struct first_alternative<std::variant<T>>
     {
         using type = T;

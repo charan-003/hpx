@@ -24,21 +24,19 @@
 #include <utility>
 #include <vector>
 
-namespace hpx::parallel { namespace detail {
+namespace hpx::parallel::detail {
 
     ///////////////////////////////////////////////////////////////////////////
     // segmented_is_partitioned
 
-    ///////////////////////////////////////////////////////////////////////
     /// \cond NOINTERNAL
 
     // sequential remote implementation
-
     template <typename Algo, typename ExPolicy, typename SegIter, typename Pred,
         typename Proj>
-    static util::detail::algorithm_result_t<ExPolicy, bool>
-    segmented_is_partitioned(Algo&& algo, ExPolicy const& policy, SegIter first,
-        SegIter last, Pred&& pred, Proj&& proj, std::true_type)
+    util::detail::algorithm_result_t<ExPolicy, bool> segmented_is_partitioned(
+        Algo&& algo, ExPolicy const& policy, SegIter first, SegIter last,
+        Pred&& pred, Proj&& proj, std::true_type)
     {
         using traits = hpx::traits::segmented_iterator_traits<SegIter>;
         using segment_iterator = typename traits::segment_iterator;
@@ -140,9 +138,9 @@ namespace hpx::parallel { namespace detail {
 
     template <typename Algo, typename ExPolicy, typename SegIter, typename Pred,
         typename Proj>
-    static util::detail::algorithm_result_t<ExPolicy, bool>
-    segmented_is_partitioned(Algo&& algo, ExPolicy const& policy, SegIter first,
-        SegIter last, Pred&& pred, Proj&& proj, std::false_type)
+    util::detail::algorithm_result_t<ExPolicy, bool> segmented_is_partitioned(
+        Algo&& algo, ExPolicy const& policy, SegIter first, SegIter last,
+        Pred&& pred, Proj&& proj, std::false_type)
     {
         using traits = hpx::traits::segmented_iterator_traits<SegIter>;
         using segment_iterator = typename traits::segment_iterator;
@@ -238,15 +236,13 @@ namespace hpx::parallel { namespace detail {
             },
             HPX_MOVE(segments)));
     }
-
     /// \endcond
-
-}}    // namespace hpx::parallel::detail
+}    // namespace hpx::parallel::detail
 
 // The segmented iterators we support all live in namespace hpx::segmented
 namespace hpx::segmented {
 
-    template <typename InIter, typename Pred>
+    HPX_CXX_EXPORT template <typename InIter, typename Pred>
         requires(hpx::traits::is_iterator_v<InIter> &&
             hpx::traits::is_segmented_iterator_v<InIter>)
     bool tag_invoke(
@@ -267,7 +263,7 @@ namespace hpx::segmented {
             hpx::identity_v, std::true_type());
     }
 
-    template <typename ExPolicy, typename SegIter, typename Pred>
+    HPX_CXX_EXPORT template <typename ExPolicy, typename SegIter, typename Pred>
         requires(hpx::is_execution_policy_v<ExPolicy> &&
             hpx::traits::is_iterator_v<SegIter> &&
             hpx::traits::is_segmented_iterator_v<SegIter>)

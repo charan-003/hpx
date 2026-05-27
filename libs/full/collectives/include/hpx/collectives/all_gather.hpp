@@ -1,4 +1,4 @@
-//  Copyright (c) 2019-2025 Hartmut Kaiser
+//  Copyright (c) 2019-2026 Hartmut Kaiser
 //  Copyright (c) 2026 Anshuman Agrawal
 //
 //  SPDX-License-Identifier: BSL-1.0
@@ -210,16 +210,16 @@ namespace hpx { namespace collectives {
 #include <hpx/config.hpp>
 
 #if !defined(HPX_COMPUTE_DEVICE_CODE)
-
-#include <hpx/collectives/argument_types.hpp>
-#include <hpx/collectives/broadcast.hpp>
-#include <hpx/collectives/create_communicator.hpp>
-#include <hpx/collectives/gather.hpp>
 #include <hpx/modules/async_base.hpp>
 #include <hpx/modules/async_distributed.hpp>
 #include <hpx/modules/components_base.hpp>
 #include <hpx/modules/futures.hpp>
 #include <hpx/modules/type_support.hpp>
+
+#include <hpx/collectives/argument_types.hpp>
+#include <hpx/collectives/broadcast.hpp>
+#include <hpx/collectives/create_communicator.hpp>
+#include <hpx/collectives/gather.hpp>
 
 #include <cstddef>
 #include <type_traits>
@@ -230,7 +230,7 @@ namespace hpx::traits {
 
     namespace communication {
 
-        struct all_gather_tag;
+        HPX_CXX_EXPORT struct all_gather_tag;
 
         template <>
         struct communicator_data<all_gather_tag>
@@ -266,7 +266,7 @@ namespace hpx::collectives {
 
     ///////////////////////////////////////////////////////////////////////////
     // all_gather plain values
-    template <typename T>
+    HPX_CXX_EXPORT template <typename T>
     hpx::future<std::vector<std::decay_t<T>>> all_gather(communicator fid,
         T&& local_result, this_site_arg this_site = this_site_arg(),
         generation_arg const generation = generation_arg())
@@ -328,7 +328,7 @@ namespace hpx::collectives {
         return fid.then(hpx::launch::sync, HPX_MOVE(all_gather_data));
     }
 
-    template <typename T>
+    HPX_CXX_EXPORT template <typename T>
     hpx::future<std::vector<std::decay_t<T>>> all_gather(communicator fid,
         T&& local_result, generation_arg const generation,
         this_site_arg const this_site = this_site_arg())
@@ -337,7 +337,7 @@ namespace hpx::collectives {
             HPX_MOVE(fid), HPX_FORWARD(T, local_result), this_site, generation);
     }
 
-    template <typename T>
+    HPX_CXX_EXPORT template <typename T>
     hpx::future<std::vector<std::decay_t<T>>> all_gather(char const* basename,
         T&& local_result, num_sites_arg const num_sites = num_sites_arg(),
         this_site_arg const this_site = this_site_arg(),
@@ -350,7 +350,7 @@ namespace hpx::collectives {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    template <typename T>
+    HPX_CXX_EXPORT template <typename T>
     std::vector<std::decay_t<T>> all_gather(hpx::launch::sync_policy,
         communicator fid, T&& local_result,
         this_site_arg const this_site = this_site_arg(),
@@ -361,7 +361,7 @@ namespace hpx::collectives {
             .get();
     }
 
-    template <typename T>
+    HPX_CXX_EXPORT template <typename T>
     std::vector<std::decay_t<T>> all_gather(hpx::launch::sync_policy,
         communicator fid, T&& local_result, generation_arg const generation,
         this_site_arg const this_site = this_site_arg())
@@ -371,7 +371,7 @@ namespace hpx::collectives {
             .get();
     }
 
-    template <typename T>
+    HPX_CXX_EXPORT template <typename T>
     std::vector<std::decay_t<T>> all_gather(hpx::launch::sync_policy,
         char const* basename, T&& local_result,
         num_sites_arg const num_sites = num_sites_arg(),
@@ -394,7 +394,7 @@ namespace hpx::collectives {
     // (O(N) data), so the broadcast phase transfers O(N) instead of a scalar.
 
     // Async overload
-    template <typename T>
+    HPX_CXX_EXPORT template <typename T>
     hpx::future<std::vector<std::decay_t<T>>> all_gather(
         hierarchical_communicator const& communicators, T&& local_result,
         this_site_arg this_site = this_site_arg(),
@@ -441,7 +441,7 @@ namespace hpx::collectives {
     }
 
     // Sync version
-    template <typename T>
+    HPX_CXX_EXPORT template <typename T>
     std::vector<std::decay_t<T>> all_gather(hpx::launch::sync_policy,
         hierarchical_communicator const& communicators, T&& local_result,
         this_site_arg const this_site = this_site_arg(),
