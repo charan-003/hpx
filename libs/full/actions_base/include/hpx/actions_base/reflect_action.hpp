@@ -51,11 +51,11 @@ namespace hpx::actions {
     /// no HPX_REGISTER_ACTION call is needed for reflection-based actions.
     ///
     /// \tparam F  A std::meta::info reflection of a free function.
-    template <std::meta::info F>
+    template <std::meta::info F, typename Derived = void>
     struct reflect_action
       : basic_action<hpx::actions::detail::plain_function,
             typename detail::reflect_action_base<F>::func_type,
-            reflect_action<F>>
+            detail::action_type_t<reflect_action<F, Derived>, Derived>>
     {
         /// The function type (e.g. int(double, double))
         using func_type = [:std::meta::type_of(F):];
@@ -96,9 +96,9 @@ namespace hpx::actions {
     };
 
     /// \cond NOINTERNAL
-    template <std::meta::info F>
-    detail::register_action_invocation_count<reflect_action<F>>
-        reflect_action<F>::invocation_count_registrar_;
+    template <std::meta::info F, typename Derived>
+    detail::register_action_invocation_count<reflect_action<F, Derived>>
+        reflect_action<F, Derived>::invocation_count_registrar_;
     /// \endcond
 
 }    // namespace hpx::actions
