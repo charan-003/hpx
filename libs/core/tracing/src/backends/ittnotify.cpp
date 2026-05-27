@@ -23,8 +23,8 @@ namespace hpx::tracing {
 
     ////////////////////////////////////////////////////////////////////////////
     // itt_counters map for caching counter metadata
-    // Note: This map is not protected against concurrent modifications. 
-    // It is assumed that counters are created during startup and only 
+    // Note: This map is not protected against concurrent modifications.
+    // It is assumed that counters are created during startup and only
     // read/sampled concurrently during execution.
     static std::map<std::string, util::itt::counter> itt_counters_;
 
