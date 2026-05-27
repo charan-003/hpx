@@ -47,7 +47,7 @@ namespace hpx::actions {
     /// reflect_action<F> integrates with HPX's action system by inheriting
     /// from basic_action<detail::plain_function, R(Ps...), reflect_action<F>>.
     /// All properties are derived automatically from the reflected function F.
-    /// Invocation count registration is automatic via a static member —
+    /// Invocation count registration is automatic via a static member --
     /// no HPX_REGISTER_ACTION call is needed for reflection-based actions.
     ///
     /// \tparam F  A std::meta::info reflection of a free function.
