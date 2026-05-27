@@ -93,8 +93,9 @@ namespace hpx::actions {
 
         /// Automatic invocation count registration -- eliminates the need
         /// for HPX_REGISTER_ACTION for reflection-based plain actions.
-        static detail::register_action_invocation_count reflect_action < F,
-            Derived >> invocation_count_registrar_;
+        static detail::register_action_invocation_count<
+            reflect_action<F, Derived>>
+            invocation_count_registrar_;
     };
 
     /// \cond NOINTERNAL
