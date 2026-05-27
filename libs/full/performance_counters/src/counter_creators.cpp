@@ -1,4 +1,4 @@
-//  Copyright (c) 2007-2022 Hartmut Kaiser
+//  Copyright (c) 2007-2026 Hartmut Kaiser
 //
 //  SPDX-License-Identifier: BSL-1.0
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -31,7 +31,7 @@
 #include <hpx/config/warnings_prefix.hpp>
 
 ///////////////////////////////////////////////////////////////////////////////
-namespace hpx { namespace performance_counters {
+namespace hpx::performance_counters {
 
     ///////////////////////////////////////////////////////////////////////////
     // Creation functions to be registered with counter types
@@ -629,4 +629,4 @@ namespace hpx { namespace performance_counters {
             "invalid counter type name: " + paths.instancename_);
         return naming::invalid_gid;
     }
-}}    // namespace hpx::performance_counters
+}    // namespace hpx::performance_counters

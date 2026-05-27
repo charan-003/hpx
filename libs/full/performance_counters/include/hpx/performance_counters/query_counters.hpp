@@ -11,6 +11,7 @@
 #include <hpx/modules/itt_notify.hpp>
 #include <hpx/modules/runtime_local.hpp>
 #include <hpx/modules/synchronization.hpp>
+
 #include <hpx/performance_counters/counters_fwd.hpp>
 #include <hpx/performance_counters/performance_counter_set.hpp>
 
@@ -24,7 +25,7 @@
 namespace hpx::util {
 
     ///////////////////////////////////////////////////////////////////////////
-    class HPX_EXPORT query_counters
+    HPX_CXX_EXPORT class HPX_EXPORT query_counters
     {
         // avoid warning about using this in member initializer list
         query_counters* this_()

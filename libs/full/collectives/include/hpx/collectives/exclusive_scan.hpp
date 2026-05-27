@@ -273,9 +273,6 @@ namespace hpx { namespace collectives {
 #include <hpx/config.hpp>
 
 #if !defined(HPX_COMPUTE_DEVICE_CODE)
-
-#include <hpx/collectives/argument_types.hpp>
-#include <hpx/collectives/create_communicator.hpp>
 #include <hpx/modules/algorithms.hpp>
 #include <hpx/modules/async_base.hpp>
 #include <hpx/modules/async_distributed.hpp>
@@ -283,6 +280,9 @@ namespace hpx { namespace collectives {
 #include <hpx/modules/futures.hpp>
 #include <hpx/modules/tag_invoke.hpp>
 #include <hpx/modules/type_support.hpp>
+
+#include <hpx/collectives/argument_types.hpp>
+#include <hpx/collectives/create_communicator.hpp>
 
 #include <concepts>
 #include <cstddef>
@@ -327,8 +327,8 @@ namespace hpx::traits {
 
     namespace communication {
 
-        struct exclusive_scan_tag;
-        struct exclusive_scan_init_tag;
+        HPX_CXX_EXPORT struct exclusive_scan_tag;
+        HPX_CXX_EXPORT struct exclusive_scan_init_tag;
 
         template <>
         struct communicator_data<exclusive_scan_tag>
@@ -456,7 +456,7 @@ namespace hpx::collectives {
 
     ////////////////////////////////////////////////////////////////////////////
     // exclusive_scan with semantics similar to MPI_Exscan
-    template <typename T, typename F>
+    HPX_CXX_EXPORT template <typename T, typename F>
     hpx::future<std::decay_t<T>> exclusive_scan(communicator fid,
         T&& local_result, F&& op, this_site_arg this_site = this_site_arg(),
         generation_arg const generation = generation_arg())
@@ -515,7 +515,7 @@ namespace hpx::collectives {
         return fid.then(hpx::launch::sync, HPX_MOVE(exclusive_scan_data));
     }
 
-    template <typename T, typename F>
+    HPX_CXX_EXPORT template <typename T, typename F>
     hpx::future<std::decay_t<T>> exclusive_scan(communicator fid,
         T&& local_result, F&& op, generation_arg generation,
         this_site_arg this_site = this_site_arg())
@@ -524,7 +524,7 @@ namespace hpx::collectives {
             HPX_FORWARD(F, op), this_site, generation);
     }
 
-    template <typename T, typename F>
+    HPX_CXX_EXPORT template <typename T, typename F>
     hpx::future<std::decay_t<T>> exclusive_scan(char const* basename,
         T&& local_result, F&& op,
         num_sites_arg const num_sites = num_sites_arg(),
@@ -537,7 +537,7 @@ namespace hpx::collectives {
             HPX_FORWARD(T, local_result), HPX_FORWARD(F, op), this_site);
     }
 
-    template <typename T, typename F>
+    HPX_CXX_EXPORT template <typename T, typename F>
     decltype(auto) exclusive_scan(hpx::launch::sync_policy, communicator fid,
         T&& local_result, F&& op, this_site_arg this_site = this_site_arg(),
         generation_arg generation = generation_arg())
@@ -547,7 +547,7 @@ namespace hpx::collectives {
             .get();
     }
 
-    template <typename T, typename F>
+    HPX_CXX_EXPORT template <typename T, typename F>
     decltype(auto) exclusive_scan(hpx::launch::sync_policy, communicator fid,
         T&& local_result, F&& op, generation_arg generation,
         this_site_arg this_site = this_site_arg())
@@ -557,7 +557,7 @@ namespace hpx::collectives {
             .get();
     }
 
-    template <typename T, typename F>
+    HPX_CXX_EXPORT template <typename T, typename F>
     decltype(auto) exclusive_scan(hpx::launch::sync_policy,
         char const* basename, T&& local_result, F&& op,
         num_sites_arg const num_sites = num_sites_arg(),
@@ -573,7 +573,7 @@ namespace hpx::collectives {
 
     ////////////////////////////////////////////////////////////////////////////
     // Version of exclusive scan that takes an initial value for element 0.
-    template <typename T, typename Init, typename F>
+    HPX_CXX_EXPORT template <typename T, typename Init, typename F>
         requires(!std::same_as<this_site_arg, std::decay_t<F>>)
     hpx::future<std::decay_t<T>> exclusive_scan(communicator fid,
         T&& local_result, Init&& init, F&& op,
@@ -637,7 +637,7 @@ namespace hpx::collectives {
         return fid.then(hpx::launch::sync, HPX_MOVE(exclusive_scan_data));
     }
 
-    template <typename T, typename Init, typename F>
+    HPX_CXX_EXPORT template <typename T, typename Init, typename F>
         requires(!std::same_as<generation_arg, std::decay_t<F>>)
     hpx::future<std::decay_t<T>> exclusive_scan(communicator fid,
         T&& local_result, Init&& init, F&& op, generation_arg generation,
@@ -647,7 +647,7 @@ namespace hpx::collectives {
             HPX_FORWARD(Init, init), HPX_FORWARD(F, op), this_site, generation);
     }
 
-    template <typename T, typename Init, typename F>
+    HPX_CXX_EXPORT template <typename T, typename Init, typename F>
         requires(!std::same_as<num_sites_arg, std::decay_t<F>>)
     hpx::future<std::decay_t<T>> exclusive_scan(char const* basename,
         T&& local_result, Init&& init, F&& op,
@@ -662,7 +662,7 @@ namespace hpx::collectives {
             HPX_FORWARD(F, op), this_site);
     }
 
-    template <typename T, typename Init, typename F>
+    HPX_CXX_EXPORT template <typename T, typename Init, typename F>
         requires(!std::same_as<this_site_arg, std::decay_t<F>>)
     decltype(auto) exclusive_scan(hpx::launch::sync_policy, communicator fid,
         T&& local_result, Init&& init, F&& op,
@@ -674,7 +674,7 @@ namespace hpx::collectives {
             .get();
     }
 
-    template <typename T, typename Init, typename F>
+    HPX_CXX_EXPORT template <typename T, typename Init, typename F>
         requires(!std::same_as<generation_arg, std::decay_t<F>>)
     decltype(auto) exclusive_scan(hpx::launch::sync_policy, communicator fid,
         T&& local_result, Init&& init, F&& op, generation_arg const generation,
@@ -685,7 +685,7 @@ namespace hpx::collectives {
             .get();
     }
 
-    template <typename T, typename Init, typename F>
+    HPX_CXX_EXPORT template <typename T, typename Init, typename F>
         requires(!std::same_as<num_sites_arg, std::decay_t<F>>)
     decltype(auto) exclusive_scan(hpx::launch::sync_policy,
         char const* basename, T&& local_result, Init&& init, F&& op,

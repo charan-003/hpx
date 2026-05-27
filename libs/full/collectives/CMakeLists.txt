@@ -29,12 +29,15 @@ set(collectives_headers
     hpx/collectives/gather.hpp
     hpx/collectives/inclusive_scan.hpp
     hpx/collectives/latch.hpp
+    hpx/collectives/macros.hpp
     hpx/collectives/reduce.hpp
     hpx/collectives/reduce_direct.hpp
     hpx/collectives/scatter.hpp
     hpx/collectives/spmd_block.hpp
     hpx/collectives/detail/latch.hpp
 )
+
+set(collectives_macros_headers hpx/collectives/macros.hpp)
 
 # Default location is $HPX_ROOT/libs/collectives/include_compatibility
 # cmake-format: off
@@ -71,8 +74,11 @@ set(collectives_sources
 include(HPX_AddModule)
 add_hpx_module(
   full collectives
+  GLOBAL_HEADER_GEN ON
+  GLOBAL_HEADER_MODULE_GEN ON
   SOURCES ${collectives_sources}
   HEADERS ${collectives_headers}
+  MACRO_HEADERS ${collectives_macros_headers}
   COMPAT_HEADERS ${collectives_compat_headers}
   DEPENDENCIES hpx_core
   MODULE_DEPENDENCIES
@@ -83,6 +89,7 @@ add_hpx_module(
     hpx_components
     hpx_components_base
     hpx_naming_base
+    hpx_performance_counters
     hpx_runtime_components
     hpx_runtime_distributed
   CMAKE_SUBDIRS examples tests

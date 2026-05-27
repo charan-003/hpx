@@ -1,4 +1,4 @@
-//  Copyright (c) 2019-2025 Hartmut Kaiser
+//  Copyright (c) 2019-2026 Hartmut Kaiser
 //  Copyright (c) 2026 Anshuman Agrawal
 //
 //  SPDX-License-Identifier: BSL-1.0
@@ -125,7 +125,7 @@ namespace hpx { namespace collectives {
     ///                     from all participating sites
     /// \param  num_sites   The number of participating sites (default: all
     ///                     localities).
-    /// \param this_site    The sequence number of this invocation (usually
+    /// \param  this_site   The sequence number of this invocation (usually
     ///                     the locality id). This value is optional and
     ///                     defaults to whatever hpx::get_locality_id() returns.
     /// \param  generation  The generational counter identifying the sequence
@@ -144,8 +144,9 @@ namespace hpx { namespace collectives {
     ///             directly returns the result.
     ///
     template <typename T, typename F>
-    decltype(auto) all_reduce(hpx::launch::sync_policy, char const* basename,
-        T&& result, F&& op, num_sites_arg num_sites = num_sites_arg(),
+    decltype(auto) all_reduce(hpx::launch::sync_policy policy,
+        char const* basename, T&& result, F&& op,
+        num_sites_arg num_sites = num_sites_arg(),
         this_site_arg this_site = this_site_arg(),
         generation_arg generation = generation_arg(),
         root_site_arg root_site = root_site_arg());
@@ -177,8 +178,9 @@ namespace hpx { namespace collectives {
     ///             directly returns the result.
     ///
     template <typename T, typename F>
-    decltype(auto) all_reduce(hpx::launch::sync_policy, communicator comm,
-        T&& result, F&& op, this_site_arg this_site = this_site_arg(),
+    decltype(auto) all_reduce(hpx::launch::sync_policy policy,
+        communicator comm, T&& result, F&& op,
+        this_site_arg this_site = this_site_arg(),
         generation_arg generation = generation_arg());
 
     /// AllReduce a set of values from different call sites
@@ -208,8 +210,8 @@ namespace hpx { namespace collectives {
     ///             directly returns the result.
     ///
     template <typename T, typename F>
-    decltype(auto) all_reduce(hpx::launch::sync_policy, communicator comm,
-        T&& result, F&& op, generation_arg generation,
+    decltype(auto) all_reduce(hpx::launch::sync_policy policy,
+        communicator comm, T&& result, F&& op, generation_arg generation,
         this_site_arg this_site = this_site_arg());
 }}    // namespace hpx::collectives
 
@@ -219,18 +221,19 @@ namespace hpx { namespace collectives {
 #include <hpx/config.hpp>
 
 #if !defined(HPX_COMPUTE_DEVICE_CODE)
-
 #include <hpx/assert.hpp>
-#include <hpx/collectives/argument_types.hpp>
-#include <hpx/collectives/broadcast.hpp>
-#include <hpx/collectives/create_communicator.hpp>
-#include <hpx/collectives/reduce.hpp>
 #include <hpx/modules/algorithms.hpp>
 #include <hpx/modules/async_base.hpp>
 #include <hpx/modules/async_distributed.hpp>
 #include <hpx/modules/components_base.hpp>
 #include <hpx/modules/futures.hpp>
 #include <hpx/modules/type_support.hpp>
+
+#include <hpx/collectives/argument_types.hpp>
+#include <hpx/collectives/broadcast.hpp>
+#include <hpx/collectives/create_communicator.hpp>
+#include <hpx/collectives/reduce.hpp>
+
 #include <cstddef>
 #include <type_traits>
 #include <utility>
@@ -240,7 +243,7 @@ namespace hpx::traits {
 
     namespace communication {
 
-        struct all_reduce_tag;
+        HPX_CXX_EXPORT struct all_reduce_tag;
 
         template <>
         struct communicator_data<all_reduce_tag>
@@ -310,7 +313,7 @@ namespace hpx::collectives {
 
     ////////////////////////////////////////////////////////////////////////////
     // all_reduce plain values
-    template <typename T, typename F>
+    HPX_CXX_EXPORT template <typename T, typename F>
     hpx::future<std::decay_t<T>> all_reduce(communicator fid, T&& local_result,
         F&& op, this_site_arg this_site = this_site_arg(),
         generation_arg const generation = generation_arg())
@@ -369,7 +372,7 @@ namespace hpx::collectives {
         return fid.then(hpx::launch::sync, HPX_MOVE(all_reduce_data));
     }
 
-    template <typename T, typename F>
+    HPX_CXX_EXPORT template <typename T, typename F>
     hpx::future<std::decay_t<T>> all_reduce(communicator fid, T&& local_result,
         F&& op, generation_arg const generation,
         this_site_arg const this_site = this_site_arg())
@@ -378,7 +381,7 @@ namespace hpx::collectives {
             HPX_FORWARD(F, op), this_site, generation);
     }
 
-    template <typename T, typename F>
+    HPX_CXX_EXPORT template <typename T, typename F>
     hpx::future<std::decay_t<T>> all_reduce(char const* basename,
         T&& local_result, F&& op,
         num_sites_arg const num_sites = num_sites_arg(),
@@ -392,7 +395,7 @@ namespace hpx::collectives {
     }
 
     ////////////////////////////////////////////////////////////////////////////
-    template <typename T, typename F>
+    HPX_CXX_EXPORT template <typename T, typename F>
     decltype(auto) all_reduce(hpx::launch::sync_policy, communicator fid,
         T&& local_result, F&& op,
         this_site_arg const this_site = this_site_arg(),
@@ -403,7 +406,7 @@ namespace hpx::collectives {
             .get();
     }
 
-    template <typename T, typename F>
+    HPX_CXX_EXPORT template <typename T, typename F>
     decltype(auto) all_reduce(hpx::launch::sync_policy, communicator fid,
         T&& local_result, F&& op, generation_arg const generation,
         this_site_arg const this_site = this_site_arg())
@@ -413,7 +416,7 @@ namespace hpx::collectives {
             .get();
     }
 
-    template <typename T, typename F>
+    HPX_CXX_EXPORT template <typename T, typename F>
     decltype(auto) all_reduce(hpx::launch::sync_policy, char const* basename,
         T&& local_result, F&& op,
         num_sites_arg const num_sites = num_sites_arg(),
@@ -431,9 +434,7 @@ namespace hpx::collectives {
     // Hierarchical all_reduce: reduce (bottom-up) + broadcast (top-down)
     // Uses 2k-1/2k generation mapping: user generation k maps to
     // internal generation 2k-1 (reduce phase) and 2k (broadcast phase)
-
-    // Scalar overload
-    template <typename T, typename F>
+    HPX_CXX_EXPORT template <typename T, typename F>
     hpx::future<std::decay_t<T>> all_reduce(
         hierarchical_communicator const& communicators, T&& local_result,
         F&& op, this_site_arg this_site = this_site_arg(),
@@ -481,7 +482,7 @@ namespace hpx::collectives {
     }
 
     // Sync version
-    template <typename T, typename F>
+    HPX_CXX_EXPORT template <typename T, typename F>
     std::decay_t<T> all_reduce(hpx::launch::sync_policy,
         hierarchical_communicator const& communicators, T&& local_result,
         F&& op, this_site_arg const this_site = this_site_arg(),

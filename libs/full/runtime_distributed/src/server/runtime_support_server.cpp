@@ -20,6 +20,7 @@
 #include <hpx/modules/futures.hpp>
 #include <hpx/modules/ini.hpp>
 #include <hpx/modules/logging.hpp>
+#include <hpx/modules/performance_counters.hpp>
 #include <hpx/modules/plugin_factories.hpp>
 #include <hpx/modules/prefix.hpp>
 #include <hpx/modules/runtime_components.hpp>
@@ -32,7 +33,6 @@
 #include <hpx/modules/threadmanager.hpp>
 #include <hpx/modules/timing.hpp>
 #include <hpx/modules/type_support.hpp>
-#include <hpx/performance_counters/counters.hpp>
 
 #include <hpx/runtime_distributed.hpp>
 #include <hpx/runtime_distributed/find_localities.hpp>
@@ -115,12 +115,14 @@ HPX_DEFINE_GET_COMPONENT_TYPE_STATIC(hpx::components::server::runtime_support,
     to_int(hpx::components::component_enum_type::runtime_support))
 
 namespace hpx {
+
     // helper function to stop evaluating counters during shutdown
     void stop_evaluating_counters(bool terminate = false);
 }    // namespace hpx
 
 ///////////////////////////////////////////////////////////////////////////////
-namespace hpx { namespace components { namespace server {
+namespace hpx::components::server {
+
     ///////////////////////////////////////////////////////////////////////////
     runtime_support::runtime_support(hpx::util::runtime_configuration& cfg)
       : stop_called_(false)
@@ -184,7 +186,7 @@ namespace hpx { namespace components { namespace server {
 #endif
         std::abort();
     }
-}}}    // namespace hpx::components::server
+}    // namespace hpx::components::server
 
 ///////////////////////////////////////////////////////////////////////////////
 namespace hpx { namespace components { namespace server {

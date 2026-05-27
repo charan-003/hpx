@@ -112,6 +112,7 @@ if(HPX_WITH_DISTRIBUTED_RUNTIME)
       hpx_async_colocated
       hpx_async_distributed
       hpx_components_base
+      hpx_distribution_policies
       hpx_runtime_components
       hpx_runtime_distributed
       hpx_lcos_distributed
@@ -129,7 +130,13 @@ add_hpx_module(
   SOURCES ${include_sources}
   HEADERS ${include_headers}
   DEPENDENCIES hpx_core
-  MODULE_DEPENDENCIES hpx_command_line_handling hpx_compute hpx_naming_base
-                      hpx_parcelset_base ${include_optional_module_dependencies}
+  MODULE_DEPENDENCIES
+    hpx_command_line_handling
+    hpx_collectives
+    hpx_compute
+    hpx_init_runtime
+    hpx_naming_base
+    hpx_parcelset_base
+    ${include_optional_module_dependencies}
   CMAKE_SUBDIRS tests
 )

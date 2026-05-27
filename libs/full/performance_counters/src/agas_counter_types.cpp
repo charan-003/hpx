@@ -1,4 +1,4 @@
-//  Copyright (c) 2011-2021 Hartmut Kaiser
+//  Copyright (c) 2011-2026 Hartmut Kaiser
 //  Copyright (c) 2016 Parsa Amini
 //
 //  SPDX-License-Identifier: BSL-1.0
@@ -19,7 +19,7 @@
 
 #include <cstdint>
 
-namespace hpx { namespace performance_counters {
+namespace hpx::performance_counters {
 
     /// Install performance counter types exposing properties from the local cache.
     void register_agas_counter_types(agas::addressing_service& client)
@@ -209,4 +209,4 @@ namespace hpx { namespace performance_counters {
         }
         agas::symbol_namespace_register_counter_types();
     }
-}}    // namespace hpx::performance_counters
+}    // namespace hpx::performance_counters

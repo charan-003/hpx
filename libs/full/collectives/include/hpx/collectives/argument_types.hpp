@@ -1,4 +1,4 @@
-//  Copyright (c) 2021-2025 Hartmut Kaiser
+//  Copyright (c) 2021-2026 Hartmut Kaiser
 //
 //  SPDX-License-Identifier: BSL-1.0
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -58,36 +58,42 @@ namespace hpx::collectives {
     }    // namespace detail
 
     /// The number of participating sites (default: all localities)
-    using num_sites_arg = detail::argument_type<detail::num_sites_tag>;
+    HPX_CXX_EXPORT using num_sites_arg =
+        detail::argument_type<detail::num_sites_tag>;
 
     /// The local end of the communication channel
-    using this_site_arg = detail::argument_type<detail::this_site_tag>;
+    HPX_CXX_EXPORT using this_site_arg =
+        detail::argument_type<detail::this_site_tag>;
 
     /// The opposite end of the communication channel
-    using that_site_arg = detail::argument_type<detail::that_site_tag>;
+    HPX_CXX_EXPORT using that_site_arg =
+        detail::argument_type<detail::that_site_tag>;
 
     /// The generational counter identifying the sequence number of the
-    /// operation performed on the given base name. It needs to be supplied
-    /// only if the operation on the given base name has to be performed
-    /// more than once. It must be a positive number greater than zero.
-    using generation_arg = detail::argument_type<detail::generation_tag>;
+    /// operation performed on the given base name. It needs to be supplied only
+    /// if the operation on the given base name has to be performed more than
+    /// once. It must be a positive number greater than zero.
+    HPX_CXX_EXPORT using generation_arg =
+        detail::argument_type<detail::generation_tag>;
 
     /// The site that is responsible for creating the support object
     /// of the operation. It defaults to '0' (zero).
-    using root_site_arg = detail::argument_type<detail::root_site_tag, 0>;
+    HPX_CXX_EXPORT using root_site_arg =
+        detail::argument_type<detail::root_site_tag, 0>;
 
     /// The tag identifying the concrete operation
-    using tag_arg = detail::argument_type<detail::tag_tag, 0>;
+    HPX_CXX_EXPORT using tag_arg = detail::argument_type<detail::tag_tag, 0>;
 
     /// The number of children each of the communication nodes is connected
     /// to (default: picked based on num_sites).
-    using arity_arg = detail::argument_type<detail::arity_tag, 2>;
+    HPX_CXX_EXPORT using arity_arg =
+        detail::argument_type<detail::arity_tag, 2>;
 
     /// The site-count threshold below which a hierarchical_communicator
     /// collapses to a single flat communicator spanning all sites. At small
     /// site counts, flat collectives outperform hierarchical composition
-    /// because tree-walking overhead exceeds the synchronization-depth
-    /// benefit. Pass 0 to disable the fallback and always build a tree.
-    using flat_fallback_threshold_arg =
+    /// because tree-walking overhead exceeds the synchronization-depth benefit.
+    /// Pass 0 to disable the fallback and always build a tree.
+    HPX_CXX_EXPORT using flat_fallback_threshold_arg =
         detail::argument_type<detail::flat_fallback_threshold_tag, 16>;
 }    // namespace hpx::collectives

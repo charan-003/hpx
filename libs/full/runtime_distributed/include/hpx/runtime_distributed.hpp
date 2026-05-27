@@ -1,4 +1,4 @@
-//  Copyright (c) 2007-2023 Hartmut Kaiser
+//  Copyright (c) 2007-2026 Hartmut Kaiser
 //  Copyright (c)      2011 Bryce Lelbach
 //
 //  SPDX-License-Identifier: BSL-1.0
@@ -13,11 +13,10 @@
 #include <hpx/modules/io_service.hpp>
 #include <hpx/modules/parcelset.hpp>
 #include <hpx/modules/parcelset_base.hpp>
+#include <hpx/modules/performance_counters.hpp>
 #include <hpx/modules/runtime_components.hpp>
 #include <hpx/modules/runtime_local.hpp>
 #include <hpx/modules/threading_base.hpp>
-#include <hpx/performance_counters/query_counters.hpp>
-#include <hpx/performance_counters/registry.hpp>
 
 #include <hpx/runtime_distributed/applier.hpp>
 #include <hpx/runtime_distributed/find_localities.hpp>
@@ -42,7 +41,7 @@ namespace hpx {
     /// The \a runtime class encapsulates the HPX runtime system in a simple to
     /// use way. It makes sure all required parts of the HPX runtime system are
     /// properly initialized.
-    class HPX_EXPORT runtime_distributed : public runtime
+    HPX_CXX_EXPORT class HPX_EXPORT runtime_distributed : public runtime
     {
     public:
         /// Construct a new HPX runtime instance

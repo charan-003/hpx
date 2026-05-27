@@ -1,4 +1,4 @@
-//  Copyright (c) 2014-2025 Hartmut Kaiser
+//  Copyright (c) 2014-2026 Hartmut Kaiser
 //  Copyright (c) 2025 Lukas Zeil
 //
 //  SPDX-License-Identifier: BSL-1.0
@@ -388,15 +388,15 @@ namespace hpx { namespace collectives {
 #include <hpx/config.hpp>
 
 #if !defined(HPX_COMPUTE_DEVICE_CODE)
-
 #include <hpx/assert.hpp>
-#include <hpx/collectives/argument_types.hpp>
-#include <hpx/collectives/create_communicator.hpp>
 #include <hpx/modules/async_base.hpp>
 #include <hpx/modules/async_distributed.hpp>
 #include <hpx/modules/components_base.hpp>
 #include <hpx/modules/futures.hpp>
 #include <hpx/modules/type_support.hpp>
+
+#include <hpx/collectives/argument_types.hpp>
+#include <hpx/collectives/create_communicator.hpp>
 
 #include <cstddef>
 #include <type_traits>
@@ -409,7 +409,7 @@ namespace hpx::traits {
     // support for scatter
     namespace communication {
 
-        struct scatter_tag;
+        HPX_CXX_EXPORT struct scatter_tag;
 
         template <>
         struct communicator_data<scatter_tag>
@@ -463,7 +463,7 @@ namespace hpx::collectives {
 
     ///////////////////////////////////////////////////////////////////////////
     // destination site needs to be handled differently
-    template <typename T>
+    HPX_CXX_EXPORT template <typename T>
     hpx::future<T> scatter_from(communicator fid,
         this_site_arg this_site = this_site_arg(),
         generation_arg const generation = generation_arg())
@@ -533,7 +533,7 @@ namespace hpx::collectives {
         }
     }    // namespace detail
 
-    template <typename T>
+    HPX_CXX_EXPORT template <typename T>
     hpx::future<T> scatter_from(hierarchical_communicator const& communicators,
         this_site_arg this_site = this_site_arg(),
         generation_arg const generation = generation_arg())
@@ -565,7 +565,7 @@ namespace hpx::collectives {
     }
 
     ////////////////////////////////////////////////////////////////////////////
-    template <typename T, typename Communicator>
+    HPX_CXX_EXPORT template <typename T, typename Communicator>
         requires(is_communicator_v<std::decay_t<Communicator>>)
     decltype(auto) scatter_from(Communicator&& comm,
         generation_arg const generation,
@@ -575,7 +575,7 @@ namespace hpx::collectives {
             HPX_FORWARD(Communicator, comm), this_site, generation);
     }
 
-    template <typename T>
+    HPX_CXX_EXPORT template <typename T>
     decltype(auto) scatter_from(char const* basename,
         this_site_arg const this_site = this_site_arg(),
         generation_arg const generation = generation_arg(),
@@ -588,7 +588,7 @@ namespace hpx::collectives {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    template <typename T, typename Communicator>
+    HPX_CXX_EXPORT template <typename T, typename Communicator>
         requires(is_communicator_v<std::decay_t<Communicator>>)
     decltype(auto) scatter_from(hpx::launch::sync_policy, Communicator&& comm,
         this_site_arg const this_site = this_site_arg(),
@@ -599,7 +599,7 @@ namespace hpx::collectives {
             .get();
     }
 
-    template <typename T, typename Communicator>
+    HPX_CXX_EXPORT template <typename T, typename Communicator>
         requires(is_communicator_v<std::decay_t<Communicator>>)
     decltype(auto) scatter_from(hpx::launch::sync_policy, Communicator&& comm,
         generation_arg const generation,
@@ -610,7 +610,7 @@ namespace hpx::collectives {
             .get();
     }
 
-    template <typename T>
+    HPX_CXX_EXPORT template <typename T>
     decltype(auto) scatter_from(hpx::launch::sync_policy, char const* basename,
         this_site_arg const this_site = this_site_arg(),
         generation_arg const generation = generation_arg(),
@@ -624,8 +624,8 @@ namespace hpx::collectives {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    // scatter plain values
-    template <typename T>
+    // scatter implementation
+    HPX_CXX_EXPORT template <typename T>
     hpx::future<T> scatter_to(communicator fid, std::vector<T>&& local_result,
         this_site_arg this_site = this_site_arg(),
         generation_arg const generation = generation_arg())
@@ -698,7 +698,7 @@ namespace hpx::collectives {
         return fid.then(hpx::launch::sync, HPX_MOVE(scatter_to_data));
     }
 
-    template <typename T>
+    HPX_CXX_EXPORT template <typename T>
     hpx::future<T> scatter_to(hierarchical_communicator const& communicators,
         std::vector<T>&& local_result,
         this_site_arg this_site = this_site_arg(),
@@ -734,7 +734,7 @@ namespace hpx::collectives {
     }
 
     ////////////////////////////////////////////////////////////////////////////
-    template <typename Communicator, typename T>
+    HPX_CXX_EXPORT template <typename Communicator, typename T>
         requires(is_communicator_v<std::decay_t<Communicator>>)
     decltype(auto) scatter_to(Communicator&& comm,
         std::vector<T>&& local_result, generation_arg const generation,
@@ -744,7 +744,7 @@ namespace hpx::collectives {
             HPX_MOVE(local_result), this_site, generation);
     }
 
-    template <typename T>
+    HPX_CXX_EXPORT template <typename T>
     decltype(auto) scatter_to(char const* basename,
         std::vector<T>&& local_result,
         num_sites_arg const num_sites = num_sites_arg(),
@@ -757,7 +757,7 @@ namespace hpx::collectives {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    template <typename Communicator, typename T>
+    HPX_CXX_EXPORT template <typename Communicator, typename T>
         requires(is_communicator_v<std::decay_t<Communicator>>)
     decltype(auto) scatter_to(hpx::launch::sync_policy, Communicator&& comm,
         std::vector<T>&& local_result,
@@ -769,7 +769,7 @@ namespace hpx::collectives {
             .get();
     }
 
-    template <typename Communicator, typename T>
+    HPX_CXX_EXPORT template <typename Communicator, typename T>
         requires(is_communicator_v<std::decay_t<Communicator>>)
     decltype(auto) scatter_to(hpx::launch::sync_policy, Communicator&& comm,
         std::vector<T>&& local_result, generation_arg const generation,
@@ -780,7 +780,7 @@ namespace hpx::collectives {
             .get();
     }
 
-    template <typename T>
+    HPX_CXX_EXPORT template <typename T>
     decltype(auto) scatter_to(hpx::launch::sync_policy, char const* basename,
         std::vector<T>&& local_result,
         num_sites_arg const num_sites = num_sites_arg(),

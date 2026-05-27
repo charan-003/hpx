@@ -1,5 +1,5 @@
 //  Copyright (c) 2007-2008 Anshul Tandon
-//  Copyright (c) 2007-2017 Hartmut Kaiser
+//  Copyright (c) 2007-2026 Hartmut Kaiser
 //  Copyright (c) 2011      Bryce Lelbach
 //
 //  SPDX-License-Identifier: BSL-1.0
@@ -31,7 +31,7 @@
 #include <utility>
 #include <vector>
 
-namespace hpx { namespace applier {
+namespace hpx::applier {
 
     applier::applier()
 #if defined(HPX_HAVE_NETWORKING)
@@ -182,4 +182,4 @@ namespace hpx { namespace applier {
     {
         return &hpx::get_runtime_distributed().get_applier();
     }
-}}    // namespace hpx::applier
+}    // namespace hpx::applier
