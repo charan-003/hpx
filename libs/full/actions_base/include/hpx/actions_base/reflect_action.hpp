@@ -51,6 +51,7 @@ namespace hpx::actions {
     /// no HPX_REGISTER_ACTION call is needed for reflection-based actions.
     ///
     /// \tparam F  A std::meta::info reflection of a free function.
+    /// \tparam Derived  Derived type for CRTP extensibility (default: void).
     template <std::meta::info F, typename Derived = void>
     struct reflect_action
       : basic_action<hpx::actions::detail::plain_function,
@@ -83,16 +84,17 @@ namespace hpx::actions {
         static auto invoke(naming::address::address_type /*lva*/,
             naming::address::component_type /*comptype*/, Ts&&... vs)
         {
-            using base_t = basic_action<hpx::actions::detail::plain_function,
-                func_type, reflect_action<F>>;
+            using base_t =
+                basic_action<hpx::actions::detail::plain_function, func_type,
+                    detail::action_type_t<reflect_action<F, Derived>, Derived>>;
             base_t::increment_invocation_count();
             return func_ptr(HPX_FORWARD(Ts, vs)...);
         }
 
         /// Automatic invocation count registration -- eliminates the need
         /// for HPX_REGISTER_ACTION for reflection-based plain actions.
-        static detail::register_action_invocation_count<reflect_action<F>>
-            invocation_count_registrar_;
+        static detail::register_action_invocation_count reflect_action < F,
+            Derived >> invocation_count_registrar_;
     };
 
     /// \cond NOINTERNAL
