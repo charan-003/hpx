@@ -16,6 +16,7 @@ set(tests
     limiting_executor
     parallel_executor
     parallel_executor_parameters
+    parallel_executor_scheduler
     parallel_fork_executor
     parallel_policy_executor
     parallel_scheduler
