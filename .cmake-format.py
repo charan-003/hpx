@@ -586,6 +586,10 @@ with section("parse"):
                                                     'FOUND_HEADERS': 1},
                           'pargs': { 'flags': [], 'nargs': '1+'}},
     'hpx_configure_module_producer': { 'kwargs': {},
+                          'pargs': { 'flags': [], 'nargs': '1+'}},
+    'hpx_configure_if_changed': { 'kwargs': { 'INPUT': 1,
+                                              'OUTPUT': 1,
+                                              'CONFIGURE_ARGS': '+'},
                           'pargs': { 'flags': [], 'nargs': '1+'}}
   }
 

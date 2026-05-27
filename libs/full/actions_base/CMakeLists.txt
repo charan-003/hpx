@@ -25,7 +25,6 @@ set(actions_base_headers
     hpx/actions_base/lambda_to_action.hpp
     hpx/actions_base/macros.hpp
     hpx/actions_base/plain_action.hpp
-    hpx/actions_base/reflect_action.hpp
     hpx/actions_base/preassigned_action_id.hpp
     hpx/actions_base/traits/action_continuation.hpp
     hpx/actions_base/traits/action_decorate_continuation.hpp
@@ -44,6 +43,12 @@ set(actions_base_headers
     hpx/actions_base/traits/is_distribution_policy.hpp
     hpx/actions_base/traits/is_valid_action.hpp
 )
+
+if(HPX_WITH_CXX26_REFLECTION)
+  set(actions_base_headers ${actions_base_headers}
+                           hpx/actions_base/reflect_action.hpp
+  )
+endif()
 
 set(actions_base_macro_headers hpx/actions_base/macros.hpp)
 
@@ -87,31 +92,6 @@ set(actions_base_sources
 )
 
 include(HPX_AddModule)
-
-# HPX_WITH_CXX26_REFLECTION flag enables reflection-based action definition
-# using C++26 reflection capabilities. Defaults to ON when reflection is
-# available.
-set(HPX_WITH_CXX26_REFLECTION_DEFAULT OFF)
-if(HPX_WITH_CXX26_EXPERIMENTAL_META)
-  set(HPX_WITH_CXX26_REFLECTION_DEFAULT ON)
-endif()
-
-hpx_option(
-  HPX_WITH_CXX26_REFLECTION
-  BOOL
-  "Enable reflection-based action definition using C++26 reflection \
-  capabilities. (default: ${HPX_WITH_CXX26_REFLECTION_DEFAULT})"
-  ${HPX_WITH_CXX26_REFLECTION_DEFAULT}
-  ADVANCED
-  CATEGORY "Modules"
-  MODULE ACTIONS_BASE
-)
-
-if(HPX_WITH_CXX26_REFLECTION)
-  hpx_add_config_define_namespace(
-    DEFINE HPX_HAVE_CXX26_REFLECTION NAMESPACE ACTIONS_BASE
-  )
-endif()
 
 add_hpx_module(
   full actions_base
