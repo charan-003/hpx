@@ -199,5 +199,10 @@ namespace hpx::execution::experimental {
         {
             return {HPX_MOVE(exec_)};
         }
+
+        // P2300 bulk customization -- defined out-of-line in
+        // executor_scheduler_bulk.hpp after executor_bulk_sender is available.
+        template <typename Sender, typename Shape, typename F>
+        auto bulk(Sender&& sender, Shape const& shape, F&& f) const;
     };
 }    // namespace hpx::execution::experimental

@@ -162,12 +162,14 @@ namespace hpx::execution::experimental {
         };
     }    // namespace detail
 
-    template <typename Executor, typename Sender, typename Shape, typename F>
-    auto tag_invoke(bulk_t, executor_scheduler<Executor> const& sched,
-        Sender&& sender, Shape const& shape, F&& f)
+    // Out-of-line definition for executor_scheduler::bulk() member.
+    template <typename Executor>
+    template <typename Sender, typename Shape, typename F>
+    auto executor_scheduler<Executor>::bulk(
+        Sender&& sender, Shape const& shape, F&& f) const
     {
         return detail::executor_bulk_sender<Executor, std::decay_t<Sender>,
             Shape, std::decay_t<F>>{
-            sched.exec_, HPX_FORWARD(Sender, sender), shape, HPX_FORWARD(F, f)};
+            exec_, HPX_FORWARD(Sender, sender), shape, HPX_FORWARD(F, f)};
     }
 }    // namespace hpx::execution::experimental
