@@ -14,6 +14,7 @@
 #if defined(HPX_HAVE_CXX26_REFLECTION)
 
 #include <hpx/actions_base/basic_action.hpp>
+#include <hpx/actions_base/detail/invocation_count_registry.hpp>
 #include <hpx/actions_base/plain_action.hpp>
 #include <hpx/modules/serialization.hpp>
 
@@ -46,13 +47,16 @@ namespace hpx::actions {
     /// reflect_action<F> integrates with HPX's action system by inheriting
     /// from basic_action<detail::plain_function, R(Ps...), reflect_action<F>>.
     /// All properties are derived automatically from the reflected function F.
+    /// Invocation count registration is automatic via a static member --
+    /// no HPX_REGISTER_ACTION call is needed for reflection-based actions.
     ///
     /// \tparam F  A std::meta::info reflection of a free function.
-    template <std::meta::info F>
+    /// \tparam Derived  Derived type for CRTP extensibility (default: void).
+    template <std::meta::info F, typename Derived = void>
     struct reflect_action
       : basic_action<hpx::actions::detail::plain_function,
             typename detail::reflect_action_base<F>::func_type,
-            reflect_action<F>>
+            detail::action_type_t<reflect_action<F, Derived>, Derived>>
     {
         /// The function type (e.g. int(double, double))
         using func_type = [:std::meta::type_of(F):];
@@ -81,11 +85,22 @@ namespace hpx::actions {
             naming::address::component_type /*comptype*/, Ts&&... vs)
         {
             using base_t = basic_action<hpx::actions::detail::plain_function,
-                func_type, reflect_action<F>>;
+                func_type, detail::action_type_t<reflect_action, Derived>>;
             base_t::increment_invocation_count();
             return func_ptr(HPX_FORWARD(Ts, vs)...);
         }
+
+        /// Automatic invocation count registration -- eliminates the need
+        /// for HPX_REGISTER_ACTION for reflection-based plain actions.
+        static detail::register_action_invocation_count<reflect_action>
+            invocation_count_registrar_;
     };
+
+    /// \cond NOINTERNAL
+    template <std::meta::info F, typename Derived>
+    detail::register_action_invocation_count<reflect_action<F, Derived>>
+        reflect_action<F, Derived>::invocation_count_registrar_;
+    /// \endcond
 
 }    // namespace hpx::actions
 
