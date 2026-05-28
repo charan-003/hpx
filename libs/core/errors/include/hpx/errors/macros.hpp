@@ -18,11 +18,6 @@
 
 #include <type_traits>
 
-#if !defined(HPX_HAVE_CXX_MODULES) || defined(HPX_CORE_EXPORTS) ||             \
-    (defined(HPX_COMPILE_BMI) && defined(HPX_COMPILE_CORE_WITH_MODULES))
-#include <hpx/errors/throw_exception.hpp>
-#endif
-
 /// \cond NOINTERNAL
 ///////////////////////////////////////////////////////////////////////////////
 // helper macro allowing to prepend file name and line number to a generated
