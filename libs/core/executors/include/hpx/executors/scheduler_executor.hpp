@@ -231,23 +231,33 @@ namespace hpx::execution::experimental {
         template <typename T, typename... Ts>
         using future_type = hpx::future<T>;
 
-    private:
         template <executor_parameters Parameters>
-        friend auto tag_invoke(
-            hpx::execution::experimental::processing_units_count_t tag,
-            Parameters&& params, scheduler_executor const& exec,
+        [[nodiscard]] auto query(processing_units_count_t,
+            Parameters&& params,
             hpx::chrono::steady_duration const& duration =
                 hpx::chrono::null_duration,
-            std::size_t num_cores = 0)
-            -> decltype(std::declval<
-                hpx::execution::experimental::processing_units_count_t>()(
-                std::declval<Parameters>(), std::declval<BaseScheduler>(),
-                std::declval<hpx::chrono::steady_duration>(), 0))
+            std::size_t num_cores = 0) const
         {
-            return tag(HPX_FORWARD(Parameters, params), exec.sched_, duration,
-                num_cores);
+            return sched_.query(processing_units_count_t{},
+                HPX_FORWARD(Parameters, params), duration, num_cores);
         }
 
+        template <typename Tag, typename Property>
+            requires(hpx::execution::experimental::is_scheduling_property_v<Tag>)
+        [[nodiscard]] auto query(Tag tag, Property&& prop) const
+        {
+            return scheduler_executor{
+                sched_.query(tag, HPX_FORWARD(Property, prop))};
+        }
+
+        template <typename Tag>
+            requires(hpx::execution::experimental::is_scheduling_property_v<Tag>)
+        [[nodiscard]] auto query(Tag tag) const
+        {
+            return sched_.query(tag);
+        }
+
+    private:
         // NonBlockingOneWayExecutor interface
         template <typename F, typename... Ts>
         friend decltype(auto) tag_invoke(hpx::parallel::execution::post_t,
@@ -534,26 +544,20 @@ namespace hpx::execution::experimental {
     explicit scheduler_executor(BaseScheduler&& sched)
         -> scheduler_executor<std::decay_t<BaseScheduler>>;
 
-    // support all properties exposed by the wrapped scheduler
     HPX_CXX_CORE_EXPORT template <typename Tag, typename BaseScheduler,
-        typename Property,
-        HPX_CONCEPT_REQUIRES_(
-            hpx::execution::experimental::is_scheduling_property_v<Tag>)>
+        typename Property>
+        requires(hpx::execution::experimental::is_scheduling_property_v<Tag>)
     auto tag_invoke(
         Tag tag, scheduler_executor<BaseScheduler> const& exec, Property&& prop)
-        -> decltype(scheduler_executor<BaseScheduler>(std::declval<Tag>()(
-            std::declval<BaseScheduler>(), std::declval<Property>())))
     {
-        return scheduler_executor<BaseScheduler>(
-            tag(exec.sched(), HPX_FORWARD(Property, prop)));
+        return exec.query(tag, HPX_FORWARD(Property, prop));
     }
 
     HPX_CXX_CORE_EXPORT template <typename Tag, typename BaseScheduler>
         requires(hpx::execution::experimental::is_scheduling_property_v<Tag>)
     auto tag_invoke(Tag tag, scheduler_executor<BaseScheduler> const& exec)
-        -> decltype(std::declval<Tag>()(std::declval<BaseScheduler>()))
     {
-        return tag(exec.sched());
+        return exec.query(tag);
     }
 
     /// \cond NOINTERNAL

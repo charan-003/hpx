@@ -1306,61 +1306,54 @@ namespace hpx::execution::experimental {
                 priority, stacksize, sched, yield_delay, pu_mask);
         }
 
-        friend fork_join_executor tag_invoke(
-            hpx::execution::experimental::with_annotation_t,
-            fork_join_executor const& exec, char const* annotation) noexcept
+        [[nodiscard]] fork_join_executor query(
+            experimental::with_annotation_t, char const* annotation) const noexcept
         {
-            auto exec_with_annotation = exec;
+            auto exec_with_annotation = *this;
             exec_with_annotation.shared_data_->annotation_ = annotation;
             return exec_with_annotation;
         }
 
-        friend fork_join_executor tag_invoke(
-            hpx::execution::experimental::with_annotation_t,
-            fork_join_executor const& exec, std::string annotation)
+        [[nodiscard]] fork_join_executor query(
+            experimental::with_annotation_t, std::string annotation) const
         {
-            auto exec_with_annotation = exec;
+            auto exec_with_annotation = *this;
             exec_with_annotation.shared_data_->annotation_ =
                 hpx::detail::store_function_annotation(HPX_MOVE(annotation));
             return exec_with_annotation;
         }
 
-        friend char const* tag_invoke(
-            hpx::execution::experimental::get_annotation_t,
-            fork_join_executor const& exec) noexcept
+        [[nodiscard]] char const* query(
+            experimental::get_annotation_t) const noexcept
         {
-            return exec.shared_data_->annotation_;
+            return shared_data_->annotation_;
         }
 
-        friend auto tag_invoke(
-            hpx::execution::experimental::get_processing_units_mask_t,
-            fork_join_executor const& exec) noexcept
+        [[nodiscard]] auto query(
+            experimental::get_processing_units_mask_t) const noexcept
         {
-            return exec.shared_data_->pu_mask_;
+            return shared_data_->pu_mask_;
         }
 
-        friend auto tag_invoke(hpx::execution::experimental::get_cores_mask_t,
-            fork_join_executor const& exec) noexcept
+        [[nodiscard]] auto query(experimental::get_cores_mask_t) const noexcept
         {
-            return exec.shared_data_->pu_mask_;
+            return shared_data_->pu_mask_;
         }
 
-        friend std::size_t tag_invoke(
-            hpx::execution::experimental::get_first_core_t,
-            fork_join_executor const& exec) noexcept
+        [[nodiscard]] std::size_t query(
+            experimental::get_first_core_t) const noexcept
         {
-            return shared_data::get_first_core(exec.shared_data_->pu_mask_);
+            return shared_data::get_first_core(shared_data_->pu_mask_);
         }
 
         template <typename Parameters>
-            requires(hpx::traits::is_executor_parameters_v<Parameters>)
-        friend std::size_t tag_invoke(
-            hpx::execution::experimental::processing_units_count_t,
-            Parameters&&, fork_join_executor const& exec,
-            hpx::chrono::steady_duration const& = hpx::chrono::null_duration,
-            std::size_t = 0) noexcept
+            requires(hpx::executor_parameters<Parameters>)
+        [[nodiscard]] std::size_t query(experimental::processing_units_count_t,
+            Parameters&&, hpx::chrono::steady_duration const& =
+                hpx::chrono::null_duration,
+            std::size_t = 0) const noexcept
         {
-            return exec.shared_data_->num_threads_;
+            return shared_data_->num_threads_;
         }
 
         /// \cond NOINTERNAL

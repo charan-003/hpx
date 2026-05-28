@@ -7,6 +7,7 @@
 #pragma once
 
 #include <hpx/config.hpp>
+#include <hpx/async_base/detail/query_dispatch.hpp>
 #include <hpx/execution/traits/executor_traits.hpp>
 #include <hpx/modules/async_base.hpp>
 #include <hpx/modules/execution_base.hpp>
@@ -249,6 +250,54 @@ namespace hpx::execution::experimental {
     {
     private:
         template <typename Parameters, typename Executor>
+        friend HPX_FORCEINLINE decltype(auto) tag_invoke(
+            processing_units_count_t tag, Parameters&& params, Executor&& exec,
+            hpx::chrono::steady_duration const& iteration_duration,
+            std::size_t num_tasks) requires(hpx::executor_parameters<Parameters> &&
+            detail::has_query_v<Executor, processing_units_count_t, Parameters,
+                hpx::chrono::steady_duration const&, std::size_t>)
+        {
+            return HPX_FORWARD(Executor, exec).query(tag,
+                HPX_FORWARD(Parameters, params), iteration_duration, num_tasks);
+        }
+
+        template <typename Parameters, typename Executor>
+        friend HPX_FORCEINLINE decltype(auto) tag_invoke(
+            processing_units_count_t tag, Parameters&& params, Executor&& exec,
+            std::size_t num_tasks) requires(hpx::executor_parameters<Parameters> &&
+            detail::has_query_v<Executor, processing_units_count_t, Parameters,
+                hpx::chrono::steady_duration const&, std::size_t>)
+        {
+            return HPX_FORWARD(Executor, exec).query(tag,
+                HPX_FORWARD(Parameters, params), hpx::chrono::null_duration,
+                num_tasks);
+        }
+
+        template <typename Executor>
+        friend HPX_FORCEINLINE decltype(auto) tag_invoke(
+            processing_units_count_t tag, Executor&& exec,
+            hpx::chrono::steady_duration const& iteration_duration,
+            std::size_t num_tasks)
+            requires(detail::has_query_v<Executor, processing_units_count_t,
+                null_parameters_t, hpx::chrono::steady_duration const&,
+                std::size_t>)
+        {
+            return HPX_FORWARD(Executor, exec).query(tag, null_parameters,
+                iteration_duration, num_tasks);
+        }
+
+        template <typename Executor>
+        friend HPX_FORCEINLINE decltype(auto) tag_invoke(
+            processing_units_count_t tag, Executor&& exec, std::size_t num_tasks)
+            requires(detail::has_query_v<Executor, processing_units_count_t,
+                null_parameters_t, hpx::chrono::steady_duration const&,
+                std::size_t>)
+        {
+            return HPX_FORWARD(Executor, exec).query(tag, null_parameters,
+                hpx::chrono::null_duration, num_tasks);
+        }
+
+        template <typename Parameters, typename Executor>
             requires(hpx::executor_parameters<Parameters> &&
                 hpx::executor_any<Executor>)
         friend HPX_FORCEINLINE decltype(auto) tag_fallback_invoke(
@@ -303,6 +352,15 @@ namespace hpx::execution::experimental {
         final
       : hpx::functional::detail::tag_priority<with_processing_units_count_t>
     {
+    private:
+        template <typename Executor>
+        friend decltype(auto) tag_invoke(with_processing_units_count_t tag,
+            Executor&& exec, std::size_t num_cores)
+            requires(detail::has_query_v<Executor,
+                with_processing_units_count_t, std::size_t>)
+        {
+            return HPX_FORWARD(Executor, exec).query(tag, num_cores);
+        }
     } with_processing_units_count{};
 
     /// Mark the begin of a parallel algorithm execution

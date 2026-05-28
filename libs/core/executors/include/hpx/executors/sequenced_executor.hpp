@@ -54,6 +54,56 @@ namespace hpx::execution {
         {
             return *this;
         }
+
+#if defined(HPX_HAVE_THREAD_DESCRIPTION)
+        [[nodiscard]] auto query(experimental::with_annotation_t,
+            char const* annotation) const
+        {
+            auto exec_with_annotation = *this;
+            exec_with_annotation.annotation_ = annotation;
+            return exec_with_annotation;
+        }
+
+        [[nodiscard]] auto query(experimental::with_annotation_t,
+            std::string annotation) const
+        {
+            auto exec_with_annotation = *this;
+            exec_with_annotation.annotation_ =
+                hpx::detail::store_function_annotation(HPX_MOVE(annotation));
+            return exec_with_annotation;
+        }
+
+        [[nodiscard]] constexpr char const* query(
+            experimental::get_annotation_t) const noexcept
+        {
+            return annotation_;
+        }
+#endif
+
+        template <typename Parameters>
+            requires(hpx::executor_parameters<Parameters>)
+        [[nodiscard]] constexpr std::size_t query(
+            experimental::processing_units_count_t, Parameters&&,
+            hpx::chrono::steady_duration const& =
+                hpx::chrono::null_duration,
+            std::size_t = 0) const
+        {
+            return 1;
+        }
+
+        [[nodiscard]] auto query(
+            experimental::get_processing_units_mask_t) const
+        {
+            return threads::detail::get_self_or_default_pool()
+                ->get_used_processing_unit(hpx::get_worker_thread_num(), false);
+        }
+
+        [[nodiscard]] auto query(experimental::get_cores_mask_t) const
+        {
+            return threads::detail::get_self_or_default_pool()
+                ->get_used_processing_unit(hpx::get_worker_thread_num(), true);
+        }
+
         /// \endcond
 
         /// \cond NOINTERNAL
@@ -168,62 +218,6 @@ namespace hpx::execution {
         {
             return hpx::unwrap(hpx::parallel::execution::bulk_async_execute(
                 exec, HPX_FORWARD(F, f), shape, HPX_FORWARD(Ts, ts)...));
-        }
-
-#if defined(HPX_HAVE_THREAD_DESCRIPTION)
-        template <typename Executor_>
-            requires(std::is_convertible_v<Executor_, sequenced_executor>)
-        friend constexpr auto tag_invoke(
-            hpx::execution::experimental::with_annotation_t,
-            Executor_ const& exec, char const* annotation)
-        {
-            auto exec_with_annotation = exec;
-            exec_with_annotation.annotation_ = annotation;
-            return exec_with_annotation;
-        }
-
-        template <typename Executor_>
-            requires(std::is_convertible_v<Executor_, sequenced_executor>)
-        friend auto tag_invoke(hpx::execution::experimental::with_annotation_t,
-            Executor_ const& exec, std::string annotation)
-        {
-            auto exec_with_annotation = exec;
-            exec_with_annotation.annotation_ =
-                hpx::detail::store_function_annotation(HPX_MOVE(annotation));
-            return exec_with_annotation;
-        }
-
-        friend constexpr char const* tag_invoke(
-            hpx::execution::experimental::get_annotation_t,
-            sequenced_executor const& exec) noexcept
-        {
-            return exec.annotation_;
-        }
-#endif
-
-        template <executor_parameters Parameters>
-        friend constexpr std::size_t tag_invoke(
-            hpx::execution::experimental::processing_units_count_t,
-            Parameters&&, sequenced_executor const&,
-            hpx::chrono::steady_duration const& = hpx::chrono::null_duration,
-            std::size_t = 0)
-        {
-            return 1;
-        }
-
-        friend auto tag_invoke(
-            hpx::execution::experimental::get_processing_units_mask_t,
-            sequenced_executor const&)
-        {
-            return threads::detail::get_self_or_default_pool()
-                ->get_used_processing_unit(hpx::get_worker_thread_num(), false);
-        }
-
-        friend auto tag_invoke(hpx::execution::experimental::get_cores_mask_t,
-            sequenced_executor const&)
-        {
-            return threads::detail::get_self_or_default_pool()
-                ->get_used_processing_unit(hpx::get_worker_thread_num(), true);
         }
 
         friend decltype(auto) tag_invoke(hpx::execution::experimental::to_par_t,

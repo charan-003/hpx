@@ -34,6 +34,15 @@ namespace hpx::execution::experimental {
       : hpx::functional::detail::tag_fallback<to_non_par_t>
     {
     private:
+        // Bridge: forward to member function if available
+        template <typename Target>
+            requires requires(Target const& t) { t.to_non_par(); }
+        friend constexpr decltype(auto) tag_invoke(
+            to_non_par_t, Target const& target)
+        {
+            return target.to_non_par();
+        }
+
         // any non-parallel policy just returns itself
         template <execution_policy ExPolicy>
         friend constexpr decltype(auto) tag_fallback_invoke(

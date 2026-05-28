@@ -76,6 +76,44 @@ namespace hpx::execution::experimental {
         using future_type =
             hpx::traits::executor_future_t<BaseExecutor, T, Ts...>;
 
+        [[nodiscard]] constexpr annotating_executor query(
+            with_annotation_t, char const* annotation) const
+        {
+            auto exec_with_annotation = *this;
+            exec_with_annotation.annotation_ = annotation;
+            return exec_with_annotation;
+        }
+
+        [[nodiscard]] annotating_executor query(
+            with_annotation_t, std::string annotation) const
+        {
+            auto exec_with_annotation = *this;
+            exec_with_annotation.annotation_ =
+                hpx::detail::store_function_annotation(HPX_MOVE(annotation));
+            return exec_with_annotation;
+        }
+
+        [[nodiscard]] constexpr char const* query(
+            get_annotation_t) const noexcept
+        {
+            return annotation_;
+        }
+
+        template <typename Tag, typename Property>
+            requires(is_scheduling_property_v<Tag>)
+        [[nodiscard]] auto query(Tag tag, Property&& prop) const
+        {
+            return annotating_executor(
+                exec_.query(tag, HPX_FORWARD(Property, prop)), annotation_);
+        }
+
+        template <typename Tag>
+            requires(is_scheduling_property_v<Tag>)
+        [[nodiscard]] auto query(Tag tag) const
+        {
+            return exec_.query(tag);
+        }
+
     private:
         // NonBlockingOneWayExecutor interface
         template <typename F, typename... Ts>
@@ -157,34 +195,6 @@ namespace hpx::execution::experimental {
                 HPX_FORWARD(Ts, ts)...);
         }
 
-        // support with_annotation property
-        friend constexpr annotating_executor tag_invoke(
-            hpx::execution::experimental::with_annotation_t,
-            annotating_executor const& exec, char const* annotation)
-        {
-            auto exec_with_annotation = exec;
-            exec_with_annotation.annotation_ = annotation;
-            return exec_with_annotation;
-        }
-
-        friend annotating_executor tag_invoke(
-            hpx::execution::experimental::with_annotation_t,
-            annotating_executor const& exec, std::string annotation)
-        {
-            auto exec_with_annotation = exec;
-            exec_with_annotation.annotation_ =
-                hpx::detail::store_function_annotation(HPX_MOVE(annotation));
-            return exec_with_annotation;
-        }
-
-        // support get_annotation property
-        friend constexpr char const* tag_invoke(
-            hpx::execution::experimental::get_annotation_t,
-            annotating_executor const& exec) noexcept
-        {
-            return exec.annotation_;
-        }
-
     private:
         friend class hpx::serialization::access;
 
@@ -207,19 +217,15 @@ namespace hpx::execution::experimental {
         requires(hpx::execution::experimental::is_scheduling_property_v<Tag>)
     auto tag_invoke(
         Tag tag, annotating_executor<BaseExecutor> const& exec, Property&& prop)
-        -> decltype(annotating_executor<BaseExecutor>(std::declval<Tag>()(
-            std::declval<BaseExecutor>(), std::declval<Property>())))
     {
-        return annotating_executor<BaseExecutor>(
-            tag(exec.get_executor(), HPX_FORWARD(Property, prop)));
+        return exec.query(tag, HPX_FORWARD(Property, prop));
     }
 
     HPX_CXX_CORE_EXPORT template <typename Tag, typename BaseExecutor>
         requires(hpx::execution::experimental::is_scheduling_property_v<Tag>)
     auto tag_invoke(Tag tag, annotating_executor<BaseExecutor> const& exec)
-        -> decltype(std::declval<Tag>()(std::declval<BaseExecutor>()))
     {
-        return tag(exec.get_executor());
+        return exec.query(tag);
     }
 
     ///////////////////////////////////////////////////////////////////////////

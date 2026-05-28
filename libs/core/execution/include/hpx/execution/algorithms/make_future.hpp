@@ -11,6 +11,7 @@
 #include <hpx/execution/algorithms/detail/inject_scheduler.hpp>
 #include <hpx/execution/algorithms/detail/partial_algorithm.hpp>
 #include <hpx/execution/algorithms/detail/single_result.hpp>
+#include <hpx/async_base/detail/query_dispatch.hpp>
 #include <hpx/execution/algorithms/run_loop.hpp>
 #include <hpx/execution_base/stdexec_forward.hpp>
 #include <hpx/modules/allocator_support.hpp>
@@ -396,6 +397,18 @@ namespace hpx::execution::experimental {
       : hpx::functional::detail::tag_priority<make_future_t>
     {
     private:
+        template <typename Scheduler, typename Sender,
+            typename Allocator = hpx::util::internal_allocator<>>
+        friend constexpr auto tag_invoke(make_future_t tag,
+            Scheduler&& sched, Sender&& sender,
+            Allocator const& allocator = Allocator{})
+            requires(detail::has_query_v<Scheduler, make_future_t, Sender,
+                Allocator const&>)
+        {
+            return HPX_FORWARD(Scheduler, sched).query(tag,
+                HPX_FORWARD(Sender, sender), allocator);
+        }
+
         // clang-format off
         template <typename Sender,
             typename Allocator = hpx::util::internal_allocator<>,
@@ -418,22 +431,6 @@ namespace hpx::execution::experimental {
 
             return hpx::functional::tag_invoke(make_future_t{},
                 HPX_MOVE(scheduler), HPX_FORWARD(Sender, sender), allocator);
-        }
-
-        // clang-format off
-        template <typename Sender,
-            typename Allocator = hpx::util::internal_allocator<>,
-            HPX_CONCEPT_REQUIRES_(
-                hpx::execution::experimental::is_sender_v<Sender>
-            )>
-        // clang-format on
-        friend auto tag_invoke(make_future_t,
-            decltype(std::declval<hpx::execution::experimental::run_loop>()
-                    .get_scheduler()) const& sched,
-            Sender&& sender, Allocator const& allocator = Allocator{})
-        {
-            return detail::make_future_with_run_loop(
-                sched, HPX_FORWARD(Sender, sender), allocator);
         }
 
         // clang-format off
@@ -479,4 +476,12 @@ namespace hpx::execution::experimental {
                 allocator};
         }
     } make_future{};
+
+    template <typename Sender, typename Allocator>
+    auto run_loop::run_loop_scheduler::query(make_future_t, Sender&& sender,
+        Allocator const& allocator) const
+    {
+        return detail::make_future_with_run_loop(
+            *this, HPX_FORWARD(Sender, sender), allocator);
+    }
 }    // namespace hpx::execution::experimental
