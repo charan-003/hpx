@@ -12,8 +12,8 @@
 // base_ would have both == and != return false -- a logical contradiction.
 
 #include <hpx/init.hpp>
+#include <hpx/modules/algorithms.hpp>
 #include <hpx/modules/testing.hpp>
-#include <hpx/parallel/util/prefetching.hpp>
 
 #include <cstddef>
 #include <numeric>
