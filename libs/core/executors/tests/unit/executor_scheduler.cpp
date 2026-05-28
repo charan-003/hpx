@@ -43,9 +43,12 @@ void test_executor_scheduler_schedule()
 
     HPX_TEST(result.has_value());
 
-    // For a sequenced executor, the work runs inline on the calling thread
-    auto executed_tid = hpx::get<0>(*result);
-    HPX_TEST_EQ(executed_tid, main_tid);
+    if (result)
+    {
+        // For a sequenced executor, the work runs inline on the calling thread
+        auto executed_tid = hpx::get<0>(*result);
+        HPX_TEST_EQ(executed_tid, main_tid);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -74,9 +77,12 @@ void test_executor_scheduler_schedule_parallel()
 
     HPX_TEST(result.has_value());
 
-    // For a parallel executor, the work may run on a different thread
-    auto executed_tid = hpx::get<0>(*result);
-    HPX_TEST_NEQ(executed_tid, hpx::thread::id());    // valid thread ID
+    if (result)
+    {
+        // For a parallel executor, the work may run on a different thread
+        auto executed_tid = hpx::get<0>(*result);
+        HPX_TEST_NEQ(executed_tid, hpx::thread::id());    // valid thread ID
+    }
     (void) main_tid;    // used only for documentation
 }
 
@@ -106,9 +112,12 @@ void test_executor_scheduler_schedule_restricted()
 
     HPX_TEST(result.has_value());
 
-    // For a restricted executor, the work may run on a different thread
-    auto executed_tid = hpx::get<0>(*result);
-    HPX_TEST_NEQ(executed_tid, hpx::thread::id());    // valid thread ID
+    if (result)
+    {
+        // For a restricted executor, the work may run on a different thread
+        auto executed_tid = hpx::get<0>(*result);
+        HPX_TEST_NEQ(executed_tid, hpx::thread::id());    // valid thread ID
+    }
     (void) main_tid;    // used only for documentation
 }
 

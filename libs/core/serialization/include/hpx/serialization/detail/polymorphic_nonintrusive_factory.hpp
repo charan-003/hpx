@@ -14,6 +14,7 @@
 #include <hpx/config.hpp>
 #include <hpx/modules/debugging.hpp>
 #include <hpx/modules/type_support.hpp>
+
 #include <hpx/serialization/detail/non_default_constructible.hpp>
 #include <hpx/serialization/macros.hpp>
 #include <hpx/serialization/serialization_fwd.hpp>
@@ -29,7 +30,7 @@
 
 #include <hpx/config/warnings_prefix.hpp>
 
-#if defined(HPX_SERIALIZATION_HAVE_ALLOW_AUTO_GENERATE)
+#if defined(HPX_HAVE_CXX26_REFLECTION)
 #include <hpx/serialization/detail/refl_qualified_name_of.hpp>
 #endif
 
@@ -43,7 +44,7 @@ namespace hpx::serialization::detail {
 #else
     {
 
-#if defined(HPX_SERIALIZATION_HAVE_ALLOW_AUTO_GENERATE)
+#if defined(HPX_HAVE_CXX26_REFLECTION)
         [[nodiscard]] constexpr char const* operator()() const noexcept
         {
             // Unless the user specifically creates a specialization of this
