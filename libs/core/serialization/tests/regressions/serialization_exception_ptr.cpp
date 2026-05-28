@@ -21,11 +21,9 @@
 // the deserialized exception carries the original, ungarbled values.
 
 #include <hpx/config.hpp>
-#include <hpx/errors/throw_exception.hpp>
 #include <hpx/modules/errors.hpp>
 #include <hpx/modules/serialization.hpp>
 #include <hpx/modules/testing.hpp>
-#include <hpx/serialization/exception_ptr.hpp>
 
 #include <climits>
 #include <exception>

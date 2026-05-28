@@ -67,6 +67,12 @@ namespace hpx::serialization {
                     throw_line_ = *line;
                 }
             }
+            // NOLINTNEXTLINE(bugprone-empty-catch)
+            catch (...)
+            {
+                // plain exception_ptr (unrelated to HPX) was serialized, no
+                // special information is available
+            }
 
             // figure out concrete underlying exception type
             try
@@ -267,7 +273,7 @@ namespace hpx::serialization {
             case hpx::util::exception_type::std_system_error:
                 e = hpx::detail::get_exception(
                     std::system_error(static_cast<int>(err_value),
-                        std::system_category(), err_message),
+                        std::system_category(), what),
                     throw_function_, throw_file_, throw_line_);
                 break;
 
