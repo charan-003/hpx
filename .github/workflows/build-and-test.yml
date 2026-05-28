@@ -64,8 +64,6 @@ jobs:
             -DHPX_WITH_THREAD_LOCAL_STORAGE=On \
             -DHPX_WITH_STACKTRACES_STATIC_SYMBOLS=On \
             -DHPX_WITH_STACKTRACES_DEMANGLE_SYMBOLS=Off \
-            -DHPX_WITH_TESTS_DEBUG_LOG=On \
-            -DHPX_WITH_TESTS_DEBUG_LOG_DESTINATION="$GITHUB_WORKSPACE/build/debug-log.txt" \
             -DHPX_WITH_SPINLOCK_DEADLOCK_DETECTION=On \
             -DHPX_WITH_CHECK_MODULE_DEPENDENCIES=On \
             -DHPX_LOGGING_WITH_SEPARATE_DESTINATIONS=Off \
@@ -79,6 +77,11 @@ jobs:
             -DHPX_WITH_TESTS_MAX_THREADS_PER_LOCALITY=2 \
             -DHPX_WITH_DATAPAR=On \
             -DHPX_WITH_DATAPAR_BACKEND=EMULATE
+
+            # Disable logging for now as otherwise we run out of diskspace on the
+            # github runner instance
+            # -DHPX_WITH_TESTS_DEBUG_LOG=On 
+            # -DHPX_WITH_TESTS_DEBUG_LOG_DESTINATION="$GITHUB_WORKSPACE/build/debug-log.txt"
 
       - name: core_local (Building Core Local)
         shell: bash
