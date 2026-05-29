@@ -368,6 +368,17 @@ namespace hpx::execution::experimental {
         {
             return HPX_FORWARD(Executor, exec).query(tag, num_cores);
         }
+
+        template <typename Policy, typename Property>
+        friend decltype(auto) tag_invoke(with_processing_units_count_t tag,
+            Policy&& policy, Property&& property)
+            requires(hpx::is_execution_policy_v<std::decay_t<Policy>> &&
+                detail::has_query_v<Policy, with_processing_units_count_t,
+                    Property>)
+        {
+            return HPX_FORWARD(Policy, policy)
+                .query(tag, HPX_FORWARD(Property, property));
+        }
     } with_processing_units_count{};
 
     /// Mark the begin of a parallel algorithm execution

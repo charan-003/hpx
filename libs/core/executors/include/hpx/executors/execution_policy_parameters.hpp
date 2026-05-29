@@ -30,6 +30,7 @@ namespace hpx::execution::experimental {
     // the underlying executor
     HPX_CXX_CORE_EXPORT template <typename ParametersProperty,
         execution_policy ExPolicy, executor_parameters Params>
+        requires(!is_scheduling_property_v<ParametersProperty>)
     constexpr decltype(auto) tag_fallback_invoke(
         ParametersProperty, ExPolicy&& policy, Params&& params)
     {

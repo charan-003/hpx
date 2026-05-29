@@ -127,7 +127,7 @@ namespace hpx {
           : policy_holder_base
           , hpx::detail::policy_holder_query<Derived>
         {
-        protected:
+        private:
             constexpr explicit policy_holder(launch_policy const p,
                 threads::thread_priority const priority =
                     threads::thread_priority::default_,
@@ -143,6 +143,24 @@ namespace hpx {
               : policy_holder_base(p)
             {
             }
+
+            friend Derived;
+
+            template <typename D>
+            friend constexpr policy_holder<D> operator~(
+                policy_holder<D> const& p) noexcept;
+
+            template <typename Left, typename Right>
+            friend policy_holder<Left> operator&=(policy_holder<Left>& lhs,
+                policy_holder<Right> const& rhs) noexcept;
+
+            template <typename Left, typename Right>
+            friend policy_holder<Left> operator|=(policy_holder<Left>& lhs,
+                policy_holder<Right> const& rhs) noexcept;
+
+            template <typename Left, typename Right>
+            friend policy_holder<Left> operator^=(policy_holder<Left>& lhs,
+                policy_holder<Right> const& rhs) noexcept;
 
         public:
             constexpr operator launch_policy() const noexcept
