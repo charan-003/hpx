@@ -907,9 +907,8 @@ namespace hpx::execution::experimental::detail {
               , op_state(hpx::execution::experimental::connect(
                     HPX_FORWARD(Sender_, sender),
                     bulk_receiver<operation_state, F, Shape>{this}))
-              , first_thread(
-                    scheduler.query(
-                        hpx::execution::experimental::get_first_core_t{}))
+              , first_thread(scheduler.query(
+                    hpx::execution::experimental::get_first_core_t{}))
               , num_worker_threads(scheduler.query(
                     hpx::execution::experimental::processing_units_count_t{},
                     hpx::execution::experimental::null_parameters,
@@ -942,10 +941,9 @@ namespace hpx::execution::experimental::detail {
         template <typename Receiver>
         operation_state<std::decay_t<Receiver>> connect(Receiver&& receiver) &&
         {
-            return operation_state<std::decay_t<Receiver>>{
-                HPX_MOVE(scheduler), HPX_MOVE(sender), HPX_MOVE(shape),
-                HPX_MOVE(f), HPX_MOVE(pu_mask),
-                HPX_FORWARD(Receiver, receiver)};
+            return operation_state<std::decay_t<Receiver>>{HPX_MOVE(scheduler),
+                HPX_MOVE(sender), HPX_MOVE(shape), HPX_MOVE(f),
+                HPX_MOVE(pu_mask), HPX_FORWARD(Receiver, receiver)};
         }
 
         template <typename Receiver>

@@ -22,7 +22,7 @@
 
 namespace hpx::execution::experimental {
 
-    struct make_future_t;
+    HPX_CXX_CORE_EXPORT struct make_future_t;
 
     namespace detail {
 

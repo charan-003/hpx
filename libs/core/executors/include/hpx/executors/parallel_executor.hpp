@@ -506,8 +506,8 @@ namespace hpx::execution {
         constexpr ~parallel_policy_executor() {}
 #endif
 
-        [[nodiscard]] auto query(
-            experimental::with_processing_units_count_t, std::size_t num_cores) const
+        [[nodiscard]] auto query(experimental::with_processing_units_count_t,
+            std::size_t num_cores) const
         {
             return base_type::with_num_cores(*this, num_cores);
         }
@@ -515,8 +515,8 @@ namespace hpx::execution {
         template <typename Parameters>
             requires(hpx::executor_parameters<Parameters>)
         [[nodiscard]] std::size_t query(experimental::processing_units_count_t,
-            Parameters&&, hpx::chrono::steady_duration const& =
-                hpx::chrono::null_duration,
+            Parameters&&,
+            hpx::chrono::steady_duration const& = hpx::chrono::null_duration,
             std::size_t = 0) const
         {
             return this->get_num_cores();
@@ -553,8 +553,8 @@ namespace hpx::execution {
             return base_type::with_annotation(*this, annotation);
         }
 
-        [[nodiscard]] auto query(experimental::with_annotation_t,
-            std::string annotation) const
+        [[nodiscard]] auto query(
+            experimental::with_annotation_t, std::string annotation) const
         {
             return base_type::with_annotation(*this, HPX_MOVE(annotation));
         }
@@ -569,7 +569,10 @@ namespace hpx::execution {
         // Generic scheduling property forwarding via embedded policy
         template <typename Tag, typename Property>
             requires(
-                hpx::execution::experimental::is_scheduling_property_v<Tag>)
+                hpx::execution::experimental::is_scheduling_property_v<Tag> &&
+                requires(Tag t, Policy const& pol, Property&& p) {
+                    t(pol, HPX_FORWARD(Property, p));
+                })
         [[nodiscard]] auto query(Tag tag, Property&& prop) const
         {
             auto exec_with_prop = *this;
@@ -580,7 +583,8 @@ namespace hpx::execution {
 
         template <typename Tag>
             requires(
-                hpx::execution::experimental::is_scheduling_property_v<Tag>)
+                hpx::execution::experimental::is_scheduling_property_v<Tag> &&
+                requires(Tag t, Policy const& pol) { t(pol); })
         [[nodiscard]] auto query(Tag tag) const
         {
             return tag(this->policy());
@@ -625,7 +629,8 @@ namespace hpx::execution {
 
         template <typename F, typename S, typename... Ts>
             requires(!std::is_integral_v<S>)
-        decltype(auto) bulk_sync_execute(F&& f, S const& shape, Ts&&... ts) const
+        decltype(auto) bulk_sync_execute(
+            F&& f, S const& shape, Ts&&... ts) const
         {
 #if defined(HPX_HAVE_THREAD_DESCRIPTION)
             hpx::threads::thread_description desc(f, this->annotation_);
@@ -813,8 +818,8 @@ namespace hpx::execution {
 
         ~parallel_policy_executor() = default;
 
-        [[nodiscard]] auto query(
-            experimental::with_processing_units_count_t, std::size_t num_cores) const
+        [[nodiscard]] auto query(experimental::with_processing_units_count_t,
+            std::size_t num_cores) const
         {
             return base_type::with_num_cores(*this, num_cores);
         }
@@ -822,8 +827,8 @@ namespace hpx::execution {
         template <typename Parameters>
             requires(hpx::executor_parameters<Parameters>)
         [[nodiscard]] std::size_t query(experimental::processing_units_count_t,
-            Parameters&&, hpx::chrono::steady_duration const& =
-                hpx::chrono::null_duration,
+            Parameters&&,
+            hpx::chrono::steady_duration const& = hpx::chrono::null_duration,
             std::size_t = 0) const
         {
             return this->get_num_cores();
@@ -860,8 +865,8 @@ namespace hpx::execution {
             return base_type::with_annotation(*this, annotation);
         }
 
-        [[nodiscard]] auto query(experimental::with_annotation_t,
-            std::string annotation) const
+        [[nodiscard]] auto query(
+            experimental::with_annotation_t, std::string annotation) const
         {
             return base_type::with_annotation(*this, HPX_MOVE(annotation));
         }
@@ -876,7 +881,10 @@ namespace hpx::execution {
         // Generic scheduling property forwarding via embedded policy
         template <typename Tag, typename Property>
             requires(
-                hpx::execution::experimental::is_scheduling_property_v<Tag>)
+                hpx::execution::experimental::is_scheduling_property_v<Tag> &&
+                requires(Tag t, Policy const& pol, Property&& p) {
+                    t(pol, HPX_FORWARD(Property, p));
+                })
         [[nodiscard]] auto query(Tag tag, Property&& prop) const
         {
             auto exec_with_prop = *this;
@@ -887,7 +895,8 @@ namespace hpx::execution {
 
         template <typename Tag>
             requires(
-                hpx::execution::experimental::is_scheduling_property_v<Tag>)
+                hpx::execution::experimental::is_scheduling_property_v<Tag> &&
+                requires(Tag t, Policy const& pol) { t(pol); })
         [[nodiscard]] auto query(Tag tag) const
         {
             return tag(this->policy());
@@ -932,7 +941,8 @@ namespace hpx::execution {
 
         template <typename F, typename S, typename... Ts>
             requires(!std::is_integral_v<S>)
-        decltype(auto) bulk_sync_execute(F&& f, S const& shape, Ts&&... ts) const
+        decltype(auto) bulk_sync_execute(
+            F&& f, S const& shape, Ts&&... ts) const
         {
 #if defined(HPX_HAVE_THREAD_DESCRIPTION)
             hpx::threads::thread_description desc(f, this->annotation_);

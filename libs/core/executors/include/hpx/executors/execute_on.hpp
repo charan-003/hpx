@@ -89,7 +89,8 @@ namespace hpx::execution::experimental {
         policy_type policy;
 
         template <typename Tag, typename Property>
-            requires(hpx::execution::experimental::is_scheduling_property_v<Tag>)
+            requires(
+                hpx::execution::experimental::is_scheduling_property_v<Tag>)
         [[nodiscard]] auto query(Tag tag, Property&& prop) const
         {
             return scheduler_and_policy{
@@ -98,7 +99,8 @@ namespace hpx::execution::experimental {
         }
 
         template <typename Tag>
-            requires(hpx::execution::experimental::is_scheduling_property_v<Tag>)
+            requires(
+                hpx::execution::experimental::is_scheduling_property_v<Tag>)
         [[nodiscard]] auto query(Tag tag) const
         {
             return get_scheduler().query(tag);
@@ -112,24 +114,9 @@ namespace hpx::execution::experimental {
 
     ////////////////////////////////////////////////////////////////////////////
 
-    HPX_CXX_CORE_EXPORT template <typename Tag, typename Scheduler,
-        typename ExPolicy, typename Property>
-        requires(hpx::execution::experimental::is_scheduling_property_v<Tag>)
-    auto tag_invoke(Tag tag,
-        scheduler_and_policy<Scheduler, ExPolicy> const& scheduler,
-        Property&& prop)
-    {
-        return scheduler.query(tag, HPX_FORWARD(Property, prop));
-    }
-
-    HPX_CXX_CORE_EXPORT template <typename Tag, typename Scheduler,
-        typename ExPolicy>
-        requires(hpx::execution::experimental::is_scheduling_property_v<Tag>)
-    auto tag_invoke(
-        Tag tag, scheduler_and_policy<Scheduler, ExPolicy> const& scheduler)
-    {
-        return scheduler.query(tag);
-    }
+    // The scheduling property CPOs detect the public query() member functions
+    // of scheduler_and_policy directly (via property_base), so no tag_invoke
+    // bridge is needed here.
 
     // Experimental support for facilities from p2500 (wg21.link/p2500)
     inline namespace p2500 {

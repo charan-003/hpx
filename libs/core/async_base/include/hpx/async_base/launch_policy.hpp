@@ -257,12 +257,6 @@ namespace hpx {
                     launch_policy::fork, priority, stacksize, hint)
             {
             }
-
-
-
-
-
-
         };
 
         struct sync_policy : policy_holder<sync_policy>
@@ -277,12 +271,6 @@ namespace hpx {
                     launch_policy::sync, priority, stacksize, hint)
             {
             }
-
-
-
-
-
-
         };
 
         struct deferred_policy : policy_holder<deferred_policy>
@@ -297,12 +285,6 @@ namespace hpx {
                     launch_policy::deferred, priority, stacksize, hint)
             {
             }
-
-
-
-
-
-
         };
 
         struct apply_policy : policy_holder<apply_policy>
@@ -317,12 +299,6 @@ namespace hpx {
                     launch_policy::apply, priority, stacksize, hint)
             {
             }
-
-
-
-
-
-
         };
 
         template <typename Pred>
@@ -353,12 +329,6 @@ namespace hpx {
             {
                 return true;
             }
-
-
-
-
-
-
 
         private:
             Pred pred_;

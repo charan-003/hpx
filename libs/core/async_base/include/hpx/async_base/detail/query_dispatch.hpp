@@ -14,10 +14,10 @@
 namespace hpx::execution::experimental::detail {
 
     template <typename Target, typename Tag, typename... Args>
-    inline constexpr bool has_query_v = requires(
-        Target&& target, Tag tag, Args&&... args) {
-        HPX_FORWARD(Target, target).query(tag, HPX_FORWARD(Args, args)...);
-    };
+    inline constexpr bool has_query_v =
+        requires(Target&& target, Tag tag, Args&&... args) {
+            HPX_FORWARD(Target, target).query(tag, HPX_FORWARD(Args, args)...);
+        };
 
     template <typename Target, typename Tag, typename... Args>
     using query_result_t = decltype(std::declval<Target>().query(

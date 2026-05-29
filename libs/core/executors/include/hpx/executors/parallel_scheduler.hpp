@@ -623,9 +623,8 @@ namespace hpx::execution::experimental {
         }
 
         template <hpx::executor_parameters Parameters>
-        [[nodiscard]] std::size_t query(processing_units_count_t,
-            Parameters&&, hpx::chrono::steady_duration const& =
-                hpx::chrono::null_duration,
+        [[nodiscard]] std::size_t query(processing_units_count_t, Parameters&&,
+            hpx::chrono::steady_duration const& = hpx::chrono::null_duration,
             std::size_t = 0) const
         {
             if (auto const* u = get_underlying_scheduler())
@@ -751,23 +750,21 @@ namespace hpx::execution::experimental {
                     set_stopped_t()>;
 
             template <typename Receiver>
-            operation_state<std::decay_t<Receiver>> connect(
-                Receiver&& receiver) const& noexcept(
-                std::is_nothrow_constructible_v<std::decay_t<Receiver>,
-                    Receiver>)
+            operation_state<std::decay_t<Receiver>> connect(Receiver&& receiver)
+                const& noexcept(
+                    std::is_nothrow_constructible_v<std::decay_t<Receiver>,
+                        Receiver>)
             {
-                return {HPX_FORWARD(Receiver, receiver),
-                    sched_.get_backend()};
+                return {HPX_FORWARD(Receiver, receiver), sched_.get_backend()};
             }
 
             template <typename Receiver>
-            operation_state<std::decay_t<Receiver>> connect(
-                Receiver&& receiver) && noexcept(
+            operation_state<std::decay_t<Receiver>>
+            connect(Receiver&& receiver) && noexcept(
                 std::is_nothrow_constructible_v<std::decay_t<Receiver>,
                     Receiver>)
             {
-                return {HPX_FORWARD(Receiver, receiver),
-                    sched_.get_backend()};
+                return {HPX_FORWARD(Receiver, receiver), sched_.get_backend()};
             }
 
             struct env

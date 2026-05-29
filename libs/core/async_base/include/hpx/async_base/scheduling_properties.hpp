@@ -46,12 +46,12 @@ namespace hpx::execution::experimental {
         {
         private:
             template <typename Target, typename... Args>
-            friend constexpr auto tag_invoke(Tag tag, Target&& target,
-                Args&&... args)
+            friend constexpr auto tag_invoke(
+                Tag tag, Target&& target, Args&&... args)
                 requires(has_query_v<Target, Tag, Args...>)
             {
-                return HPX_FORWARD(Target, target).query(
-                    tag, HPX_FORWARD(Args, args)...);
+                return HPX_FORWARD(Target, target)
+                    .query(tag, HPX_FORWARD(Args, args)...);
             }
 
             // attempt to improve error messages if property is not supported

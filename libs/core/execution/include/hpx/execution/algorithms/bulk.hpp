@@ -196,11 +196,12 @@ namespace hpx::execution::experimental {
             typename F>
         friend constexpr auto tag_invoke(bulk_t tag, Scheduler&& sched,
             Sender&& sender, Shape const& shape, F&& f)
-            requires detail::has_query_v<Scheduler, bulk_t, Sender, Shape const&,
-                F&&>
+            requires detail::has_query_v<Scheduler, bulk_t, Sender,
+                Shape const&, F&&>
         {
-            return HPX_FORWARD(Scheduler, sched).query(tag,
-                HPX_FORWARD(Sender, sender), shape, HPX_FORWARD(F, f));
+            return HPX_FORWARD(Scheduler, sched)
+                .query(
+                    tag, HPX_FORWARD(Sender, sender), shape, HPX_FORWARD(F, f));
         }
 
         // clang-format off
@@ -221,8 +222,9 @@ namespace hpx::execution::experimental {
                     hpx::execution::experimental::set_value_t>(
                     hpx::execution::experimental::get_env(sender));
 
-            return HPX_FORWARD(decltype(scheduler), scheduler).query(bulk_t{},
-                HPX_FORWARD(Sender, sender), shape, HPX_FORWARD(F, f));
+            return HPX_FORWARD(decltype(scheduler), scheduler)
+                .query(bulk_t{}, HPX_FORWARD(Sender, sender), shape,
+                    HPX_FORWARD(F, f));
         }
 
         // clang-format off

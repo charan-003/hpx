@@ -196,13 +196,13 @@ namespace hpx::execution::experimental {
             return pool_;
         }
 
-        [[nodiscard]] auto query(with_processing_units_count_t,
-            std::size_t num_cores) const
+        [[nodiscard]] auto query(
+            with_processing_units_count_t, std::size_t num_cores) const
         {
             if (num_cores == 0)
             {
-                auto pool = pool_ ? pool_ :
-                                       threads::detail::get_self_or_default_pool();
+                auto pool =
+                    pool_ ? pool_ : threads::detail::get_self_or_default_pool();
                 num_cores = pool->get_active_os_thread_count();
             }
             auto scheduler_with_num_cores = *this;
@@ -211,16 +211,15 @@ namespace hpx::execution::experimental {
         }
 
         template <executor_parameters Parameters>
-        [[nodiscard]] std::size_t query(processing_units_count_t,
-            Parameters&&, hpx::chrono::steady_duration const& =
-                hpx::chrono::null_duration,
+        [[nodiscard]] std::size_t query(processing_units_count_t, Parameters&&,
+            hpx::chrono::steady_duration const& = hpx::chrono::null_duration,
             std::size_t = 0) const
         {
             return get_num_cores();
         }
 
-        [[nodiscard]] auto query(with_first_core_t,
-            std::size_t first_core) const noexcept
+        [[nodiscard]] auto query(
+            with_first_core_t, std::size_t first_core) const noexcept
         {
             auto scheduler_with_first_core = *this;
             scheduler_with_first_core.first_core_ = first_core;
@@ -234,15 +233,16 @@ namespace hpx::execution::experimental {
         }
 
 #if defined(HPX_HAVE_THREAD_DESCRIPTION)
-        [[nodiscard]] auto query(with_annotation_t,
-            char const* annotation) const
+        [[nodiscard]] auto query(
+            with_annotation_t, char const* annotation) const
         {
             auto sched_with_annotation = *this;
             sched_with_annotation.annotation_ = annotation;
             return sched_with_annotation;
         }
 
-        [[nodiscard]] auto query(with_annotation_t, std::string annotation) const
+        [[nodiscard]] auto query(
+            with_annotation_t, std::string annotation) const
         {
             auto sched_with_annotation = *this;
             sched_with_annotation.annotation_ =
@@ -259,20 +259,21 @@ namespace hpx::execution::experimental {
 
         [[nodiscard]] auto query(get_processing_units_mask_t) const
         {
-            auto pool = pool_ ? pool_ :
-                                   threads::detail::get_self_or_default_pool();
+            auto pool =
+                pool_ ? pool_ : threads::detail::get_self_or_default_pool();
             return pool->get_used_processing_units(get_num_cores(), false);
         }
 
         [[nodiscard]] auto query(get_cores_mask_t) const
         {
-            auto pool = pool_ ? pool_ :
-                                   threads::detail::get_self_or_default_pool();
+            auto pool =
+                pool_ ? pool_ : threads::detail::get_self_or_default_pool();
             return pool->get_used_processing_units(get_num_cores(), true);
         }
 
         template <typename Tag, typename Property>
-            requires(hpx::execution::experimental::is_scheduling_property_v<Tag>)
+            requires(
+                hpx::execution::experimental::is_scheduling_property_v<Tag>)
         [[nodiscard]] auto query(Tag tag, Property&& prop) const
         {
             auto scheduler_with_prop = *this;
@@ -282,7 +283,8 @@ namespace hpx::execution::experimental {
         }
 
         template <typename Tag>
-            requires(hpx::execution::experimental::is_scheduling_property_v<Tag>)
+            requires(
+                hpx::execution::experimental::is_scheduling_property_v<Tag>)
         [[nodiscard]] auto query(Tag tag) const
         {
             return tag(policy());

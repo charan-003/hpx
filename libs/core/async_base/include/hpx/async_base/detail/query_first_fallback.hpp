@@ -15,31 +15,32 @@ namespace hpx::execution::experimental::detail {
 
     // CPO tag that prefers target.query(tag, args...) and otherwise invokes
     // Fallback{}(target, args...).
+    // NOLINTBEGIN(bugprone-crtp-constructor-accessibility)
     template <typename Tag, typename Fallback>
-    struct query_first_tag_fallback
-      : hpx::functional::detail::tag_fallback<Tag>
+    struct query_first_tag_fallback : hpx::functional::detail::tag_fallback<Tag>
     {
     private:
         template <typename Target, typename... Args>
-        friend constexpr auto tag_invoke(Tag tag, Target&& target,
-            Args&&... args)
+        friend constexpr auto tag_invoke(
+            Tag tag, Target&& target, Args&&... args)
             requires(has_query_v<Target, Tag, Args...>)
         {
-            return HPX_FORWARD(Target, target).query(
-                tag, HPX_FORWARD(Args, args)...);
+            return HPX_FORWARD(Target, target)
+                .query(tag, HPX_FORWARD(Args, args)...);
         }
 
         template <typename Target, typename... Args>
-        friend constexpr auto tag_fallback_invoke(
-            Tag, Target&& target, Args&&... args)
-            noexcept(noexcept(Fallback{}(
-                HPX_FORWARD(Target, target), HPX_FORWARD(Args, args)...)))
-                -> decltype(Fallback{}(HPX_FORWARD(Target, target),
-                    HPX_FORWARD(Args, args)...))
+        friend constexpr auto tag_fallback_invoke(Tag, Target&& target,
+            Args&&... args) noexcept(noexcept(Fallback{}(HPX_FORWARD(Target,
+                                                             target),
+            HPX_FORWARD(Args, args)...)))
+            -> decltype(Fallback{}(
+                HPX_FORWARD(Target, target), HPX_FORWARD(Args, args)...))
         {
             return Fallback{}(
                 HPX_FORWARD(Target, target), HPX_FORWARD(Args, args)...);
         }
     };
+    // NOLINTEND(bugprone-crtp-constructor-accessibility)
 
 }    // namespace hpx::execution::experimental::detail
