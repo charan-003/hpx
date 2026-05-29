@@ -28,6 +28,10 @@ namespace hpx::execution::detail {
         constexpr auto to_task() const;
         constexpr auto to_par() const;
         constexpr auto to_non_simd() const;
+
+    private:
+        friend Derived;
+        constexpr simd_sync_policy_mappings() = default;
     };
 
     template <typename Derived>
@@ -36,6 +40,10 @@ namespace hpx::execution::detail {
         constexpr auto to_non_task() const;
         constexpr auto to_par() const;
         constexpr auto to_non_simd() const;
+
+    private:
+        friend Derived;
+        constexpr simd_async_policy_mappings() = default;
     };
 
     template <typename Derived>
@@ -44,6 +52,10 @@ namespace hpx::execution::detail {
         constexpr auto to_task() const;
         constexpr auto to_non_par() const;
         constexpr auto to_non_simd() const;
+
+    private:
+        friend Derived;
+        constexpr par_simd_sync_policy_mappings() = default;
     };
 
     template <typename Derived>
@@ -52,6 +64,10 @@ namespace hpx::execution::detail {
         constexpr auto to_non_task() const;
         constexpr auto to_non_par() const;
         constexpr auto to_non_simd() const;
+
+    private:
+        friend Derived;
+        constexpr par_simd_async_policy_mappings() = default;
     };
 
 }    // namespace hpx::execution::detail

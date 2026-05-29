@@ -11,7 +11,9 @@
 
 namespace hpx::detail {
 
-    // NOLINTBEGIN(bugprone-crtp-constructor-accessibility)
+    template <typename Derived>
+    struct policy_holder;
+
     template <typename Policy>
     struct policy_holder_query
     {
@@ -59,7 +61,12 @@ namespace hpx::detail {
         {
             return static_cast<Policy const&>(*this).get_hint();
         }
+
+    private:
+        friend Policy;
+        template <typename T>
+        friend struct policy_holder;
+        constexpr policy_holder_query() = default;
     };
-    // NOLINTEND(bugprone-crtp-constructor-accessibility)
 
 }    // namespace hpx::detail

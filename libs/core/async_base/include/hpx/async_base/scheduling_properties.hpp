@@ -136,6 +136,7 @@ namespace hpx::execution::experimental {
       : detail::query_first_tag_fallback<get_priority_t,
             detail::get_priority_fallback>
     {
+        constexpr get_priority_t() = default;
     } get_priority{};
 
     template <>
@@ -158,6 +159,7 @@ namespace hpx::execution::experimental {
       : detail::query_first_tag_fallback<get_stacksize_t,
             detail::get_stacksize_fallback>
     {
+        constexpr get_stacksize_t() = default;
     } get_stacksize{};
 
     template <>
@@ -179,6 +181,7 @@ namespace hpx::execution::experimental {
     HPX_CXX_CORE_EXPORT inline constexpr struct get_hint_t final
       : detail::query_first_tag_fallback<get_hint_t, detail::get_hint_fallback>
     {
+        constexpr get_hint_t() = default;
     } get_hint{};
 
     template <>
@@ -201,6 +204,7 @@ namespace hpx::execution::experimental {
       : detail::query_first_tag_fallback<get_annotation_t,
             detail::get_annotation_fallback>
     {
+        constexpr get_annotation_t() = default;
     } get_annotation{};
 
     template <>
@@ -218,6 +222,7 @@ namespace hpx::execution::experimental {
       : detail::query_first_tag_fallback<get_first_core_t,
             detail::get_first_core_fallback>
     {
+        constexpr get_first_core_t() = default;
     } get_first_core{};
 
     template <>

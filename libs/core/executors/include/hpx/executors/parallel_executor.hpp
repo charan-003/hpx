@@ -509,7 +509,8 @@ namespace hpx::execution {
         [[nodiscard]] auto query(experimental::with_processing_units_count_t,
             std::size_t num_cores) const
         {
-            return base_type::with_num_cores(*this, num_cores);
+            using self_type = std::decay_t<decltype(*this)>;
+            return base_type::with_num_cores(self_type(*this), num_cores);
         }
 
         template <typename Parameters>
@@ -525,7 +526,8 @@ namespace hpx::execution {
         [[nodiscard]] auto query(experimental::with_first_core_t,
             std::size_t first_core) const noexcept
         {
-            return base_type::with_first_core(*this, first_core);
+            using self_type = std::decay_t<decltype(*this)>;
+            return base_type::with_first_core(self_type(*this), first_core);
         }
 
         [[nodiscard]] constexpr std::size_t query(
@@ -821,7 +823,8 @@ namespace hpx::execution {
         [[nodiscard]] auto query(experimental::with_processing_units_count_t,
             std::size_t num_cores) const
         {
-            return base_type::with_num_cores(*this, num_cores);
+            using self_type = std::decay_t<decltype(*this)>;
+            return base_type::with_num_cores(self_type(*this), num_cores);
         }
 
         template <typename Parameters>
@@ -837,7 +840,8 @@ namespace hpx::execution {
         [[nodiscard]] auto query(experimental::with_first_core_t,
             std::size_t first_core) const noexcept
         {
-            return base_type::with_first_core(*this, first_core);
+            using self_type = std::decay_t<decltype(*this)>;
+            return base_type::with_first_core(self_type(*this), first_core);
         }
 
         [[nodiscard]] constexpr std::size_t query(

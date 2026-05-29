@@ -22,6 +22,7 @@ namespace hpx::execution::experimental {
       : detail::query_first_tag_fallback<get_processing_units_mask_t,
             detail::machine_affinity_mask_fallback>
     {
+        constexpr get_processing_units_mask_t() = default;
     } get_processing_units_mask{};
 
     template <>
@@ -34,6 +35,7 @@ namespace hpx::execution::experimental {
       : detail::query_first_tag_fallback<get_cores_mask_t,
             detail::machine_affinity_mask_fallback>
     {
+        constexpr get_cores_mask_t() = default;
     } get_cores_mask{};
 
     template <>

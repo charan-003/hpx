@@ -92,7 +92,10 @@ namespace hpx::execution::experimental {
 
         template <typename Tag, typename Property>
             requires(
-                hpx::execution::experimental::is_scheduling_property_v<Tag>)
+                hpx::execution::experimental::is_scheduling_property_v<Tag> &&
+                requires(BaseScheduler const& sched, Tag tag, Property prop) {
+                    sched.query(tag, HPX_FORWARD(Property, prop));
+                })
         [[nodiscard]] auto query(Tag tag, Property&& prop) const
         {
             return explicit_scheduler_executor{
@@ -101,7 +104,9 @@ namespace hpx::execution::experimental {
 
         template <typename Tag>
             requires(
-                hpx::execution::experimental::is_scheduling_property_v<Tag>)
+                hpx::execution::experimental::is_scheduling_property_v<Tag> &&
+                requires(
+                    BaseScheduler const& sched, Tag tag) { sched.query(tag); })
         [[nodiscard]] auto query(Tag tag) const
         {
             return sched_.query(tag);

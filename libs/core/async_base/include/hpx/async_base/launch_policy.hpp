@@ -127,7 +127,7 @@ namespace hpx {
           : policy_holder_base
           , hpx::detail::policy_holder_query<Derived>
         {
-            // NOLINTNEXTLINE(bugprone-crtp-constructor-accessibility)
+        protected:
             constexpr explicit policy_holder(launch_policy const p,
                 threads::thread_priority const priority =
                     threads::thread_priority::default_,
@@ -138,13 +138,13 @@ namespace hpx {
             {
             }
 
-            // NOLINTNEXTLINE(bugprone-crtp-constructor-accessibility)
             constexpr explicit policy_holder(
                 policy_holder_base const p) noexcept
               : policy_holder_base(p)
             {
             }
 
+        public:
             constexpr operator launch_policy() const noexcept
             {
                 return static_cast<Derived const*>(this)->get_policy();
@@ -181,7 +181,7 @@ namespace hpx {
           : policy_holder_base
           , hpx::detail::policy_holder_query<policy_holder<void>>
         {
-            // NOLINTNEXTLINE(bugprone-crtp-constructor-accessibility)
+        public:
             constexpr explicit policy_holder(launch_policy const p,
                 threads::thread_priority const priority =
                     threads::thread_priority::default_,
@@ -192,7 +192,6 @@ namespace hpx {
             {
             }
 
-            // NOLINTNEXTLINE(bugprone-crtp-constructor-accessibility)
             constexpr explicit policy_holder(
                 policy_holder_base const p) noexcept
               : policy_holder_base(p)

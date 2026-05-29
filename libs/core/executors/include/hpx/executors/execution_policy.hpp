@@ -22,9 +22,13 @@
 #include <hpx/modules/properties.hpp>
 #include <hpx/modules/serialization.hpp>
 
+#include <cstddef>
 #include <memory>
+#include <string>
 #include <type_traits>
 #include <utility>
+
+#include <concepts>
 
 namespace hpx::execution {
 
@@ -241,8 +245,11 @@ namespace hpx::execution {
             // Scheduling property query implementations forward to the
             // embedded executor and rebound through create_rebound_policy.
             template <scheduling_property Tag, typename Property>
-                requires(hpx::functional::is_tag_invocable_v<Tag, executor_type,
-                    Property>)
+                requires(!std::is_same_v<Tag,
+                             hpx::execution::experimental::
+                                 with_processing_units_count_t> &&
+                    hpx::functional::is_tag_invocable_v<Tag, executor_type,
+                        Property>)
             [[nodiscard]] auto query(Tag tag, Property&& prop) const
             {
                 return hpx::execution::experimental::create_rebound_policy(
@@ -300,21 +307,52 @@ namespace hpx::execution {
             [[nodiscard]] auto query(
                 hpx::execution::experimental::with_processing_units_count_t,
                 std::size_t num_cores) const
-                requires(std::invocable<
+                requires(hpx::functional::is_tag_invocable_v<
                     hpx::execution::experimental::with_processing_units_count_t,
                     executor_type, std::size_t>)
             {
-                auto exec =
-                    hpx::execution::experimental::with_processing_units_count(
-                        executor(), num_cores);
+                using exec_type = executor_type;
+                using updated_exec_type = std::decay_t<decltype(hpx::execution::
+                        experimental::with_processing_units_count(
+                            std::declval<exec_type const&>(), num_cores))>;
 
-                return hpx::execution::experimental::create_rebound_policy(
-                    derived(), HPX_MOVE(exec), parameters());
+                if constexpr (std::is_same_v<updated_exec_type, exec_type>)
+                {
+                    auto exec = hpx::execution::experimental::
+                        with_processing_units_count(executor(), num_cores);
+
+                    return hpx::execution::experimental::create_rebound_policy(
+                        derived(), HPX_MOVE(exec), parameters());
+                }
+                else if constexpr (requires(exec_type e) {
+                                       e.num_cores_;
+                                       e.pool();
+                                   })
+                {
+                    exec_type exec = executor();
+                    if (num_cores == 0)
+                    {
+                        num_cores = exec.pool()->get_active_os_thread_count();
+                    }
+                    exec.num_cores_ = num_cores;
+
+                    return hpx::execution::experimental::create_rebound_policy(
+                        derived(), HPX_MOVE(exec), parameters());
+                }
+                else
+                {
+                    auto exec = hpx::execution::experimental::
+                        with_processing_units_count(executor(), num_cores);
+
+                    return hpx::execution::experimental::create_rebound_policy(
+                        derived(), HPX_MOVE(exec), parameters());
+                }
             }
 
             template <executor_parameters Params>
-                requires(std::invocable<hpx::execution::experimental::
-                                            with_processing_units_count_t,
+                requires(hpx::functional::is_tag_invocable_v<
+                             hpx::execution::experimental::
+                                 with_processing_units_count_t,
                              executor_type, std::size_t> &&
                     std::invocable<
                         hpx::execution::experimental::processing_units_count_t,

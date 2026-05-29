@@ -15,11 +15,13 @@ namespace hpx::execution::experimental::detail {
 
     // CPO tag that prefers target.query(tag, args...) and otherwise invokes
     // Fallback{}(target, args...).
-    // NOLINTBEGIN(bugprone-crtp-constructor-accessibility)
     template <typename Tag, typename Fallback>
     struct query_first_tag_fallback : hpx::functional::detail::tag_fallback<Tag>
     {
     private:
+        friend Tag;
+        constexpr query_first_tag_fallback() = default;
+
         template <typename Target, typename... Args>
         friend constexpr auto tag_invoke(
             Tag tag, Target&& target, Args&&... args)
@@ -41,6 +43,5 @@ namespace hpx::execution::experimental::detail {
                 HPX_FORWARD(Target, target), HPX_FORWARD(Args, args)...);
         }
     };
-    // NOLINTEND(bugprone-crtp-constructor-accessibility)
 
 }    // namespace hpx::execution::experimental::detail

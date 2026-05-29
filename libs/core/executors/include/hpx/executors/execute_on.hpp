@@ -105,6 +105,28 @@ namespace hpx::execution::experimental {
         {
             return get_scheduler().query(tag);
         }
+
+        template <typename Tag, typename... Args>
+            requires(
+                !hpx::execution::experimental::is_scheduling_property_v<Tag> &&
+                requires(base_scheduler_type const& sched, Tag t, Args... a) {
+                    sched.query(t, HPX_FORWARD(Args, a)...);
+                })
+        [[nodiscard]] auto query(Tag tag, Args&&... args) const
+        {
+            return get_scheduler().query(tag, HPX_FORWARD(Args, args)...);
+        }
+
+        template <typename Tag>
+            requires(
+                !hpx::execution::experimental::is_scheduling_property_v<Tag> &&
+                requires(base_scheduler_type const& sched, Tag t) {
+                    sched.query(t);
+                })
+        [[nodiscard]] auto query(Tag tag) const
+        {
+            return get_scheduler().query(tag);
+        }
     };
 
     HPX_CXX_CORE_EXPORT template <typename Scheduler, typename ExPolicy>
