@@ -19,14 +19,6 @@
 #include <cstdint>
 #include <string>
 #include <vector>
-#if !defined(HPX_HAVE_APEX)
-#if HPX_HAVE_ITTNOTIFY != 0
-#include <map>
-#endif
-#if defined(HPX_HAVE_TRACY)
-#include <set>
-#endif
-#endif
 
 #include <hpx/config/warnings_prefix.hpp>
 
@@ -124,15 +116,6 @@ namespace hpx::util {
         bool counter_types_;
 
         interval_timer timer_;
-
-#if !defined(HPX_HAVE_APEX)
-#if HPX_HAVE_ITTNOTIFY != 0
-        std::map<std::string, util::itt::counter> itt_counters_;
-#endif
-#if defined(HPX_HAVE_TRACY)
-        std::set<std::string> tracy_counters_;
-#endif
-#endif
     };
 }    // namespace hpx::util
 

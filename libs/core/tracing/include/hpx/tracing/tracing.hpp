@@ -9,312 +9,53 @@
 
 #include <hpx/config.hpp>
 
-#include <cstddef>
+#if defined(DOXYGEN)
+/// \defgroup tracing Tracing API
+/// \brief Unconditionally defined tracing and profiling abstractions.
+///
+/// The HPX tracing API provides a unified, zero-overhead interface for
+/// annotating HPX applications. Depending on the build configuration
+/// (`HPX_HAVE_TRACY`, `HPX_HAVE_ITTNOTIFY`, `HPX_HAVE_APEX`), the
+/// corresponding backend is selected at compile-time. If no backend is
+/// selected, all tracing calls are optimized away as `constexpr` no-ops.
+///
+/// \b Core \b Components:
+/// - \b task_timer_data: Opaque context passed to task timers.
+/// - \b scoped_task_timer: RAII object for timing execution tasks. Provides
+///   `yield()`, `stop()`, and `handle_post_execution()`.
+///
+/// \b Regions \b & \b Events:
+/// - \b region: General scope annotation.
+/// - \b fiber_region: Scope annotation specifically tracking HPX user-level
+///   threads (fibers) across OS threads.
+/// - \b fiber_suspend_region: Records the suspend and yield phases of an HPX fiber.
+/// - \b mark_event: Marks a distinct event/message in time.
+/// - \b rename_region: Dynamically renames the current active region.
+///
+/// \b Synchronization \b & \b Threading:
+/// - \b lock_context: Annotates the acquisition and release of locks.
+/// - \b set_thread_name: Names the underlying OS thread for the profiler.
+///
+/// \b Performance \b Counters:
+/// - \b create_counter: Registers a continuous performance metric.
+/// - \b sample_counter: Updates a registered metric with a new double value.
+#endif
+
+namespace hpx::threads {
+    HPX_CORE_EXPORT struct thread_description;
+    HPX_CORE_EXPORT struct thread_id;
+}    // namespace hpx::threads
+
+namespace hpx::util::external_timer {
+    HPX_CORE_EXPORT struct task_wrapper;
+}    // namespace hpx::util::external_timer
 
 #if defined(HPX_HAVE_TRACY)
-#include <hpx/modules/tracy.hpp>
-
-#include <hpx/config/warnings_prefix.hpp>
-
-namespace hpx::tracing {
-
-    ////////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT struct region_init_data
-    {
-        char const* name = nullptr;
-        std::size_t thread_phase = 0;
-        bool is_stackless = false;
-    };
-
-    ////////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT struct HPX_CORE_EXPORT [[maybe_unused]] loop_context
-    {
-        constexpr explicit loop_context() noexcept {}
-
-        ~loop_context() = default;
-
-        loop_context(loop_context const&) = delete;
-        loop_context& operator=(loop_context const&) = delete;
-    };
-
-    ////////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT struct HPX_CORE_EXPORT region
-    {
-        explicit region(loop_context&, region_init_data const& init_data,
-            std::size_t num_thread) noexcept;
-
-        ~region();
-
-    private:
-        static hpx::tracy::region create_tracy_region(
-            region_init_data const& data, std::size_t num_thread) noexcept;
-
-        hpx::tracy::region impl;
-    };
-
-    ////////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT struct HPX_CORE_EXPORT mark_event
-    {
-        explicit mark_event(char const* name) noexcept;
-        ~mark_event();
-
-    private:
-        hpx::tracy::mark_event impl;
-    };
-
-    ////////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT struct fiber_region_init_data
-    {
-        char const* name = nullptr;
-        char const* fiber_name = nullptr;
-        bool is_stackless = false;
-    };
-
-    HPX_CXX_CORE_EXPORT struct HPX_CORE_EXPORT fiber_region
-    {
-        explicit fiber_region(fiber_region_init_data const& data,
-            std::size_t num_thread) noexcept;
-
-        ~fiber_region();
-
-    private:
-        static hpx::tracy::fiber_region create_tracy_fiber_region(
-            fiber_region_init_data const& data,
-            std::size_t num_thread) noexcept;
-
-        hpx::tracy::fiber_region impl;
-    };
-
-    ////////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT struct HPX_CORE_EXPORT fiber_suspend_region
-    {
-        explicit fiber_suspend_region(char const* desc) noexcept;
-        ~fiber_suspend_region();
-
-    private:
-        hpx::tracy::fiber_suspend_region impl;
-    };
-
-    ////////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT struct HPX_CORE_EXPORT [[maybe_unused]] lock_context
-    {
-        explicit lock_context(char const* name = nullptr) noexcept;
-        explicit lock_context(char const* prefix, char const* suffix) noexcept;
-
-        ~lock_context();
-
-        lock_context(lock_context const&) = delete;
-        lock_context& operator=(lock_context const&) = delete;
-
-        bool before_lock() const noexcept;
-        void after_lock() const noexcept;
-        void after_try_lock(bool acquired) const noexcept;
-        void after_unlock() const noexcept;
-
-    private:
-        hpx::tracy::lock_data impl;
-    };
-
-    ////////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT void set_thread_name(
-        char const* name) noexcept;
-
-    ////////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT char const* rename_region(
-        char const* name) noexcept;
-
-}    // namespace hpx::tracing
-
-#include <hpx/config/warnings_suffix.hpp>
-
+#include <hpx/tracing/backends/tracy.hpp>
 #elif defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0
-#include <hpx/modules/itt_notify.hpp>
-
-namespace hpx::tracing {
-
-    ////////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT struct region_init_data
-    {
-        char const* name = nullptr;
-        std::size_t thread_phase = 0;
-        void const* thread_ptr = nullptr;
-        bool is_stackless = false;
-        std::size_t address = 0;
-        bool is_address_type = false;
-        void* itt_string_handle = nullptr;
-    };
-
-    ////////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT struct HPX_CORE_EXPORT loop_context
-    {
-        explicit loop_context() noexcept;
-        ~loop_context();
-
-        loop_context(loop_context const&) = delete;
-        loop_context& operator=(loop_context const&) = delete;
-
-        util::itt::stack_context stack_ctx;
-        util::itt::thread_domain thread_domain;
-        util::itt::string_handle task_id;
-        util::itt::string_handle task_phase;
-    };
-
-    ////////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT struct HPX_CORE_EXPORT region
-    {
-        explicit region(
-            loop_context& ctx, region_init_data const& data, std::size_t);
-        ~region();
-
-        region(region const&) = delete;
-        region& operator=(region const&) = delete;
-
-    private:
-        static util::itt::task make_task(
-            loop_context& ctx, region_init_data const& data);
-
-        util::itt::caller_context cctx;
-        util::itt::task task;
-    };
-
-    ////////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT struct [[maybe_unused]] mark_event
-    {
-        constexpr explicit mark_event(char const*) noexcept {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT struct fiber_region_init_data
-    {
-    };
-
-    HPX_CXX_CORE_EXPORT struct [[maybe_unused]] fiber_region
-    {
-        constexpr explicit fiber_region(
-            fiber_region_init_data const&, std::size_t) noexcept
-        {
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT struct [[maybe_unused]] fiber_suspend_region
-    {
-        constexpr explicit fiber_suspend_region(char const*) noexcept {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT struct [[maybe_unused]] lock_context
-    {
-        constexpr explicit lock_context(char const* = nullptr) noexcept {}
-        constexpr explicit lock_context(char const*, char const*) noexcept {}
-
-        constexpr bool before_lock() const noexcept
-        {
-            return false;
-        }
-
-        constexpr void after_lock() const noexcept {}
-
-        constexpr void after_try_lock(bool) const noexcept {}
-
-        constexpr void after_unlock() const noexcept {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT constexpr void set_thread_name(char const*) noexcept {}
-
-    ////////////////////////////////////////////////////////////////////////////
-    // ITT has no rename_region equivalent
-    HPX_CXX_CORE_EXPORT constexpr char const* rename_region(
-        char const*) noexcept
-    {
-        return nullptr;
-    }
-
-}    // namespace hpx::tracing
-
+#include <hpx/tracing/backends/ittnotify.hpp>
+#elif defined(HPX_HAVE_APEX)
+#include <hpx/tracing/backends/apex.hpp>
 #else
-
-namespace hpx::tracing {
-
-    ////////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT struct region_init_data
-    {
-    };
-
-    ////////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT struct [[maybe_unused]] loop_context
-    {
-        constexpr explicit loop_context() noexcept {}
-
-        ~loop_context() = default;
-
-        loop_context(loop_context const&) = delete;
-        loop_context& operator=(loop_context const&) = delete;
-    };
-
-    ////////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT struct [[maybe_unused]] region
-    {
-        constexpr explicit region(
-            loop_context&, region_init_data const&, std::size_t) noexcept
-        {
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT struct [[maybe_unused]] mark_event
-    {
-        constexpr explicit mark_event(char const*) noexcept {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT struct fiber_region_init_data
-    {
-    };
-
-    HPX_CXX_CORE_EXPORT struct [[maybe_unused]] fiber_region
-    {
-        constexpr explicit fiber_region(
-            fiber_region_init_data const&, std::size_t) noexcept
-        {
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT struct [[maybe_unused]] fiber_suspend_region
-    {
-        constexpr explicit fiber_suspend_region(char const*) noexcept {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT struct [[maybe_unused]] lock_context
-    {
-        constexpr explicit lock_context(char const* = nullptr) noexcept {}
-        constexpr explicit lock_context(char const*, char const*) noexcept {}
-
-        constexpr bool before_lock() const noexcept
-        {
-            return false;
-        }
-
-        constexpr void after_lock() const noexcept {}
-
-        constexpr void after_try_lock(bool) const noexcept {}
-
-        constexpr void after_unlock() const noexcept {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT constexpr void set_thread_name(char const*) noexcept {}
-
-    ////////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT constexpr char const* rename_region(
-        char const*) noexcept
-    {
-        return nullptr;
-    }
-
-}    // namespace hpx::tracing
-
+#include <hpx/tracing/backends/empty.hpp>
 #endif

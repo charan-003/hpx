@@ -27,6 +27,7 @@
 #include <hpx/modules/thread_support.hpp>
 #include <hpx/modules/threading_base.hpp>
 #include <hpx/modules/threadmanager.hpp>
+#include <hpx/modules/tracing.hpp>
 #include <hpx/modules/type_support.hpp>
 #include <hpx/modules/util.hpp>
 
@@ -544,9 +545,8 @@ namespace hpx::parcelset {
             util::itt::event_tick(parcel_send);
 #endif
 
-#if defined(HPX_HAVE_APEX) && defined(HPX_HAVE_PARCEL_PROFILING)
-            // tell APEX about the sent parcel
-            util::external_timer::send(
+#if defined(HPX_HAVE_PARCEL_PROFILING)
+            hpx::tracing::send_parcel(
                 p.parcel_id().get_lsb(), p.size(), p.destination_locality_id());
 #endif
         }

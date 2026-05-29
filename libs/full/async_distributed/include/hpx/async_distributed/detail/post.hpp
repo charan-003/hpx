@@ -23,6 +23,7 @@
 #include <hpx/modules/parcelset.hpp>
 #include <hpx/modules/parcelset_base.hpp>
 #include <hpx/modules/threading_base.hpp>
+#include <hpx/modules/tracing.hpp>
 #if defined(HPX_HAVE_THREAD_PARENT_REFERENCE)
 #include <hpx/modules/runtime_local.hpp>
 #endif
@@ -176,10 +177,7 @@ namespace hpx {
             data.parent_id = threads::get_self_id();
             data.parent_locality_id = get_locality_id();
 #endif
-#if defined(HPX_HAVE_APEX)
-            data.timer_data = hpx::util::external_timer::new_task(
-                data.description, data.parent_locality_id, data.parent_id);
-#endif
+            data.timer_data = threads::thread_init_data::setup_timer_data(data);
             data.priority = policy.priority();
             data.stacksize = policy.stacksize();
 
@@ -206,10 +204,7 @@ namespace hpx {
             data.parent_id = threads::get_self_id();
             data.parent_locality_id = get_locality_id();
 #endif
-#if defined(HPX_HAVE_APEX)
-            data.timer_data = hpx::util::external_timer::new_task(
-                data.description, data.parent_locality_id, data.parent_id);
-#endif
+            data.timer_data = threads::thread_init_data::setup_timer_data(data);
             data.priority = policy.priority();
             data.stacksize = policy.stacksize();
 
@@ -435,10 +430,7 @@ namespace hpx {
             data.parent_id = threads::get_self_id();
             data.parent_locality_id = get_locality_id();
 #endif
-#if defined(HPX_HAVE_APEX)
-            data.timer_data = hpx::util::external_timer::new_task(
-                data.description, data.parent_locality_id, data.parent_id);
-#endif
+            data.timer_data = threads::thread_init_data::setup_timer_data(data);
             data.priority = policy.priority();
             data.stacksize = policy.stacksize();
 
