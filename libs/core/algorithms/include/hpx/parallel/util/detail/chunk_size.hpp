@@ -11,12 +11,14 @@
 #include <hpx/modules/async_base.hpp>
 #include <hpx/modules/datastructures.hpp>
 #include <hpx/modules/execution.hpp>
+#include <hpx/modules/executors.hpp>
 #include <hpx/modules/futures.hpp>
 #include <hpx/modules/iterator_support.hpp>
 #include <hpx/modules/properties.hpp>
 #include <hpx/parallel/util/detail/chunk_size_iterator.hpp>
 
 #include <algorithm>
+#include <concepts>
 #include <cstddef>
 #include <type_traits>
 #include <utility>

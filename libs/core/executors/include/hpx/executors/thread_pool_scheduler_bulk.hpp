@@ -900,10 +900,10 @@ namespace hpx::execution::experimental::detail {
 
             template <typename Scheduler_, typename Sender_, typename Shape_,
                 typename F_, typename Receiver_>
-            operation_state(Scheduler_&& scheduler, Sender_&& sender,
+            operation_state(Scheduler_&& scheduler_, Sender_&& sender,
                 Shape_&& shape, F_&& f, hpx::threads::mask_type pumask,
                 Receiver_&& receiver)
-              : scheduler(HPX_FORWARD(Scheduler_, scheduler))
+              : scheduler(HPX_FORWARD(Scheduler_, scheduler_))
               , op_state(hpx::execution::experimental::connect(
                     HPX_FORWARD(Sender_, sender),
                     bulk_receiver<operation_state, F, Shape>{this}))
