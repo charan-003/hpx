@@ -40,7 +40,8 @@ namespace hpx::execution {
         struct simd_task_policy_shim
           : execution_policy<simd_task_policy_shim, Executor, Parameters,
                 unsequenced_execution_tag>
-          , simd_async_policy_mappings<simd_task_policy_shim>
+          , simd_async_policy_mappings<
+                simd_task_policy_shim<Executor, Parameters>>
         {
         private:
             using base_type = execution_policy<simd_task_policy_shim, Executor,
@@ -111,7 +112,7 @@ namespace hpx::execution {
         struct simd_policy_shim
           : execution_policy<simd_policy_shim, Executor, Parameters,
                 unsequenced_execution_tag>
-          , simd_sync_policy_mappings<simd_policy_shim>
+          , simd_sync_policy_mappings<simd_policy_shim<Executor, Parameters>>
         {
         private:
             using base_type = execution_policy<simd_policy_shim, Executor,
@@ -179,7 +180,8 @@ namespace hpx::execution {
         struct par_simd_task_policy_shim
           : execution_policy<par_simd_task_policy_shim, Executor, Parameters,
                 unsequenced_execution_tag>
-          , par_simd_async_policy_mappings<par_simd_task_policy_shim>
+          , par_simd_async_policy_mappings<
+                par_simd_task_policy_shim<Executor, Parameters>>
         {
         private:
             using base_type = execution_policy<par_simd_task_policy_shim,
@@ -249,7 +251,8 @@ namespace hpx::execution {
         struct par_simd_policy_shim
           : execution_policy<par_simd_policy_shim, Executor, Parameters,
                 unsequenced_execution_tag>
-          , par_simd_sync_policy_mappings<par_simd_policy_shim>
+          , par_simd_sync_policy_mappings<
+                par_simd_policy_shim<Executor, Parameters>>
         {
         private:
             using base_type = execution_policy<par_simd_policy_shim, Executor,

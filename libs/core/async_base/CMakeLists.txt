@@ -9,6 +9,9 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 set(async_base_headers
     hpx/async_base/async.hpp
     hpx/async_base/dataflow.hpp
+    hpx/async_base/detail/policy_holder_query.hpp
+    hpx/async_base/detail/query_dispatch.hpp
+    hpx/async_base/detail/query_first_fallback.hpp
     hpx/async_base/launch_policy.hpp
     hpx/async_base/post.hpp
     hpx/async_base/sync.hpp

@@ -30,7 +30,9 @@ endif()
 
 # Default location is $HPX_ROOT/libs/topology/include
 set(topology_headers
-    hpx/topology/cpu_mask.hpp hpx/topology/scheduling_properties.hpp
+    hpx/topology/cpu_mask.hpp
+    hpx/topology/detail/mask_fallback.hpp
+    hpx/topology/scheduling_properties.hpp
     hpx/topology/topology.hpp
 )
 

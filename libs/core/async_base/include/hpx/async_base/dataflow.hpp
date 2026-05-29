@@ -60,8 +60,8 @@ namespace hpx {
             friend constexpr auto tag_invoke(
                 dataflow_t, Target&& target, Args&&... args)
             {
-                return HPX_FORWARD(Target, target).dataflow(
-                    HPX_FORWARD(Args, args)...);
+                return HPX_FORWARD(Target, target)
+                    .dataflow(HPX_FORWARD(Args, args)...);
             }
 
             template <typename F, typename... Ts,
