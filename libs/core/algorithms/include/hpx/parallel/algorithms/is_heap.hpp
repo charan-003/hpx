@@ -242,9 +242,9 @@ namespace hpx::parallel {
     namespace detail {
 
         HPX_CXX_CORE_EXPORT template <typename Iter, typename Sent,
-            typename Comp, typename Proj>
+            typename Comp, typename Proj = hpx::identity>
         constexpr Iter sequential_is_heap_until(
-            Iter first, Sent last, Comp&& comp, Proj&& proj)
+            Iter first, Sent last, Comp&& comp, Proj&& proj = Proj())
         {
             Iter child = first;
             if (child == last)
@@ -255,50 +255,35 @@ namespace hpx::parallel {
             while (true)
             {
                 ++child;
-                if (child == last ||
-                    HPX_INVOKE(comp, HPX_INVOKE(proj, *first),
-                        HPX_INVOKE(proj, *child)))
-                {
+                if (child == last)
                     break;
+
+                if constexpr (std::is_same_v<std::decay_t<Proj>, hpx::identity>)
+                {
+                    if (HPX_INVOKE(comp, *first, *child))
+                        break;
+                }
+                else
+                {
+                    if (HPX_INVOKE(comp, HPX_INVOKE(proj, *first),
+                            HPX_INVOKE(proj, *child)))
+                        break;
                 }
 
                 ++child;
-                if (child == last ||
-                    HPX_INVOKE(comp, HPX_INVOKE(proj, *first),
-                        HPX_INVOKE(proj, *child)))
-                {
+                if (child == last)
                     break;
+
+                if constexpr (std::is_same_v<std::decay_t<Proj>, hpx::identity>)
+                {
+                    if (HPX_INVOKE(comp, *first, *child))
+                        break;
                 }
-
-                ++first;
-            }
-
-            return child;
-        }
-
-        HPX_CXX_CORE_EXPORT template <typename Iter, typename Sent,
-            typename Comp>
-        constexpr Iter sequential_is_heap_until(
-            Iter first, Sent last, Comp&& comp, hpx::identity)
-        {
-            Iter child = first;
-            if (child == last)
-            {
-                return child;
-            }
-
-            while (true)
-            {
-                ++child;
-                if (child == last || HPX_INVOKE(comp, *first, *child))
+                else
                 {
-                    break;
-                }
-
-                ++child;
-                if (child == last || HPX_INVOKE(comp, *first, *child))
-                {
-                    break;
+                    if (HPX_INVOKE(comp, HPX_INVOKE(proj, *first),
+                            HPX_INVOKE(proj, *child)))
+                        break;
                 }
 
                 ++first;
