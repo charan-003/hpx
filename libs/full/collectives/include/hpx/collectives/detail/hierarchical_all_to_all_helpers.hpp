@@ -64,9 +64,8 @@ namespace hpx::collectives::detail {
         // we call gather_here.
         for (std::size_t i = comms.size() - 1; i >= 1; --i)
         {
-            result = gather_data(
-                gather_here(hpx::launch::sync, comms.get(i),
-                    HPX_MOVE(result), this_site_arg(0), generation));
+            result = gather_data(gather_here(hpx::launch::sync, comms.get(i),
+                HPX_MOVE(result), this_site_arg(0), generation));
         }
 
         return result;
@@ -96,9 +95,8 @@ namespace hpx::collectives::detail {
         // (each intermediate rep gathers from its children).
         for (std::size_t i = comms.size() - 1; i != 0; --i)
         {
-            data = gather_data(
-                gather_here(hpx::launch::sync, comms.get(i),
-                    HPX_MOVE(data), this_site_arg(0), generation));
+            data = gather_data(gather_here(hpx::launch::sync, comms.get(i),
+                HPX_MOVE(data), this_site_arg(0), generation));
         }
 
         // At the topmost level (level 0 in this site's vector, which is
@@ -145,8 +143,8 @@ namespace hpx::collectives::detail {
         // At the leaf level (size()-1), pass data directly to scatter_to
         // WITHOUT scatter_data — each element maps 1:1 to a leaf site.
         // (Same pattern as scatter_to(hierarchical_communicator).)
-        return scatter_to(hpx::launch::sync, comms.back(),
-            HPX_MOVE(data), this_site_arg(0), generation);
+        return scatter_to(hpx::launch::sync, comms.back(), HPX_MOVE(data),
+            this_site_arg(0), generation);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -160,16 +158,15 @@ namespace hpx::collectives::detail {
     // level 0, then scatter down through intermediate levels to the leaf.
     ///////////////////////////////////////////////////////////////////////////
     template <typename T>
-    T subtree_receive_from_top_rep(hierarchical_communicator const& comms,
-        generation_arg const generation)
+    T subtree_receive_from_top_rep(
+        hierarchical_communicator const& comms, generation_arg const generation)
     {
         auto [current_communicator, current_site] = comms[0];
 
         if (comms.size() == 1)
         {
-            return scatter_from<T>(
-                hpx::launch::sync, current_communicator, current_site,
-                generation);
+            return scatter_from<T>(hpx::launch::sync, current_communicator,
+                current_site, generation);
         }
 
         std::vector<T> data = scatter_from<std::vector<T>>(
@@ -188,8 +185,8 @@ namespace hpx::collectives::detail {
         // At the leaf level, pass data directly to scatter_to WITHOUT
         // scatter_data — each element maps 1:1 to a leaf site.
         // (Same pattern as scatter_from(hierarchical_communicator).)
-        return scatter_to(hpx::launch::sync, comms.back(),
-            HPX_MOVE(data), this_site_arg(0), generation);
+        return scatter_to(hpx::launch::sync, comms.back(), HPX_MOVE(data),
+            this_site_arg(0), generation);
     }
 
 }    // namespace hpx::collectives::detail

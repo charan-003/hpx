@@ -45,9 +45,8 @@ void test_uniform_payload(std::uint32_t num_sites, int arity)
                 std::to_string(arity) + "/";
 
             auto const comms = create_hierarchical_communicator(
-                basename.c_str(), num_sites_arg(num_sites),
-                this_site_arg(site), arity_arg(arity),
-                generation_arg(), root_site_arg(),
+                basename.c_str(), num_sites_arg(num_sites), this_site_arg(site),
+                arity_arg(arity), generation_arg(), root_site_arg(),
                 flat_fallback_threshold_arg(0));
 
             for (int i = 0; i != ITERATIONS; ++i)
@@ -55,16 +54,14 @@ void test_uniform_payload(std::uint32_t num_sites, int arity)
                 std::vector<std::uint32_t> values(num_sites);
                 std::fill(values.begin(), values.end(), site + i);
 
-                auto result = all_to_all(hpx::launch::sync, comms,
-                    std::move(values), this_site_arg(site),
-                    generation_arg(i + 1));
+                auto result =
+                    all_to_all(hpx::launch::sync, comms, std::move(values),
+                        this_site_arg(site), generation_arg(i + 1));
 
-                HPX_TEST_EQ(result.size(),
-                    static_cast<std::size_t>(num_sites));
+                HPX_TEST_EQ(result.size(), static_cast<std::size_t>(num_sites));
                 for (std::size_t j = 0; j != result.size(); ++j)
                 {
-                    HPX_TEST_EQ(result[j],
-                        static_cast<std::uint32_t>(j + i));
+                    HPX_TEST_EQ(result[j], static_cast<std::uint32_t>(j + i));
                 }
             }
         }));
@@ -91,9 +88,8 @@ void test_distinct_payload(std::uint32_t num_sites, int arity)
                 std::to_string(arity) + "/";
 
             auto const comms = create_hierarchical_communicator(
-                basename.c_str(), num_sites_arg(num_sites),
-                this_site_arg(site), arity_arg(arity),
-                generation_arg(), root_site_arg(),
+                basename.c_str(), num_sites_arg(num_sites), this_site_arg(site),
+                arity_arg(arity), generation_arg(), root_site_arg(),
                 flat_fallback_threshold_arg(0));
 
             for (int i = 0; i != ITERATIONS; ++i)
@@ -104,17 +100,15 @@ void test_distinct_payload(std::uint32_t num_sites, int arity)
                     values[j] = site * num_sites + j + i;
                 }
 
-                auto result = all_to_all(hpx::launch::sync, comms,
-                    std::move(values), this_site_arg(site),
-                    generation_arg(i + 1));
+                auto result =
+                    all_to_all(hpx::launch::sync, comms, std::move(values),
+                        this_site_arg(site), generation_arg(i + 1));
 
-                HPX_TEST_EQ(result.size(),
-                    static_cast<std::size_t>(num_sites));
+                HPX_TEST_EQ(result.size(), static_cast<std::size_t>(num_sites));
                 for (std::size_t s = 0; s != result.size(); ++s)
                 {
                     HPX_TEST_EQ(result[s],
-                        static_cast<std::uint32_t>(
-                            s * num_sites + site + i));
+                        static_cast<std::uint32_t>(s * num_sites + site + i));
                 }
             }
         }));

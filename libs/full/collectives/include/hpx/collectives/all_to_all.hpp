@@ -442,8 +442,7 @@ namespace hpx::collectives {
             this_site = agas::get_locality_id();
         }
 
-        std::size_t const num_sites_val =
-            hpx::get<0>(communicators.get_info());
+        std::size_t const num_sites_val = hpx::get<0>(communicators.get_info());
         std::size_t const arity_val = communicators.get_arity();
 
         // Flat fallback: created by create_hierarchical_communicator when
@@ -451,9 +450,8 @@ namespace hpx::collectives {
         // spanning all N sites. Delegate to the flat overload.
         if (communicators.is_flat_fallback())
         {
-            return all_to_all(communicators.get(0),
-                HPX_MOVE(local_result), communicators.site(0),
-                generation);
+            return all_to_all(communicators.get(0), HPX_MOVE(local_result),
+                communicators.site(0), generation);
         }
 
         // Generation mapping: each communicator must see consecutive
@@ -475,11 +473,10 @@ namespace hpx::collectives {
         {
             // Phase 1: Gather all subtree sites' data at this rep.
             std::vector<std::vector<T>> gathered =
-                detail::subtree_gather_at_top_rep(communicators,
-                    HPX_MOVE(local_result), gather_gen);
+                detail::subtree_gather_at_top_rep(
+                    communicators, HPX_MOVE(local_result), gather_gen);
 
-            std::size_t const gidx =
-                detail::classify_site(this_site, groups);
+            std::size_t const gidx = detail::classify_site(this_site, groups);
             std::size_t const my_group_size = groups[gidx].size;
             std::size_t const num_groups = groups.size();
 
@@ -491,8 +488,7 @@ namespace hpx::collectives {
                 std::size_t const dest_group_size = groups[h].size;
                 std::size_t const dest_left = groups[h].left;
 
-                exchange_blocks[h].reserve(
-                    my_group_size * dest_group_size);
+                exchange_blocks[h].reserve(my_group_size * dest_group_size);
                 for (std::size_t s = 0; s != my_group_size; ++s)
                 {
                     for (std::size_t j = 0; j != dest_group_size; ++j)
@@ -503,10 +499,9 @@ namespace hpx::collectives {
                 }
             }
 
-            std::vector<std::vector<T>> received =
-                all_to_all(hpx::launch::sync, communicators.get(0),
-                    HPX_MOVE(exchange_blocks), communicators.site(0),
-                    exchange_gen);
+            std::vector<std::vector<T>> received = all_to_all(hpx::launch::sync,
+                communicators.get(0), HPX_MOVE(exchange_blocks),
+                communicators.site(0), exchange_gen);
 
             // Phase 3: Transpose received blocks back to per-site vectors,
             // then scatter down the subtree.
@@ -520,8 +515,8 @@ namespace hpx::collectives {
                     std::size_t const src_left = groups[h].left;
                     for (std::size_t s = 0; s != src_group_size; ++s)
                     {
-                        scatter_input[j][src_left + s] = HPX_MOVE(
-                            received[h][s * my_group_size + j]);
+                        scatter_input[j][src_left + s] =
+                            HPX_MOVE(received[h][s * my_group_size + j]);
                     }
                 }
             }
@@ -537,9 +532,8 @@ namespace hpx::collectives {
             detail::subtree_send_to_top_rep(
                 communicators, HPX_MOVE(local_result), gather_gen);
 
-            auto result =
-                detail::subtree_receive_from_top_rep<std::vector<T>>(
-                    communicators, scatter_gen);
+            auto result = detail::subtree_receive_from_top_rep<std::vector<T>>(
+                communicators, scatter_gen);
             return hpx::make_ready_future(HPX_MOVE(result));
         }
     }
@@ -552,8 +546,8 @@ namespace hpx::collectives {
         this_site_arg const this_site = this_site_arg(),
         generation_arg const generation = generation_arg())
     {
-        return all_to_all(communicators, HPX_MOVE(local_result),
-            this_site, generation)
+        return all_to_all(
+            communicators, HPX_MOVE(local_result), this_site, generation)
             .get();
     }
 }    // namespace hpx::collectives

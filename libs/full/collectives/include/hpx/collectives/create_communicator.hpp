@@ -300,8 +300,7 @@ namespace hpx::collectives {
         hierarchical_communicator(
             std::vector<hpx::tuple<communicator, this_site_arg>>&& comms,
             arity_arg arity, root_site_arg root_site, num_sites_arg num_sites,
-            this_site_arg this_site,
-            bool flat_fallback = false) noexcept
+            this_site_arg this_site, bool flat_fallback = false) noexcept
           : communicators(HPX_MOVE(comms))
           , num_sites(num_sites)
           , this_site(this_site)

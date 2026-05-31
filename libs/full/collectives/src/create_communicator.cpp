@@ -395,8 +395,8 @@ namespace hpx::collectives {
                 return;
             }
 
-            auto const groups = detail::get_top_level_groups(
-                right - left + 1, arity);
+            auto const groups =
+                detail::get_top_level_groups(right - left + 1, arity);
 
             for (std::size_t i = 0; i != groups.size(); ++i)
             {
@@ -406,9 +406,8 @@ namespace hpx::collectives {
                 if (this_site == current_left)
                 {
                     auto c = create_communicator(name.c_str(),
-                        num_sites_arg(groups.size()),
-                        this_site_arg(i), generation_arg(generation),
-                        root_site_arg(0));
+                        num_sites_arg(groups.size()), this_site_arg(i),
+                        generation_arg(generation), root_site_arg(0));
 
                     communicators.emplace_back(HPX_MOVE(c), this_site_arg(i));
                 }

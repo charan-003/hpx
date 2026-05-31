@@ -44,13 +44,12 @@ void test_round_trip(std::uint32_t num_sites, int arity)
     {
         sites.push_back(hpx::async([=]() {
             std::string basename(subtree_gs_basename);
-            basename += std::to_string(num_sites) + "_" +
-                std::to_string(arity) + "/";
+            basename +=
+                std::to_string(num_sites) + "_" + std::to_string(arity) + "/";
 
             auto const comms = create_hierarchical_communicator(
-                basename.c_str(), num_sites_arg(num_sites),
-                this_site_arg(site), arity_arg(arity),
-                generation_arg(), root_site_arg(),
+                basename.c_str(), num_sites_arg(num_sites), this_site_arg(site),
+                arity_arg(arity), generation_arg(), root_site_arg(),
                 flat_fallback_threshold_arg(0));
 
             auto [ns, ts] = comms.get_info();
@@ -65,10 +64,8 @@ void test_round_trip(std::uint32_t num_sites, int arity)
                 if (is_rep)
                 {
                     // Gather: collect subtree data.
-                    auto gathered =
-                        detail::subtree_gather_at_top_rep(comms,
-                            std::uint32_t(site),
-                            generation_arg(gather_gen));
+                    auto gathered = detail::subtree_gather_at_top_rep(
+                        comms, std::uint32_t(site), generation_arg(gather_gen));
 
                     // Verify: gathered should contain contiguous site ids.
                     auto groups =
@@ -80,21 +77,19 @@ void test_round_trip(std::uint32_t num_sites, int arity)
                     for (std::size_t j = 0; j != gathered.size(); ++j)
                     {
                         HPX_TEST_EQ(gathered[j],
-                            static_cast<std::uint32_t>(
-                                groups[gidx].left + j));
+                            static_cast<std::uint32_t>(groups[gidx].left + j));
                     }
 
                     // Scatter: send each site its value back.
                     auto my_val = detail::subtree_scatter_at_top_rep(
-                        comms, HPX_MOVE(gathered),
-                        generation_arg(scatter_gen));
+                        comms, HPX_MOVE(gathered), generation_arg(scatter_gen));
                     HPX_TEST_EQ(my_val, site);
                 }
                 else
                 {
                     // Send our value to the rep.
-                    detail::subtree_send_to_top_rep(comms,
-                        std::uint32_t(site), generation_arg(gather_gen));
+                    detail::subtree_send_to_top_rep(
+                        comms, std::uint32_t(site), generation_arg(gather_gen));
 
                     // Receive our value back.
                     auto my_val =
@@ -127,9 +122,8 @@ void test_vector_payload(std::uint32_t num_sites, int arity)
                 std::to_string(arity) + "/";
 
             auto const comms = create_hierarchical_communicator(
-                basename.c_str(), num_sites_arg(num_sites),
-                this_site_arg(site), arity_arg(arity),
-                generation_arg(), root_site_arg(),
+                basename.c_str(), num_sites_arg(num_sites), this_site_arg(site),
+                arity_arg(arity), generation_arg(), root_site_arg(),
                 flat_fallback_threshold_arg(0));
 
             auto [ns, ts] = comms.get_info();
@@ -144,9 +138,8 @@ void test_vector_payload(std::uint32_t num_sites, int arity)
                 // Gather: each site contributes a vector<uint32_t>.
                 // gather_data flattens one nesting level per gather step,
                 // so the result is vector<vector<uint32_t>>.
-                auto gathered =
-                    detail::subtree_gather_at_top_rep(comms,
-                        HPX_MOVE(my_data), generation_arg(1));
+                auto gathered = detail::subtree_gather_at_top_rep(
+                    comms, HPX_MOVE(my_data), generation_arg(1));
 
                 auto groups =
                     detail::get_top_level_groups(ns, comms.get_arity());
@@ -163,8 +156,8 @@ void test_vector_payload(std::uint32_t num_sites, int arity)
                 {
                     std::uint32_t expected_site =
                         static_cast<std::uint32_t>(groups[gidx].left + j);
-                    HPX_TEST_EQ(gathered[j].size(),
-                        static_cast<std::size_t>(3));
+                    HPX_TEST_EQ(
+                        gathered[j].size(), static_cast<std::size_t>(3));
                     HPX_TEST_EQ(gathered[j][0], expected_site * 10);
                     HPX_TEST_EQ(gathered[j][1], expected_site * 10 + 1);
                     HPX_TEST_EQ(gathered[j][2], expected_site * 10 + 2);
@@ -186,10 +179,8 @@ void test_vector_payload(std::uint32_t num_sites, int arity)
                 detail::subtree_send_to_top_rep(
                     comms, HPX_MOVE(my_data), generation_arg(1));
 
-                auto my_result =
-                    detail::subtree_receive_from_top_rep<
-                        std::vector<std::uint32_t>>(
-                        comms, generation_arg(2));
+                auto my_result = detail::subtree_receive_from_top_rep<
+                    std::vector<std::uint32_t>>(comms, generation_arg(2));
 
                 HPX_TEST_EQ(my_result.size(), static_cast<std::size_t>(3));
                 HPX_TEST_EQ(my_result[0], site * 10);

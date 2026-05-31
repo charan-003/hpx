@@ -172,13 +172,6 @@ namespace hpx::execution::experimental {
 
         struct env_t
         {
-            // Explicit constructor needed for Apple Clang which does not
-            // support P0960 (parenthesized aggregate initialization).
-            explicit constexpr env_t(run_loop* l) noexcept
-              : loop(l)
-            {
-            }
-
             [[nodiscard]]
             auto query(get_completion_scheduler_t<set_value_t>) const noexcept;
 
