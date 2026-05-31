@@ -19,6 +19,7 @@
 
 using hpx::collectives::detail::classify_site;
 using hpx::collectives::detail::get_top_level_groups;
+using hpx::collectives::detail::is_top_level_rep;
 using hpx::collectives::detail::top_level_group;
 
 void test_balanced_arity2()
@@ -213,6 +214,53 @@ void test_matches_recursive_fill()
     }
 }
 
+void test_is_top_level_rep_basic()
+{
+    // N=8, arity=2 -> groups [0,3] and [4,7]. Reps are 0 and 4.
+    HPX_TEST(is_top_level_rep(0, 8, 2));
+    HPX_TEST(!is_top_level_rep(1, 8, 2));
+    HPX_TEST(!is_top_level_rep(3, 8, 2));
+    HPX_TEST(is_top_level_rep(4, 8, 2));
+    HPX_TEST(!is_top_level_rep(5, 8, 2));
+    HPX_TEST(!is_top_level_rep(7, 8, 2));
+
+    // N=11, arity=4 -> groups [0,2], [3,5], [6,8], [9,10]. Reps: 0,3,6,9.
+    HPX_TEST(is_top_level_rep(0, 11, 4));
+    HPX_TEST(!is_top_level_rep(1, 11, 4));
+    HPX_TEST(!is_top_level_rep(2, 11, 4));
+    HPX_TEST(is_top_level_rep(3, 11, 4));
+    HPX_TEST(is_top_level_rep(6, 11, 4));
+    HPX_TEST(is_top_level_rep(9, 11, 4));
+    HPX_TEST(!is_top_level_rep(10, 11, 4));
+}
+
+void test_is_top_level_rep_exhaustive()
+{
+    // For various N and arity, exactly the leftmost site in each group
+    // should be a rep, and no other site.
+    for (std::size_t n = 1; n <= 32; ++n)
+    {
+        for (std::size_t arity = 2; arity <= 8; ++arity)
+        {
+            auto groups = get_top_level_groups(n, arity);
+
+            for (std::size_t site = 0; site != n; ++site)
+            {
+                bool expected = false;
+                for (auto const& g : groups)
+                {
+                    if (site == g.left)
+                    {
+                        expected = true;
+                        break;
+                    }
+                }
+                HPX_TEST_EQ(is_top_level_rep(site, n, arity), expected);
+            }
+        }
+    }
+}
+
 int hpx_main()
 {
     test_balanced_arity2();
@@ -225,6 +273,8 @@ int hpx_main()
     test_classify_site_basic();
     test_classify_site_exhaustive();
     test_matches_recursive_fill();
+    test_is_top_level_rep_basic();
+    test_is_top_level_rep_exhaustive();
 
     return hpx::finalize();
 }

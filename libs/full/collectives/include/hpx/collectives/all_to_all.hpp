@@ -209,6 +209,11 @@ namespace hpx { namespace collectives {
 #include <hpx/config.hpp>
 
 #if !defined(HPX_COMPUTE_DEVICE_CODE)
+
+#include <hpx/collectives/argument_types.hpp>
+#include <hpx/collectives/create_communicator.hpp>
+#include <hpx/collectives/detail/hierarchical_all_to_all_helpers.hpp>
+#include <hpx/collectives/detail/hierarchical_helpers.hpp>
 #include <hpx/modules/async_base.hpp>
 #include <hpx/modules/async_distributed.hpp>
 #include <hpx/modules/components_base.hpp>
@@ -395,6 +400,160 @@ namespace hpx::collectives {
         return all_to_all(create_communicator(basename, num_sites, this_site,
                               generation, root_site),
             HPX_MOVE(local_result), this_site)
+            .get();
+    }
+    ///////////////////////////////////////////////////////////////////////////
+    // hierarchical all_to_all
+    //
+    // Three-phase algorithm:
+    //  Phase 1 (gather):   subtree sites gather their local_result vectors
+    //                      at their top-level representative.
+    //  Phase 2 (exchange): representatives perform flat all_to_all at level 0,
+    //                      exchanging blocks of data between groups.
+    //  Phase 3 (scatter):  representatives scatter the transposed results
+    //                      back to their subtree sites.
+    //
+    // Generation mapping (user generation k, starting from 1):
+    //  - Subtree communicators: 2k-1 (gather) and 2k (scatter)
+    //  - Inter-group communicator: k (exchange)
+    // Each communicator sees consecutive generations starting at 1,
+    // which is required by the and_gate synchronization mechanism.
+
+    // Async overload
+    template <typename T>
+    hpx::future<std::vector<T>> all_to_all(
+        hierarchical_communicator const& communicators,
+        std::vector<T>&& local_result,
+        this_site_arg this_site = this_site_arg(),
+        generation_arg const generation = generation_arg())
+    {
+        if (generation.is_default())
+        {
+            return hpx::make_exceptional_future<std::vector<T>>(
+                HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                    "hpx::collectives::all_to_all (hierarchical)",
+                    "hierarchical all_to_all requires an explicit "
+                    "generation number for its internal generation "
+                    "mapping"));
+        }
+
+        if (this_site.is_default())
+        {
+            this_site = agas::get_locality_id();
+        }
+
+        std::size_t const num_sites_val =
+            hpx::get<0>(communicators.get_info());
+        std::size_t const arity_val = communicators.get_arity();
+
+        // Flat fallback: created by create_hierarchical_communicator when
+        // num_sites < threshold. All sites share a single flat communicator
+        // spanning all N sites. Delegate to the flat overload.
+        if (communicators.is_flat_fallback())
+        {
+            return all_to_all(communicators.get(0),
+                HPX_MOVE(local_result), communicators.site(0),
+                generation);
+        }
+
+        // Generation mapping: each communicator must see consecutive
+        // generation numbers starting from 1 (the gate blocks until all
+        // prior generations complete).  Subtree communicators participate
+        // in both gather and scatter, so they use 2k-1 / 2k.  The
+        // inter-group communicator participates only in the exchange, so
+        // it uses k directly.
+        generation_arg const gather_gen(2 * generation - 1);
+        generation_arg const exchange_gen(generation);
+        generation_arg const scatter_gen(2 * generation);
+
+        auto const groups =
+            detail::get_top_level_groups(num_sites_val, arity_val);
+        bool const is_rep =
+            detail::is_top_level_rep(this_site, num_sites_val, arity_val);
+
+        if (is_rep)
+        {
+            // Phase 1: Gather all subtree sites' data at this rep.
+            std::vector<std::vector<T>> gathered =
+                detail::subtree_gather_at_top_rep(communicators,
+                    HPX_MOVE(local_result), gather_gen);
+
+            std::size_t const gidx =
+                detail::classify_site(this_site, groups);
+            std::size_t const my_group_size = groups[gidx].size;
+            std::size_t const num_groups = groups.size();
+
+            // Phase 2: Build exchange blocks — pack gathered data by
+            // destination group, then perform flat all_to_all among reps.
+            std::vector<std::vector<T>> exchange_blocks(num_groups);
+            for (std::size_t h = 0; h != num_groups; ++h)
+            {
+                std::size_t const dest_group_size = groups[h].size;
+                std::size_t const dest_left = groups[h].left;
+
+                exchange_blocks[h].reserve(
+                    my_group_size * dest_group_size);
+                for (std::size_t s = 0; s != my_group_size; ++s)
+                {
+                    for (std::size_t j = 0; j != dest_group_size; ++j)
+                    {
+                        exchange_blocks[h].push_back(
+                            HPX_MOVE(gathered[s][dest_left + j]));
+                    }
+                }
+            }
+
+            std::vector<std::vector<T>> received =
+                all_to_all(hpx::launch::sync, communicators.get(0),
+                    HPX_MOVE(exchange_blocks), communicators.site(0),
+                    exchange_gen);
+
+            // Phase 3: Transpose received blocks back to per-site vectors,
+            // then scatter down the subtree.
+            std::vector<std::vector<T>> scatter_input(my_group_size);
+            for (std::size_t j = 0; j != my_group_size; ++j)
+            {
+                scatter_input[j].resize(num_sites_val);
+                for (std::size_t h = 0; h != num_groups; ++h)
+                {
+                    std::size_t const src_group_size = groups[h].size;
+                    std::size_t const src_left = groups[h].left;
+                    for (std::size_t s = 0; s != src_group_size; ++s)
+                    {
+                        scatter_input[j][src_left + s] = HPX_MOVE(
+                            received[h][s * my_group_size + j]);
+                    }
+                }
+            }
+
+            auto result = detail::subtree_scatter_at_top_rep(
+                communicators, HPX_MOVE(scatter_input), scatter_gen);
+            return hpx::make_ready_future(HPX_MOVE(result));
+        }
+        else
+        {
+            // Non-representative: send data to rep, then receive
+            // result from rep.
+            detail::subtree_send_to_top_rep(
+                communicators, HPX_MOVE(local_result), gather_gen);
+
+            auto result =
+                detail::subtree_receive_from_top_rep<std::vector<T>>(
+                    communicators, scatter_gen);
+            return hpx::make_ready_future(HPX_MOVE(result));
+        }
+    }
+
+    // Sync overload
+    template <typename T>
+    std::vector<T> all_to_all(hpx::launch::sync_policy,
+        hierarchical_communicator const& communicators,
+        std::vector<T>&& local_result,
+        this_site_arg const this_site = this_site_arg(),
+        generation_arg const generation = generation_arg())
+    {
+        return all_to_all(communicators, HPX_MOVE(local_result),
+            this_site, generation)
             .get();
     }
 }    // namespace hpx::collectives

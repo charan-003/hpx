@@ -71,4 +71,15 @@ namespace hpx::collectives::detail {
         return static_cast<std::size_t>(-1);
     }
 
+    // Return true if `this_site` is the leftmost site (representative)
+    // of its top-level group.
+    inline bool is_top_level_rep(
+        std::size_t this_site, std::size_t num_sites, std::size_t arity)
+    {
+        auto const groups = get_top_level_groups(num_sites, arity);
+        auto const g = classify_site(this_site, groups);
+        return (g != static_cast<std::size_t>(-1)) &&
+            (this_site == groups[g].left);
+    }
+
 }    // namespace hpx::collectives::detail
