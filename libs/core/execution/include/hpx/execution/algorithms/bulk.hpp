@@ -196,8 +196,7 @@ namespace hpx::execution::experimental {
             typename F>
         friend constexpr auto tag_invoke(bulk_t tag, Scheduler&& sched,
             Sender&& sender, Shape const& shape, F&& f)
-            requires has_query_v<Scheduler, bulk_t, Sender,
-                Shape const&, F&&>
+            requires has_query_v<Scheduler, bulk_t, Sender, Shape const&, F&&>
         {
             return HPX_FORWARD(Scheduler, sched)
                 .query(

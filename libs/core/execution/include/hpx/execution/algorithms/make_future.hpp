@@ -401,8 +401,8 @@ namespace hpx::execution::experimental {
             typename Allocator = hpx::util::internal_allocator<>>
         friend constexpr auto tag_invoke(make_future_t tag, Scheduler&& sched,
             Sender&& sender, Allocator const& allocator = Allocator{})
-            requires(has_query_v<Scheduler, make_future_t, Sender,
-                Allocator const&>)
+            requires(
+                has_query_v<Scheduler, make_future_t, Sender, Allocator const&>)
         {
             return HPX_FORWARD(Scheduler, sched)
                 .query(tag, HPX_FORWARD(Sender, sender), allocator);
