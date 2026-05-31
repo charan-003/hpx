@@ -7,7 +7,7 @@
 #pragma once
 
 #include <hpx/config.hpp>
-#include <hpx/async_base/detail/query_dispatch.hpp>
+#include <hpx/async_base/query_dispatch.hpp>
 #include <hpx/execution/traits/executor_traits.hpp>
 #include <hpx/modules/async_base.hpp>
 #include <hpx/modules/execution_base.hpp>
@@ -255,7 +255,7 @@ namespace hpx::execution::experimental {
             hpx::chrono::steady_duration const& iteration_duration,
             std::size_t num_tasks)
             requires(hpx::executor_parameters<Parameters> &&
-                detail::has_query_v<Executor, processing_units_count_t,
+                has_query_v<Executor, processing_units_count_t,
                     Parameters, hpx::chrono::steady_duration const&,
                     std::size_t>)
         {
@@ -269,7 +269,7 @@ namespace hpx::execution::experimental {
             processing_units_count_t tag, Parameters&& params, Executor&& exec,
             std::size_t num_tasks)
             requires(hpx::executor_parameters<Parameters> &&
-                detail::has_query_v<Executor, processing_units_count_t,
+                has_query_v<Executor, processing_units_count_t,
                     Parameters, hpx::chrono::steady_duration const&,
                     std::size_t>)
         {
@@ -283,7 +283,7 @@ namespace hpx::execution::experimental {
             processing_units_count_t tag, Executor&& exec,
             hpx::chrono::steady_duration const& iteration_duration,
             std::size_t num_tasks)
-            requires(detail::has_query_v<Executor, processing_units_count_t,
+            requires(has_query_v<Executor, processing_units_count_t,
                 null_parameters_t, hpx::chrono::steady_duration const&,
                 std::size_t>)
         {
@@ -295,7 +295,7 @@ namespace hpx::execution::experimental {
         friend HPX_FORCEINLINE decltype(auto) tag_invoke(
             processing_units_count_t tag, Executor&& exec,
             std::size_t num_tasks)
-            requires(detail::has_query_v<Executor, processing_units_count_t,
+            requires(has_query_v<Executor, processing_units_count_t,
                 null_parameters_t, hpx::chrono::steady_duration const&,
                 std::size_t>)
         {
@@ -363,7 +363,7 @@ namespace hpx::execution::experimental {
         template <typename Executor>
         friend decltype(auto) tag_invoke(with_processing_units_count_t tag,
             Executor&& exec, std::size_t num_cores)
-            requires(detail::has_query_v<Executor,
+            requires(has_query_v<Executor,
                 with_processing_units_count_t, std::size_t>)
         {
             return HPX_FORWARD(Executor, exec).query(tag, num_cores);
@@ -373,7 +373,7 @@ namespace hpx::execution::experimental {
         friend decltype(auto) tag_invoke(with_processing_units_count_t tag,
             Policy&& policy, Property&& property)
             requires(hpx::is_execution_policy_v<std::decay_t<Policy>> &&
-                detail::has_query_v<Policy, with_processing_units_count_t,
+                has_query_v<Policy, with_processing_units_count_t,
                     Property>)
         {
             return HPX_FORWARD(Policy, policy)

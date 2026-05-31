@@ -10,13 +10,13 @@ set(async_base_headers
     hpx/async_base/async.hpp
     hpx/async_base/dataflow.hpp
     hpx/async_base/detail/policy_holder_query.hpp
-    hpx/async_base/detail/query_dispatch.hpp
     hpx/async_base/detail/query_first_fallback.hpp
     hpx/async_base/launch_policy.hpp
     hpx/async_base/post.hpp
+    hpx/async_base/query_dispatch.hpp
+    hpx/async_base/scheduling_properties.hpp
     hpx/async_base/sync.hpp
     hpx/async_base/traits/is_launch_policy.hpp
-    hpx/async_base/scheduling_properties.hpp
 )
 
 set(async_base_sources launch_policy.cpp)

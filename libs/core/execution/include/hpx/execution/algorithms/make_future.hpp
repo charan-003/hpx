@@ -8,7 +8,7 @@
 #pragma once
 
 #include <hpx/assert.hpp>
-#include <hpx/async_base/detail/query_dispatch.hpp>
+#include <hpx/async_base/query_dispatch.hpp>
 #include <hpx/execution/algorithms/detail/inject_scheduler.hpp>
 #include <hpx/execution/algorithms/detail/partial_algorithm.hpp>
 #include <hpx/execution/algorithms/detail/single_result.hpp>
@@ -401,7 +401,7 @@ namespace hpx::execution::experimental {
             typename Allocator = hpx::util::internal_allocator<>>
         friend constexpr auto tag_invoke(make_future_t tag, Scheduler&& sched,
             Sender&& sender, Allocator const& allocator = Allocator{})
-            requires(detail::has_query_v<Scheduler, make_future_t, Sender,
+            requires(has_query_v<Scheduler, make_future_t, Sender,
                 Allocator const&>)
         {
             return HPX_FORWARD(Scheduler, sched)

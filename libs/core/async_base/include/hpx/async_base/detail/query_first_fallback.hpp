@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <hpx/async_base/detail/query_dispatch.hpp>
+#include <hpx/async_base/query_dispatch.hpp>
 #include <hpx/modules/tag_invoke.hpp>
 
 #include <utility>
@@ -18,14 +18,14 @@ namespace hpx::execution::experimental::detail {
     template <typename Tag, typename Fallback>
     struct query_first_tag_fallback : hpx::functional::detail::tag_fallback<Tag>
     {
-    private:
-        friend Tag;
+    protected:
         constexpr query_first_tag_fallback() = default;
 
         template <typename Target, typename... Args>
         friend constexpr auto tag_invoke(
             Tag tag, Target&& target, Args&&... args)
-            requires(has_query_v<Target, Tag, Args...>)
+            requires(
+                hpx::execution::experimental::has_query_v<Target, Tag, Args...>)
         {
             return HPX_FORWARD(Target, target)
                 .query(tag, HPX_FORWARD(Args, args)...);

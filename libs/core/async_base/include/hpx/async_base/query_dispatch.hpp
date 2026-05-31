@@ -11,7 +11,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace hpx::execution::experimental::detail {
+namespace hpx::execution::experimental {
 
     template <typename Target, typename Tag, typename... Args>
     inline constexpr bool has_query_v =
@@ -23,4 +23,4 @@ namespace hpx::execution::experimental::detail {
     using query_result_t = decltype(std::declval<Target>().query(
         std::declval<Tag>(), std::declval<Args>()...));
 
-}    // namespace hpx::execution::experimental::detail
+}    // namespace hpx::execution::experimental

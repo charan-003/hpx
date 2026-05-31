@@ -243,7 +243,7 @@ namespace hpx::execution::experimental {
         template <typename Tag, typename Property>
             requires(
                 hpx::execution::experimental::is_scheduling_property_v<Tag> &&
-                hpx::execution::experimental::detail::has_query_v<
+                hpx::execution::experimental::has_query_v<
                     std::decay_t<BaseScheduler>, Tag, Property>)
         [[nodiscard]] auto query(Tag tag, Property&& prop) const
         {
@@ -254,7 +254,7 @@ namespace hpx::execution::experimental {
         template <typename Tag>
             requires(
                 hpx::execution::experimental::is_scheduling_property_v<Tag> &&
-                hpx::execution::experimental::detail::has_query_v<
+                hpx::execution::experimental::has_query_v<
                     std::decay_t<BaseScheduler>, Tag>)
         [[nodiscard]] auto query(Tag tag) const
         {

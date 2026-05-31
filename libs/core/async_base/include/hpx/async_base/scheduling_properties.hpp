@@ -8,8 +8,8 @@
 #pragma once
 
 #include <hpx/config.hpp>
-#include <hpx/async_base/detail/query_dispatch.hpp>
 #include <hpx/async_base/detail/query_first_fallback.hpp>
+#include <hpx/async_base/query_dispatch.hpp>
 #include <hpx/modules/coroutines.hpp>
 #include <hpx/modules/tag_invoke.hpp>
 
