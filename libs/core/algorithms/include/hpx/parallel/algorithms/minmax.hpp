@@ -395,49 +395,51 @@ namespace hpx::parallel {
     namespace detail {
 
         /// \cond NOINTERNAL
-        template <typename Proj, typename FwdIter>
-        struct project_type_helper
-        {
-            using type = std::conditional_t<
-                std::is_same_v<std::decay_t<Proj>, hpx::identity>,
-                hpx::traits::proxy_value_t<hpx::traits::iter_value_t<FwdIter>>,
-                hpx::traits::proxy_value_t<std::decay_t<std::invoke_result_t<
-                    Proj, hpx::traits::iter_reference_t<FwdIter>>>>>;
-        };
-
-        template <typename Proj, typename FwdIter>
-        using project_type_helper_t =
-            typename project_type_helper<Proj, FwdIter>::type;
-
-        template <typename Proj, typename Val>
-        constexpr decltype(auto) project_helper(Proj const& proj, Val&& val)
-        {
-            if constexpr (std::is_same_v<std::decay_t<Proj>, hpx::identity>)
-            {
-                return HPX_FORWARD(Val, val);
-            }
-            else
-            {
-                return HPX_INVOKE(proj, HPX_FORWARD(Val, val));
-            }
-        }
-
         HPX_CXX_CORE_EXPORT template <typename ExPolicy, typename FwdIter,
-            typename F, typename Proj = hpx::identity>
+            typename F, typename Proj>
         constexpr FwdIter sequential_min_element(ExPolicy&&, FwdIter it,
-            std::size_t const count, F const& f, Proj const& proj = Proj())
+            std::size_t const count, F const& f, Proj const& proj)
         {
             if (count == 0 || count == 1)
                 return it;
 
             auto smallest = it;
 
-            using element_type = project_type_helper_t<Proj, FwdIter>;
+            using element_type =
+                hpx::traits::proxy_value_t<std::decay_t<std::invoke_result_t<
+                    Proj, hpx::traits::iter_reference_t<FwdIter>>>>;
 
-            element_type value = project_helper(proj, *smallest);
+            element_type value = HPX_INVOKE(proj, *smallest);
             util::const_loop_n<std::decay_t<ExPolicy>>(
                 ++it, count - 1, [&](FwdIter const& curr) -> void {
-                    if (element_type curr_value = project_helper(proj, *curr);
+                    if (element_type curr_value = HPX_INVOKE(proj, *curr);
+                        HPX_INVOKE(f, curr_value, value))
+                    {
+                        smallest = curr;
+                        value = HPX_MOVE(curr_value);
+                    }
+                });
+
+            return smallest;
+        }
+
+        HPX_CXX_CORE_EXPORT template <typename ExPolicy, typename FwdIter,
+            typename F>
+        constexpr FwdIter sequential_min_element(ExPolicy&&, FwdIter it,
+            std::size_t const count, F const& f, hpx::identity)
+        {
+            if (count == 0 || count == 1)
+                return it;
+
+            auto smallest = it;
+
+            using element_type =
+                hpx::traits::proxy_value_t<hpx::traits::iter_value_t<FwdIter>>;
+
+            element_type value = *smallest;
+            util::const_loop_n<std::decay_t<ExPolicy>>(
+                ++it, count - 1, [&](FwdIter const& curr) -> void {
+                    if (element_type curr_value = *curr;
                         HPX_INVOKE(f, curr_value, value))
                     {
                         smallest = curr;
@@ -455,11 +457,11 @@ namespace hpx::parallel {
             // this has to be a member of the algorithm type as we access this
             // generically from the segmented algorithms
             template <typename ExPolicy, typename FwdIter, typename F,
-                typename Proj = hpx::identity>
+                typename Proj>
             static constexpr hpx::traits::proxy_value_t<
                 typename std::iterator_traits<FwdIter>::value_type>
             sequential_minmax_element_ind(ExPolicy&&, FwdIter it,
-                std::size_t const count, F const& f, Proj const& proj = Proj())
+                std::size_t const count, F const& f, Proj const& proj)
             {
                 HPX_ASSERT(count != 0);
 
@@ -468,13 +470,44 @@ namespace hpx::parallel {
 
                 auto smallest = *it;
 
-                using element_type = project_type_helper_t<Proj, Iter>;
+                using element_type = hpx::traits::proxy_value_t<
+                    std::decay_t<std::invoke_result_t<Proj,
+                        hpx::traits::iter_reference_t<Iter>>>>;
 
-                element_type value = project_helper(proj, *smallest);
+                element_type value = HPX_INVOKE(proj, *smallest);
                 util::const_loop_n<std::decay_t<ExPolicy>>(
                     ++it, count - 1, [&](FwdIter const& curr) -> void {
-                        if (element_type curr_value =
-                                project_helper(proj, **curr);
+                        if (element_type curr_value = HPX_INVOKE(proj, **curr);
+                            HPX_INVOKE(f, curr_value, value))
+                        {
+                            smallest = *curr;
+                            value = HPX_MOVE(curr_value);
+                        }
+                    });
+
+                return smallest;
+            }
+
+            template <typename ExPolicy, typename FwdIter, typename F>
+            static constexpr hpx::traits::proxy_value_t<
+                typename std::iterator_traits<FwdIter>::value_type>
+            sequential_minmax_element_ind(ExPolicy&&, FwdIter it,
+                std::size_t const count, F const& f, hpx::identity)
+            {
+                HPX_ASSERT(count != 0);
+
+                if (count == 1)
+                    return *it;
+
+                auto smallest = *it;
+
+                using element_type =
+                    hpx::traits::proxy_value_t<hpx::traits::iter_value_t<Iter>>;
+
+                element_type value = *smallest;
+                util::const_loop_n<std::decay_t<ExPolicy>>(
+                    ++it, count - 1, [&](FwdIter const& curr) -> void {
+                        if (element_type curr_value = **curr;
                             HPX_INVOKE(f, curr_value, value))
                         {
                             smallest = *curr;
@@ -491,22 +524,50 @@ namespace hpx::parallel {
             }
 
             template <typename ExPolicy, typename FwdIter, typename Sent,
-                typename F, typename Proj = hpx::identity>
-            static constexpr FwdIter sequential(ExPolicy&& policy,
-                FwdIter first, Sent last, F&& f, Proj&& proj = Proj())
+                typename F, typename Proj>
+            static constexpr FwdIter sequential(
+                ExPolicy&& policy, FwdIter first, Sent last, F&& f, Proj&& proj)
             {
                 if (first == last)
                     return first;
 
                 auto smallest = first;
 
-                using element_type = project_type_helper_t<Proj, FwdIter>;
+                using element_type = hpx::traits::proxy_value_t<
+                    std::decay_t<std::invoke_result_t<Proj,
+                        hpx::traits::iter_reference_t<FwdIter>>>>;
 
-                element_type value = project_helper(proj, *smallest);
+                element_type value = HPX_INVOKE(proj, *smallest);
                 util::const_loop(HPX_FORWARD(ExPolicy, policy), ++first, last,
                     [&](FwdIter const& curr) -> void {
-                        if (element_type curr_value =
-                                project_helper(proj, *curr);
+                        if (element_type curr_value = HPX_INVOKE(proj, *curr);
+                            HPX_INVOKE(f, curr_value, value))
+                        {
+                            smallest = curr;
+                            value = HPX_MOVE(curr_value);
+                        }
+                    });
+
+                return smallest;
+            }
+
+            template <typename ExPolicy, typename FwdIter, typename Sent,
+                typename F>
+            static constexpr FwdIter sequential(ExPolicy&& policy,
+                FwdIter first, Sent last, F&& f, hpx::identity)
+            {
+                if (first == last)
+                    return first;
+
+                auto smallest = first;
+
+                using element_type = hpx::traits::proxy_value_t<
+                    hpx::traits::iter_value_t<FwdIter>>;
+
+                element_type value = *smallest;
+                util::const_loop(HPX_FORWARD(ExPolicy, policy), ++first, last,
+                    [&](FwdIter const& curr) -> void {
+                        if (element_type curr_value = *curr;
                             HPX_INVOKE(f, curr_value, value))
                         {
                             smallest = curr;
@@ -574,21 +635,50 @@ namespace hpx::parallel {
 
         /// \cond NOINTERNAL
         HPX_CXX_CORE_EXPORT template <typename ExPolicy, typename FwdIter,
-            typename F, typename Proj = hpx::identity>
+            typename F, typename Proj>
         constexpr FwdIter sequential_max_element(ExPolicy&&, FwdIter it,
-            std::size_t const count, F const& f, Proj const& proj = Proj())
+            std::size_t const count, F const& f, Proj const& proj)
         {
             if (count == 0 || count == 1)
                 return it;
 
             auto largest = it;
 
-            using element_type = project_type_helper_t<Proj, FwdIter>;
+            using element_type =
+                hpx::traits::proxy_value_t<std::decay_t<std::invoke_result_t<
+                    Proj, hpx::traits::iter_reference_t<FwdIter>>>>;
 
-            element_type value = project_helper(proj, *largest);
+            element_type value = HPX_INVOKE(proj, *largest);
             util::const_loop_n<std::decay_t<ExPolicy>>(
                 ++it, count - 1, [&](FwdIter const& curr) -> void {
-                    if (element_type curr_value = project_helper(proj, *curr);
+                    if (element_type curr_value = HPX_INVOKE(proj, *curr);
+                        HPX_INVOKE(f, value, curr_value))
+                    {
+                        largest = curr;
+                        value = HPX_MOVE(curr_value);
+                    }
+                });
+
+            return largest;
+        }
+
+        HPX_CXX_CORE_EXPORT template <typename ExPolicy, typename FwdIter,
+            typename F>
+        constexpr FwdIter sequential_max_element(ExPolicy&&, FwdIter it,
+            std::size_t const count, F const& f, hpx::identity)
+        {
+            if (count == 0 || count == 1)
+                return it;
+
+            auto largest = it;
+
+            using element_type =
+                hpx::traits::proxy_value_t<hpx::traits::iter_value_t<FwdIter>>;
+
+            element_type value = *largest;
+            util::const_loop_n<std::decay_t<ExPolicy>>(
+                ++it, count - 1, [&](FwdIter const& curr) -> void {
+                    if (element_type curr_value = *curr;
                         HPX_INVOKE(f, value, curr_value))
                     {
                         largest = curr;
@@ -606,11 +696,11 @@ namespace hpx::parallel {
             // this has to be a member of the algorithm type as we access this
             // generically from the segmented algorithms
             template <typename ExPolicy, typename FwdIter, typename F,
-                typename Proj = hpx::identity>
+                typename Proj>
             static constexpr hpx::traits::proxy_value_t<
                 typename std::iterator_traits<FwdIter>::value_type>
             sequential_minmax_element_ind(ExPolicy&&, FwdIter it,
-                std::size_t const count, F const& f, Proj const& proj = Proj())
+                std::size_t const count, F const& f, Proj const& proj)
             {
                 HPX_ASSERT(count != 0);
 
@@ -619,13 +709,44 @@ namespace hpx::parallel {
 
                 auto largest = *it;
 
-                using element_type = project_type_helper_t<Proj, Iter>;
+                using element_type = hpx::traits::proxy_value_t<
+                    std::decay_t<std::invoke_result_t<Proj,
+                        hpx::traits::iter_reference_t<Iter>>>>;
 
-                element_type value = project_helper(proj, *largest);
+                element_type value = HPX_INVOKE(proj, *largest);
                 util::const_loop_n<std::decay_t<ExPolicy>>(
                     ++it, count - 1, [&](FwdIter const& curr) -> void {
-                        if (element_type curr_value =
-                                project_helper(proj, **curr);
+                        if (element_type curr_value = HPX_INVOKE(proj, **curr);
+                            HPX_INVOKE(f, value, curr_value))
+                        {
+                            largest = *curr;
+                            value = HPX_MOVE(curr_value);
+                        }
+                    });
+
+                return largest;
+            }
+
+            template <typename ExPolicy, typename FwdIter, typename F>
+            static constexpr hpx::traits::proxy_value_t<
+                typename std::iterator_traits<FwdIter>::value_type>
+            sequential_minmax_element_ind(ExPolicy&&, FwdIter it,
+                std::size_t const count, F const& f, hpx::identity)
+            {
+                HPX_ASSERT(count != 0);
+
+                if (count == 1)
+                    return *it;
+
+                auto largest = *it;
+
+                using element_type =
+                    hpx::traits::proxy_value_t<hpx::traits::iter_value_t<Iter>>;
+
+                element_type value = *largest;
+                util::const_loop_n<std::decay_t<ExPolicy>>(
+                    ++it, count - 1, [&](FwdIter const& curr) -> void {
+                        if (element_type curr_value = **curr;
                             HPX_INVOKE(f, value, curr_value))
                         {
                             largest = *curr;
@@ -642,22 +763,50 @@ namespace hpx::parallel {
             }
 
             template <typename ExPolicy, typename FwdIter, typename Sent,
-                typename F, typename Proj = hpx::identity>
-            static constexpr FwdIter sequential(ExPolicy&& policy,
-                FwdIter first, Sent last, F&& f, Proj&& proj = Proj())
+                typename F, typename Proj>
+            static constexpr FwdIter sequential(
+                ExPolicy&& policy, FwdIter first, Sent last, F&& f, Proj&& proj)
             {
                 if (first == last)
                     return first;
 
                 auto largest = first;
 
-                using element_type = project_type_helper_t<Proj, FwdIter>;
+                using element_type = hpx::traits::proxy_value_t<
+                    std::decay_t<std::invoke_result_t<Proj,
+                        hpx::traits::iter_reference_t<FwdIter>>>>;
 
-                element_type value = project_helper(proj, *largest);
+                element_type value = HPX_INVOKE(proj, *largest);
                 util::const_loop(HPX_FORWARD(ExPolicy, policy), ++first, last,
                     [&](FwdIter const& curr) -> void {
-                        if (element_type curr_value =
-                                project_helper(proj, *curr);
+                        if (element_type curr_value = HPX_INVOKE(proj, *curr);
+                            HPX_INVOKE(f, value, curr_value))
+                        {
+                            largest = curr;
+                            value = HPX_MOVE(curr_value);
+                        }
+                    });
+
+                return largest;
+            }
+
+            template <typename ExPolicy, typename FwdIter, typename Sent,
+                typename F>
+            static constexpr FwdIter sequential(ExPolicy&& policy,
+                FwdIter first, Sent last, F&& f, hpx::identity)
+            {
+                if (first == last)
+                    return first;
+
+                auto largest = first;
+
+                using element_type = hpx::traits::proxy_value_t<
+                    hpx::traits::iter_value_t<FwdIter>>;
+
+                element_type value = *largest;
+                util::const_loop(HPX_FORWARD(ExPolicy, policy), ++first, last,
+                    [&](FwdIter const& curr) -> void {
+                        if (element_type curr_value = *curr;
                             HPX_INVOKE(f, value, curr_value))
                         {
                             largest = curr;
@@ -725,23 +874,58 @@ namespace hpx::parallel {
 
         /// \cond NOINTERNAL
         HPX_CXX_CORE_EXPORT template <typename ExPolicy, typename FwdIter,
-            typename F, typename Proj = hpx::identity>
+            typename F, typename Proj>
         minmax_element_result<FwdIter> sequential_minmax_element(ExPolicy&&,
-            FwdIter it, std::size_t const count, F const& f,
-            Proj const& proj = Proj())
+            FwdIter it, std::size_t const count, F const& f, Proj const& proj)
         {
             minmax_element_result<FwdIter> result = {it, it};
 
             if (count == 0 || count == 1)
                 return result;
 
-            using element_type = project_type_helper_t<Proj, FwdIter>;
+            using element_type =
+                hpx::traits::proxy_value_t<std::decay_t<std::invoke_result_t<
+                    Proj, hpx::traits::iter_reference_t<FwdIter>>>>;
 
-            element_type min_value = project_helper(proj, *it);
+            element_type min_value = HPX_INVOKE(proj, *it);
             element_type max_value = min_value;
             util::const_loop_n<std::decay_t<ExPolicy>>(
                 ++it, count - 1, [&](FwdIter const& curr) -> void {
-                    element_type curr_value = project_helper(proj, *curr);
+                    element_type curr_value = HPX_INVOKE(proj, *curr);
+                    if (HPX_INVOKE(f, curr_value, min_value))
+                    {
+                        result.min = curr;
+                        min_value = curr_value;
+                    }
+
+                    if (!HPX_INVOKE(f, curr_value, max_value))
+                    {
+                        result.max = curr;
+                        max_value = HPX_MOVE(curr_value);
+                    }
+                });
+
+            return result;
+        }
+
+        HPX_CXX_CORE_EXPORT template <typename ExPolicy, typename FwdIter,
+            typename F>
+        minmax_element_result<FwdIter> sequential_minmax_element(ExPolicy&&,
+            FwdIter it, std::size_t const count, F const& f, hpx::identity)
+        {
+            minmax_element_result<FwdIter> result = {it, it};
+
+            if (count == 0 || count == 1)
+                return result;
+
+            using element_type =
+                hpx::traits::proxy_value_t<hpx::traits::iter_value_t<FwdIter>>;
+
+            element_type min_value = *it;
+            element_type max_value = min_value;
+            util::const_loop_n<std::decay_t<ExPolicy>>(
+                ++it, count - 1, [&](FwdIter const& curr) -> void {
+                    element_type curr_value = *curr;
                     if (HPX_INVOKE(f, curr_value, min_value))
                     {
                         result.min = curr;
@@ -765,11 +949,11 @@ namespace hpx::parallel {
             // this has to be a member of the algorithm type as we access this
             // generically from the segmented algorithms
             template <typename ExPolicy, typename PairIter, typename F,
-                typename Proj = hpx::identity>
+                typename Proj>
             static constexpr hpx::traits::proxy_value_t<
                 typename std::iterator_traits<PairIter>::value_type>
             sequential_minmax_element_ind(ExPolicy&&, PairIter it,
-                std::size_t const count, F const& f, Proj const& proj = Proj())
+                std::size_t const count, F const& f, Proj const& proj)
             {
                 HPX_ASSERT(count != 0);
 
@@ -778,14 +962,16 @@ namespace hpx::parallel {
 
                 auto result = *it;
 
-                using element_type = project_type_helper_t<Proj, Iter>;
+                using element_type = hpx::traits::proxy_value_t<
+                    std::decay_t<std::invoke_result_t<Proj,
+                        hpx::traits::iter_reference_t<Iter>>>>;
 
-                element_type min_value = project_helper(proj, *result.min);
-                element_type max_value = project_helper(proj, *result.max);
+                element_type min_value = HPX_INVOKE(proj, *result.min);
+                element_type max_value = HPX_INVOKE(proj, *result.max);
                 util::const_loop_n<std::decay_t<ExPolicy>>(
                     ++it, count - 1, [&](PairIter const& curr) -> void {
                         element_type curr_min_value =
-                            project_helper(proj, *curr->min);
+                            HPX_INVOKE(proj, *curr->min);
                         if (HPX_INVOKE(f, curr_min_value, min_value))
                         {
                             result.min = curr->min;
@@ -793,7 +979,45 @@ namespace hpx::parallel {
                         }
 
                         element_type curr_max_value =
-                            project_helper(proj, *curr->max);
+                            HPX_INVOKE(proj, *curr->max);
+                        if (!HPX_INVOKE(f, curr_max_value, max_value))
+                        {
+                            result.max = curr->max;
+                            max_value = HPX_MOVE(curr_max_value);
+                        }
+                    });
+
+                return result;
+            }
+
+            template <typename ExPolicy, typename PairIter, typename F>
+            static constexpr hpx::traits::proxy_value_t<
+                typename std::iterator_traits<PairIter>::value_type>
+            sequential_minmax_element_ind(ExPolicy&&, PairIter it,
+                std::size_t const count, F const& f, hpx::identity)
+            {
+                HPX_ASSERT(count != 0);
+
+                if (count == 1)
+                    return *it;
+
+                auto result = *it;
+
+                using element_type =
+                    hpx::traits::proxy_value_t<hpx::traits::iter_value_t<Iter>>;
+
+                element_type min_value = *result.min;
+                element_type max_value = *result.max;
+                util::const_loop_n<std::decay_t<ExPolicy>>(
+                    ++it, count - 1, [&](PairIter const& curr) -> void {
+                        element_type curr_min_value = *curr->min;
+                        if (HPX_INVOKE(f, curr_min_value, min_value))
+                        {
+                            result.min = curr->min;
+                            min_value = HPX_MOVE(curr_min_value);
+                        }
+
+                        element_type curr_max_value = *curr->max;
                         if (!HPX_INVOKE(f, curr_max_value, max_value))
                         {
                             result.max = curr->max;
@@ -811,10 +1035,9 @@ namespace hpx::parallel {
             }
 
             template <typename ExPolicy, typename FwdIter, typename Sent,
-                typename F, typename Proj = hpx::identity>
+                typename F, typename Proj>
             static constexpr minmax_element_result<FwdIter> sequential(
-                ExPolicy&& policy, FwdIter first, Sent last, F&& f,
-                Proj&& proj = Proj())
+                ExPolicy&& policy, FwdIter first, Sent last, F&& f, Proj&& proj)
             {
                 auto min = first, max = first;
 
@@ -824,13 +1047,53 @@ namespace hpx::parallel {
                     return minmax_element_result<FwdIter>{min, max};
                 }
 
-                using element_type = project_type_helper_t<Proj, FwdIter>;
+                using element_type = hpx::traits::proxy_value_t<
+                    std::decay_t<std::invoke_result_t<Proj,
+                        hpx::traits::iter_reference_t<FwdIter>>>>;
 
-                element_type min_value = project_helper(proj, *min);
-                element_type max_value = project_helper(proj, *max);
+                element_type min_value = HPX_INVOKE(proj, *min);
+                element_type max_value = HPX_INVOKE(proj, *max);
                 util::const_loop(HPX_FORWARD(ExPolicy, policy), first, last,
                     [&](FwdIter const& curr) -> void {
-                        element_type curr_value = project_helper(proj, *curr);
+                        element_type curr_value = HPX_INVOKE(proj, *curr);
+                        if (HPX_INVOKE(f, curr_value, min_value))
+                        {
+                            min = curr;
+                            min_value = curr_value;
+                        }
+
+                        if (!HPX_INVOKE(f, curr_value, max_value))
+                        {
+                            max = curr;
+                            max_value = HPX_MOVE(curr_value);
+                        }
+                    });
+
+                return minmax_element_result<FwdIter>{min, max};
+            }
+
+            template <typename ExPolicy, typename FwdIter, typename Sent,
+                typename F>
+            static constexpr minmax_element_result<FwdIter> sequential(
+                ExPolicy&& policy, FwdIter first, Sent last, F&& f,
+                hpx::identity)
+            {
+                auto min = first, max = first;
+
+                // NOLINTNEXTLINE(bugprone-inc-dec-in-conditions)
+                if (first == last || ++first == last)
+                {
+                    return minmax_element_result<FwdIter>{min, max};
+                }
+
+                using element_type = hpx::traits::proxy_value_t<
+                    hpx::traits::iter_value_t<FwdIter>>;
+
+                element_type min_value = *min;
+                element_type max_value = *max;
+                util::const_loop(HPX_FORWARD(ExPolicy, policy), first, last,
+                    [&](FwdIter const& curr) -> void {
+                        element_type curr_value = *curr;
                         if (HPX_INVOKE(f, curr_value, min_value))
                         {
                             min = curr;
