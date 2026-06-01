@@ -221,9 +221,6 @@ namespace hpx { namespace collectives {
 #include <hpx/modules/futures.hpp>
 #include <hpx/modules/type_support.hpp>
 
-#include <hpx/collectives/argument_types.hpp>
-#include <hpx/collectives/create_communicator.hpp>
-
 #include <cstddef>
 #include <type_traits>
 #include <utility>
