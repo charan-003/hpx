@@ -477,7 +477,7 @@ namespace hpx::collectives {
             std::size_t const my_group_size = groups[gidx].size;
             std::size_t const num_groups = groups.size();
 
-            // Phase 2: Build exchange blocks — pack gathered data by
+            // Phase 2: Build exchange blocks -- pack gathered data by
             // destination group, then perform flat all_to_all among reps.
             std::vector<std::vector<T>> exchange_blocks(num_groups);
             for (std::size_t group = 0; group != num_groups; ++group)
