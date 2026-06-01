@@ -364,6 +364,16 @@ namespace hpx::collectives {
             HPX_MOVE(local_result), this_site);
     }
 
+    // Forward declaration of the hierarchical overload (defined below) so the
+    // generic sync overload can resolve to it; otherwise only the flat
+    // overloads above are visible at that call site.
+    HPX_CXX_EXPORT template <typename T>
+    hpx::future<std::vector<T>> all_to_all(
+        hierarchical_communicator const& communicators,
+        std::vector<T>&& local_result,
+        this_site_arg this_site = this_site_arg(),
+        generation_arg generation = generation_arg());
+
     ///////////////////////////////////////////////////////////////////////////
     // Generic sync overload: dispatches to the flat or hierarchical async
     // overload based on the communicator type passed.
@@ -420,13 +430,13 @@ namespace hpx::collectives {
     // Each communicator sees consecutive generations starting at 1,
     // which is required by the and_gate synchronization mechanism.
 
-    // Async overload
+    // Async overload (declared above; default arguments live on that
+    // forward declaration).
     HPX_CXX_EXPORT template <typename T>
     hpx::future<std::vector<T>> all_to_all(
         hierarchical_communicator const& communicators,
-        std::vector<T>&& local_result,
-        this_site_arg this_site = this_site_arg(),
-        generation_arg const generation = generation_arg())
+        std::vector<T>&& local_result, this_site_arg this_site,
+        generation_arg const generation)
     {
         if (generation.is_default())
         {
