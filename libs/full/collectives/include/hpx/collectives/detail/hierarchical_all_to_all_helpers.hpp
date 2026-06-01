@@ -48,22 +48,21 @@ namespace hpx::collectives::detail {
         hierarchical_communicator const& comms, T&& local_result,
         generation_arg const generation)
     {
+        HPX_ASSERT(comms.size() != 0);
+
         using value_type = std::decay_t<T>;
 
         // Wrap local value in a vector (same pattern as hierarchical
         // gather_here).
         std::vector<value_type> result(1, HPX_FORWARD(T, local_result));
 
-        // Flat fallback or single-level tree: subtree is just this site.
-        if (comms.size() <= 1)
-        {
-            return result;
-        }
-
-        // Walk bottom-up from leaf (size()-1) to level 1, skipping level 0.
-        // At every subtree level, this site is rank 0 (subtree root), so
-        // we call gather_here.
-        for (std::size_t i = comms.size() - 1; i >= 1; --i)
+        // Walk bottom-up from leaf (size()-1) to level 1, skipping level 0
+        // (the inter-group communicator). At every subtree level this site
+        // is rank 0 (subtree root), so we call gather_here. For a
+        // single-level subtree (size() == 1, e.g. the arity >= num_sites
+        // case) the loop body simply does not execute and the site's own
+        // data is returned.
+        for (std::size_t i = comms.size() - 1; i != 0; --i)
         {
             result = gather_data(gather_here(hpx::launch::sync, comms.get(i),
                 HPX_MOVE(result), this_site_arg(0), generation));
