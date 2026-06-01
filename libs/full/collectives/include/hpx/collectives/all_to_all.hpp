@@ -463,10 +463,10 @@ namespace hpx::collectives {
 
         auto const groups =
             detail::get_top_level_groups(num_sites_val, arity_val);
-        bool const is_rep =
+        bool const is_representative =
             detail::is_top_level_rep(this_site, num_sites_val, arity_val);
 
-        if (is_rep)
+        if (is_representative)
         {
             // Phase 1: Gather all subtree sites' data at this rep.
             std::vector<std::vector<T>> gathered =
