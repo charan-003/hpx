@@ -49,15 +49,15 @@ namespace hpx::collectives::detail {
     {
         using value_type = std::decay_t<T>;
 
-        // Flat fallback or single-level tree: subtree is just this site.
-        if (comms.size() <= 1)
-        {
-            return std::vector<value_type>(1, HPX_FORWARD(T, local_result));
-        }
-
         // Wrap local value in a vector (same pattern as hierarchical
         // gather_here).
         std::vector<value_type> result(1, HPX_FORWARD(T, local_result));
+
+        // Flat fallback or single-level tree: subtree is just this site.
+        if (comms.size() <= 1)
+        {
+            return result;
+        }
 
         // Walk bottom-up from leaf (size()-1) to level 1, skipping level 0.
         // At every subtree level, this site is rank 0 (subtree root), so
