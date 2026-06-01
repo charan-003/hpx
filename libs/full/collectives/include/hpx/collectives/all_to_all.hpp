@@ -365,24 +365,28 @@ namespace hpx::collectives {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    HPX_CXX_EXPORT template <typename T>
-    std::vector<T> all_to_all(hpx::launch::sync_policy, communicator fid,
+    // Generic sync overload: dispatches to the flat or hierarchical async
+    // overload based on the communicator type passed.
+    HPX_CXX_EXPORT template <typename Communicator, typename T>
+        requires(is_communicator_v<std::decay_t<Communicator>>)
+    std::vector<T> all_to_all(hpx::launch::sync_policy, Communicator&& fid,
         std::vector<T>&& local_result,
         this_site_arg const this_site = this_site_arg(),
         generation_arg const generation = generation_arg())
     {
-        return all_to_all(
-            HPX_MOVE(fid), HPX_MOVE(local_result), this_site, generation)
+        return all_to_all(HPX_FORWARD(Communicator, fid),
+            HPX_MOVE(local_result), this_site, generation)
             .get();
     }
 
-    HPX_CXX_EXPORT template <typename T>
-    std::vector<T> all_to_all(hpx::launch::sync_policy, communicator fid,
+    HPX_CXX_EXPORT template <typename Communicator, typename T>
+        requires(is_communicator_v<std::decay_t<Communicator>>)
+    std::vector<T> all_to_all(hpx::launch::sync_policy, Communicator&& fid,
         std::vector<T>&& local_result, generation_arg const generation,
         this_site_arg const this_site = this_site_arg())
     {
-        return all_to_all(
-            HPX_MOVE(fid), HPX_MOVE(local_result), this_site, generation)
+        return all_to_all(HPX_FORWARD(Communicator, fid),
+            HPX_MOVE(local_result), this_site, generation)
             .get();
     }
 
@@ -534,19 +538,6 @@ namespace hpx::collectives {
                 communicators, scatter_gen);
             return hpx::make_ready_future(HPX_MOVE(result));
         }
-    }
-
-    // Sync overload
-    HPX_CXX_EXPORT template <typename T>
-    std::vector<T> all_to_all(hpx::launch::sync_policy,
-        hierarchical_communicator const& communicators,
-        std::vector<T>&& local_result,
-        this_site_arg const this_site = this_site_arg(),
-        generation_arg const generation = generation_arg())
-    {
-        return all_to_all(
-            communicators, HPX_MOVE(local_result), this_site, generation)
-            .get();
     }
 }    // namespace hpx::collectives
 
