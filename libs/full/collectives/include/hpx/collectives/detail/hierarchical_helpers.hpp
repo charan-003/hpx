@@ -10,8 +10,10 @@
 
 #include <hpx/config.hpp>
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdlib>
+#include <iterator>
 #include <vector>
 
 namespace hpx::collectives::detail {
@@ -60,15 +62,20 @@ namespace hpx::collectives::detail {
     }
 
     // Return the index of the top-level group that contains `this_site`.
+    // Groups are sorted by left boundary, so we use std::lower_bound.
     inline std::size_t classify_site(
         std::size_t this_site, std::vector<top_level_group> const& groups)
     {
-        for (std::size_t i = 0; i != groups.size(); ++i)
+        auto const it = std::lower_bound(groups.begin(), groups.end(),
+            this_site,
+            [](top_level_group const& g, std::size_t site) {
+                return g.right < site;
+            });
+
+        if (it != groups.end() && this_site >= it->left)
         {
-            if (this_site >= groups[i].left && this_site <= groups[i].right)
-            {
-                return i;
-            }
+            return static_cast<std::size_t>(
+                std::distance(groups.begin(), it));
         }
 
         return static_cast<std::size_t>(-1);
