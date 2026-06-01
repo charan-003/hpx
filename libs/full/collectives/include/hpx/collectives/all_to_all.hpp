@@ -480,17 +480,18 @@ namespace hpx::collectives {
             // Phase 2: Build exchange blocks — pack gathered data by
             // destination group, then perform flat all_to_all among reps.
             std::vector<std::vector<T>> exchange_blocks(num_groups);
-            for (std::size_t h = 0; h != num_groups; ++h)
+            for (std::size_t group = 0; group != num_groups; ++group)
             {
-                std::size_t const dest_group_size = groups[h].size;
-                std::size_t const dest_left = groups[h].left;
+                std::size_t const dest_group_size = groups[group].size;
+                std::size_t const dest_left = groups[group].left;
 
-                exchange_blocks[h].reserve(my_group_size * dest_group_size);
+                exchange_blocks[group].reserve(
+                    my_group_size * dest_group_size);
                 for (std::size_t s = 0; s != my_group_size; ++s)
                 {
                     for (std::size_t j = 0; j != dest_group_size; ++j)
                     {
-                        exchange_blocks[h].push_back(
+                        exchange_blocks[group].push_back(
                             HPX_MOVE(gathered[s][dest_left + j]));
                     }
                 }
@@ -506,14 +507,14 @@ namespace hpx::collectives {
             for (std::size_t j = 0; j != my_group_size; ++j)
             {
                 scatter_input[j].resize(num_sites_val);
-                for (std::size_t h = 0; h != num_groups; ++h)
+                for (std::size_t group = 0; group != num_groups; ++group)
                 {
-                    std::size_t const src_group_size = groups[h].size;
-                    std::size_t const src_left = groups[h].left;
+                    std::size_t const src_group_size = groups[group].size;
+                    std::size_t const src_left = groups[group].left;
                     for (std::size_t s = 0; s != src_group_size; ++s)
                     {
                         scatter_input[j][src_left + s] =
-                            HPX_MOVE(received[h][s * my_group_size + j]);
+                            HPX_MOVE(received[group][s * my_group_size + j]);
                     }
                 }
             }
