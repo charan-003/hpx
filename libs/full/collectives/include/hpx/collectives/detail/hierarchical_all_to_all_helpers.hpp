@@ -144,7 +144,7 @@ namespace hpx::collectives::detail {
         }
 
         // At the leaf level (size()-1), pass data directly to scatter_to
-        // WITHOUT scatter_data — each element maps 1:1 to a leaf site.
+        // WITHOUT scatter_data -- each element maps 1:1 to a leaf site.
         // (Same pattern as scatter_to(hierarchical_communicator).)
         return scatter_to(hpx::launch::sync, comms.back(), HPX_MOVE(data),
             this_site_arg(0), generation);
