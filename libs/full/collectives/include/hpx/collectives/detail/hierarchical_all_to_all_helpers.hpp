@@ -166,14 +166,13 @@ namespace hpx::collectives::detail {
     {
         auto [current_communicator, current_site] = comms[0];
 
-        if (comms.size() == 1)
-        {
-            return scatter_from<T>(hpx::launch::sync, current_communicator,
-                current_site, generation);
-        }
-
         std::vector<T> data = scatter_from<std::vector<T>>(
             hpx::launch::sync, current_communicator, current_site, generation);
+
+        if (comms.size() == 1)
+        {
+            return data;
+        }
 
         arity_arg const arity = comms.get_arity();
 
@@ -186,8 +185,7 @@ namespace hpx::collectives::detail {
         }
 
         // At the leaf level, pass data directly to scatter_to WITHOUT
-        // scatter_data — each element maps 1:1 to a leaf site.
-        // (Same pattern as scatter_from(hierarchical_communicator).)
+        // scatter_data -- each element maps 1:1 to a leaf site.
         return scatter_to(hpx::launch::sync, comms.back(), HPX_MOVE(data),
             this_site_arg(0), generation);
     }
