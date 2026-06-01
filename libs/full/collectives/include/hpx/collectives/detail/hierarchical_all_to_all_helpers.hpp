@@ -164,6 +164,8 @@ namespace hpx::collectives::detail {
     T subtree_receive_from_top_rep(
         hierarchical_communicator const& comms, generation_arg const generation)
     {
+        HPX_ASSERT(comms.size() != 0);
+
         auto [current_communicator, current_site] = comms[0];
 
         std::vector<T> data = scatter_from<std::vector<T>>(
