@@ -38,8 +38,7 @@ namespace hpx::collectives::detail {
         }
 
         auto const dv = std::lldiv(
-            static_cast<long long>(num_sites),
-            static_cast<long long>(arity));
+            static_cast<long long>(num_sites), static_cast<long long>(arity));
 
         std::vector<top_level_group> groups;
         groups.reserve(arity);
@@ -47,8 +46,7 @@ namespace hpx::collectives::detail {
         std::size_t offset = 0;
         for (std::size_t i = 0; i != arity; ++i)
         {
-            std::size_t const group_size =
-                static_cast<std::size_t>(dv.quot) +
+            std::size_t const group_size = static_cast<std::size_t>(dv.quot) +
                 (i < static_cast<std::size_t>(dv.rem) ? 1 : 0);
 
             std::size_t const left = offset;
@@ -67,15 +65,13 @@ namespace hpx::collectives::detail {
         std::size_t this_site, std::vector<top_level_group> const& groups)
     {
         auto const it = std::lower_bound(groups.begin(), groups.end(),
-            this_site,
-            [](top_level_group const& g, std::size_t site) {
+            this_site, [](top_level_group const& g, std::size_t site) {
                 return g.right < site;
             });
 
         if (it != groups.end() && this_site >= it->left)
         {
-            return static_cast<std::size_t>(
-                std::distance(groups.begin(), it));
+            return static_cast<std::size_t>(std::distance(groups.begin(), it));
         }
 
         return static_cast<std::size_t>(-1);

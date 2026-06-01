@@ -489,8 +489,7 @@ namespace hpx::collectives {
                 std::size_t const dest_group_size = groups[group].size;
                 std::size_t const dest_left = groups[group].left;
 
-                exchange_blocks[group].reserve(
-                    my_group_size * dest_group_size);
+                exchange_blocks[group].reserve(my_group_size * dest_group_size);
                 for (std::size_t s = 0; s != my_group_size; ++s)
                 {
                     for (std::size_t j = 0; j != dest_group_size; ++j)
