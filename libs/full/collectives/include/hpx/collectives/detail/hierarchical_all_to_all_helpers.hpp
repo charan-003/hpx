@@ -16,6 +16,7 @@
 
 #if !defined(HPX_COMPUTE_DEVICE_CODE)
 
+#include <hpx/assert.hpp>
 #include <hpx/collectives/create_communicator.hpp>
 #include <hpx/collectives/gather.hpp>
 #include <hpx/collectives/scatter.hpp>
@@ -87,6 +88,8 @@ namespace hpx::collectives::detail {
     void subtree_send_to_top_rep(hierarchical_communicator const& comms,
         T&& local_result, generation_arg const generation)
     {
+        HPX_ASSERT(comms.size() != 0);
+
         using value_type = std::decay_t<T>;
 
         std::vector<value_type> data(1, HPX_FORWARD(T, local_result));
