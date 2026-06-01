@@ -168,13 +168,18 @@ namespace hpx::collectives::detail {
 
         auto [current_communicator, current_site] = comms[0];
 
-        std::vector<T> data = scatter_from<std::vector<T>>(
-            hpx::launch::sync, current_communicator, current_site, generation);
-
+        // A direct leaf of the top representative receives exactly its own
+        // portion (a single T), so the scatter delivers T directly.
         if (comms.size() == 1)
         {
-            return data;
+            return scatter_from<T>(hpx::launch::sync, current_communicator,
+                current_site, generation);
         }
+
+        // An intermediate representative receives a vector<T> (one element
+        // per site in its subtree) to scatter further down.
+        std::vector<T> data = scatter_from<std::vector<T>>(
+            hpx::launch::sync, current_communicator, current_site, generation);
 
         arity_arg const arity = comms.get_arity();
 
