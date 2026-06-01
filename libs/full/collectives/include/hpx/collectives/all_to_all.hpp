@@ -417,7 +417,7 @@ namespace hpx::collectives {
     // which is required by the and_gate synchronization mechanism.
 
     // Async overload
-    template <typename T>
+    HPX_CXX_EXPORT template <typename T>
     hpx::future<std::vector<T>> all_to_all(
         hierarchical_communicator const& communicators,
         std::vector<T>&& local_result,
@@ -536,7 +536,7 @@ namespace hpx::collectives {
     }
 
     // Sync overload
-    template <typename T>
+    HPX_CXX_EXPORT template <typename T>
     std::vector<T> all_to_all(hpx::launch::sync_policy,
         hierarchical_communicator const& communicators,
         std::vector<T>&& local_result,
