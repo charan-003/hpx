@@ -11,6 +11,7 @@
 #include <hpx/config.hpp>
 
 #include <cstddef>
+#include <cstdlib>
 #include <vector>
 
 namespace hpx::collectives::detail {
@@ -34,8 +35,9 @@ namespace hpx::collectives::detail {
             arity = num_sites;
         }
 
-        std::size_t const division_steps = num_sites / arity;
-        std::size_t const remainder = num_sites % arity;
+        auto const dv = std::lldiv(
+            static_cast<long long>(num_sites),
+            static_cast<long long>(arity));
 
         std::vector<top_level_group> groups;
         groups.reserve(arity);
@@ -44,7 +46,8 @@ namespace hpx::collectives::detail {
         for (std::size_t i = 0; i != arity; ++i)
         {
             std::size_t const group_size =
-                division_steps + (i < remainder ? 1 : 0);
+                static_cast<std::size_t>(dv.quot) +
+                (i < static_cast<std::size_t>(dv.rem) ? 1 : 0);
 
             std::size_t const left = offset;
             std::size_t const right = left + group_size - 1;
