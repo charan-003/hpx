@@ -487,7 +487,7 @@ namespace hpx::collectives {
                 detail::subtree_gather_at_top_rep(
                     communicators, HPX_MOVE(local_result), gather_gen);
 
-            std::size_t const gidx = detail::classify_site(this_site, groups);
+            auto const gidx = detail::classify_site(this_site, groups);
             std::size_t const my_group_size = groups[gidx].size;
             std::size_t const num_groups = groups.size();
 

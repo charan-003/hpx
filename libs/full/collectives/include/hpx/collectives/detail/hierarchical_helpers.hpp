@@ -59,9 +59,11 @@ namespace hpx::collectives::detail {
         return groups;
     }
 
-    // Return the index of the top-level group that contains `this_site`.
-    // Groups are sorted by left boundary, so we use std::lower_bound.
-    inline std::size_t classify_site(
+    // Return the index of the top-level group that contains `this_site`,
+    // or -1 if there is none. Groups are sorted by left boundary, so we use
+    // std::lower_bound. The return type is signed so the -1 sentinel and the
+    // std::distance result need no casts.
+    inline std::ptrdiff_t classify_site(
         std::size_t this_site, std::vector<top_level_group> const& groups)
     {
         auto const it = std::lower_bound(groups.begin(), groups.end(),
@@ -71,10 +73,10 @@ namespace hpx::collectives::detail {
 
         if (it != groups.end() && this_site >= it->left)
         {
-            return static_cast<std::size_t>(std::distance(groups.begin(), it));
+            return std::distance(groups.begin(), it);
         }
 
-        return static_cast<std::size_t>(-1);
+        return -1;
     }
 
     // Return true if `this_site` is the leftmost site (representative)
@@ -84,8 +86,7 @@ namespace hpx::collectives::detail {
     {
         auto const groups = get_top_level_groups(num_sites, arity);
         auto const g = classify_site(this_site, groups);
-        return (g != static_cast<std::size_t>(-1)) &&
-            (this_site == groups[g].left);
+        return g != -1 && this_site == groups[g].left;
     }
 
 }    // namespace hpx::collectives::detail

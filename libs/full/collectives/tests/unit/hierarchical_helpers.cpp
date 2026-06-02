@@ -152,14 +152,14 @@ void test_classify_site_basic()
 {
     auto groups = get_top_level_groups(11, 4);
 
-    HPX_TEST_EQ(classify_site(0, groups), static_cast<std::size_t>(0));
-    HPX_TEST_EQ(classify_site(1, groups), static_cast<std::size_t>(0));
-    HPX_TEST_EQ(classify_site(2, groups), static_cast<std::size_t>(0));
-    HPX_TEST_EQ(classify_site(3, groups), static_cast<std::size_t>(1));
-    HPX_TEST_EQ(classify_site(5, groups), static_cast<std::size_t>(1));
-    HPX_TEST_EQ(classify_site(6, groups), static_cast<std::size_t>(2));
-    HPX_TEST_EQ(classify_site(9, groups), static_cast<std::size_t>(3));
-    HPX_TEST_EQ(classify_site(10, groups), static_cast<std::size_t>(3));
+    HPX_TEST_EQ(classify_site(0, groups), static_cast<std::ptrdiff_t>(0));
+    HPX_TEST_EQ(classify_site(1, groups), static_cast<std::ptrdiff_t>(0));
+    HPX_TEST_EQ(classify_site(2, groups), static_cast<std::ptrdiff_t>(0));
+    HPX_TEST_EQ(classify_site(3, groups), static_cast<std::ptrdiff_t>(1));
+    HPX_TEST_EQ(classify_site(5, groups), static_cast<std::ptrdiff_t>(1));
+    HPX_TEST_EQ(classify_site(6, groups), static_cast<std::ptrdiff_t>(2));
+    HPX_TEST_EQ(classify_site(9, groups), static_cast<std::ptrdiff_t>(3));
+    HPX_TEST_EQ(classify_site(10, groups), static_cast<std::ptrdiff_t>(3));
 }
 
 void test_classify_site_exhaustive()
@@ -173,8 +173,8 @@ void test_classify_site_exhaustive()
 
             for (std::size_t site = 0; site != n; ++site)
             {
-                std::size_t g = classify_site(site, groups);
-                HPX_TEST_NEQ(g, static_cast<std::size_t>(-1));
+                std::ptrdiff_t g = classify_site(site, groups);
+                HPX_TEST_NEQ(g, static_cast<std::ptrdiff_t>(-1));
                 HPX_TEST(site >= groups[g].left && site <= groups[g].right);
             }
         }
