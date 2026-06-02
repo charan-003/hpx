@@ -81,6 +81,9 @@ add_hpx_module(
   SOURCES ${collectives_sources}
   HEADERS ${collectives_headers}
   MACRO_HEADERS ${collectives_macros_headers}
+  ADD_TO_GLOBAL_HEADER
+    "hpx/collectives/detail/hierarchical_all_to_all_helpers.hpp"
+    "hpx/collectives/detail/hierarchical_helpers.hpp"
   COMPAT_HEADERS ${collectives_compat_headers}
   DEPENDENCIES hpx_core
   MODULE_DEPENDENCIES

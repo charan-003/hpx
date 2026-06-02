@@ -12,9 +12,6 @@
 #include <hpx/modules/collectives.hpp>
 #include <hpx/modules/testing.hpp>
 
-#include <hpx/collectives/detail/hierarchical_all_to_all_helpers.hpp>
-#include <hpx/collectives/detail/hierarchical_helpers.hpp>
-
 #include <cstdint>
 #include <string>
 #include <utility>

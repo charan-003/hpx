@@ -11,7 +11,7 @@
 #include <hpx/hpx_init.hpp>
 #include <hpx/modules/testing.hpp>
 
-#include <hpx/collectives/detail/hierarchical_helpers.hpp>
+#include <hpx/modules/collectives.hpp>
 
 #include <cstddef>
 #include <numeric>
