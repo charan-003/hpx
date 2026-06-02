@@ -1387,6 +1387,13 @@ void test_keep_future_sender()
 {
     // the future should be passed to then, not it's contained value
     {
+        auto sender = ex::keep_future(hpx::make_ready_future<void>());
+        static_assert(
+            std::is_same_v<decltype(ex::get_env(sender)), ex::empty_env>);
+    }
+
+    // the future should be passed to then, not it's contained value
+    {
         ex::run_loop loop;
         auto t = hpx::thread([&] { loop.run(); });
         [[maybe_unused]] auto sched = loop.get_scheduler();
