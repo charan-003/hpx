@@ -43,7 +43,7 @@ namespace hpx::collectives::detail {
     // For the flat fallback case (comms.size() <= 1), returns the site's
     // own data wrapped in a single-element vector.
     ///////////////////////////////////////////////////////////////////////////
-    template <typename T>
+    HPX_CXX_EXPORT template <typename T>
     std::vector<std::decay_t<T>> subtree_gather_at_top_rep(
         hierarchical_communicator const& comms, T&& local_result,
         generation_arg const generation)
@@ -83,7 +83,7 @@ namespace hpx::collectives::detail {
     // walk bottom-up with gather_here at intermediate levels, then
     // gather_there at the topmost level.
     ///////////////////////////////////////////////////////////////////////////
-    template <typename T>
+    HPX_CXX_EXPORT template <typename T>
     void subtree_send_to_top_rep(hierarchical_communicator const& comms,
         T&& local_result, generation_arg const generation)
     {
@@ -120,7 +120,7 @@ namespace hpx::collectives::detail {
     // For the flat fallback case (comms.size() <= 1), returns the first
     // (and only) element of the input data.
     ///////////////////////////////////////////////////////////////////////////
-    template <typename T>
+    HPX_CXX_EXPORT template <typename T>
     hpx::future<T> subtree_scatter_at_top_rep(
         hierarchical_communicator const& comms, std::vector<T>&& data,
         generation_arg const generation)
@@ -163,7 +163,7 @@ namespace hpx::collectives::detail {
     // portion. This mirrors scatter_from(hierarchical_comm): receive at
     // level 0, then scatter down through intermediate levels to the leaf.
     ///////////////////////////////////////////////////////////////////////////
-    template <typename T>
+    HPX_CXX_EXPORT template <typename T>
     hpx::future<T> subtree_receive_from_top_rep(
         hierarchical_communicator const& comms, generation_arg const generation)
     {

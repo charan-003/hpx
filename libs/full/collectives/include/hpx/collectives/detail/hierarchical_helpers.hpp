@@ -20,7 +20,7 @@
 
 namespace hpx::collectives::detail {
 
-    struct top_level_group
+    HPX_CXX_EXPORT struct top_level_group
     {
         std::size_t left;
         std::size_t right;
@@ -31,7 +31,7 @@ namespace hpx::collectives::detail {
     // Uses the same division logic as recursively_fill_communicators:
     // first (num_sites % arity) groups get ceil(num_sites/arity) sites,
     // the rest get floor(num_sites/arity).
-    inline std::vector<top_level_group> get_top_level_groups(
+    HPX_CXX_EXPORT inline std::vector<top_level_group> get_top_level_groups(
         std::size_t num_sites, std::size_t arity)
     {
         HPX_ASSERT(arity != 0);
@@ -67,7 +67,7 @@ namespace hpx::collectives::detail {
     // or -1 if there is none. Groups are sorted by left boundary, so we use
     // std::lower_bound. The return type is signed so the -1 sentinel and the
     // std::distance result need no casts.
-    inline std::ptrdiff_t classify_site(
+    HPX_CXX_EXPORT inline std::ptrdiff_t classify_site(
         std::size_t this_site, std::vector<top_level_group> const& groups)
     {
         auto const it = std::lower_bound(groups.begin(), groups.end(),
@@ -85,7 +85,7 @@ namespace hpx::collectives::detail {
 
     // Return true if `this_site` is the leftmost site (representative)
     // of its top-level group.
-    inline bool is_top_level_rep(
+    HPX_CXX_EXPORT inline bool is_top_level_rep(
         std::size_t this_site, std::size_t num_sites, std::size_t arity)
     {
         auto const groups = get_top_level_groups(num_sites, arity);
