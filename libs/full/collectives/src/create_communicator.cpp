@@ -481,8 +481,8 @@ namespace hpx::collectives {
         std::vector<hpx::tuple<communicator, this_site_arg>> communicators;
         recursively_fill_communicators(communicators, 0, num_sites - 1, name,
             arity, this_site, num_sites, generation);
-        return hierarchical_communicator(
-            HPX_MOVE(communicators), arity, root_site, num_sites, this_site);
+        return hierarchical_communicator(HPX_MOVE(communicators), arity,
+            root_site, num_sites, this_site, /*flat_fallback=*/false);
     }
 
     hpx::tuple<num_sites_arg, this_site_arg, root_site_arg>
