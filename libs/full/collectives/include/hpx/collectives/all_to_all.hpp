@@ -502,11 +502,9 @@ namespace hpx::collectives {
                 exchange_blocks[group].reserve(my_group_size * dest_group_size);
                 for (std::size_t s = 0; s != my_group_size; ++s)
                 {
-                    for (std::size_t j = 0; j != dest_group_size; ++j)
-                    {
-                        exchange_blocks[group].push_back(
-                            HPX_MOVE(gathered[s][dest_left + j]));
-                    }
+                    std::move(gathered[s].begin() + dest_left,
+                        gathered[s].begin() + dest_left + dest_group_size,
+                        std::back_inserter(exchange_blocks[group]));
                 }
             }
 
