@@ -82,7 +82,8 @@ void test_round_trip(std::uint32_t num_sites, int arity)
 
                     // Scatter: send each site its value back.
                     auto my_val = detail::subtree_scatter_at_top_rep(
-                        comms, HPX_MOVE(gathered), generation_arg(scatter_gen));
+                        comms, HPX_MOVE(gathered), generation_arg(scatter_gen))
+                                      .get();
                     HPX_TEST_EQ(my_val, site);
                 }
                 else
@@ -94,7 +95,8 @@ void test_round_trip(std::uint32_t num_sites, int arity)
                     // Receive our value back.
                     auto my_val =
                         detail::subtree_receive_from_top_rep<std::uint32_t>(
-                            comms, generation_arg(scatter_gen));
+                            comms, generation_arg(scatter_gen))
+                            .get();
                     HPX_TEST_EQ(my_val, site);
                 }
             }
@@ -167,7 +169,8 @@ void test_vector_payload(std::uint32_t num_sites, int arity)
                 // which is the right shape for scatter (one entry per
                 // subtree site). Pass directly.
                 auto my_result = detail::subtree_scatter_at_top_rep(
-                    comms, HPX_MOVE(gathered), generation_arg(2));
+                    comms, HPX_MOVE(gathered), generation_arg(2))
+                                     .get();
 
                 HPX_TEST_EQ(my_result.size(), static_cast<std::size_t>(3));
                 HPX_TEST_EQ(my_result[0], site * 10);
@@ -180,7 +183,8 @@ void test_vector_payload(std::uint32_t num_sites, int arity)
                     comms, HPX_MOVE(my_data), generation_arg(1));
 
                 auto my_result = detail::subtree_receive_from_top_rep<
-                    std::vector<std::uint32_t>>(comms, generation_arg(2));
+                    std::vector<std::uint32_t>>(comms, generation_arg(2))
+                                     .get();
 
                 HPX_TEST_EQ(my_result.size(), static_cast<std::size_t>(3));
                 HPX_TEST_EQ(my_result[0], site * 10);

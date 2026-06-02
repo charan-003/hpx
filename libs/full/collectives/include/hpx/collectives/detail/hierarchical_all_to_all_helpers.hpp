@@ -121,8 +121,9 @@ namespace hpx::collectives::detail {
     // (and only) element of the input data.
     ///////////////////////////////////////////////////////////////////////////
     template <typename T>
-    T subtree_scatter_at_top_rep(hierarchical_communicator const& comms,
-        std::vector<T>&& data, generation_arg const generation)
+    hpx::future<T> subtree_scatter_at_top_rep(
+        hierarchical_communicator const& comms, std::vector<T>&& data,
+        generation_arg const generation)
     {
         HPX_ASSERT(comms.size() != 0);
 
@@ -130,7 +131,7 @@ namespace hpx::collectives::detail {
         // belongs to this site.
         if (comms.size() == 1)
         {
-            return HPX_MOVE(data[0]);
+            return hpx::make_ready_future(HPX_MOVE(data[0]));
         }
 
         arity_arg const arity = comms.get_arity();
@@ -145,11 +146,11 @@ namespace hpx::collectives::detail {
                 generation);
         }
 
-        // At the leaf level (size()-1), pass data directly to scatter_to
-        // WITHOUT scatter_data -- each element maps 1:1 to a leaf site.
-        // (Same pattern as scatter_to(hierarchical_communicator).)
-        return scatter_to(hpx::launch::sync, comms.back(), HPX_MOVE(data),
-            this_site_arg(0), generation);
+        // At the leaf level (size()-1), scatter asynchronously and return
+        // the future directly (no scatter_data; each element maps 1:1 to a
+        // leaf site).
+        return scatter_to(
+            comms.back(), HPX_MOVE(data), this_site_arg(0), generation);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -163,7 +164,7 @@ namespace hpx::collectives::detail {
     // level 0, then scatter down through intermediate levels to the leaf.
     ///////////////////////////////////////////////////////////////////////////
     template <typename T>
-    T subtree_receive_from_top_rep(
+    hpx::future<T> subtree_receive_from_top_rep(
         hierarchical_communicator const& comms, generation_arg const generation)
     {
         HPX_ASSERT(comms.size() != 0);
@@ -171,11 +172,11 @@ namespace hpx::collectives::detail {
         auto [current_communicator, current_site] = comms[0];
 
         // A direct leaf of the top representative receives exactly its own
-        // portion (a single T), so the scatter delivers T directly.
+        // portion (a single T) as a future, returned directly.
         if (comms.size() == 1)
         {
-            return scatter_from<T>(hpx::launch::sync, current_communicator,
-                current_site, generation);
+            return scatter_from<T>(
+                current_communicator, current_site, generation);
         }
 
         // An intermediate representative receives a vector<T> (one element
@@ -193,10 +194,10 @@ namespace hpx::collectives::detail {
                 generation);
         }
 
-        // At the leaf level, pass data directly to scatter_to WITHOUT
-        // scatter_data -- each element maps 1:1 to a leaf site.
-        return scatter_to(hpx::launch::sync, comms.back(), HPX_MOVE(data),
-            this_site_arg(0), generation);
+        // At the leaf level, scatter asynchronously and return the future
+        // directly (no scatter_data; each element maps 1:1 to a leaf site).
+        return scatter_to(
+            comms.back(), HPX_MOVE(data), this_site_arg(0), generation);
     }
 
 }    // namespace hpx::collectives::detail

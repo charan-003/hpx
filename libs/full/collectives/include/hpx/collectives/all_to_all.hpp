@@ -532,9 +532,8 @@ namespace hpx::collectives {
                 }
             }
 
-            auto result = detail::subtree_scatter_at_top_rep(
+            return detail::subtree_scatter_at_top_rep(
                 communicators, HPX_MOVE(scatter_input), scatter_gen);
-            return hpx::make_ready_future(HPX_MOVE(result));
         }
         else
         {
@@ -543,9 +542,8 @@ namespace hpx::collectives {
             detail::subtree_send_to_top_rep(
                 communicators, HPX_MOVE(local_result), gather_gen);
 
-            auto result = detail::subtree_receive_from_top_rep<std::vector<T>>(
+            return detail::subtree_receive_from_top_rep<std::vector<T>>(
                 communicators, scatter_gen);
-            return hpx::make_ready_future(HPX_MOVE(result));
         }
     }
 }    // namespace hpx::collectives
