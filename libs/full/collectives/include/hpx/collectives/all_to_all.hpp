@@ -221,6 +221,7 @@ namespace hpx { namespace collectives {
 #include <hpx/modules/futures.hpp>
 #include <hpx/modules/type_support.hpp>
 
+#include <algorithm>
 #include <cstddef>
 #include <type_traits>
 #include <utility>
