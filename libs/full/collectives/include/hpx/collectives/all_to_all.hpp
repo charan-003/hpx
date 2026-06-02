@@ -477,8 +477,9 @@ namespace hpx::collectives {
 
         auto const groups =
             detail::get_top_level_groups(num_sites_val, arity_val);
+        auto const gidx = detail::classify_site(this_site, groups);
         bool const is_representative =
-            detail::is_top_level_rep(this_site, num_sites_val, arity_val);
+            gidx != -1 && this_site == groups[gidx].left;
 
         if (is_representative)
         {
@@ -487,7 +488,6 @@ namespace hpx::collectives {
                 detail::subtree_gather_at_top_rep(
                     communicators, HPX_MOVE(local_result), gather_gen);
 
-            auto const gidx = detail::classify_site(this_site, groups);
             std::size_t const my_group_size = groups[gidx].size;
             std::size_t const num_groups = groups.size();
 

@@ -10,6 +10,8 @@
 
 #include <hpx/config.hpp>
 
+#include <hpx/assert.hpp>
+
 #include <algorithm>
 #include <cstddef>
 #include <cstdlib>
@@ -32,6 +34,8 @@ namespace hpx::collectives::detail {
     inline std::vector<top_level_group> get_top_level_groups(
         std::size_t num_sites, std::size_t arity)
     {
+        HPX_ASSERT(arity != 0);
+
         if (arity > num_sites)
         {
             arity = num_sites;
