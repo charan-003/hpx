@@ -124,8 +124,11 @@ namespace hpx::collectives::detail {
     T subtree_scatter_at_top_rep(hierarchical_communicator const& comms,
         std::vector<T>&& data, generation_arg const generation)
     {
-        // Flat fallback: the entire data vector belongs to this site.
-        if (comms.size() <= 1)
+        HPX_ASSERT(comms.size() != 0);
+
+        // Flat fallback or single-level subtree: the entire data vector
+        // belongs to this site.
+        if (comms.size() == 1)
         {
             return HPX_MOVE(data[0]);
         }
