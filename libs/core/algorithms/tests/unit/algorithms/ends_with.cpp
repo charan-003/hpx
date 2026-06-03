@@ -14,22 +14,13 @@
 #include <iterator>
 #include <numeric>
 #include <random>
-#include <string>
+
 #include <vector>
 
 #include "test_utils.hpp"
 
 unsigned int seed = std::random_device{}();
 std::mt19937 gen(seed);
-
-struct custom_type
-{
-    int val;
-    bool operator==(custom_type const& other) const
-    {
-        return val == other.val;
-    }
-};
 
 ////////////////////////////////////////////////////////////////////////////
 template <typename IteratorTag>
