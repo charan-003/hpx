@@ -271,19 +271,23 @@ namespace hpx {
     {
     private:
         template <typename InIter1, typename InIter2,
-            typename Pred = hpx::parallel::detail::equal_to>
+            typename Pred = hpx::parallel::detail::equal_to,
+            typename Proj1 = hpx::identity, typename Proj2 = hpx::identity>
         // clang-format off
             requires (
                 hpx::traits::is_iterator_v<InIter1> &&
                 hpx::traits::is_iterator_v<InIter2> &&
                 hpx::is_invocable_v<Pred,
-                    hpx::traits::iter_value_t<InIter1>,
-                    hpx::traits::iter_value_t<InIter2>
+                    hpx::util::invoke_result_t<Proj1,
+                        hpx::traits::iter_value_t<InIter1>>,
+                    hpx::util::invoke_result_t<Proj2,
+                        hpx::traits::iter_value_t<InIter2>>
                 >
             )
         // clang-format on
         friend bool tag_fallback_invoke(hpx::starts_with_t, InIter1 first1,
-            InIter1 last1, InIter2 first2, InIter2 last2, Pred pred = Pred())
+            InIter1 last1, InIter2 first2, InIter2 last2, Pred pred = Pred(),
+            Proj1 proj1 = Proj1(), Proj2 proj2 = Proj2())
         {
             static_assert(std::input_iterator<InIter1>,
                 "Required at least input iterator.");
@@ -293,25 +297,29 @@ namespace hpx {
 
             return hpx::parallel::detail::starts_with().call(
                 hpx::execution::seq, first1, last1, first2, last2,
-                HPX_MOVE(pred), hpx::identity_v, hpx::identity_v);
+                HPX_MOVE(pred), HPX_MOVE(proj1), HPX_MOVE(proj2));
         }
 
         template <typename ExPolicy, typename FwdIter1, typename FwdIter2,
-            typename Pred = ranges::equal_to>
+            typename Pred = ranges::equal_to,
+            typename Proj1 = hpx::identity, typename Proj2 = hpx::identity>
         // clang-format off
             requires (
                 hpx::is_execution_policy_v<ExPolicy> &&
                 hpx::traits::is_iterator_v<FwdIter1> &&
                 hpx::traits::is_iterator_v<FwdIter2> &&
                 hpx::is_invocable_v<Pred,
-                    hpx::traits::iter_value_t<FwdIter1>,
-                    hpx::traits::iter_value_t<FwdIter2>
+                    hpx::util::invoke_result_t<Proj1,
+                        hpx::traits::iter_value_t<FwdIter1>>,
+                    hpx::util::invoke_result_t<Proj2,
+                        hpx::traits::iter_value_t<FwdIter2>>
                 >
             )
         // clang-format on
         friend decltype(auto) tag_fallback_invoke(hpx::starts_with_t,
             ExPolicy&& policy, FwdIter1 first1, FwdIter1 last1, FwdIter2 first2,
-            FwdIter2 last2, Pred pred = Pred())
+            FwdIter2 last2, Pred pred = Pred(), Proj1 proj1 = Proj1(),
+            Proj2 proj2 = Proj2())
         {
             static_assert(std::forward_iterator<FwdIter1>,
                 "Required at least forward iterator.");
@@ -321,7 +329,7 @@ namespace hpx {
 
             return hpx::parallel::detail::starts_with().call(
                 HPX_FORWARD(ExPolicy, policy), first1, last1, first2, last2,
-                HPX_MOVE(pred), hpx::identity_v, hpx::identity_v);
+                HPX_MOVE(pred), HPX_MOVE(proj1), HPX_MOVE(proj2));
         }
     } starts_with{};
 }    // namespace hpx

@@ -22,6 +22,15 @@
 unsigned int seed = std::random_device{}();
 std::mt19937 gen(seed);
 
+struct custom_type
+{
+    int val;
+    bool operator==(custom_type const& other) const
+    {
+        return val == other.val;
+    }
+};
+
 ////////////////////////////////////////////////////////////////////////////
 template <typename IteratorTag>
 void test_ends_with(IteratorTag)
@@ -106,6 +115,130 @@ void test_ends_with_async(ExPolicy p, IteratorTag)
 }
 
 template <typename IteratorTag>
+void test_ends_with_proj(IteratorTag)
+{
+    std::uniform_int_distribution<int> dis1(2, 10007);
+    auto end1 = dis1(gen);
+    std::uniform_int_distribution<int> dis2(1, end1 - 1);
+    auto end2 = dis2(gen);
+    auto some_ints = std::vector<custom_type>(end1);
+    for (int i = 0; i < end1; ++i)
+    {
+        some_ints[i].val = i + 1;
+    }
+
+    auto some_more_ints = std::vector<custom_type>(end1 - end2 + 1);
+    for (int i = 0; i < end1 - end2 + 1; ++i)
+    {
+        some_more_ints[i].val = end2 + i;
+    }
+
+    auto some_wrong_ints = std::vector<custom_type>(end2);
+    for (int i = 0; i < end2; ++i)
+    {
+        some_wrong_ints[i].val = i + 1;
+    }
+
+    auto proj = [](custom_type const& x) { return x.val; };
+
+    auto result1 = hpx::ends_with(std::begin(some_ints), std::end(some_ints),
+        std::begin(some_more_ints), std::end(some_more_ints), std::equal_to<int>{},
+        proj, proj);
+    HPX_TEST_EQ(result1, true);
+
+    auto result2 = hpx::ends_with(std::begin(some_ints), std::end(some_ints),
+        std::begin(some_wrong_ints), std::end(some_wrong_ints), std::equal_to<int>{},
+        proj, proj);
+    HPX_TEST_EQ(result2, false);
+}
+
+template <typename ExPolicy, typename IteratorTag>
+void test_ends_with_proj(ExPolicy policy, IteratorTag)
+{
+    static_assert(hpx::is_execution_policy<ExPolicy>::value,
+        "hpx::is_execution_policy<ExPolicy>::value");
+
+    std::uniform_int_distribution<int> dis1(2, 10007);
+    auto end1 = dis1(gen);
+    std::uniform_int_distribution<int> dis2(1, end1 - 1);
+    auto end2 = dis2(gen);
+    auto some_ints = std::vector<custom_type>(end1);
+    for (int i = 0; i < end1; ++i)
+    {
+        some_ints[i].val = i + 1;
+    }
+
+    auto some_more_ints = std::vector<custom_type>(end1 - end2 + 1);
+    for (int i = 0; i < end1 - end2 + 1; ++i)
+    {
+        some_more_ints[i].val = end2 + i;
+    }
+
+    auto some_wrong_ints = std::vector<custom_type>(end2);
+    for (int i = 0; i < end2; ++i)
+    {
+        some_wrong_ints[i].val = i + 1;
+    }
+
+    auto proj = [](custom_type const& x) { return x.val; };
+
+    auto result1 =
+        hpx::ends_with(policy, std::begin(some_ints), std::end(some_ints),
+            std::begin(some_more_ints), std::end(some_more_ints),
+            std::equal_to<int>{}, proj, proj);
+    HPX_TEST_EQ(result1, true);
+
+    auto result2 =
+        hpx::ends_with(policy, std::begin(some_ints), std::end(some_ints),
+            std::begin(some_wrong_ints), std::end(some_wrong_ints),
+            std::equal_to<int>{}, proj, proj);
+
+    HPX_TEST_EQ(result2, false);
+}
+
+template <typename ExPolicy, typename IteratorTag>
+void test_ends_with_async_proj(ExPolicy p, IteratorTag)
+{
+    std::uniform_int_distribution<int> dis1(2, 10007);
+    auto end1 = dis1(gen);
+    std::uniform_int_distribution<int> dis2(1, end1 - 1);
+    auto end2 = dis2(gen);
+    auto some_ints = std::vector<custom_type>(end1);
+    for (int i = 0; i < end1; ++i)
+    {
+        some_ints[i].val = i + 1;
+    }
+
+    auto some_more_ints = std::vector<custom_type>(end1 - end2 + 1);
+    for (int i = 0; i < end1 - end2 + 1; ++i)
+    {
+        some_more_ints[i].val = end2 + i;
+    }
+
+    auto some_wrong_ints = std::vector<custom_type>(end2);
+    for (int i = 0; i < end2; ++i)
+    {
+        some_wrong_ints[i].val = i + 1;
+    }
+
+    auto proj = [](custom_type const& x) { return x.val; };
+
+    hpx::future<bool> result1 =
+        hpx::ends_with(p, std::begin(some_ints), std::end(some_ints),
+            std::begin(some_more_ints), std::end(some_more_ints),
+            std::equal_to<int>{}, proj, proj);
+    result1.wait();
+    HPX_TEST_EQ(result1.get(), true);
+
+    hpx::future<bool> result2 =
+        hpx::ends_with(p, std::begin(some_ints), std::end(some_ints),
+            std::begin(some_wrong_ints), std::end(some_wrong_ints),
+            std::equal_to<int>{}, proj, proj);
+    result2.wait();
+    HPX_TEST_EQ(result2.get(), false);
+}
+
+template <typename IteratorTag>
 void test_ends_with()
 {
     using namespace hpx::execution;
@@ -117,6 +250,14 @@ void test_ends_with()
 
     test_ends_with_async(seq(task), IteratorTag());
     test_ends_with_async(par(task), IteratorTag());
+
+    test_ends_with_proj(IteratorTag());
+    test_ends_with_proj(seq, IteratorTag());
+    test_ends_with_proj(par, IteratorTag());
+    test_ends_with_proj(par_unseq, IteratorTag());
+
+    test_ends_with_async_proj(seq(task), IteratorTag());
+    test_ends_with_async_proj(par(task), IteratorTag());
 }
 
 void ends_with_test()
