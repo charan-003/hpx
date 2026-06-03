@@ -275,12 +275,12 @@ void test_starts_with_proj(IteratorTag)
 
     auto proj = [](custom_type const& x) { return x.val; };
 
-    auto result1 = hpx::ranges::starts_with(some_ints, some_more_ints,
-        hpx::ranges::equal_to{}, proj, proj);
+    auto result1 = hpx::ranges::starts_with(
+        some_ints, some_more_ints, hpx::ranges::equal_to{}, proj, proj);
     HPX_TEST_EQ(result1, true);
 
-    auto result2 = hpx::ranges::starts_with(some_ints, some_wrong_ints,
-        hpx::ranges::equal_to{}, proj, proj);
+    auto result2 = hpx::ranges::starts_with(
+        some_ints, some_wrong_ints, hpx::ranges::equal_to{}, proj, proj);
     HPX_TEST_EQ(result2, false);
 }
 
@@ -309,8 +309,8 @@ void test_starts_with_proj(ExPolicy policy, IteratorTag)
 
     auto proj = [](custom_type const& x) { return x.val; };
 
-    auto result1 = hpx::ranges::starts_with(policy, some_ints, some_more_ints,
-        hpx::ranges::equal_to{}, proj, proj);
+    auto result1 = hpx::ranges::starts_with(
+        policy, some_ints, some_more_ints, hpx::ranges::equal_to{}, proj, proj);
     HPX_TEST_EQ(result1, true);
 
     auto result2 = hpx::ranges::starts_with(policy, some_ints, some_wrong_ints,
@@ -340,15 +340,13 @@ void test_starts_with_async_proj(ExPolicy p, IteratorTag)
 
     auto proj = [](custom_type const& x) { return x.val; };
 
-    hpx::future<bool> result1 =
-        hpx::ranges::starts_with(p, some_ints, some_more_ints,
-            hpx::ranges::equal_to{}, proj, proj);
+    hpx::future<bool> result1 = hpx::ranges::starts_with(
+        p, some_ints, some_more_ints, hpx::ranges::equal_to{}, proj, proj);
     result1.wait();
     HPX_TEST_EQ(result1.get(), true);
 
-    hpx::future<bool> result2 =
-        hpx::ranges::starts_with(p, some_ints, some_wrong_ints,
-            hpx::ranges::equal_to{}, proj, proj);
+    hpx::future<bool> result2 = hpx::ranges::starts_with(
+        p, some_ints, some_wrong_ints, hpx::ranges::equal_to{}, proj, proj);
     result2.wait();
     HPX_TEST_EQ(result2.get(), false);
 }
