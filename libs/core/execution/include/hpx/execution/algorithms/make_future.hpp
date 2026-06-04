@@ -33,14 +33,14 @@ namespace hpx::execution::experimental {
     namespace detail {
 
         using run_loop_scheduler_type =
-            decltype(std::declval<run_loop>().get_scheduler());
+            decltype(std::declval<run_loop&>().get_scheduler());
 
         // Recover the parent `run_loop&` from HPX's concrete run-loop
         // scheduler through its public accessor instead of depending on the
         // scheduled sender's environment layout.
         inline hpx::execution::experimental::run_loop&
-        get_run_loop_from_scheduler(
-            run_loop_scheduler_type const& sched) noexcept
+        get_run_loop_from_scheduler(run_loop_scheduler_type const&
+                sched) noexcept(noexcept(sched.get_run_loop()))
         {
             return sched.get_run_loop();
         }
