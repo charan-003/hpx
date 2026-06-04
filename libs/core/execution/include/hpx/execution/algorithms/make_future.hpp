@@ -32,11 +32,15 @@ namespace hpx::execution::experimental {
     // enforce proper formatting
     namespace detail {
 
+        using run_loop_scheduler_type =
+            decltype(std::declval<run_loop>().get_scheduler());
+
         // Recover the parent `run_loop&` from HPX's concrete run-loop
         // scheduler through its public accessor instead of depending on the
         // scheduled sender's environment layout.
         inline hpx::execution::experimental::run_loop&
-        get_run_loop_from_scheduler(run_loop_scheduler const& sched) noexcept
+        get_run_loop_from_scheduler(
+            run_loop_scheduler_type const& sched) noexcept
         {
             return sched.get_run_loop();
         }
@@ -181,8 +185,8 @@ namespace hpx::execution::experimental {
 
             template <typename Sender>
             future_data_with_run_loop(init_no_addref no_addref,
-                other_allocator const& alloc, run_loop_scheduler const& sched,
-                Sender&& sender)
+                other_allocator const& alloc,
+                run_loop_scheduler_type const& sched, Sender&& sender)
               : base_type(no_addref, alloc, HPX_FORWARD(Sender, sender))
               , loop(get_run_loop_from_scheduler(sched))
             {
@@ -292,7 +296,7 @@ namespace hpx::execution::experimental {
 
         ///////////////////////////////////////////////////////////////////////
         HPX_CXX_CORE_EXPORT template <typename Sender, typename Allocator>
-        auto make_future_with_run_loop(run_loop_scheduler const& sched,
+        auto make_future_with_run_loop(run_loop_scheduler_type const& sched,
             Sender&& sender, Allocator const& allocator)
         {
             using allocator_type = Allocator;
