@@ -32,28 +32,15 @@ namespace hpx::execution::experimental {
     // enforce proper formatting
     namespace detail {
 
-        // Recover the parent `run_loop&` from a `run_loop::scheduler`.
-        //
-        // P2300 deliberately does not provide a public API to obtain the owning
-        // `run_loop&` from one of its schedulers. The only way to do this
-        // against the current stdexec implementation is to read the private
-        // `loop` member exposed by the scheduler's environment.
-        //
-        // The parameter is constrained to the concrete `run_loop::scheduler`
-        // type (rather than a generic template) because the implementation
-        // depends on `.loop` being the specific stdexec env layout.
-        // `run_loop::scheduler::schedule()` is `noexcept`, so the unconditional
-        // `noexcept` here is sound. The function is not marked `constexpr`
-        // because the `stdexec::schedule` CPO wrapper is not declared
-        // `constexpr` (GCC strict mode rejects calling it from a constexpr
-        // context, even though the underlying member is constexpr).
+        // Recover the parent `run_loop&` from HPX's concrete run-loop
+        // scheduler through its public accessor instead of depending on the
+        // scheduled sender's environment layout.
         inline hpx::execution::experimental::run_loop&
         get_run_loop_from_scheduler(
             decltype(std::declval<hpx::execution::experimental::run_loop>()
                     .get_scheduler()) const& sched) noexcept
         {
-            return static_cast<hpx::execution::experimental::run_loop&>(
-                *hpx::execution::experimental::get_env(schedule(sched)).loop);
+            return sched.get_run_loop();
         }
 
         template <typename OperationState>
