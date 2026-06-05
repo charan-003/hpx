@@ -120,6 +120,7 @@ namespace hpx {
 #include <hpx/parallel/algorithms/detail/distance.hpp>
 #include <hpx/parallel/algorithms/equal.hpp>
 #include <hpx/parallel/util/detail/algorithm_result.hpp>
+#include <hpx/parallel/util/detail/sender_util.hpp>
 
 #include <algorithm>
 #include <cstddef>
