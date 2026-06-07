@@ -1,4 +1,4 @@
-//  Copyright (c) 2007-2025 Hartmut Kaiser
+//  Copyright (c) 2007-2026 Hartmut Kaiser
 //
 //  SPDX-License-Identifier: BSL-1.0
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -32,7 +32,6 @@ namespace hpx {
 #include <hpx/modules/allocator_support.hpp>
 #include <hpx/modules/concepts.hpp>
 #include <hpx/modules/concurrency.hpp>
-#include <hpx/modules/tag_invoke.hpp>
 
 #include <type_traits>
 #include <utility>
@@ -49,27 +48,44 @@ namespace hpx {
         // real function based API that dispatches to the CPO. Once
         // dataflow<Action>(...) has been removed, this CPO can be moved to
         // namespace hpx.
+        // Customization struct specialized in the heavy header
+        // (hpx/executors/dataflow.hpp)
+        template <typename F, typename Enable = void>
+        struct dataflow_dispatch_impl;
+
         HPX_CXX_CORE_EXPORT inline constexpr struct dataflow_t final
-          : hpx::functional::detail::tag_fallback<dataflow_t>
         {
-        private:
+            // Primary: target has .dataflow() member
             template <typename Target, typename... Args>
                 requires requires(Target&& t, Args&&... args) {
                     HPX_FORWARD(Target, t).dataflow(HPX_FORWARD(Args, args)...);
                 }
-            friend constexpr auto tag_invoke(
-                dataflow_t, Target&& target, Args&&... args)
+            constexpr auto operator()(Target&& target, Args&&... args) const
             {
                 return HPX_FORWARD(Target, target)
                     .dataflow(HPX_FORWARD(Args, args)...);
             }
 
-            template <typename F, typename... Ts,
-                HPX_CONCEPT_REQUIRES_(
-                    !hpx::traits::is_allocator_v<std::decay_t<F>>)>
-            friend constexpr HPX_FORCEINLINE auto tag_fallback_invoke(
-                dataflow_t tag, F&& f, Ts&&... ts)
-                -> decltype(hpx::functional::tag_invoke(tag,
+            // Allocator-based dispatch (defers to specializable struct)
+            template <typename Allocator, typename F, typename... Ts>
+                requires(hpx::traits::is_allocator_v<std::decay_t<Allocator>>)
+            constexpr HPX_FORCEINLINE auto operator()(
+                Allocator const& alloc, F&& f, Ts&&... ts) const
+                -> decltype(dataflow_dispatch_impl<std::decay_t<F>>::call(
+                    alloc, HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...))
+            {
+                return dataflow_dispatch_impl<std::decay_t<F>>::call(
+                    alloc, HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...);
+            }
+
+            // Fallback: add default allocator and re-invoke
+            template <typename F, typename... Ts>
+                requires(!hpx::traits::is_allocator_v<std::decay_t<F>> &&
+                    !requires(F&& f, Ts&&... ts) {
+                        HPX_FORWARD(F, f).dataflow(HPX_FORWARD(Ts, ts)...);
+                    })
+            constexpr HPX_FORCEINLINE auto operator()(F&& f, Ts&&... ts) const
+                -> decltype(dataflow_dispatch_impl<std::decay_t<F>>::call(
                     hpx::util::thread_local_caching_allocator<
                         hpx::lockfree::variable_size_stack,
                         hpx::util::internal_allocator<>>{},
@@ -79,8 +95,9 @@ namespace hpx {
                     hpx::util::thread_local_caching_allocator<
                         hpx::lockfree::variable_size_stack,
                         hpx::util::internal_allocator<>>;
-                return hpx::functional::tag_invoke(tag, allocator_type{},
-                    HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...);
+                return dataflow_dispatch_impl<std::decay_t<F>>::call(
+                    allocator_type{}, HPX_FORWARD(F, f),
+                    HPX_FORWARD(Ts, ts)...);
             }
         } dataflow{};
     }    // namespace detail

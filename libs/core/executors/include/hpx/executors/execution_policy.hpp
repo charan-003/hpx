@@ -248,8 +248,7 @@ namespace hpx::execution {
                 requires(!std::is_same_v<Tag,
                              hpx::execution::experimental::
                                  with_processing_units_count_t> &&
-                    hpx::functional::is_tag_invocable_v<Tag, executor_type,
-                        Property>)
+                    std::invocable<Tag, executor_type, Property>)
             [[nodiscard]] auto query(Tag tag, Property&& prop) const
             {
                 return hpx::execution::experimental::create_rebound_policy(
@@ -258,8 +257,7 @@ namespace hpx::execution {
             }
 
             template <scheduling_property Tag>
-                requires(
-                    hpx::functional::is_tag_invocable_v<Tag, executor_type>)
+                requires(std::invocable<Tag, executor_type>)
             [[nodiscard]] auto query(Tag tag) const
             {
                 return tag(executor());
@@ -307,7 +305,7 @@ namespace hpx::execution {
             [[nodiscard]] auto query(
                 hpx::execution::experimental::with_processing_units_count_t,
                 std::size_t num_cores) const
-                requires(hpx::functional::is_tag_invocable_v<
+                requires(std::invocable<
                     hpx::execution::experimental::with_processing_units_count_t,
                     executor_type, std::size_t>)
             {
@@ -350,9 +348,8 @@ namespace hpx::execution {
             }
 
             template <executor_parameters Params>
-                requires(hpx::functional::is_tag_invocable_v<
-                             hpx::execution::experimental::
-                                 with_processing_units_count_t,
+                requires(std::invocable<hpx::execution::experimental::
+                                            with_processing_units_count_t,
                              executor_type, std::size_t> &&
                     std::invocable<
                         hpx::execution::experimental::processing_units_count_t,
