@@ -198,8 +198,8 @@ namespace hpx {
 #endif
         }
 
-        [[nodiscard]] hpx::tracing::annotation_handle get_function_annotation_tracing()
-            const
+        [[nodiscard]] hpx::tracing::annotation_handle
+        get_function_annotation_tracing() const
         {
             return vptr->get_function_annotation_tracing(object);
         }

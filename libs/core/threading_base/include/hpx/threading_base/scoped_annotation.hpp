@@ -17,10 +17,6 @@
 #include <hpx/threading_base/thread_data.hpp>
 #include <hpx/threading_base/thread_description.hpp>
 #include <hpx/threading_base/thread_helpers.hpp>
-
-#if HPX_HAVE_ITTNOTIFY != 0
-#include <hpx/modules/itt_notify.hpp>
-#endif
 #endif
 
 #include <string>
@@ -113,7 +109,8 @@ namespace hpx {
                 if (auto timer_data = threads::get_self_timer_data();
                     timer_data.valid())
                 {
-                    hpx::tracing::update_task_timer(timer_data, desc_.get_description());
+                    hpx::tracing::update_task_timer(
+                        timer_data, desc_.get_description());
                     threads::set_self_timer_data(HPX_MOVE(timer_data));
                 }
             }

@@ -251,13 +251,14 @@ namespace hpx {
 #endif
             }
 
-            [[nodiscard]] hpx::tracing::annotation_handle get_function_annotation_tracing()
-                const
+            [[nodiscard]] hpx::tracing::annotation_handle
+            get_function_annotation_tracing() const
             {
 #if defined(HPX_HAVE_THREAD_DESCRIPTION)
                 return traits::get_function_annotation_tracing<F>::call(_f);
 #else
-                static hpx::tracing::annotation_handle sh("bound");
+                static auto sh =
+                    hpx::tracing::create_annotation_handle("bound");
                 return sh;
 #endif
             }

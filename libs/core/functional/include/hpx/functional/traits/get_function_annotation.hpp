@@ -29,7 +29,7 @@ namespace hpx::traits {
     {
         static hpx::tracing::annotation_handle call(F const& f)
         {
-            static hpx::tracing::annotation_handle sh = 
+            static hpx::tracing::annotation_handle sh =
                 hpx::tracing::create_annotation_handle(
                     get_function_annotation<F>::call(f));
             return sh;

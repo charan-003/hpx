@@ -71,7 +71,8 @@ namespace hpx::util::detail {
 
         [[nodiscard]] std::size_t get_function_address() const;
         [[nodiscard]] char const* get_function_annotation() const;
-        [[nodiscard]] hpx::tracing::annotation_handle get_function_annotation_tracing() const;
+        [[nodiscard]] hpx::tracing::annotation_handle
+        get_function_annotation_tracing() const;
 
     protected:
         vtable const* vptr;
