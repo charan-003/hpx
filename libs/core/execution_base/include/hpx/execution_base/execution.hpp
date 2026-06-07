@@ -415,8 +415,11 @@ namespace hpx::parallel::execution {
                 !detail::has_bulk_async_execute_member<Executor, F, Shape,
                     Ts...> &&
                 hpx::traits::is_bulk_two_way_executor_v<std::decay_t<Executor>>)
-        HPX_FORCEINLINE decltype(auto) operator()(
+        HPX_FORCEINLINE auto operator()(
             Executor&& exec, F&& f, Shape const& shape, Ts&&... ts) const
+            -> decltype(HPX_FORWARD(Executor, exec)
+                    .bulk_async_execute(
+                        HPX_FORWARD(F, f), shape, HPX_FORWARD(Ts, ts)...))
         {
             return HPX_FORWARD(Executor, exec)
                 .bulk_async_execute(
