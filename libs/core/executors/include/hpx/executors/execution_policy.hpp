@@ -686,6 +686,25 @@ namespace hpx::execution {
 #if defined(HPX_HAVE_DATAPAR)
             constexpr auto to_simd() const;
 #endif
+
+            /// \cond NOINTERNAL
+            // Forward execution operations to wrapped executor (member functions, not tag_invoke)
+            template <typename F, typename... Ts>
+            decltype(auto) async_execute(F&& f, Ts&&... ts) const
+            {
+                return hpx::parallel::execution::async_execute(this->executor(),
+                    HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...);
+            }
+
+            template <typename F, typename Shape, typename... Ts>
+            decltype(auto) bulk_sync_execute(
+                F&& f, Shape const& shape, Ts&&... ts) const
+            {
+                return hpx::parallel::execution::bulk_sync_execute(
+                    this->executor(), HPX_FORWARD(F, f), shape,
+                    HPX_FORWARD(Ts, ts)...);
+            }
+            /// \endcond
         };
     }    // namespace detail
 
@@ -1518,4 +1537,126 @@ namespace hpx::detail {
     {
     };
     /// \endcond
+
+    /// \endcond
 }    // namespace hpx::detail
+
+///////////////////////////////////////////////////////////////////////////////
+namespace hpx::execution::experimental {
+
+    /// \cond NOINTERNAL
+    // Make policy shims satisfy executor traits based on their wrapped executor
+    template <typename Executor, typename Parameters>
+    struct is_two_way_executor<
+        hpx::execution::detail::parallel_policy_shim<Executor, Parameters>>
+      : is_two_way_executor<Executor>
+    {
+    };
+
+    template <typename Executor, typename Parameters>
+    struct is_two_way_executor<hpx::execution::detail::
+            parallel_unsequenced_policy_shim<Executor, Parameters>>
+      : is_two_way_executor<Executor>
+    {
+    };
+
+    template <typename Executor, typename Parameters>
+    struct is_two_way_executor<
+        hpx::execution::detail::parallel_task_policy_shim<Executor, Parameters>>
+      : is_two_way_executor<Executor>
+    {
+    };
+
+    template <typename Executor, typename Parameters>
+    struct is_two_way_executor<hpx::execution::detail::
+            parallel_unsequenced_task_policy_shim<Executor, Parameters>>
+      : is_two_way_executor<Executor>
+    {
+    };
+
+    template <typename Executor, typename Parameters>
+    struct is_two_way_executor<hpx::execution::detail::
+            sequenced_task_policy_shim<Executor, Parameters>>
+      : is_two_way_executor<Executor>
+    {
+    };
+
+    template <typename Executor, typename Parameters>
+    struct is_two_way_executor<
+        hpx::execution::detail::sequenced_policy_shim<Executor, Parameters>>
+      : is_two_way_executor<Executor>
+    {
+    };
+
+    template <typename Executor, typename Parameters>
+    struct is_two_way_executor<
+        hpx::execution::detail::unsequenced_policy_shim<Executor, Parameters>>
+      : is_two_way_executor<Executor>
+    {
+    };
+
+    template <typename Executor, typename Parameters>
+    struct is_two_way_executor<hpx::execution::detail::
+            unsequenced_task_policy_shim<Executor, Parameters>>
+      : is_two_way_executor<Executor>
+    {
+    };
+
+    // Also add bulk_two_way_executor specializations
+    template <typename Executor, typename Parameters>
+    struct is_bulk_two_way_executor<
+        hpx::execution::detail::parallel_policy_shim<Executor, Parameters>>
+      : is_bulk_two_way_executor<Executor>
+    {
+    };
+
+    template <typename Executor, typename Parameters>
+    struct is_bulk_two_way_executor<hpx::execution::detail::
+            parallel_unsequenced_policy_shim<Executor, Parameters>>
+      : is_bulk_two_way_executor<Executor>
+    {
+    };
+
+    template <typename Executor, typename Parameters>
+    struct is_bulk_two_way_executor<
+        hpx::execution::detail::parallel_task_policy_shim<Executor, Parameters>>
+      : is_bulk_two_way_executor<Executor>
+    {
+    };
+
+    template <typename Executor, typename Parameters>
+    struct is_bulk_two_way_executor<hpx::execution::detail::
+            parallel_unsequenced_task_policy_shim<Executor, Parameters>>
+      : is_bulk_two_way_executor<Executor>
+    {
+    };
+
+    template <typename Executor, typename Parameters>
+    struct is_bulk_two_way_executor<hpx::execution::detail::
+            sequenced_task_policy_shim<Executor, Parameters>>
+      : is_bulk_two_way_executor<Executor>
+    {
+    };
+
+    template <typename Executor, typename Parameters>
+    struct is_bulk_two_way_executor<
+        hpx::execution::detail::sequenced_policy_shim<Executor, Parameters>>
+      : is_bulk_two_way_executor<Executor>
+    {
+    };
+
+    template <typename Executor, typename Parameters>
+    struct is_bulk_two_way_executor<
+        hpx::execution::detail::unsequenced_policy_shim<Executor, Parameters>>
+      : is_bulk_two_way_executor<Executor>
+    {
+    };
+
+    template <typename Executor, typename Parameters>
+    struct is_bulk_two_way_executor<hpx::execution::detail::
+            unsequenced_task_policy_shim<Executor, Parameters>>
+      : is_bulk_two_way_executor<Executor>
+    {
+    };
+    /// \endcond
+}    // namespace hpx::execution::experimental

@@ -122,7 +122,8 @@ namespace hpx::parallel::execution {
         // Fallback: use fn_helper
         template <executor_any Executor, typename F, typename... Ts>
             requires(!detail::has_sync_execute_member<Executor, F, Ts...> &&
-                std::invocable<F &&, Ts && ...>)
+                (std::invocable<F &&, Ts && ...> ||
+                    hpx::traits::is_action_v<std::decay_t<F>>) )
         HPX_FORCEINLINE decltype(auto) operator()(
             Executor&& exec, F&& f, Ts&&... ts) const
         {
@@ -175,7 +176,8 @@ namespace hpx::parallel::execution {
         // Fallback: use fn_helper
         template <executor_any Executor, typename F, typename... Ts>
             requires(!detail::has_async_execute_member<Executor, F, Ts...> &&
-                std::invocable<F &&, Ts && ...>)
+                (std::invocable<F &&, Ts && ...> ||
+                    hpx::traits::is_action_v<std::decay_t<F>>) )
         HPX_FORCEINLINE decltype(auto) operator()(
             Executor&& exec, F&& f, Ts&&... ts) const
         {
