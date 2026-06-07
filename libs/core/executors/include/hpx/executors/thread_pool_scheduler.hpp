@@ -274,7 +274,8 @@ namespace hpx::execution::experimental {
         template <typename Tag, typename Property>
             requires(
                 hpx::execution::experimental::is_scheduling_property_v<Tag> &&
-                hpx::functional::is_tag_invocable_v<Tag, Policy, Property>)
+                hpx::execution::experimental::has_query_v<Policy const&, Tag,
+                    Property>)
         [[nodiscard]] auto query(Tag tag, Property&& prop) const
         {
             auto scheduler_with_prop = *this;
@@ -286,7 +287,7 @@ namespace hpx::execution::experimental {
         template <typename Tag>
             requires(
                 hpx::execution::experimental::is_scheduling_property_v<Tag> &&
-                hpx::functional::is_tag_invocable_v<Tag, Policy>)
+                hpx::execution::experimental::has_query_v<Policy const&, Tag>)
         [[nodiscard]] auto query(Tag tag) const
         {
             return tag(policy());

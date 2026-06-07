@@ -66,38 +66,39 @@ namespace hpx {
                     .dataflow(HPX_FORWARD(Args, args)...);
             }
 
-            // Allocator-based dispatch (defers to specializable struct)
-            template <typename Allocator, typename F, typename... Ts>
-                requires(hpx::traits::is_allocator_v<std::decay_t<Allocator>>)
-            constexpr HPX_FORCEINLINE auto operator()(
-                Allocator const& alloc, F&& f, Ts&&... ts) const
-                -> decltype(dataflow_dispatch_impl<std::decay_t<F>>::call(
-                    alloc, HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...))
+            // Non-member dispatch (handles both allocator and non-allocator)
+            template <typename F, typename... Ts>
+                requires(!requires(F&& f, Ts&&... ts) {
+                    HPX_FORWARD(F, f).dataflow(HPX_FORWARD(Ts, ts)...);
+                })
+            constexpr HPX_FORCEINLINE decltype(auto) operator()(
+                F&& f, Ts&&... ts) const
             {
-                return dataflow_dispatch_impl<std::decay_t<F>>::call(
-                    alloc, HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...);
+                if constexpr (hpx::traits::is_allocator_v<std::decay_t<F>>)
+                {
+                    return dispatch_with_allocator(
+                        HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...);
+                }
+                else
+                {
+                    using allocator_type =
+                        hpx::util::thread_local_caching_allocator<
+                            hpx::lockfree::variable_size_stack,
+                            hpx::util::internal_allocator<>>;
+                    return dataflow_dispatch_impl<std::decay_t<F>>::call(
+                        allocator_type{}, HPX_FORWARD(F, f),
+                        HPX_FORWARD(Ts, ts)...);
+                }
             }
 
-            // Fallback: add default allocator and re-invoke
-            template <typename F, typename... Ts>
-                requires(!hpx::traits::is_allocator_v<std::decay_t<F>> &&
-                    !requires(F&& f, Ts&&... ts) {
-                        HPX_FORWARD(F, f).dataflow(HPX_FORWARD(Ts, ts)...);
-                    })
-            constexpr HPX_FORCEINLINE auto operator()(F&& f, Ts&&... ts) const
-                -> decltype(dataflow_dispatch_impl<std::decay_t<F>>::call(
-                    hpx::util::thread_local_caching_allocator<
-                        hpx::lockfree::variable_size_stack,
-                        hpx::util::internal_allocator<>>{},
-                    HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...))
+        private:
+            template <typename Allocator, typename Func, typename... Rest>
+            constexpr HPX_FORCEINLINE decltype(auto) dispatch_with_allocator(
+                Allocator&& alloc, Func&& func, Rest&&... rest) const
             {
-                using allocator_type =
-                    hpx::util::thread_local_caching_allocator<
-                        hpx::lockfree::variable_size_stack,
-                        hpx::util::internal_allocator<>>;
-                return dataflow_dispatch_impl<std::decay_t<F>>::call(
-                    allocator_type{}, HPX_FORWARD(F, f),
-                    HPX_FORWARD(Ts, ts)...);
+                return dataflow_dispatch_impl<std::decay_t<Func>>::call(
+                    HPX_FORWARD(Allocator, alloc), HPX_FORWARD(Func, func),
+                    HPX_FORWARD(Rest, rest)...);
             }
         } dataflow{};
     }    // namespace detail
