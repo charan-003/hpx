@@ -347,6 +347,7 @@ namespace hpx::execution::experimental {
 
         template <typename Executor>
             requires(hpx::executor_any<Executor> &&
+                !hpx::is_execution_policy_v<std::decay_t<Executor>> &&
                 !has_query_v<Executor, processing_units_count_t,
                     null_parameters_t, hpx::chrono::steady_duration const&,
                     std::size_t>)
@@ -361,6 +362,7 @@ namespace hpx::execution::experimental {
 
         template <typename Executor>
             requires(hpx::executor_any<Executor> &&
+                !hpx::is_execution_policy_v<std::decay_t<Executor>> &&
                 !has_query_v<Executor, processing_units_count_t,
                     null_parameters_t, hpx::chrono::steady_duration const&,
                     std::size_t>)
