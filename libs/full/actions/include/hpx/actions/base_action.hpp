@@ -17,7 +17,6 @@
 #include <hpx/modules/preprocessor.hpp>
 #include <hpx/modules/serialization.hpp>
 
-
 #include <hpx/actions/actions_fwd.hpp>
 #include <hpx/modules/actions_base.hpp>
 #include <hpx/modules/components_base.hpp>
@@ -125,8 +124,6 @@ namespace hpx::actions {
         /// The function \a get_serialization_id returns the id which has been
         /// associated with this action (mainly used for serialization purposes).
         virtual std::uint32_t get_action_id() const = 0;
-
-
     };
 
     ///////////////////////////////////////////////////////////////////////////

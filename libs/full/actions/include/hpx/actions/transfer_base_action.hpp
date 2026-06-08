@@ -26,7 +26,6 @@
 #include <hpx/modules/serialization.hpp>
 #include <hpx/modules/util.hpp>
 
-
 #include <hpx/modules/parcelset_base.hpp>
 
 #include <atomic>
@@ -212,8 +211,6 @@ namespace hpx::actions {
         {
             return detail::get_action_id<derived_type>();
         }
-
-
 
         /// The function \a get_action_type returns whether this action needs
         /// to be executed in a new thread or directly.
