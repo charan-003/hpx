@@ -789,6 +789,12 @@ namespace hpx::execution::experimental {
                 {
                     return {};
                 }
+
+                // P2300 get_allocator query
+                constexpr auto query(get_allocator_t) const noexcept
+                {
+                    return std::allocator<std::byte>{};
+                }
             };
 
             env get_env() const noexcept
