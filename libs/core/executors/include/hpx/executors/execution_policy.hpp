@@ -688,7 +688,8 @@ namespace hpx::execution {
 #endif
 
             /// \cond NOINTERNAL
-            // Forward execution operations to wrapped executor (member functions, not tag_invoke)
+            // Forward execution operations to wrapped executor
+            // (member functions, not tag_invoke)
             template <typename F, typename... Ts>
             decltype(auto) async_execute(F&& f, Ts&&... ts) const
             {
