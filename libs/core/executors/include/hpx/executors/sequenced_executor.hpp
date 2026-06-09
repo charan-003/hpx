@@ -82,8 +82,8 @@ namespace hpx::execution {
 
         template <typename Parameters>
             requires(hpx::executor_parameters<Parameters>)
-        [[nodiscard]] std::size_t query(
-            experimental::processing_units_count_t, Parameters&& params,
+        [[nodiscard]] std::size_t query(experimental::processing_units_count_t,
+            Parameters&& params,
             hpx::chrono::steady_duration const& iter_dur =
                 hpx::chrono::null_duration,
             std::size_t num_tasks = 0) const
@@ -95,8 +95,8 @@ namespace hpx::execution {
                               p.processing_units_count(e, d, std::size_t{});
                           })
             {
-                return HPX_FORWARD(Parameters, params).processing_units_count(
-                    *this, iter_dur, num_tasks);
+                return HPX_FORWARD(Parameters, params)
+                    .processing_units_count(*this, iter_dur, num_tasks);
             }
             else
             {

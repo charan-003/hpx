@@ -182,11 +182,9 @@ namespace hpx::execution::experimental {
 
     // execution_markers: begin_execution
     HPX_CXX_CORE_EXPORT template <typename Params, typename Executor>
-    inline constexpr bool supports_mark_begin_execution_v =
-        requires(std::remove_reference_t<Params> const& p,
-            std::remove_reference_t<Executor>& e) {
-            p.mark_begin_execution(e);
-        };
+    inline constexpr bool supports_mark_begin_execution_v = requires(
+        std::remove_reference_t<Params> const& p,
+        std::remove_reference_t<Executor>& e) { p.mark_begin_execution(e); };
 
     HPX_CXX_CORE_EXPORT template <typename Params, typename InnerParams,
         typename Executor>
@@ -199,11 +197,9 @@ namespace hpx::execution::experimental {
 
     // execution_markers: end_of_scheduling
     HPX_CXX_CORE_EXPORT template <typename Params, typename Executor>
-    inline constexpr bool supports_mark_end_of_scheduling_v =
-        requires(std::remove_reference_t<Params> const& p,
-            std::remove_reference_t<Executor>& e) {
-            p.mark_end_of_scheduling(e);
-        };
+    inline constexpr bool supports_mark_end_of_scheduling_v = requires(
+        std::remove_reference_t<Params> const& p,
+        std::remove_reference_t<Executor>& e) { p.mark_end_of_scheduling(e); };
 
     HPX_CXX_CORE_EXPORT template <typename Params, typename InnerParams,
         typename Executor>
@@ -222,12 +218,10 @@ namespace hpx::execution::experimental {
 
     HPX_CXX_CORE_EXPORT template <typename Params, typename InnerParams,
         typename Executor>
-    inline constexpr bool supports_wrapping_mark_end_execution_v =
-        requires(std::remove_reference_t<Params> const& p,
-            std::remove_reference_t<InnerParams>& ip,
-            std::remove_reference_t<Executor>& e) {
-            p.mark_end_execution(ip, e);
-        };
+    inline constexpr bool supports_wrapping_mark_end_execution_v = requires(
+        std::remove_reference_t<Params> const& p,
+        std::remove_reference_t<InnerParams>& ip,
+        std::remove_reference_t<Executor>& e) { p.mark_end_execution(ip, e); };
 
     // execution_markers: partition
     HPX_CXX_CORE_EXPORT template <typename Params, typename Executor,
@@ -352,18 +346,20 @@ namespace hpx::execution::experimental {
         constexpr hpx::chrono::steady_duration measure_iteration(
             Executor&& exec, F&& f, std::size_t const num_tasks)
         {
-            if constexpr (supports_wrapping_measure_iteration_v<Wrapping, Wrapped,
-                              Executor, F>)
+            if constexpr (supports_wrapping_measure_iteration_v<Wrapping,
+                              Wrapped, Executor, F>)
             {
                 return wrapping.measure_iteration(wrapped,
                     HPX_FORWARD(Executor, exec), HPX_FORWARD(F, f), num_tasks);
             }
-            else if constexpr (supports_measure_iteration_v<Wrapping, Executor, F>)
+            else if constexpr (supports_measure_iteration_v<Wrapping, Executor,
+                                   F>)
             {
                 return wrapping.measure_iteration(
                     HPX_FORWARD(Executor, exec), HPX_FORWARD(F, f), num_tasks);
             }
-            else if constexpr (supports_measure_iteration_v<Wrapped, Executor, F>)
+            else if constexpr (supports_measure_iteration_v<Wrapped, Executor,
+                                   F>)
             {
                 return wrapped.measure_iteration(
                     HPX_FORWARD(Executor, exec), HPX_FORWARD(F, f), num_tasks);
@@ -383,8 +379,8 @@ namespace hpx::execution::experimental {
             if constexpr (supports_wrapping_maximal_number_of_chunks_v<Wrapping,
                               Wrapped, Executor>)
             {
-                return wrapping.maximal_number_of_chunks(wrapped,
-                    HPX_FORWARD(Executor, exec), cores, num_tasks);
+                return wrapping.maximal_number_of_chunks(
+                    wrapped, HPX_FORWARD(Executor, exec), cores, num_tasks);
             }
             else if constexpr (supports_maximal_number_of_chunks_v<Wrapping,
                                    Executor>)
@@ -409,17 +405,19 @@ namespace hpx::execution::experimental {
         template <typename Executor>
         constexpr void mark_begin_execution(Executor&& exec) const
         {
-            if constexpr (supports_wrapping_mark_begin_execution_v<Wrapping, Wrapped,
-                              Executor>)
+            if constexpr (supports_wrapping_mark_begin_execution_v<Wrapping,
+                              Wrapped, Executor>)
             {
-                wrapping.mark_begin_execution(wrapped,
-                    HPX_FORWARD(Executor, exec));
+                wrapping.mark_begin_execution(
+                    wrapped, HPX_FORWARD(Executor, exec));
             }
-            else if constexpr (supports_mark_begin_execution_v<Wrapping, Executor>)
+            else if constexpr (supports_mark_begin_execution_v<Wrapping,
+                                   Executor>)
             {
                 wrapping.mark_begin_execution(HPX_FORWARD(Executor, exec));
             }
-            else if constexpr (supports_mark_begin_execution_v<Wrapped, Executor>)
+            else if constexpr (supports_mark_begin_execution_v<Wrapped,
+                                   Executor>)
             {
                 wrapped.mark_begin_execution(HPX_FORWARD(Executor, exec));
             }
@@ -432,8 +430,8 @@ namespace hpx::execution::experimental {
             if constexpr (supports_wrapping_mark_end_of_scheduling_v<Wrapping,
                               Wrapped, Executor>)
             {
-                wrapping.mark_end_of_scheduling(wrapped,
-                    HPX_FORWARD(Executor, exec));
+                wrapping.mark_end_of_scheduling(
+                    wrapped, HPX_FORWARD(Executor, exec));
             }
             else if constexpr (supports_mark_end_of_scheduling_v<Wrapping,
                                    Executor>)
@@ -451,13 +449,14 @@ namespace hpx::execution::experimental {
         template <typename Executor>
         constexpr void mark_end_execution(Executor&& exec) const
         {
-            if constexpr (supports_wrapping_mark_end_execution_v<Wrapping, Wrapped,
-                              Executor>)
+            if constexpr (supports_wrapping_mark_end_execution_v<Wrapping,
+                              Wrapped, Executor>)
             {
-                wrapping.mark_end_execution(wrapped,
-                    HPX_FORWARD(Executor, exec));
+                wrapping.mark_end_execution(
+                    wrapped, HPX_FORWARD(Executor, exec));
             }
-            else if constexpr (supports_mark_end_execution_v<Wrapping, Executor>)
+            else if constexpr (supports_mark_end_execution_v<Wrapping,
+                                   Executor>)
             {
                 wrapping.mark_end_execution(HPX_FORWARD(Executor, exec));
             }
@@ -469,8 +468,8 @@ namespace hpx::execution::experimental {
 
         // execution_markers: partition
         template <typename Executor, typename... Args>
-        constexpr void mark_partition(Executor&& exec, std::size_t partition,
-            Args&&... args) const
+        constexpr void mark_partition(
+            Executor&& exec, std::size_t partition, Args&&... args) const
         {
             if constexpr (supports_wrapping_mark_partition_v<Wrapping, Wrapped,
                               Executor, Args...>)
@@ -528,11 +527,11 @@ namespace hpx::execution::experimental {
         template <typename Executor>
         constexpr void reset_thread_distribution(Executor&& exec) const
         {
-            if constexpr (supports_wrapping_reset_thread_distribution_v<Wrapping,
-                              Wrapped, Executor>)
+            if constexpr (supports_wrapping_reset_thread_distribution_v<
+                              Wrapping, Wrapped, Executor>)
             {
-                wrapping.reset_thread_distribution(wrapped,
-                    HPX_FORWARD(Executor, exec));
+                wrapping.reset_thread_distribution(
+                    wrapped, HPX_FORWARD(Executor, exec));
             }
             else if constexpr (supports_reset_thread_distribution_v<Wrapping,
                                    Executor>)
@@ -552,26 +551,26 @@ namespace hpx::execution::experimental {
             std::size_t const num_elements, std::size_t const num_cores,
             std::size_t const num_chunks, std::size_t const chunk_size) const
         {
-            if constexpr (supports_wrapping_collect_execution_parameters_v<Wrapping,
-                              Wrapped, Executor>)
+            if constexpr (supports_wrapping_collect_execution_parameters_v<
+                              Wrapping, Wrapped, Executor>)
             {
                 wrapping.collect_execution_parameters(wrapped,
-                    HPX_FORWARD(Executor, exec), num_elements, num_cores, num_chunks,
-                    chunk_size);
+                    HPX_FORWARD(Executor, exec), num_elements, num_cores,
+                    num_chunks, chunk_size);
             }
             else if constexpr (supports_collect_execution_parameters_v<Wrapping,
                                    Executor>)
             {
                 wrapping.collect_execution_parameters(
-                    HPX_FORWARD(Executor, exec), num_elements, num_cores, num_chunks,
-                    chunk_size);
+                    HPX_FORWARD(Executor, exec), num_elements, num_cores,
+                    num_chunks, chunk_size);
             }
             else if constexpr (supports_collect_execution_parameters_v<Wrapped,
                                    Executor>)
             {
                 wrapped.collect_execution_parameters(
-                    HPX_FORWARD(Executor, exec), num_elements, num_cores, num_chunks,
-                    chunk_size);
+                    HPX_FORWARD(Executor, exec), num_elements, num_cores,
+                    num_chunks, chunk_size);
             }
         }
 

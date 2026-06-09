@@ -69,8 +69,8 @@ namespace hpx::execution::experimental {
             hpx::chrono::steady_duration const&, std::size_t const cores,
             std::size_t const num_tasks) const noexcept
         {
-            return (std::max) (
-                min_chunk_size_, (num_tasks + cores - 1) / cores);
+            return (
+                std::max) (min_chunk_size_, (num_tasks + cores - 1) / cores);
         }
         /// \endcond
 

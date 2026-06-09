@@ -43,6 +43,11 @@ struct partition_hooks_parameters
         seen_[partition] = 1;
     }
 
+    template <typename Executor, typename State, typename Extra>
+    void mark_partition(Executor&&, std::size_t, State, Extra) noexcept
+    {
+    }
+
     std::size_t count_seen() const
     {
         std::size_t c = 0;

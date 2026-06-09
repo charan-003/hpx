@@ -101,8 +101,8 @@ struct adaptive_chunk_size
             hpx::execution::experimental::processing_units_count(
                 exec, time_per_iteration_, count);
 
-        auto const overall_time = static_cast<double>(
-            (count + 1) * time_per_iteration_.count());
+        auto const overall_time =
+            static_cast<double>((count + 1) * time_per_iteration_.count());
 
         constexpr double efficiency_factor = 0.052;    // see paper: 1 / 19
         auto const optimal_num_cores =
@@ -116,9 +116,8 @@ struct adaptive_chunk_size
     }
 
     template <typename Executor>
-    std::size_t get_chunk_size(Executor&&,
-        hpx::chrono::steady_duration const&, std::size_t const cores,
-        std::size_t const num_iterations) const
+    std::size_t get_chunk_size(Executor&&, hpx::chrono::steady_duration const&,
+        std::size_t const cores, std::size_t const num_iterations) const
     {
         if (cores == 1)
         {
@@ -215,8 +214,7 @@ struct force_sequential_execution
 
     template <typename Executor>
     constexpr std::size_t processing_units_count(Executor&&,
-        hpx::chrono::steady_duration const&,
-        std::size_t const) const noexcept
+        hpx::chrono::steady_duration const&, std::size_t const) const noexcept
     {
         return 1;
     }

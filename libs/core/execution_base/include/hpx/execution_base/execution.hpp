@@ -272,8 +272,7 @@ namespace hpx::parallel::execution {
 
         // Fallback: use fn_helper
         template <executor_any Executor, typename F, typename... Ts>
-            requires(!detail::has_post_member<Executor, F, Ts...> &&
-                std::invocable<F &&, Ts && ...>)
+            requires(!detail::has_post_member<Executor, F, Ts...>)
         HPX_FORCEINLINE decltype(auto) operator()(
             Executor&& exec, F&& f, Ts&&... ts) const
         {

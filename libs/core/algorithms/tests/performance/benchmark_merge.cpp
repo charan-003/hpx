@@ -100,9 +100,8 @@ struct compute_chunk_size
     //}
 
     template <typename Executor>
-    std::size_t get_chunk_size(Executor&&,
-        hpx::chrono::steady_duration const&, std::size_t const cores,
-        std::size_t const num_iterations) const
+    std::size_t get_chunk_size(Executor&&, hpx::chrono::steady_duration const&,
+        std::size_t const cores, std::size_t const num_iterations) const
     {
         if (cores == 1)
         {

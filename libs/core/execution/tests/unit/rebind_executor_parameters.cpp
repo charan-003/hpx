@@ -45,8 +45,8 @@ struct test_replaced_get_chunk_size
     }
 
     template <typename Executor>
-    std::size_t get_chunk_size(Executor&&,
-        hpx::chrono::steady_duration const&, std::size_t, std::size_t) const noexcept
+    std::size_t get_chunk_size(Executor&&, hpx::chrono::steady_duration const&,
+        std::size_t, std::size_t) const noexcept
     {
         *invoked = true;
         return 0;
@@ -187,8 +187,8 @@ struct base_measure_iteration
     using invokes_testing_function = void;
 
     template <typename Executor, typename F>
-    hpx::chrono::steady_duration measure_iteration(Executor&&, F&&,
-        std::size_t) const noexcept
+    hpx::chrono::steady_duration measure_iteration(
+        Executor&&, F&&, std::size_t) const noexcept
     {
         return hpx::chrono::null_duration;
     }
@@ -205,8 +205,8 @@ struct test_replaced_measure_iteration
     }
 
     template <typename Executor, typename F>
-    hpx::chrono::steady_duration measure_iteration(Executor&&, F&&,
-        std::size_t) const noexcept
+    hpx::chrono::steady_duration measure_iteration(
+        Executor&&, F&&, std::size_t) const noexcept
     {
         *invoked = true;
         return hpx::chrono::null_duration;
@@ -316,8 +316,8 @@ struct test_replaced_maximal_number_of_chunks
     }
 
     template <typename Executor>
-    std::size_t maximal_number_of_chunks(Executor&&, std::size_t,
-        std::size_t) const noexcept
+    std::size_t maximal_number_of_chunks(
+        Executor&&, std::size_t, std::size_t) const noexcept
     {
         *invoked = true;
         return 0;

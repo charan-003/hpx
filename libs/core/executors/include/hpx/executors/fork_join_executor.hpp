@@ -1356,8 +1356,8 @@ namespace hpx::execution::experimental {
                               p.processing_units_count(e, d, std::size_t{});
                           })
             {
-                return HPX_FORWARD(Parameters, params).processing_units_count(
-                    *this, iter_dur, num_tasks);
+                return HPX_FORWARD(Parameters, params)
+                    .processing_units_count(*this, iter_dur, num_tasks);
             }
             else
             {

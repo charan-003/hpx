@@ -48,9 +48,8 @@ struct hpx::execution::experimental::is_two_way_executor<
 struct test_chunk_size
 {
     template <typename Executor>
-    std::size_t get_chunk_size(Executor&&,
-        hpx::chrono::steady_duration const&, std::size_t cores,
-        std::size_t count) const
+    std::size_t get_chunk_size(Executor&&, hpx::chrono::steady_duration const&,
+        std::size_t cores, std::size_t count) const
     {
         ++params_count;
         return (count + cores - 1) / cores;
