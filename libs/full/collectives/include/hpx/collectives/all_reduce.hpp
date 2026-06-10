@@ -434,6 +434,10 @@ namespace hpx::collectives {
     // Hierarchical all_reduce: reduce (bottom-up) + broadcast (top-down)
     // Uses 2k-1/2k generation mapping: user generation k maps to
     // internal generation 2k-1 (reduce phase) and 2k (broadcast phase)
+    //
+    // An instance may be shared between all_reduce and all_gather (identical
+    // generation scheme), but not with other collectives; see the note on
+    // create_hierarchical_communicator.
     HPX_CXX_EXPORT template <typename T, typename F>
     hpx::future<std::decay_t<T>> all_reduce(
         hierarchical_communicator const& communicators, T&& local_result,
@@ -449,7 +453,7 @@ namespace hpx::collectives {
                 HPX_GET_EXCEPTION(hpx::error::bad_parameter,
                     "hpx::collectives::all_reduce (hierarchical)",
                     "hierarchical all_reduce requires an explicit generation "
-                    "number for the 2k/2k+1 internal mapping"));
+                    "number for the 2k-1/2k internal mapping"));
         }
 
         if (this_site.is_default())
@@ -480,10 +484,12 @@ namespace hpx::collectives {
                     "participating sites"));
         }
 
-        // Flat fast path: when arity >= num_sites, each site is its own
-        // group and the reduce+broadcast decomposition collapses to a
-        // single flat all_reduce. Dispatch directly to avoid the two
-        // separate gate synchronizations.
+        // Flat fast path: when arity >= num_sites, the tree builder's leaf
+        // condition (right - left < arity) fired at the root call and
+        // produced a single flat communicator spanning all sites. The
+        // reduce+broadcast decomposition then collapses to a single flat
+        // all_reduce; dispatch directly to avoid the two separate gate
+        // synchronizations.
         if (arity_val >= num_sites_val)
         {
             HPX_ASSERT(communicators.size() == 1);

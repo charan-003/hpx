@@ -431,6 +431,10 @@ namespace hpx::collectives {
     //  - Inter-group communicator: k (exchange)
     // Each communicator sees consecutive generations starting at 1,
     // which is required by the and_gate synchronization mechanism.
+    //
+    // A hierarchical_communicator instance used with all_to_all must not be
+    // shared with other collective operations; see the note on
+    // create_hierarchical_communicator.
 
     // Async overload (declared above; default arguments live on that
     // forward declaration).
@@ -483,9 +487,11 @@ namespace hpx::collectives {
 
         // Flat fast path: when arity >= num_sites (either because the user
         // chose a large arity or because the factory overrode arity to
-        // num_sites for the flat fallback), each site is its own group and
-        // the 3-phase algorithm collapses to a flat all_to_all. Dispatch
-        // directly to avoid the intermediate allocations.
+        // num_sites for the flat fallback), the tree builder's leaf condition
+        // (right - left < arity) fired at the root call and produced a single
+        // flat communicator spanning all sites. The 3-phase algorithm then
+        // collapses to a flat all_to_all; dispatch directly to avoid the
+        // intermediate allocations.
         if (arity_val >= num_sites_val)
         {
             HPX_ASSERT(communicators.size() == 1);

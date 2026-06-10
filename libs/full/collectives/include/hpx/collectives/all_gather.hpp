@@ -392,6 +392,10 @@ namespace hpx::collectives {
     //
     // Key difference from all_reduce: the gather phase produces vector<T>
     // (O(N) data), so the broadcast phase transfers O(N) instead of a scalar.
+    //
+    // An instance may be shared between all_gather and all_reduce (identical
+    // generation scheme), but not with other collectives; see the note on
+    // create_hierarchical_communicator.
 
     // Async overload
     HPX_CXX_EXPORT template <typename T>
@@ -409,7 +413,7 @@ namespace hpx::collectives {
                 HPX_GET_EXCEPTION(hpx::error::bad_parameter,
                     "hpx::collectives::all_gather (hierarchical)",
                     "hierarchical all_gather requires an explicit generation "
-                    "number for the 2k/2k+1 internal mapping"));
+                    "number for the 2k-1/2k internal mapping"));
         }
 
         if (this_site.is_default())
@@ -440,10 +444,12 @@ namespace hpx::collectives {
                     "participating sites"));
         }
 
-        // Flat fast path: when arity >= num_sites, each site is its own
-        // group and the gather+broadcast decomposition collapses to a
-        // single flat all_gather. Dispatch directly to avoid the two
-        // separate gate synchronizations.
+        // Flat fast path: when arity >= num_sites, the tree builder's leaf
+        // condition (right - left < arity) fired at the root call and
+        // produced a single flat communicator spanning all sites. The
+        // gather+broadcast decomposition then collapses to a single flat
+        // all_gather; dispatch directly to avoid the two separate gate
+        // synchronizations.
         if (arity_val >= num_sites_val)
         {
             HPX_ASSERT(communicators.size() == 1);

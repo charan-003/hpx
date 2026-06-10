@@ -25,9 +25,6 @@
 #include <hpx/modules/synchronization.hpp>
 #include <hpx/modules/type_support.hpp>
 
-#include <hpx/collectives/argument_types.hpp>
-#include <hpx/collectives/create_communicator.hpp>
-
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -465,11 +462,12 @@ namespace hpx::collectives {
         }
 
         // Flat fallback: below the threshold, hierarchical overhead exceeds
-        // its benefit. Override arity to num_sites so that each site becomes
-        // its own group; the tree builder then produces a single flat
-        // communicator and the hierarchical collective algorithms collapse to
-        // a direct flat call (same code path as arity >= num_sites). Pass
-        // threshold == 0 to disable this fallback and always build a tree.
+        // its benefit. Overriding arity to num_sites makes the tree builder's
+        // leaf condition (right - left < arity) fire at the root call, which
+        // produces a single flat communicator spanning all sites; the
+        // hierarchical collectives dispatch on the same arity >= num_sites
+        // condition and collapse to a direct flat call. Pass threshold == 0
+        // to disable this fallback and always build a tree.
         if (num_sites < threshold)
         {
             arity = static_cast<std::size_t>(num_sites);
