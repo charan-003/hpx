@@ -1,5 +1,6 @@
 //  Copyright (c) 2020-2026 Hartmut Kaiser
 //  Copyright (c) 2025 Lukas Zeil
+//  Copyright (c) 2026 Anshuman Agrawal
 //
 //  SPDX-License-Identifier: BSL-1.0
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -435,18 +436,27 @@ namespace hpx::collectives {
         if (this_site.is_default())
         {
             this_site = agas::get_locality_id();
-            if (root_site == static_cast<std::size_t>(-1))    //-V1051
-            {
-                root_site = 0;
-            }
+        }
+
+        if (root_site == static_cast<std::size_t>(-1))
+        {
+            root_site = 0;
         }
         if (root_site != 0)
         {
-            this_site = this_site - root_site % num_sites;
+            HPX_THROW_EXCEPTION(hpx::error::bad_parameter,
+                "hpx::collectives::create_hierarchical_communicator",
+                "hierarchical communicators currently support only "
+                "root_site == 0");
         }
-        HPX_ASSERT(this_site < num_sites);
-        HPX_ASSERT(
-            root_site != static_cast<std::size_t>(-1) && root_site < num_sites);
+
+        if (num_sites == 0 || this_site >= num_sites)
+        {
+            HPX_THROW_EXCEPTION(hpx::error::bad_parameter,
+                "hpx::collectives::create_hierarchical_communicator",
+                "num_sites must be non-zero and this_site must be smaller "
+                "than the number of participating sites");
+        }
 
         std::string name(basename);
         if (!generation.is_default())

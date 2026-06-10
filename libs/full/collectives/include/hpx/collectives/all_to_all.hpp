@@ -1,4 +1,5 @@
 //  Copyright (c) 2019-2026 Hartmut Kaiser
+//  Copyright (c) 2026 Anshuman Agrawal
 //
 //  SPDX-License-Identifier: BSL-1.0
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -456,6 +457,29 @@ namespace hpx::collectives {
 
         std::size_t const num_sites_val = hpx::get<0>(communicators.get_info());
         std::size_t const arity_val = communicators.get_arity();
+
+        // An out-of-range site would classify into no top-level group and
+        // silently take the non-representative branch, hanging the gather.
+        if (this_site >= num_sites_val)
+        {
+            return hpx::make_exceptional_future<std::vector<T>>(
+                HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                    "hpx::collectives::all_to_all (hierarchical)",
+                    "this_site must be smaller than the number of "
+                    "participating sites"));
+        }
+
+        // The phase-2 packing slices each gathered contribution with
+        // unchecked iterator arithmetic, so a wrong-size contribution must
+        // be rejected client-side before any data is sent.
+        if (local_result.size() != num_sites_val)
+        {
+            return hpx::make_exceptional_future<std::vector<T>>(
+                HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                    "hpx::collectives::all_to_all (hierarchical)",
+                    "each participating site must contribute exactly "
+                    "num_sites elements"));
+        }
 
         // Flat fast path: when arity >= num_sites (either because the user
         // chose a large arity or because the factory overrode arity to
