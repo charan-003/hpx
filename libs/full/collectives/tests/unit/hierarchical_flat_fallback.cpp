@@ -52,17 +52,27 @@ void test_distributed_fallback()
     HPX_TEST_EQ(fb_result, expected);
 
     // Force the tree path by setting threshold to 0; results must match.
-    auto const tree_clients = create_hierarchical_communicator(
-        "/test/hflback_dist_tree/", num_sites_arg(num_localities),
-        this_site_arg(this_locality), arity_arg(2), generation_arg(),
-        root_site_arg(0), flat_fallback_threshold_arg(0));
+    // With 2 localities and arity 2 a tree is structurally impossible
+    // (arity >= num_sites dispatches flat), so this leg needs at least 3.
+    if (num_localities >= 3)
+    {
+        auto const tree_clients = create_hierarchical_communicator(
+            "/test/hflback_dist_tree/", num_sites_arg(num_localities),
+            this_site_arg(this_locality), arity_arg(2), generation_arg(),
+            root_site_arg(0), flat_fallback_threshold_arg(0));
 
-    std::uint32_t const tree_result = all_reduce(tree_clients,
-        std::uint32_t(value), std::plus<std::uint32_t>{},
-        this_site_arg(this_locality), generation_arg(1))
-                                          .get();
+        // Assert the dispatch predicate so the comparison can never
+        // silently degenerate to flat-vs-flat.
+        HPX_TEST_LT(static_cast<std::size_t>(tree_clients.get_arity()),
+            static_cast<std::size_t>(num_localities));
 
-    HPX_TEST_EQ(tree_result, expected);
+        std::uint32_t const tree_result = all_reduce(tree_clients,
+            std::uint32_t(value), std::plus<std::uint32_t>{},
+            this_site_arg(this_locality), generation_arg(1))
+                                              .get();
+
+        HPX_TEST_EQ(tree_result, expected);
+    }
 }
 
 // Distributed test for all_to_all flat fallback: mirrors test_distributed_fallback
@@ -107,28 +117,38 @@ void test_distributed_fallback_all_to_all()
         HPX_TEST_EQ(fb_result[i], expected[i]);
     }
 
-    // Force tree path; results must match.
-    auto const tree_clients = create_hierarchical_communicator(
-        "/test/hflback_dist_a2a_tree/", num_sites_arg(num_localities),
-        this_site_arg(this_locality), arity_arg(2), generation_arg(),
-        root_site_arg(0), flat_fallback_threshold_arg(0));
-
-    auto const tree_result =
-        all_to_all(tree_clients, std::vector<std::uint32_t>(send_data),
-            this_site_arg(this_locality), generation_arg(1))
-            .get();
-
-    HPX_TEST_EQ(tree_result.size(), expected.size());
-    for (std::size_t i = 0; i != expected.size(); ++i)
+    // Force tree path; results must match. With 2 localities and arity 2 a
+    // tree is structurally impossible (arity >= num_sites dispatches flat),
+    // so this leg needs at least 3.
+    if (num_localities >= 3)
     {
-        HPX_TEST_EQ(tree_result[i], expected[i]);
+        auto const tree_clients = create_hierarchical_communicator(
+            "/test/hflback_dist_a2a_tree/", num_sites_arg(num_localities),
+            this_site_arg(this_locality), arity_arg(2), generation_arg(),
+            root_site_arg(0), flat_fallback_threshold_arg(0));
+
+        // Assert the dispatch predicate so the comparison can never
+        // silently degenerate to flat-vs-flat.
+        HPX_TEST_LT(static_cast<std::size_t>(tree_clients.get_arity()),
+            static_cast<std::size_t>(num_localities));
+
+        auto const tree_result =
+            all_to_all(tree_clients, std::vector<std::uint32_t>(send_data),
+                this_site_arg(this_locality), generation_arg(1))
+                .get();
+
+        HPX_TEST_EQ(tree_result.size(), expected.size());
+        for (std::size_t i = 0; i != expected.size(); ++i)
+        {
+            HPX_TEST_EQ(tree_result[i], expected[i]);
+        }
     }
 }
 
-// Local test (single-process, multi-thread sites): verifies that the fallback
-// works for a range of site counts below the default threshold, exercised
-// from locality 0 only.
-void test_local_fallback(std::uint32_t num_sites)
+// Local test (single-process, multi-thread sites), exercised from locality 0
+// only and parameterized over the fallback threshold: 1024 forces the flat
+// path, 0 forces the tree path.
+void test_local_fallback(std::uint32_t num_sites, std::size_t threshold)
 {
     std::vector<hpx::future<void>> sites;
     sites.reserve(num_sites);
@@ -136,12 +156,24 @@ void test_local_fallback(std::uint32_t num_sites)
     for (std::uint32_t site = 0; site != num_sites; ++site)
     {
         sites.push_back(hpx::async([=]() {
+            std::string const basename =
+                "/test/hflback_local_t" + std::to_string(threshold) + "/";
             auto const clients = create_hierarchical_communicator(
-                "/test/hflback_local/", num_sites_arg(num_sites),
-                this_site_arg(site), arity_arg(2), generation_arg(),
-                root_site_arg(0), flat_fallback_threshold_arg(1024));
+                basename.c_str(), num_sites_arg(num_sites), this_site_arg(site),
+                arity_arg(2), generation_arg(), root_site_arg(0),
+                flat_fallback_threshold_arg(threshold));
 
-            HPX_TEST_EQ(clients.size(), static_cast<std::size_t>(1));
+            if (threshold == 0)
+            {
+                // Assert the dispatch predicate so the comparison can never
+                // silently degenerate to flat-vs-flat.
+                HPX_TEST_LT(static_cast<std::size_t>(clients.get_arity()),
+                    static_cast<std::size_t>(num_sites));
+            }
+            else
+            {
+                HPX_TEST_EQ(clients.size(), static_cast<std::size_t>(1));
+            }
 
             std::uint32_t const value = site + 1;
             std::uint32_t const result = all_reduce(clients,
@@ -161,9 +193,11 @@ void test_local_fallback(std::uint32_t num_sites)
     hpx::wait_all(std::move(sites));
 }
 
-// Local all_to_all flat fallback test: exercises the arity_val >= num_sites_val
-// branch in the hierarchical all_to_all overload from a single process.
-void test_local_fallback_all_to_all(std::uint32_t num_sites)
+// Local all_to_all test, parameterized over the fallback threshold like
+// test_local_fallback: 1024 exercises the arity_val >= num_sites_val flat
+// dispatch branch, 0 exercises the 3-phase tree path.
+void test_local_fallback_all_to_all(
+    std::uint32_t num_sites, std::size_t threshold)
 {
     std::vector<hpx::future<void>> sites;
     sites.reserve(num_sites);
@@ -171,12 +205,24 @@ void test_local_fallback_all_to_all(std::uint32_t num_sites)
     for (std::uint32_t site = 0; site != num_sites; ++site)
     {
         sites.push_back(hpx::async([=]() {
+            std::string const basename =
+                "/test/hflback_local_a2a_t" + std::to_string(threshold) + "/";
             auto const clients = create_hierarchical_communicator(
-                "/test/hflback_local_a2a/", num_sites_arg(num_sites),
-                this_site_arg(site), arity_arg(2), generation_arg(),
-                root_site_arg(0), flat_fallback_threshold_arg(1024));
+                basename.c_str(), num_sites_arg(num_sites), this_site_arg(site),
+                arity_arg(2), generation_arg(), root_site_arg(0),
+                flat_fallback_threshold_arg(threshold));
 
-            HPX_TEST_EQ(clients.size(), static_cast<std::size_t>(1));
+            if (threshold == 0)
+            {
+                // Assert the dispatch predicate so the comparison can never
+                // silently degenerate to flat-vs-flat.
+                HPX_TEST_LT(static_cast<std::size_t>(clients.get_arity()),
+                    static_cast<std::size_t>(num_sites));
+            }
+            else
+            {
+                HPX_TEST_EQ(clients.size(), static_cast<std::size_t>(1));
+            }
 
             // Site s sends {s*N+0, ..., s*N+(N-1)}
             std::vector<std::uint32_t> send_data(num_sites);
@@ -213,10 +259,19 @@ int hpx_main()
 
     if (hpx::get_locality_id() == 0)
     {
+        // Flat legs: threshold above all site counts forces the fallback.
         for (std::uint32_t n : {2u, 4u, 8u})
         {
-            test_local_fallback(n);
-            test_local_fallback_all_to_all(n);
+            test_local_fallback(n, 1024);
+            test_local_fallback_all_to_all(n, 1024);
+        }
+
+        // Tree legs: threshold 0 forces real trees (n == 2 cannot tree at
+        // arity 2 because arity >= num_sites dispatches flat).
+        for (std::uint32_t n : {3u, 5u, 8u})
+        {
+            test_local_fallback(n, 0);
+            test_local_fallback_all_to_all(n, 0);
         }
     }
 
