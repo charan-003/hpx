@@ -65,6 +65,66 @@ void test_distributed_fallback()
     HPX_TEST_EQ(tree_result, expected);
 }
 
+// Distributed test for all_to_all flat fallback: mirrors test_distributed_fallback
+// but exercises the all_to_all flat dispatch branch (arity_val >= num_sites_val).
+void test_distributed_fallback_all_to_all()
+{
+    std::uint32_t const this_locality = hpx::get_locality_id();
+    std::uint32_t const num_localities =
+        hpx::get_num_localities(hpx::launch::sync);
+    HPX_TEST_LTE(static_cast<std::uint32_t>(2), num_localities);
+
+    // Site s sends {s*N+0, s*N+1, ..., s*N+(N-1)}
+    std::vector<std::uint32_t> send_data(num_localities);
+    for (std::uint32_t d = 0; d != num_localities; ++d)
+    {
+        send_data[d] = this_locality * num_localities + d;
+    }
+
+    // Expected: result[i] = i * N + this_locality
+    std::vector<std::uint32_t> expected(num_localities);
+    for (std::uint32_t i = 0; i != num_localities; ++i)
+    {
+        expected[i] = i * num_localities + this_locality;
+    }
+
+    // Force flat fallback path.
+    auto const fb_clients = create_hierarchical_communicator(
+        "/test/hflback_dist_a2a_fb/", num_sites_arg(num_localities),
+        this_site_arg(this_locality), arity_arg(2), generation_arg(),
+        root_site_arg(0), flat_fallback_threshold_arg(1024));
+
+    HPX_TEST_EQ(fb_clients.size(), static_cast<std::size_t>(1));
+
+    auto const fb_result =
+        all_to_all(fb_clients, std::vector<std::uint32_t>(send_data),
+            this_site_arg(this_locality), generation_arg(1))
+            .get();
+
+    HPX_TEST_EQ(fb_result.size(), expected.size());
+    for (std::size_t i = 0; i != expected.size(); ++i)
+    {
+        HPX_TEST_EQ(fb_result[i], expected[i]);
+    }
+
+    // Force tree path; results must match.
+    auto const tree_clients = create_hierarchical_communicator(
+        "/test/hflback_dist_a2a_tree/", num_sites_arg(num_localities),
+        this_site_arg(this_locality), arity_arg(2), generation_arg(),
+        root_site_arg(0), flat_fallback_threshold_arg(0));
+
+    auto const tree_result =
+        all_to_all(tree_clients, std::vector<std::uint32_t>(send_data),
+            this_site_arg(this_locality), generation_arg(1))
+            .get();
+
+    HPX_TEST_EQ(tree_result.size(), expected.size());
+    for (std::size_t i = 0; i != expected.size(); ++i)
+    {
+        HPX_TEST_EQ(tree_result[i], expected[i]);
+    }
+}
+
 // Local test (single-process, multi-thread sites): verifies that the fallback
 // works for a range of site counts below the default threshold, exercised
 // from locality 0 only.
@@ -101,12 +161,53 @@ void test_local_fallback(std::uint32_t num_sites)
     hpx::wait_all(std::move(sites));
 }
 
+// Local all_to_all flat fallback test: exercises the arity_val >= num_sites_val
+// branch in the hierarchical all_to_all overload from a single process.
+void test_local_fallback_all_to_all(std::uint32_t num_sites)
+{
+    std::vector<hpx::future<void>> sites;
+    sites.reserve(num_sites);
+
+    for (std::uint32_t site = 0; site != num_sites; ++site)
+    {
+        sites.push_back(hpx::async([=]() {
+            auto const clients = create_hierarchical_communicator(
+                "/test/hflback_local_a2a/", num_sites_arg(num_sites),
+                this_site_arg(site), arity_arg(2), generation_arg(),
+                root_site_arg(0), flat_fallback_threshold_arg(1024));
+
+            HPX_TEST_EQ(clients.size(), static_cast<std::size_t>(1));
+
+            // Site s sends {s*N+0, ..., s*N+(N-1)}
+            std::vector<std::uint32_t> send_data(num_sites);
+            for (std::uint32_t d = 0; d != num_sites; ++d)
+            {
+                send_data[d] = site * num_sites + d;
+            }
+
+            auto const result = all_to_all(clients, HPX_MOVE(send_data),
+                this_site_arg(site), generation_arg(1))
+                                    .get();
+
+            // Expected: result[i] = i * N + site
+            HPX_TEST_EQ(result.size(), static_cast<std::size_t>(num_sites));
+            for (std::uint32_t i = 0; i != num_sites; ++i)
+            {
+                HPX_TEST_EQ(result[i], i * num_sites + site);
+            }
+        }));
+    }
+
+    hpx::wait_all(std::move(sites));
+}
+
 int hpx_main()
 {
 #if defined(HPX_HAVE_NETWORKING)
     if (hpx::get_num_localities(hpx::launch::sync) > 1)
     {
         test_distributed_fallback();
+        test_distributed_fallback_all_to_all();
     }
 #endif
 
@@ -115,6 +216,7 @@ int hpx_main()
         for (std::uint32_t n : {2u, 4u, 8u})
         {
             test_local_fallback(n);
+            test_local_fallback_all_to_all(n);
         }
     }
 

@@ -417,6 +417,21 @@ namespace hpx::collectives {
             this_site = agas::get_locality_id();
         }
 
+        // Flat fast path: when arity >= num_sites, each site is its own
+        // group and the gather+broadcast decomposition collapses to a
+        // single flat all_gather. Dispatch directly to avoid the two
+        // separate gate synchronizations.
+        std::size_t const num_sites_val = hpx::get<0>(communicators.get_info());
+        std::size_t const arity_val = communicators.get_arity();
+
+        if (arity_val >= num_sites_val)
+        {
+            HPX_ASSERT(communicators.size() == 1);
+            return all_gather(communicators.get(0),
+                HPX_FORWARD(T, local_result), communicators.site(0),
+                generation);
+        }
+
         generation_arg const gather_gen(2 * generation - 1);
         generation_arg const broadcast_gen(2 * generation);
 

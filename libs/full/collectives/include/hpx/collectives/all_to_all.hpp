@@ -457,11 +457,14 @@ namespace hpx::collectives {
         std::size_t const num_sites_val = hpx::get<0>(communicators.get_info());
         std::size_t const arity_val = communicators.get_arity();
 
-        // Flat fallback: created by create_hierarchical_communicator when
-        // num_sites < threshold. All sites share a single flat communicator
-        // spanning all N sites. Delegate to the flat overload.
-        if (communicators.is_flat_fallback())
+        // Flat fast path: when arity >= num_sites (either because the user
+        // chose a large arity or because the factory overrode arity to
+        // num_sites for the flat fallback), each site is its own group and
+        // the 3-phase algorithm collapses to a flat all_to_all. Dispatch
+        // directly to avoid the intermediate allocations.
+        if (arity_val >= num_sites_val)
         {
+            HPX_ASSERT(communicators.size() == 1);
             return all_to_all(communicators.get(0), HPX_MOVE(local_result),
                 communicators.site(0), generation);
         }
