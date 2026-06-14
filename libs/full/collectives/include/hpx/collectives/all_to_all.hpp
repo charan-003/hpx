@@ -249,7 +249,8 @@ namespace hpx::traits {
     {
         template <typename Result, typename T>
         static Result get(Communicator& communicator, std::size_t which,
-            std::size_t generation, std::vector<T>&& t)
+            std::size_t generation, std::size_t num_generations,
+            std::vector<T>&& t)
         {
             return communicator.template handle_data<std::vector<T>>(
                 communication::communicator_data<
@@ -279,7 +280,8 @@ namespace hpx::traits {
                             HPX_MOVE(v[which])));
                     }
                     return result;
-                });
+                },
+                static_cast<std::size_t>(-1), num_generations);
         }
     };
 }    // namespace hpx::traits
@@ -292,7 +294,8 @@ namespace hpx::collectives {
     hpx::future<std::vector<T>> all_to_all(communicator fid,
         std::vector<T>&& local_result,
         this_site_arg this_site = this_site_arg(),
-        generation_arg const generation = generation_arg())
+        generation_arg const generation = generation_arg(),
+        std::size_t num_generations = 1)
     {
         if (this_site.is_default())
         {
@@ -321,16 +324,17 @@ namespace hpx::collectives {
         }
 
         auto all_to_all_data =
-            [local_result = HPX_MOVE(local_result), this_site, generation](
+            [local_result = HPX_MOVE(local_result), this_site, generation,
+                num_generations](
                 communicator&& c) mutable -> hpx::future<std::vector<T>> {
             using action_type =
                 detail::communicator_server::communication_get_direct_action<
                     traits::communication::all_to_all_tag,
-                    hpx::future<std::vector<T>>, std::vector<T>>;
+                    hpx::future<std::vector<T>>, std::size_t, std::vector<T>>;
 
             // explicitly unwrap returned future
             hpx::future<std::vector<T>> result = hpx::async(action_type(), c,
-                this_site, generation, HPX_MOVE(local_result));
+                this_site, generation, num_generations, HPX_MOVE(local_result));
 
             if (!result.is_ready())
             {
@@ -429,13 +433,11 @@ namespace hpx::collectives {
     //
     // Generation mapping (user generation k, starting from 1):
     //  - Subtree communicators: 2k-1 (gather) and 2k (scatter)
-    //  - Inter-group communicator: k (exchange)
-    // Each communicator sees consecutive generations starting at 1,
-    // which is required by the and_gate synchronization mechanism.
-    //
-    // A hierarchical_communicator instance used with all_to_all must not be
-    // shared with other collective operations; see the note on
-    // create_hierarchical_communicator.
+    //  - Inter-group communicator: 2k-1 (exchange), advancing the gate by two
+    //    in a single step so it stays in lock-step with the subtrees
+    // Each communicator therefore advances by two generations per call,
+    // which lets a single instance be shared across collectives; see the
+    // note on create_hierarchical_communicator.
 
     // Async overload (declared above; default arguments live on that
     // forward declaration).
@@ -504,10 +506,13 @@ namespace hpx::collectives {
         // generation numbers starting from 1 (the gate blocks until all
         // prior generations complete).  Subtree communicators participate
         // in both gather and scatter, so they use 2k-1 / 2k.  The
-        // inter-group communicator participates only in the exchange, so
-        // it uses k directly.
+        // inter-group communicator participates only in the exchange, but
+        // advances two generations per call as well so this communicator set
+        // can be shared with other collectives: the exchange runs at 2k-1 and
+        // the gate is advanced past 2k in a single step (num_generations == 2
+        // below).
         generation_arg const gather_gen(2 * generation - 1);
-        generation_arg const exchange_gen(generation);
+        generation_arg const exchange_gen(2 * generation - 1);
         generation_arg const scatter_gen(2 * generation);
 
         auto const groups =
@@ -543,9 +548,13 @@ namespace hpx::collectives {
                 }
             }
 
-            std::vector<std::vector<T>> received = all_to_all(hpx::launch::sync,
-                communicators.get(0), HPX_MOVE(exchange_blocks),
-                communicators.site(0), exchange_gen);
+            // The exchange touches the inter-group communicator once but must
+            // advance it by two generations to stay in lock-step with the
+            // subtree communicators, so request num_generations == 2.
+            std::vector<std::vector<T>> received =
+                all_to_all(communicators.get(0), HPX_MOVE(exchange_blocks),
+                    communicators.site(0), exchange_gen, /*num_generations=*/2)
+                    .get();
 
             // Phase 3: Transpose received blocks back to per-site vectors,
             // then scatter down the subtree.
