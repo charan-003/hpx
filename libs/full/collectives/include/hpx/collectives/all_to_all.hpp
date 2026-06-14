@@ -1,4 +1,5 @@
 //  Copyright (c) 2019-2026 Hartmut Kaiser
+//  Copyright (c) 2026 Anshuman Agrawal
 //
 //  SPDX-License-Identifier: BSL-1.0
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -210,6 +211,7 @@ namespace hpx { namespace collectives {
 
 #if !defined(HPX_COMPUTE_DEVICE_CODE)
 
+#include <hpx/assert.hpp>
 #include <hpx/collectives/argument_types.hpp>
 #include <hpx/collectives/create_communicator.hpp>
 #include <hpx/collectives/detail/hierarchical_all_to_all_helpers.hpp>
@@ -430,6 +432,10 @@ namespace hpx::collectives {
     //  - Inter-group communicator: k (exchange)
     // Each communicator sees consecutive generations starting at 1,
     // which is required by the and_gate synchronization mechanism.
+    //
+    // A hierarchical_communicator instance used with all_to_all must not be
+    // shared with other collective operations; see the note on
+    // create_hierarchical_communicator.
 
     // Async overload (declared above; default arguments live on that
     // forward declaration).
@@ -457,11 +463,39 @@ namespace hpx::collectives {
         std::size_t const num_sites_val = hpx::get<0>(communicators.get_info());
         std::size_t const arity_val = communicators.get_arity();
 
-        // Flat fallback: created by create_hierarchical_communicator when
-        // num_sites < threshold. All sites share a single flat communicator
-        // spanning all N sites. Delegate to the flat overload.
-        if (communicators.is_flat_fallback())
+        // An out-of-range site would classify into no top-level group and
+        // silently take the non-representative branch, hanging the gather.
+        if (this_site >= num_sites_val)
         {
+            return hpx::make_exceptional_future<std::vector<T>>(
+                HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                    "hpx::collectives::all_to_all (hierarchical)",
+                    "this_site must be smaller than the number of "
+                    "participating sites"));
+        }
+
+        // The phase-2 packing slices each gathered contribution with
+        // unchecked iterator arithmetic, so a wrong-size contribution must
+        // be rejected client-side before any data is sent.
+        if (local_result.size() != num_sites_val)
+        {
+            return hpx::make_exceptional_future<std::vector<T>>(
+                HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                    "hpx::collectives::all_to_all (hierarchical)",
+                    "each participating site must contribute exactly "
+                    "num_sites elements"));
+        }
+
+        // Flat fast path: when arity >= num_sites (either because the user
+        // chose a large arity or because the factory overrode arity to
+        // num_sites for the flat fallback), the tree builder's leaf condition
+        // (right - left < arity) fired at the root call and produced a single
+        // flat communicator spanning all sites. The 3-phase algorithm then
+        // collapses to a flat all_to_all; dispatch directly to avoid the
+        // intermediate allocations.
+        if (arity_val >= num_sites_val)
+        {
+            HPX_ASSERT(communicators.size() == 1);
             return all_to_all(communicators.get(0), HPX_MOVE(local_result),
                 communicators.site(0), generation);
         }
