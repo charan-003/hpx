@@ -39,30 +39,30 @@ namespace hpx::execution::experimental::detail {
         using check_for_property = CheckForProperty<std::decay_t<T>>;
 
     public:
-        // Primary: Parameters directly supports property (highest priority -
-        // mirrors tag_override_invoke > tag_invoke semantics)
-        template <typename Executor, typename Parameters>
-            requires(hpx::traits::is_executor_parameters_v<Parameters> &&
-                check_for_property<Parameters>::value)
-        HPX_FORCEINLINE constexpr decltype(auto) operator()(Executor&& exec,
-            Parameters&& params, Property /*prop*/) const noexcept
-        {
-            return std::pair<Parameters&&, Executor&&>(
-                HPX_FORWARD(Parameters, params), HPX_FORWARD(Executor, exec));
-        }
-
-        ///////////////////////////////////////////////////////////////////
-        // Secondary: Executor directly supports property (when parameters doesn't)
+        // Primary: Executor directly supports property (highest priority -
+        // mirrors old tag_invoke > tag_fallback_invoke semantics)
         template <typename Executor, typename Parameters>
             requires(hpx::traits::is_executor_any_v<Executor> &&
-                check_for_property<Executor>::value &&
-                (!hpx::traits::is_executor_parameters_v<Parameters> ||
-                    !check_for_property<Parameters>::value))
+                check_for_property<Executor>::value)
         HPX_FORCEINLINE constexpr decltype(auto) operator()(Executor&& exec,
             Parameters&& params, Property /*prop*/) const noexcept
         {
             return std::pair<Executor&&, Parameters&&>(
                 HPX_FORWARD(Executor, exec), HPX_FORWARD(Parameters, params));
+        }
+
+        ///////////////////////////////////////////////////////////////////
+        // Secondary: Parameters directly supports property (when executor
+        // doesn't)
+        template <typename Executor, typename Parameters>
+            requires(hpx::traits::is_executor_parameters_v<Parameters> &&
+                check_for_property<Parameters>::value &&
+                !check_for_property<Executor>::value)
+        HPX_FORCEINLINE constexpr decltype(auto) operator()(Executor&& exec,
+            Parameters&& params, Property /*prop*/) const noexcept
+        {
+            return std::pair<Parameters&&, Executor&&>(
+                HPX_FORWARD(Parameters, params), HPX_FORWARD(Executor, exec));
         }
 
         // Fallback: neither executor nor parameters support property

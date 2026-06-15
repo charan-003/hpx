@@ -94,8 +94,8 @@ void test_get_chunk_size()
         hpx::execution::experimental::get_chunk_size(
             test_chunk_size{}, test_executor_get_chunk_size{}, 1, 1);
 
-        HPX_TEST_EQ(params_count, static_cast<std::size_t>(1));
-        HPX_TEST_EQ(exec_count, static_cast<std::size_t>(0));
+        HPX_TEST_EQ(params_count, static_cast<std::size_t>(0));
+        HPX_TEST_EQ(exec_count, static_cast<std::size_t>(1));
     }
 
     {
@@ -195,8 +195,8 @@ void test_get_measure_iteration()
             test_measure_iteration{}, test_executor_measure_iteration{},
             [](std::size_t) { return 0; }, 1);
 
-        HPX_TEST_EQ(params_count, static_cast<std::size_t>(1));
-        HPX_TEST_EQ(exec_count, static_cast<std::size_t>(0));
+        HPX_TEST_EQ(params_count, static_cast<std::size_t>(0));
+        HPX_TEST_EQ(exec_count, static_cast<std::size_t>(1));
     }
 }
 
@@ -274,8 +274,8 @@ void test_maximal_number_of_chunks()
             test_number_of_chunks{}, test_executor_maximal_number_of_chunks{},
             1, 1);
 
-        HPX_TEST_EQ(params_count, static_cast<std::size_t>(1));
-        HPX_TEST_EQ(exec_count, static_cast<std::size_t>(0));
+        HPX_TEST_EQ(params_count, static_cast<std::size_t>(0));
+        HPX_TEST_EQ(exec_count, static_cast<std::size_t>(1));
     }
 }
 
@@ -349,8 +349,8 @@ void test_reset_thread_distribution()
             test_thread_distribution{},
             test_executor_reset_thread_distribution{});
 
-        HPX_TEST_EQ(params_count, static_cast<std::size_t>(1));
-        HPX_TEST_EQ(exec_count, static_cast<std::size_t>(0));
+        HPX_TEST_EQ(params_count, static_cast<std::size_t>(0));
+        HPX_TEST_EQ(exec_count, static_cast<std::size_t>(1));
     }
 }
 
@@ -539,8 +539,8 @@ void test_mark_begin_execution()
         hpx::execution::experimental::mark_begin_execution(
             test_begin_end{}, test_executor_begin_end{});
 
-        HPX_TEST_EQ(params_count, static_cast<std::size_t>(1));
-        HPX_TEST_EQ(exec_count, static_cast<std::size_t>(0));
+        HPX_TEST_EQ(params_count, static_cast<std::size_t>(0));
+        HPX_TEST_EQ(exec_count, static_cast<std::size_t>(1));
     }
 }
 
@@ -575,8 +575,8 @@ void test_mark_end_of_scheduling()
         hpx::execution::experimental::mark_end_of_scheduling(
             test_begin_end{}, test_executor_begin_end{});
 
-        HPX_TEST_EQ(params_count, static_cast<std::size_t>(1));
-        HPX_TEST_EQ(exec_count, static_cast<std::size_t>(0));
+        HPX_TEST_EQ(params_count, static_cast<std::size_t>(0));
+        HPX_TEST_EQ(exec_count, static_cast<std::size_t>(1));
     }
 }
 
@@ -611,8 +611,8 @@ void test_mark_end_execution()
         hpx::execution::experimental::mark_end_execution(
             test_begin_end{}, test_executor_begin_end{});
 
-        HPX_TEST_EQ(params_count, static_cast<std::size_t>(1));
-        HPX_TEST_EQ(exec_count, static_cast<std::size_t>(0));
+        HPX_TEST_EQ(params_count, static_cast<std::size_t>(0));
+        HPX_TEST_EQ(exec_count, static_cast<std::size_t>(1));
     }
 }
 
