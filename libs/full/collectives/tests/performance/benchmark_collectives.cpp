@@ -36,7 +36,6 @@ constexpr char const* all_reduce_direct_basename = "/test/all_reduce_direct/";
 constexpr char const* all_gather_direct_basename = "/test/all_gather_direct/";
 constexpr char const* all_to_all_direct_basename = "/test/all_to_all_direct/";
 constexpr char const* barrier_bench_basename = "/test/barrier_bench/";
-constexpr char const* timing_reduce_basename = "/test/timing_reduce/";
 
 struct double_max
 {
@@ -64,17 +63,6 @@ struct vector_adder
         return result;
     }
 };
-
-std::vector<std::vector<int>> generate_matrix(
-    int localities, int test_size, int start_val)
-{
-    std::vector<std::vector<int>> result;
-    for (int i = 0; i < localities; ++i)
-    {
-        result.push_back(std::vector<int>(test_size, start_val + i));
-    }
-    return result;
-}
 
 void create_parent_dir(std::filesystem::path const& file_path)
 {
@@ -106,6 +94,8 @@ struct Stats
 
 Stats compute_moments(std::vector<double> const& data)
 {
+    if (data.empty())
+        return Stats{0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     double const n = static_cast<double>(data.size());
 
     // Mean
@@ -166,9 +156,20 @@ void write_to_file(std::string const& collective, std::string const& type,
         stats.variance, stats.stddev, stats.min, stats.max, stats.median)
         << std::flush;
 
-    // Create directory
+    // Determine active parcelport (bootstrap port = highest-priority enabled port).
+    // Guard on num_l > 1: single-locality runs have no distributed runtime/parcelport.
+    std::string pp_type = "local";
+    if (num_l > 1)
+    {
+        auto& ph = hpx::get_runtime_distributed().get_parcel_handler();
+        if (auto pp = ph.get_bootstrap_parcelport())
+            pp_type = pp->type();
+    }
+
+    // Create directory: result/hpx/<parcelport>/<collective>/
     std::string runtime_file_path =
-        "result/hpx/" + collective + "/runtimes_" + collective + "_" + type;
+        "result/hpx/" + pp_type + "/" + collective + "/runtimes_" +
+        collective + "_" + type;
     if (arity != -1 && type == "hierarchical")
     {
         runtime_file_path = runtime_file_path + "_" + std::to_string(arity);
@@ -231,11 +232,17 @@ void test_scatter_hierarchical(int arity, int lpn, std::size_t iterations, std::
     hpx::distributed::barrier barrier(barrier_test_name);
     // Result vector
     auto const timing_comm =
-        create_communicator(timing_reduce_basename,
+        create_communicator("/test/timing_reduce/scatter/",
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
     std::vector<std::vector<int>> send_data;
+    // Pre-allocate scatter send buffer once (root only); refill each iteration
+    if (this_locality == 0)
+    {
+        send_data.assign(num_localities,
+            std::vector<int>(static_cast<std::size_t>(test_size), 0));
+    }
     std::vector<int> recv_data;
     hpx::future<std::vector<int>> ft_data;
 
@@ -243,8 +250,14 @@ void test_scatter_hierarchical(int arity, int lpn, std::size_t iterations, std::
     {
         if (this_locality == 0)
         {
-            send_data = generate_matrix(static_cast<int>(num_localities),
-                test_size, static_cast<int>(42 + i));
+            for (std::ptrdiff_t j = 0;
+                 j < static_cast<std::ptrdiff_t>(num_localities); ++j)
+            {
+                std::fill(
+                    send_data[static_cast<std::size_t>(j)].begin(),
+                    send_data[static_cast<std::size_t>(j)].end(),
+                    static_cast<int>(42 + i) + static_cast<int>(j));
+            }
         }
 
         barrier.wait();
@@ -271,9 +284,9 @@ void test_scatter_hierarchical(int arity, int lpn, std::size_t iterations, std::
             result[i - warmup_iterations] = max_elapsed;
 
         // Check for correctness
-        for (std::size_t check : recv_data)
+        for (int check : recv_data)
         {
-            HPX_TEST_EQ(42 + i + this_locality, check);
+            HPX_TEST_EQ(static_cast<int>(42 + i) + static_cast<int>(this_locality), check);
         }
     }
 
@@ -310,17 +323,17 @@ void test_reduce_hierarchical(int arity, int lpn, std::size_t iterations, std::s
     hpx::distributed::barrier barrier(barrier_test_name);
     // Result vector
     auto const timing_comm =
-        create_communicator(timing_reduce_basename,
+        create_communicator("/test/timing_reduce/reduce/",
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
-    std::vector<int> send_data;
+    std::vector<int> send_data(static_cast<std::size_t>(test_size), 0);
     std::vector<int> recv_data;
     hpx::future<std::vector<int>> ft_data;
 
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        send_data = std::vector<int>(test_size, static_cast<int>(i));
+        std::fill(send_data.begin(), send_data.end(), static_cast<int>(i));
 
         barrier.wait();
         // Time collective
@@ -353,7 +366,7 @@ void test_reduce_hierarchical(int arity, int lpn, std::size_t iterations, std::s
         if (this_locality == 0)
         {
             HPX_TEST_EQ(
-                i * num_localities, static_cast<std::size_t>(recv_data[0]));
+                static_cast<int>(i) * static_cast<int>(num_localities), recv_data[0]);
         }
     }
 
@@ -390,11 +403,11 @@ void test_broadcast_hierarchical(int arity, int lpn, std::size_t iterations, std
     hpx::distributed::barrier barrier(barrier_test_name);
     // Result vector
     auto const timing_comm =
-        create_communicator(timing_reduce_basename,
+        create_communicator("/test/timing_reduce/broadcast/",
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
-    std::vector<int> send_data;
+    std::vector<int> send_data(static_cast<std::size_t>(test_size), 0);
     std::vector<int> recv_data;
     hpx::future<std::vector<int>> ft_data;
 
@@ -402,7 +415,7 @@ void test_broadcast_hierarchical(int arity, int lpn, std::size_t iterations, std
     {
         if (this_locality == 0)
         {
-            send_data = std::vector<int>(test_size, static_cast<int>(i));
+            std::fill(send_data.begin(), send_data.end(), static_cast<int>(i));
         }
 
         barrier.wait();
@@ -431,7 +444,7 @@ void test_broadcast_hierarchical(int arity, int lpn, std::size_t iterations, std
         // Check for correctness
         if (this_locality == 0)
         {
-            HPX_TEST_EQ(i, static_cast<std::size_t>(recv_data[0]));
+            HPX_TEST_EQ(static_cast<int>(i), recv_data[0]);
         }
     }
 
@@ -468,18 +481,18 @@ void test_gather_hierarchical(int arity, int lpn, std::size_t iterations, std::s
     hpx::distributed::barrier barrier(barrier_test_name);
     // Result vector
     auto const timing_comm =
-        create_communicator(timing_reduce_basename,
+        create_communicator("/test/timing_reduce/gather/",
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
-    std::vector<int> send_data;
+    std::vector<int> send_data(static_cast<std::size_t>(test_size), 0);
     std::vector<std::vector<int>> recv_data;
     hpx::future<std::vector<std::vector<int>>> ft_data;
 
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        send_data =
-            std::vector<int>(test_size, static_cast<int>(i + this_locality));
+        std::fill(send_data.begin(), send_data.end(),
+            static_cast<int>(i + this_locality));
 
         barrier.wait();
         // Time collective
@@ -512,7 +525,7 @@ void test_gather_hierarchical(int arity, int lpn, std::size_t iterations, std::s
         {
             for (int j = 0; j < static_cast<int>(num_localities); ++j)
             {
-                HPX_TEST_EQ(i + j, static_cast<std::size_t>(recv_data[j][0]));
+                HPX_TEST_EQ(static_cast<int>(i + j), recv_data[j][0]);
             }
         }
     }
@@ -550,16 +563,16 @@ void test_all_reduce_hierarchical(int arity, int lpn, std::size_t iterations, st
     hpx::distributed::barrier barrier(barrier_test_name);
     // Result vector
     auto const timing_comm =
-        create_communicator(timing_reduce_basename,
+        create_communicator("/test/timing_reduce/all_reduce/",
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
-    std::vector<int> send_data;
+    std::vector<int> send_data(static_cast<std::size_t>(test_size), 0);
     std::vector<int> recv_data;
 
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        send_data = std::vector<int>(test_size, static_cast<int>(i));
+        std::fill(send_data.begin(), send_data.end(), static_cast<int>(i));
 
         barrier.wait();
         // Time collective
@@ -579,7 +592,7 @@ void test_all_reduce_hierarchical(int arity, int lpn, std::size_t iterations, st
             result[i - warmup_iterations] = max_elapsed;
 
         // Check for correctness: every site should have the sum
-        HPX_TEST_EQ(i * num_localities, static_cast<std::size_t>(recv_data[0]));
+        HPX_TEST_EQ(static_cast<int>(i) * static_cast<int>(num_localities), recv_data[0]);
     }
 
     if (this_locality == 0)
@@ -610,7 +623,7 @@ void test_barrier_hierarchical(int arity, int lpn, std::size_t iterations, std::
     char const* const barrier_sync_name = "/test/barrier/hierarchical";
     hpx::distributed::barrier sync(barrier_sync_name);
     auto const timing_comm =
-        create_communicator(timing_reduce_basename,
+        create_communicator("/test/timing_reduce/barrier/",
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
 
@@ -656,11 +669,17 @@ void test_one_shot_use_scatter(int lpn, std::size_t iterations, std::size_t warm
     hpx::distributed::barrier barrier(barrier_test_name);
     // Result vector
     auto const timing_comm =
-        create_communicator(timing_reduce_basename,
+        create_communicator("/test/timing_reduce/scatter/",
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
     std::vector<std::vector<int>> send_data;
+    // Pre-allocate scatter send buffer once (root only); refill each iteration
+    if (this_locality == 0)
+    {
+        send_data.assign(num_localities,
+            std::vector<int>(static_cast<std::size_t>(test_size), 0));
+    }
     std::vector<int> recv_data;
     hpx::future<std::vector<int>> ft_data;
 
@@ -668,8 +687,14 @@ void test_one_shot_use_scatter(int lpn, std::size_t iterations, std::size_t warm
     {
         if (this_locality == 0)
         {
-            send_data = generate_matrix(static_cast<int>(num_localities),
-                test_size, static_cast<int>(42 + i));
+            for (std::ptrdiff_t j = 0;
+                 j < static_cast<std::ptrdiff_t>(num_localities); ++j)
+            {
+                std::fill(
+                    send_data[static_cast<std::size_t>(j)].begin(),
+                    send_data[static_cast<std::size_t>(j)].end(),
+                    static_cast<int>(42 + i) + static_cast<int>(j));
+            }
         }
 
         barrier.wait();
@@ -697,9 +722,9 @@ void test_one_shot_use_scatter(int lpn, std::size_t iterations, std::size_t warm
             result[i - warmup_iterations] = max_elapsed;
 
         // Check for correctness
-        for (std::size_t check : recv_data)
+        for (int check : recv_data)
         {
-            HPX_TEST_EQ(42 + i + this_locality, check);
+            HPX_TEST_EQ(static_cast<int>(42 + i) + static_cast<int>(this_locality), check);
         }
     }
 
@@ -724,17 +749,17 @@ void test_one_shot_use_reduce(int lpn, std::size_t iterations, std::size_t warmu
     hpx::distributed::barrier barrier(barrier_test_name);
     // Result vector
     auto const timing_comm =
-        create_communicator(timing_reduce_basename,
+        create_communicator("/test/timing_reduce/reduce/",
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
-    std::vector<int> send_data;
+    std::vector<int> send_data(static_cast<std::size_t>(test_size), 0);
     std::vector<int> recv_data;
     hpx::future<std::vector<int>> ft_data;
 
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        send_data = std::vector<int>(test_size, static_cast<int>(i));
+        std::fill(send_data.begin(), send_data.end(), static_cast<int>(i));
 
         barrier.wait();
         // Time collective
@@ -767,7 +792,7 @@ void test_one_shot_use_reduce(int lpn, std::size_t iterations, std::size_t warmu
         if (this_locality == 0)
         {
             HPX_TEST_EQ(
-                i * num_localities, static_cast<std::size_t>(recv_data[0]));
+                static_cast<int>(i) * static_cast<int>(num_localities), recv_data[0]);
         }
     }
 
@@ -792,11 +817,11 @@ void test_one_shot_use_broadcast(int lpn, std::size_t iterations, std::size_t wa
     hpx::distributed::barrier barrier(barrier_test_name);
     // Result vector
     auto const timing_comm =
-        create_communicator(timing_reduce_basename,
+        create_communicator("/test/timing_reduce/broadcast/",
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
-    std::vector<int> send_data;
+    std::vector<int> send_data(static_cast<std::size_t>(test_size), 0);
     std::vector<int> recv_data;
     hpx::future<std::vector<int>> ft_data;
 
@@ -804,7 +829,7 @@ void test_one_shot_use_broadcast(int lpn, std::size_t iterations, std::size_t wa
     {
         if (this_locality == 0)
         {
-            send_data = std::vector<int>(test_size, static_cast<int>(i));
+            std::fill(send_data.begin(), send_data.end(), static_cast<int>(i));
         }
 
         barrier.wait();
@@ -835,7 +860,7 @@ void test_one_shot_use_broadcast(int lpn, std::size_t iterations, std::size_t wa
         // Check for correctness
         if (this_locality == 0)
         {
-            HPX_TEST_EQ(i, static_cast<std::size_t>(recv_data[0]));
+            HPX_TEST_EQ(static_cast<int>(i), recv_data[0]);
         }
     }
 
@@ -860,18 +885,18 @@ void test_one_shot_use_gather(int lpn, std::size_t iterations, std::size_t warmu
     hpx::distributed::barrier barrier(barrier_test_name);
     // Result vector
     auto const timing_comm =
-        create_communicator(timing_reduce_basename,
+        create_communicator("/test/timing_reduce/gather/",
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
-    std::vector<int> send_data;
+    std::vector<int> send_data(static_cast<std::size_t>(test_size), 0);
     std::vector<std::vector<int>> recv_data;
     hpx::future<std::vector<std::vector<int>>> ft_data;
 
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        send_data =
-            std::vector<int>(test_size, static_cast<int>(i + this_locality));
+        std::fill(send_data.begin(), send_data.end(),
+            static_cast<int>(i + this_locality));
 
         barrier.wait();
         // Time collective
@@ -905,7 +930,7 @@ void test_one_shot_use_gather(int lpn, std::size_t iterations, std::size_t warmu
         {
             for (int j = 0; j < static_cast<int>(num_localities); ++j)
             {
-                HPX_TEST_EQ(i + j, static_cast<std::size_t>(recv_data[j][0]));
+                HPX_TEST_EQ(static_cast<int>(i + j), recv_data[j][0]);
             }
         }
     }
@@ -931,16 +956,16 @@ void test_one_shot_use_all_reduce(int lpn, std::size_t iterations, std::size_t w
     hpx::distributed::barrier barrier(barrier_test_name);
     // Result vector
     auto const timing_comm =
-        create_communicator(timing_reduce_basename,
+        create_communicator("/test/timing_reduce/all_reduce/",
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
-    std::vector<int> send_data;
+    std::vector<int> send_data(static_cast<std::size_t>(test_size), 0);
     std::vector<int> recv_data;
 
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        send_data = std::vector<int>(test_size, static_cast<int>(i));
+        std::fill(send_data.begin(), send_data.end(), static_cast<int>(i));
 
         barrier.wait();
         // Time collective
@@ -960,7 +985,7 @@ void test_one_shot_use_all_reduce(int lpn, std::size_t iterations, std::size_t w
             result[i - warmup_iterations] = max_elapsed;
 
         // Check for correctness
-        HPX_TEST_EQ(i * num_localities, static_cast<std::size_t>(recv_data[0]));
+        HPX_TEST_EQ(static_cast<int>(i) * static_cast<int>(num_localities), recv_data[0]);
     }
 
     if (this_locality == 0)
@@ -990,11 +1015,17 @@ void test_multiple_use_with_generation_scatter(int lpn, std::size_t iterations, 
     hpx::distributed::barrier barrier(barrier_test_name);
     // Result vector
     auto const timing_comm =
-        create_communicator(timing_reduce_basename,
+        create_communicator("/test/timing_reduce/scatter/",
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
     std::vector<std::vector<int>> send_data;
+    // Pre-allocate scatter send buffer once (root only); refill each iteration
+    if (this_locality == 0)
+    {
+        send_data.assign(num_localities,
+            std::vector<int>(static_cast<std::size_t>(test_size), 0));
+    }
     std::vector<int> recv_data;
     hpx::future<std::vector<int>> ft_data;
 
@@ -1002,8 +1033,14 @@ void test_multiple_use_with_generation_scatter(int lpn, std::size_t iterations, 
     {
         if (this_locality == 0)
         {
-            send_data = generate_matrix(static_cast<int>(num_localities),
-                test_size, static_cast<int>(42 + i));
+            for (std::ptrdiff_t j = 0;
+                 j < static_cast<std::ptrdiff_t>(num_localities); ++j)
+            {
+                std::fill(
+                    send_data[static_cast<std::size_t>(j)].begin(),
+                    send_data[static_cast<std::size_t>(j)].end(),
+                    static_cast<int>(42 + i) + static_cast<int>(j));
+            }
         }
 
         barrier.wait();
@@ -1030,9 +1067,9 @@ void test_multiple_use_with_generation_scatter(int lpn, std::size_t iterations, 
             result[i - warmup_iterations] = max_elapsed;
 
         // Check for correctness
-        for (std::size_t check : recv_data)
+        for (int check : recv_data)
         {
-            HPX_TEST_EQ(42 + i + this_locality, check);
+            HPX_TEST_EQ(static_cast<int>(42 + i) + static_cast<int>(this_locality), check);
         }
     }
 
@@ -1061,17 +1098,17 @@ void test_multiple_use_with_generation_reduce(int lpn, std::size_t iterations, s
     hpx::distributed::barrier barrier(barrier_test_name);
     // Result vector
     auto const timing_comm =
-        create_communicator(timing_reduce_basename,
+        create_communicator("/test/timing_reduce/reduce/",
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
-    std::vector<int> send_data;
+    std::vector<int> send_data(static_cast<std::size_t>(test_size), 0);
     std::vector<int> recv_data;
     hpx::future<std::vector<int>> ft_data;
 
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        send_data = std::vector<int>(test_size, static_cast<int>(i));
+        std::fill(send_data.begin(), send_data.end(), static_cast<int>(i));
 
         barrier.wait();
         // Time collective
@@ -1102,7 +1139,7 @@ void test_multiple_use_with_generation_reduce(int lpn, std::size_t iterations, s
         if (this_locality == 0)
         {
             HPX_TEST_EQ(
-                i * num_localities, static_cast<std::size_t>(recv_data[0]));
+                static_cast<int>(i) * static_cast<int>(num_localities), recv_data[0]);
         }
     }
 
@@ -1131,11 +1168,11 @@ void test_multiple_use_with_generation_broadcast(int lpn,
     hpx::distributed::barrier barrier(barrier_test_name);
     // Result vector
     auto const timing_comm =
-        create_communicator(timing_reduce_basename,
+        create_communicator("/test/timing_reduce/broadcast/",
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
-    std::vector<int> send_data;
+    std::vector<int> send_data(static_cast<std::size_t>(test_size), 0);
     std::vector<int> recv_data;
     hpx::future<std::vector<int>> ft_data;
 
@@ -1143,7 +1180,7 @@ void test_multiple_use_with_generation_broadcast(int lpn,
     {
         if (this_locality == 0)
         {
-            send_data = std::vector<int>(test_size, static_cast<int>(i));
+            std::fill(send_data.begin(), send_data.end(), static_cast<int>(i));
         }
 
         barrier.wait();
@@ -1172,7 +1209,7 @@ void test_multiple_use_with_generation_broadcast(int lpn,
         // Check for correctness
         if (this_locality == 0)
         {
-            HPX_TEST_EQ(i, static_cast<std::size_t>(recv_data[0]));
+            HPX_TEST_EQ(static_cast<int>(i), recv_data[0]);
         }
     }
 
@@ -1184,7 +1221,7 @@ void test_multiple_use_with_generation_broadcast(int lpn,
 }
 
 void test_multiple_use_with_generation_gather(
-    int lpn, std::size_t iterations, std::size_t warmup_iterations, int test_size, std::string operation)
+    int lpn, std::size_t iterations, std::size_t warmup_iterations, int test_size, std::string const& operation)
 {
     // Get parameters
     std::size_t const num_localities =
@@ -1201,18 +1238,18 @@ void test_multiple_use_with_generation_gather(
     hpx::distributed::barrier barrier(barrier_test_name);
     // Result vector
     auto const timing_comm =
-        create_communicator(timing_reduce_basename,
+        create_communicator("/test/timing_reduce/gather/",
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
-    std::vector<int> send_data;
+    std::vector<int> send_data(static_cast<std::size_t>(test_size), 0);
     std::vector<std::vector<int>> recv_data;
     hpx::future<std::vector<std::vector<int>>> ft_data;
 
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        send_data =
-            std::vector<int>(test_size, static_cast<int>(i + this_locality));
+        std::fill(send_data.begin(), send_data.end(),
+            static_cast<int>(i + this_locality));
 
         barrier.wait();
         // Time collective
@@ -1244,7 +1281,7 @@ void test_multiple_use_with_generation_gather(
         {
             for (int j = 0; j < static_cast<int>(num_localities); ++j)
             {
-                HPX_TEST_EQ(i + j, static_cast<std::size_t>(recv_data[j][0]));
+                HPX_TEST_EQ(static_cast<int>(i + j), recv_data[j][0]);
             }
         }
     }
@@ -1274,16 +1311,16 @@ void test_multiple_use_with_generation_all_reduce(int lpn,
     hpx::distributed::barrier barrier(barrier_test_name);
     // Result vector
     auto const timing_comm =
-        create_communicator(timing_reduce_basename,
+        create_communicator("/test/timing_reduce/all_reduce/",
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
-    std::vector<int> send_data;
+    std::vector<int> send_data(static_cast<std::size_t>(test_size), 0);
     std::vector<int> recv_data;
 
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        send_data = std::vector<int>(test_size, static_cast<int>(i));
+        std::fill(send_data.begin(), send_data.end(), static_cast<int>(i));
 
         barrier.wait();
         // Time collective
@@ -1302,7 +1339,7 @@ void test_multiple_use_with_generation_all_reduce(int lpn,
             result[i - warmup_iterations] = max_elapsed;
 
         // Check for correctness
-        HPX_TEST_EQ(i * num_localities, static_cast<std::size_t>(recv_data[0]));
+        HPX_TEST_EQ(static_cast<int>(i) * static_cast<int>(num_localities), recv_data[0]);
     }
 
     if (this_locality == 0)
@@ -1324,7 +1361,7 @@ void test_multiple_use_with_generation_barrier(int lpn, std::size_t iterations, 
     char const* const barrier_sync_name = "/test/barrier/generation";
     hpx::distributed::barrier sync(barrier_sync_name);
     auto const timing_comm =
-        create_communicator(timing_reduce_basename,
+        create_communicator("/test/timing_reduce/barrier/",
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
 
@@ -1333,7 +1370,7 @@ void test_multiple_use_with_generation_barrier(int lpn, std::size_t iterations, 
         sync.wait();
         hpx::chrono::high_resolution_timer const timer;
         hpx::collectives::barrier(
-            barrier_client, this_site_arg(), generation_arg(i + 1))
+            barrier_client, this_site_arg(this_locality), generation_arg(i + 1))
             .get();
         // Reduce max elapsed time across all localities
         double const max_elapsed =
@@ -1374,16 +1411,16 @@ void test_all_gather_hierarchical(int arity, int lpn, std::size_t iterations, st
     hpx::distributed::barrier barrier(barrier_test_name);
     // Result vector
     auto const timing_comm =
-        create_communicator(timing_reduce_basename,
+        create_communicator("/test/timing_reduce/all_gather/",
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
-    std::vector<int> send_data;
+    std::vector<int> send_data(static_cast<std::size_t>(test_size), 0);
     std::vector<std::vector<int>> recv_data;
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        send_data =
-            std::vector<int>(test_size, static_cast<int>(i + this_locality));
+        std::fill(send_data.begin(), send_data.end(),
+            static_cast<int>(i + this_locality));
         barrier.wait();
         // Time collective
         hpx::chrono::high_resolution_timer const timer;
@@ -1403,7 +1440,7 @@ void test_all_gather_hierarchical(int arity, int lpn, std::size_t iterations, st
         // recv_data[j][0] must equal (i + j) at every site.
         for (int j = 0; j < static_cast<int>(num_localities); ++j)
         {
-            HPX_TEST_EQ(i + j, static_cast<std::size_t>(recv_data[j][0]));
+            HPX_TEST_EQ(static_cast<int>(i + j), recv_data[j][0]);
         }
     }
     if (this_locality == 0)
@@ -1439,29 +1476,37 @@ void test_all_to_all_hierarchical(int arity, int lpn, std::size_t iterations, st
     hpx::distributed::barrier barrier(barrier_test_name);
     // Result vector
     auto const timing_comm =
-        create_communicator(timing_reduce_basename,
+        create_communicator("/test/timing_reduce/all_to_all/",
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
-    // The all_to_all payload contract requires exactly num_sites elements
-    // per site, so payload scaling happens through the per-destination
-    // block size.
-    std::size_t const block_size = std::max<std::size_t>(
-        1, static_cast<std::size_t>(test_size) / num_localities);
-    // Data
-    std::vector<std::vector<std::uint32_t>> send_data;
-    std::vector<std::vector<std::uint32_t>> recv_data;
+    // Each destination block carries test_size ints, matching MPI's
+    // MPI_Alltoall with sendcount=test_size per rank.
+    std::size_t const block_size = static_cast<std::size_t>(test_size);
+    // Data – pre-allocate shape; refill each iteration so payload varies
+    // with i (matching the MPI benchmark: block j carries this_locality+j+i).
+    std::vector<std::vector<int>> send_data(
+        num_localities, std::vector<int>(block_size, 0));
+    std::vector<std::vector<int>> recv_data;
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        // Each destination block carries the source id
-        send_data.assign(num_localities,
-            std::vector<std::uint32_t>(
-                block_size, static_cast<std::uint32_t>(this_locality)));
+        // Refill: block j carries (this_locality + j + i)
+        for (std::ptrdiff_t j = 0;
+             j < static_cast<std::ptrdiff_t>(num_localities); ++j)
+        {
+            std::fill(
+                send_data[static_cast<std::size_t>(j)].begin(),
+                send_data[static_cast<std::size_t>(j)].end(),
+                static_cast<int>(
+                    this_locality + static_cast<std::size_t>(j) + i));
+        }
         barrier.wait();
         // Time collective
+        // all_to_all consumes its payload via &&; copy the pre-filled buffer
+        // so the pre-allocated shape survives for the next iteration.
+        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
-        hpx::future<std::vector<std::vector<std::uint32_t>>> ft_data =
-            // NOLINTNEXTLINE(bugprone-use-after-move)
-            all_to_all(communicators, std::move(send_data),
+        hpx::future<std::vector<std::vector<int>>> ft_data =
+            all_to_all(communicators, std::move(iter_data),
                 this_site_arg(this_locality), generation_arg(i + 1));
         recv_data = ft_data.get();
         // Reduce max elapsed time across all localities
@@ -1471,16 +1516,13 @@ void test_all_to_all_hierarchical(int arity, int lpn, std::size_t iterations, st
                 .get();
         if (i >= warmup_iterations)
             result[i - warmup_iterations] = max_elapsed;
-        // Check for correctness on the first iteration only: result block s
-        // originated at site s. Later iterations are timed unchecked.
-        if (i == 0)
+        // Correctness: recv_data[s][*] == s + this_locality + i
+        HPX_TEST_EQ(recv_data.size(), num_localities);
+        for (std::size_t s = 0; s != num_localities; ++s)
         {
-            HPX_TEST_EQ(recv_data.size(), num_localities);
-            for (std::size_t s = 0; s != num_localities; ++s)
-            {
-                HPX_TEST_EQ(recv_data[s].size(), block_size);
-                HPX_TEST_EQ(static_cast<std::size_t>(recv_data[s][0]), s);
-            }
+            HPX_TEST_EQ(recv_data[s].size(), block_size);
+            HPX_TEST_EQ(recv_data[s][0],
+                static_cast<int>(s + this_locality + i));
         }
     }
     if (this_locality == 0)
@@ -1507,16 +1549,16 @@ void test_one_shot_use_all_gather(int lpn, std::size_t iterations, std::size_t w
     hpx::distributed::barrier barrier(barrier_test_name);
     // Result vector
     auto const timing_comm =
-        create_communicator(timing_reduce_basename,
+        create_communicator("/test/timing_reduce/all_gather/",
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
-    std::vector<int> send_data;
+    std::vector<int> send_data(static_cast<std::size_t>(test_size), 0);
     std::vector<std::vector<int>> recv_data;
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        send_data =
-            std::vector<int>(test_size, static_cast<int>(i + this_locality));
+        std::fill(send_data.begin(), send_data.end(),
+            static_cast<int>(i + this_locality));
         barrier.wait();
         // Time collective
         hpx::chrono::high_resolution_timer const timer;
@@ -1536,7 +1578,7 @@ void test_one_shot_use_all_gather(int lpn, std::size_t iterations, std::size_t w
         // Check for correctness
         for (int j = 0; j < static_cast<int>(num_localities); ++j)
         {
-            HPX_TEST_EQ(i + j, static_cast<std::size_t>(recv_data[j][0]));
+            HPX_TEST_EQ(static_cast<int>(i + j), recv_data[j][0]);
         }
     }
     if (this_locality == 0)
@@ -1564,16 +1606,16 @@ void test_multiple_use_with_generation_all_gather(int lpn,
     hpx::distributed::barrier barrier(barrier_test_name);
     // Result vector
     auto const timing_comm =
-        create_communicator(timing_reduce_basename,
+        create_communicator("/test/timing_reduce/all_gather/",
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
-    std::vector<int> send_data;
+    std::vector<int> send_data(static_cast<std::size_t>(test_size), 0);
     std::vector<std::vector<int>> recv_data;
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        send_data =
-            std::vector<int>(test_size, static_cast<int>(i + this_locality));
+        std::fill(send_data.begin(), send_data.end(),
+            static_cast<int>(i + this_locality));
         barrier.wait();
         // Time collective
         hpx::chrono::high_resolution_timer const timer;
@@ -1592,7 +1634,7 @@ void test_multiple_use_with_generation_all_gather(int lpn,
         // Check for correctness
         for (int j = 0; j < static_cast<int>(num_localities); ++j)
         {
-            HPX_TEST_EQ(i + j, static_cast<std::size_t>(recv_data[j][0]));
+            HPX_TEST_EQ(static_cast<int>(i + j), recv_data[j][0]);
         }
     }
     if (this_locality == 0)
@@ -1610,6 +1652,13 @@ int hpx_main(hpx::program_options::variables_map& vm)
     int const iterations = vm["iterations"].as<int>();
     int const fallback_threshold = vm["fallback_threshold"].as<int>();
     int const warmup_iterations = vm["warmup_iterations"].as<int>();
+
+    if (iterations <= 0 || warmup_iterations < 0 || test_size <= 0 || lpn <= 0)
+    {
+        hpx::cout << "error: iterations and test_size and lpn must be > 0; "
+                     "warmup_iterations must be >= 0\n";
+        return hpx::finalize();
+    }
 
     if (hpx::get_num_localities(hpx::launch::sync) > 1)
     {
@@ -1707,6 +1756,11 @@ int hpx_main(hpx::program_options::variables_map& vm)
             {
                 test_all_to_all_hierarchical(arity, lpn, iterations, static_cast<std::size_t>(warmup_iterations), test_size,
                     operation, fallback_threshold);
+            }
+            else
+            {
+                hpx::cout << "warning: all_to_all requires --arity to select "
+                             "an algorithm; no flat variant is implemented\n";
             }
         }
         else if (operation == "barrier")
