@@ -43,7 +43,7 @@ namespace hpx::util {
         {
         }
 
-        ~spinlock() {}
+        ~spinlock() = default;
 
         void lock() noexcept(
             noexcept(util::register_lock(std::declval<spinlock*>())))

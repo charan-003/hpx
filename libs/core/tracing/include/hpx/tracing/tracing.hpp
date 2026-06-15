@@ -21,6 +21,7 @@
 /// selected, all tracing calls are optimized away as `constexpr` no-ops.
 ///
 /// \b Core \b Components:
+/// - \b annotation_handle: Opaque handle type for tracing annotations.
 /// - \b task_timer_data: Opaque context passed to task timers.
 /// - \b scoped_task_timer: RAII object for timing execution tasks. Provides
 ///   `yield()`, `stop()`, and `handle_post_execution()`.
@@ -30,7 +31,8 @@
 /// - \b fiber_region: Scope annotation specifically tracking HPX user-level
 ///   threads (fibers) across OS threads.
 /// - \b fiber_suspend_region: Records the suspend and yield phases of an HPX fiber.
-/// - \b mark_event: Marks a distinct event/message in time.
+/// - \b mark_event: Low-level type marking an event.
+/// - \b HPX_TRACING_MARK_EVENT: Macro to safely emit distinct events in time.
 /// - \b rename_region: Dynamically renames the current active region.
 ///
 /// \b Synchronization \b & \b Threading:

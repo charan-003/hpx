@@ -21,6 +21,7 @@
 #include <hpx/modules/format.hpp>
 #include <hpx/modules/functional.hpp>
 #include <hpx/modules/hardware.hpp>
+#include <hpx/modules/tracing.hpp>
 
 #include <hpx/modules/resource_partitioner.hpp>
 #include <hpx/modules/synchronization.hpp>
