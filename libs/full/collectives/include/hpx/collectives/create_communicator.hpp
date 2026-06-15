@@ -134,19 +134,17 @@ namespace hpx { namespace collectives {
     ///                     is 16; pass 0 to disable the fallback and always
     ///                     build a tree.
     ///
-    /// \note   The sub-communicators of a hierarchical_communicator share
-    ///         one generation sequence per registered name, and the
-    ///         hierarchical collectives consume internal generations at
-    ///         different rates: \a broadcast and \a barrier consume one
-    ///         generation per call on every sub-communicator, \a all_gather
-    ///         and \a all_reduce consume two per call, and \a all_to_all
-    ///         consumes two per call on the subtree communicators but one on
-    ///         the inter-group communicator. A single
-    ///         hierarchical_communicator instance must therefore only be
-    ///         used with collective operations sharing one consumption
-    ///         scheme: \a all_gather and \a all_reduce may be mixed on one
-    ///         instance, while \a all_to_all, \a broadcast, and \a barrier
-    ///         each require their own instance.
+    /// \note   The sub-communicators of a hierarchical_communicator share one
+    ///         generation sequence per registered name. Every hierarchical
+    ///         collective advances each sub-communicator it touches by exactly
+    ///         two internal generations per call (a single-pass collective
+    ///         such as \a broadcast, \a gather, \a scatter or \a reduce, and
+    ///         the inter-group exchange of \a all_to_all, skip the second
+    ///         generation in one step rather than performing a second
+    ///         round-trip). A single hierarchical_communicator instance may
+    ///         therefore be shared freely across collective operations,
+    ///         provided every call uses an explicit, strictly consecutive
+    ///         generation number so the shared sequence stays gap-free.
     ///
     /// \returns    This function returns a new communicator object usable
     ///             with the collective operation.
