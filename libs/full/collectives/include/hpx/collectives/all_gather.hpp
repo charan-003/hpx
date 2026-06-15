@@ -394,9 +394,9 @@ namespace hpx::collectives {
     // Key difference from all_reduce: the gather phase produces vector<T>
     // (O(N) data), so the broadcast phase transfers O(N) instead of a scalar.
     //
-    // An instance may be shared between all_gather and all_reduce (identical
-    // generation scheme), but not with other collectives; see the note on
-    // create_hierarchical_communicator.
+    // Every hierarchical collective advances each communicator by two
+    // generations per call, so an instance may be shared freely across
+    // collectives; see the note on create_hierarchical_communicator.
 
     // Async overload
     HPX_CXX_EXPORT template <typename T>
@@ -464,21 +464,26 @@ namespace hpx::collectives {
 
         if (this_site == root_site)
         {
+            // gather phase advances each communicator by one (the broadcast
+            // phase consumes 2k), so pass num_generations == 1.
             std::vector<arg_type> gathered = gather_here(communicators,
-                HPX_FORWARD(T, local_result), this_site, gather_gen)
+                HPX_FORWARD(T, local_result), this_site, gather_gen,
+                /*num_generations=*/1)
                                                  .get();
 
-            return broadcast_to(
-                communicators, HPX_MOVE(gathered), this_site, broadcast_gen);
+            // broadcast phase advances each communicator by one (the gather
+            // phase already consumed 2k-1), so pass num_generations == 1.
+            return broadcast_to(communicators, HPX_MOVE(gathered), this_site,
+                broadcast_gen, /*num_generations=*/1);
         }
         else
         {
             gather_there(communicators, HPX_FORWARD(T, local_result), this_site,
-                gather_gen)
+                gather_gen, /*num_generations=*/1)
                 .get();
 
             return broadcast_from<std::vector<arg_type>>(
-                communicators, this_site, broadcast_gen);
+                communicators, this_site, broadcast_gen, /*num_generations=*/1);
         }
     }
 

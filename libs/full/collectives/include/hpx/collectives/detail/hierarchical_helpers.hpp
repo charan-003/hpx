@@ -11,6 +11,7 @@
 #include <hpx/config.hpp>
 
 #include <hpx/assert.hpp>
+#include <hpx/collectives/argument_types.hpp>
 
 #include <algorithm>
 #include <cstddef>
@@ -19,6 +20,35 @@
 #include <vector>
 
 namespace hpx::collectives::detail {
+
+    // The per-call generation parameters a hierarchical sub-communicator uses:
+    // the run generation handed to the flat operation, and how many generations
+    // the gate advances by in a single step.
+    HPX_CXX_EXPORT struct hierarchical_run
+    {
+        generation_arg generation;
+        std::size_t num_generations;
+    };
+
+    // Map a user generation k to those parameters when the communicator
+    // advances num_generations per call: the run generation becomes
+    // num_generations * (k - 1) + 1 (so 2k-1 for the common step of two, and
+    // the identity for a step of one). A default (auto) generation is passed
+    // through unchanged and always advances by one, preserving the single-step
+    // behavior for instances that are not shared across collectives (sharing
+    // requires explicit, consecutive generations).
+    HPX_CXX_EXPORT inline hierarchical_run hierarchical_run_params(
+        generation_arg const generation, std::size_t const num_generations)
+    {
+        if (generation.is_default())
+        {
+            return {generation, 1};
+        }
+        return {generation_arg(num_generations *
+                        (static_cast<std::size_t>(generation) - 1) +
+                    1),
+            num_generations};
+    }
 
     HPX_CXX_EXPORT struct top_level_group
     {

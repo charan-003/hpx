@@ -397,6 +397,7 @@ namespace hpx { namespace collectives {
 
 #include <hpx/collectives/argument_types.hpp>
 #include <hpx/collectives/create_communicator.hpp>
+#include <hpx/collectives/detail/hierarchical_helpers.hpp>
 
 #include <cstddef>
 #include <type_traits>
@@ -423,7 +424,7 @@ namespace hpx::traits {
     {
         template <typename Result>
         static Result get(Communicator& communicator, std::size_t which,
-            std::size_t generation)
+            std::size_t generation, std::size_t num_generations)
         {
             using data_type = typename Result::result_type;
 
@@ -437,12 +438,14 @@ namespace hpx::traits {
                 [](auto& data, bool&, std::size_t which) {
                     return Communicator::template handle_bool<data_type>(
                         HPX_MOVE(data[which]));
-                });
+                },
+                static_cast<std::size_t>(-1), num_generations);
         }
 
         template <typename Result, typename T>
         static Result set(Communicator& communicator, std::size_t which,
-            std::size_t generation, std::vector<T>&& t)
+            std::size_t generation, std::size_t num_generations,
+            std::vector<T>&& t)
         {
             return communicator.template handle_data<T>(
                 communication::communicator_data<
@@ -454,7 +457,8 @@ namespace hpx::traits {
                 [](auto& data, bool&, std::size_t which) {
                     return Communicator::template handle_bool<T>(
                         HPX_MOVE(data[which]));
-                });
+                },
+                static_cast<std::size_t>(-1), num_generations);
         }
     };
 }    // namespace hpx::traits
@@ -466,7 +470,8 @@ namespace hpx::collectives {
     HPX_CXX_EXPORT template <typename T>
     hpx::future<T> scatter_from(communicator fid,
         this_site_arg this_site = this_site_arg(),
-        generation_arg const generation = generation_arg())
+        generation_arg const generation = generation_arg(),
+        std::size_t num_generations = 1)
     {
         if (this_site.is_default())
         {
@@ -479,15 +484,16 @@ namespace hpx::collectives {
                 "the generation number shouldn't be zero"));
         }
 
-        auto scatter_from_data = [this_site, generation](
+        auto scatter_from_data = [this_site, generation, num_generations](
                                      communicator&& c) -> hpx::future<T> {
             using action_type =
                 detail::communicator_server::communication_get_direct_action<
-                    traits::communication::scatter_tag, hpx::future<T>>;
+                    traits::communication::scatter_tag, hpx::future<T>,
+                    std::size_t>;
 
             // explicitly unwrap returned future
-            hpx::future<T> result =
-                hpx::async(action_type(), c, this_site, generation);
+            hpx::future<T> result = hpx::async(
+                action_type(), c, this_site, generation, num_generations);
 
             if (!result.is_ready())
             {
@@ -536,32 +542,40 @@ namespace hpx::collectives {
     HPX_CXX_EXPORT template <typename T>
     hpx::future<T> scatter_from(hierarchical_communicator const& communicators,
         this_site_arg this_site = this_site_arg(),
-        generation_arg const generation = generation_arg())
+        generation_arg const generation = generation_arg(),
+        std::size_t num_generations = 2)
     {
         if (this_site.is_default())
         {
             this_site = agas::get_locality_id();
         }
 
+        // Used standalone (num_generations == 2) the user generation maps to
+        // 2k-1 and the gate advances by two per call.
+        auto const [run_gen, run_step] =
+            detail::hierarchical_run_params(generation, num_generations);
+
         auto [current_communicator, current_site] = communicators[0];
         if (communicators.size() == 1)
         {
             return scatter_from<T>(
-                current_communicator, current_site, generation);
+                current_communicator, current_site, run_gen, run_step);
         }
 
         std::vector<T> data = scatter_from<std::vector<T>>(
-            hpx::launch::sync, current_communicator, current_site, generation);
+            current_communicator, current_site, run_gen, run_step)
+                                  .get();
 
         for (std::size_t i = 1; i < communicators.size() - 1; ++i)
         {
-            data = scatter_to(hpx::launch::sync, communicators.get(i),
+            data = scatter_to(communicators.get(i),
                 detail::scatter_data(HPX_MOVE(data), communicators.get_arity()),
-                this_site_arg(0), generation);
+                this_site_arg(0), run_gen, run_step)
+                       .get();
         }
 
-        return scatter_to(
-            communicators.back(), HPX_MOVE(data), this_site_arg(0), generation);
+        return scatter_to(communicators.back(), HPX_MOVE(data),
+            this_site_arg(0), run_gen, run_step);
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -628,7 +642,8 @@ namespace hpx::collectives {
     HPX_CXX_EXPORT template <typename T>
     hpx::future<T> scatter_to(communicator fid, std::vector<T>&& local_result,
         this_site_arg this_site = this_site_arg(),
-        generation_arg const generation = generation_arg())
+        generation_arg const generation = generation_arg(),
+        std::size_t num_generations = 1)
     {
         if (this_site.is_default())
         {
@@ -674,16 +689,16 @@ namespace hpx::collectives {
         }
 
         auto scatter_to_data = [local_result = HPX_MOVE(local_result),
-                                   this_site, generation](
+                                   this_site, generation, num_generations](
                                    communicator&& c) mutable -> hpx::future<T> {
             using action_type =
                 detail::communicator_server::communication_set_direct_action<
                     traits::communication::scatter_tag, hpx::future<T>,
-                    std::vector<T>>;
+                    std::size_t, std::vector<T>>;
 
             // explicitly unwrap returned future
             hpx::future<T> result = hpx::async(action_type(), c, this_site,
-                generation, HPX_MOVE(local_result));
+                generation, num_generations, HPX_MOVE(local_result));
 
             if (!result.is_ready())
             {
@@ -702,35 +717,41 @@ namespace hpx::collectives {
     hpx::future<T> scatter_to(hierarchical_communicator const& communicators,
         std::vector<T>&& local_result,
         this_site_arg this_site = this_site_arg(),
-        generation_arg const generation = generation_arg())
+        generation_arg const generation = generation_arg(),
+        std::size_t num_generations = 2)
     {
         if (this_site.is_default())
         {
             this_site = agas::get_locality_id();
         }
 
+        // See scatter_from above for the internal generation mapping.
+        auto const [run_gen, run_step] =
+            detail::hierarchical_run_params(generation, num_generations);
+
         auto [current_communicator, current_site] = communicators[0];
         if (communicators.size() == 1)
         {
             return scatter_to(current_communicator, HPX_MOVE(local_result),
-                current_site, generation);
+                current_site, run_gen, run_step);
         }
 
         arity_arg arity = communicators.get_arity();
-        std::vector<T> data =
-            scatter_to(hpx::launch::sync, communicators.get(0),
-                detail::scatter_data(HPX_MOVE(local_result), arity),
-                this_site_arg(0), generation);
+        std::vector<T> data = scatter_to(communicators.get(0),
+            detail::scatter_data(HPX_MOVE(local_result), arity),
+            this_site_arg(0), run_gen, run_step)
+                                  .get();
 
         for (std::size_t i = 1; i < communicators.size() - 1; ++i)
         {
-            data = scatter_to(hpx::launch::sync, communicators.get(i),
+            data = scatter_to(communicators.get(i),
                 detail::scatter_data(HPX_MOVE(data), arity),
-                this_site_arg(this_site % arity), generation);
+                this_site_arg(this_site % arity), run_gen, run_step)
+                       .get();
         }
 
-        return scatter_to(
-            communicators.back(), HPX_MOVE(data), this_site_arg(0), generation);
+        return scatter_to(communicators.back(), HPX_MOVE(data),
+            this_site_arg(0), run_gen, run_step);
     }
 
     ////////////////////////////////////////////////////////////////////////////

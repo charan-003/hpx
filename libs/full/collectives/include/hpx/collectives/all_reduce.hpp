@@ -435,9 +435,9 @@ namespace hpx::collectives {
     // Uses 2k-1/2k generation mapping: user generation k maps to
     // internal generation 2k-1 (reduce phase) and 2k (broadcast phase)
     //
-    // An instance may be shared between all_reduce and all_gather (identical
-    // generation scheme), but not with other collectives; see the note on
-    // create_hierarchical_communicator.
+    // Every hierarchical collective advances each communicator by two
+    // generations per call, so an instance may be shared freely across
+    // collectives; see the note on create_hierarchical_communicator.
     HPX_CXX_EXPORT template <typename T, typename F>
     hpx::future<std::decay_t<T>> all_reduce(
         hierarchical_communicator const& communicators, T&& local_result,
@@ -503,22 +503,28 @@ namespace hpx::collectives {
 
         if (this_site == root_site)
         {
+            // reduce phase advances each communicator by one (the broadcast
+            // phase consumes 2k), so pass num_generations == 1.
             arg_type reduced =
                 reduce_here(communicators, HPX_FORWARD(T, local_result),
-                    HPX_FORWARD(F, op), this_site, reduce_gen)
+                    HPX_FORWARD(F, op), this_site, reduce_gen,
+                    /*num_generations=*/1)
                     .get();
 
-            return broadcast_to(
-                communicators, HPX_MOVE(reduced), this_site, broadcast_gen);
+            // broadcast phase advances each communicator by one (the reduce
+            // phase already consumed 2k-1), so pass num_generations == 1.
+            return broadcast_to(communicators, HPX_MOVE(reduced), this_site,
+                broadcast_gen, /*num_generations=*/1);
         }
         else
         {
             reduce_there(communicators, HPX_FORWARD(T, local_result),
-                HPX_FORWARD(F, op), this_site, reduce_gen)
+                HPX_FORWARD(F, op), this_site, reduce_gen,
+                /*num_generations=*/1)
                 .get();
 
             return broadcast_from<arg_type>(
-                communicators, this_site, broadcast_gen);
+                communicators, this_site, broadcast_gen, /*num_generations=*/1);
         }
     }
 
