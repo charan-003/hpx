@@ -17,6 +17,8 @@
 #include <hpx/modules/testing.hpp>
 
 #include <algorithm>
+#include <cmath>
+#include <numeric>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
@@ -92,33 +94,53 @@ void create_parent_dir(std::filesystem::path const& file_path)
     }
 }
 
-std::pair<double, double> compute_moments(std::vector<double> const& data)
+struct Stats
 {
-    // Compute mean
-    double sum = 0.0;
-    for (double x : data)
-    {
-        sum += x;
-    }
-    double mean = sum / static_cast<double>(data.size());
+    double mean;
+    double variance;
+    double stddev;
+    double min;
+    double max;
+    double median;
+};
 
-    // Compute variance (population variance)
+Stats compute_moments(std::vector<double> const& data)
+{
+    double const n = static_cast<double>(data.size());
+
+    // Mean
+    double const sum = std::accumulate(data.begin(), data.end(), 0.0);
+    double const mean = sum / n;
+
+    // Variance (population)
     double varianceSum = 0.0;
     for (double x : data)
-    {
         varianceSum += (x - mean) * (x - mean);
-    }
-    double variance = varianceSum / static_cast<double>(data.size());
+    double const variance = varianceSum / n;
+    double const stddev = std::sqrt(variance);
 
-    return std::make_pair(mean, variance);
+    // Min / max
+    double const min_val = *std::min_element(data.begin(), data.end());
+    double const max_val = *std::max_element(data.begin(), data.end());
+
+    // Median (sorted copy)
+    std::vector<double> sorted(data);
+    std::sort(sorted.begin(), sorted.end());
+    std::size_t const mid = sorted.size() / 2;
+    double const median = (sorted.size() % 2 == 0)
+        ? 0.5 * (sorted[mid - 1] + sorted[mid])
+        : sorted[mid];
+
+    return Stats{mean, variance, stddev, min_val, max_val, median};
 }
 
 void write_to_file(std::string const& collective, std::string const& type,
-    int arity, std::size_t num_l, int lpn, int size, std::size_t iterations,
+    int arity, std::size_t num_l, int lpn, int size,
+    std::size_t warmup_iterations, std::size_t iterations,
     std::vector<double> const& result)
 {
-    // Compute mean and variance
-    auto moments = compute_moments(result);
+    // Compute statistics
+    Stats const stats = compute_moments(result);
     // Compute nodes
     std::size_t nodes = num_l / static_cast<std::size_t>(lpn);
     auto threads = hpx::get_os_thread_count();
@@ -131,11 +153,17 @@ void write_to_file(std::string const& collective, std::string const& type,
                       "Localities/Node:   {6}\n"
                       "HPX threads:       {7}\n"
                       "Size/Locality:     {8}\n"
-                      "Iterations:        {9}\n"
-                      "Mean runtime:      {10}\n"
-                      "Variance:          {11}\n";
+                      "Warmup iterations: {9}\n"
+                      "Iterations:        {10}\n"
+                      "Mean runtime:      {11}\n"
+                      "Variance:          {12}\n"
+                      "Stddev:            {13}\n"
+                      "Min:               {14}\n"
+                      "Max:               {15}\n"
+                      "Median:            {16}\n";
     hpx::util::format_to(std::cout, msg, collective, type, arity, nodes, num_l,
-        lpn, threads, size, iterations, moments.first, moments.second)
+        lpn, threads, size, warmup_iterations, iterations, stats.mean,
+        stats.variance, stats.stddev, stats.min, stats.max, stats.median)
         << std::flush;
 
     // Create directory
@@ -149,8 +177,9 @@ void write_to_file(std::string const& collective, std::string const& type,
     create_parent_dir(runtime_file_path);
 
     // Add header if necessary
-    std::string const header = "collective;type;arity;nodes;localities;lpn;"
-                               "threads;size;iterations;mean;variance\n";
+    std::string const header =
+        "collective;type;arity;nodes;localities;lpn;"
+        "threads;size;warmup;iterations;mean;variance;stddev;min;max;median\n";
     // Read existing content
     std::ifstream infile(runtime_file_path);
     std::stringstream buffer;
@@ -170,7 +199,9 @@ void write_to_file(std::string const& collective, std::string const& type,
     outfile.open(runtime_file_path, std::ios_base::app);
     outfile << collective << ";" << type << ";" << arity << ";" << nodes << ";"
             << num_l << ";" << lpn << ";" << threads << ";" << size << ";"
-            << iterations << ";" << moments.first << ";" << moments.second
+            << warmup_iterations << ";" << iterations << ";"
+            << stats.mean << ";" << stats.variance << ";" << stats.stddev
+            << ";" << stats.min << ";" << stats.max << ";" << stats.median
             << "\n";
     outfile.close();
 }
@@ -252,7 +283,7 @@ void test_scatter_hierarchical(int arity, int lpn, std::size_t iterations, std::
             std::string("hierarchical") :
             "hierarchical_t" + std::to_string(fallback_threshold);
         write_to_file(operation, mod_name, arity, num_localities, lpn,
-            test_size, iterations, result);
+            test_size, warmup_iterations, iterations, result);
     }
 }
 
@@ -332,7 +363,7 @@ void test_reduce_hierarchical(int arity, int lpn, std::size_t iterations, std::s
             std::string("hierarchical") :
             "hierarchical_t" + std::to_string(fallback_threshold);
         write_to_file(operation, mod_name, arity, num_localities, lpn,
-            test_size, iterations, result);
+            test_size, warmup_iterations, iterations, result);
     }
 }
 
@@ -410,7 +441,7 @@ void test_broadcast_hierarchical(int arity, int lpn, std::size_t iterations, std
             std::string("hierarchical") :
             "hierarchical_t" + std::to_string(fallback_threshold);
         write_to_file(operation, mod_name, arity, num_localities, lpn,
-            test_size, iterations, result);
+            test_size, warmup_iterations, iterations, result);
     }
 }
 
@@ -492,7 +523,7 @@ void test_gather_hierarchical(int arity, int lpn, std::size_t iterations, std::s
             std::string("hierarchical") :
             "hierarchical_t" + std::to_string(fallback_threshold);
         write_to_file(operation, mod_name, arity, num_localities, lpn,
-            test_size, iterations, result);
+            test_size, warmup_iterations, iterations, result);
     }
 }
 
@@ -557,7 +588,7 @@ void test_all_reduce_hierarchical(int arity, int lpn, std::size_t iterations, st
             std::string("hierarchical") :
             "hierarchical_t" + std::to_string(fallback_threshold);
         write_to_file(operation, mod_name, arity, num_localities, lpn,
-            test_size, iterations, result);
+            test_size, warmup_iterations, iterations, result);
     }
 }
 
@@ -605,7 +636,7 @@ void test_barrier_hierarchical(int arity, int lpn, std::size_t iterations, std::
             std::string("hierarchical") :
             "hierarchical_t" + std::to_string(fallback_threshold);
         write_to_file(operation, mod_name, arity, num_localities, lpn,
-            test_size, iterations, result);
+            test_size, warmup_iterations, iterations, result);
     }
 }
 
@@ -675,7 +706,7 @@ void test_one_shot_use_scatter(int lpn, std::size_t iterations, std::size_t warm
     if (this_locality == 0)
     {
         write_to_file(operation, "single_use", -1, num_localities, lpn,
-            test_size, iterations, result);
+            test_size, warmup_iterations, iterations, result);
     }
 }
 
@@ -743,7 +774,7 @@ void test_one_shot_use_reduce(int lpn, std::size_t iterations, std::size_t warmu
     if (this_locality == 0)
     {
         write_to_file(operation, "single_use", -1, num_localities, lpn,
-            test_size, iterations, result);
+            test_size, warmup_iterations, iterations, result);
     }
 }
 
@@ -811,7 +842,7 @@ void test_one_shot_use_broadcast(int lpn, std::size_t iterations, std::size_t wa
     if (this_locality == 0)
     {
         write_to_file(operation, "single_use", -1, num_localities, lpn,
-            test_size, iterations, result);
+            test_size, warmup_iterations, iterations, result);
     }
 }
 
@@ -882,7 +913,7 @@ void test_one_shot_use_gather(int lpn, std::size_t iterations, std::size_t warmu
     if (this_locality == 0)
     {
         write_to_file(operation, "single_use", -1, num_localities, lpn,
-            test_size, iterations, result);
+            test_size, warmup_iterations, iterations, result);
     }
 }
 
@@ -935,7 +966,7 @@ void test_one_shot_use_all_reduce(int lpn, std::size_t iterations, std::size_t w
     if (this_locality == 0)
     {
         write_to_file(operation, "single_use", -1, num_localities, lpn,
-            test_size, iterations, result);
+            test_size, warmup_iterations, iterations, result);
     }
 }
 
@@ -1008,7 +1039,7 @@ void test_multiple_use_with_generation_scatter(int lpn, std::size_t iterations, 
     if (this_locality == 0)
     {
         write_to_file(operation, "multi_use", -1, num_localities, lpn,
-            test_size, iterations, result);
+            test_size, warmup_iterations, iterations, result);
     }
 }
 
@@ -1078,7 +1109,7 @@ void test_multiple_use_with_generation_reduce(int lpn, std::size_t iterations, s
     if (this_locality == 0)
     {
         write_to_file(operation, "multi_use", -1, num_localities, lpn,
-            test_size, iterations, result);
+            test_size, warmup_iterations, iterations, result);
     }
 }
 
@@ -1148,7 +1179,7 @@ void test_multiple_use_with_generation_broadcast(int lpn,
     if (this_locality == 0)
     {
         write_to_file(operation, "multi_use", -1, num_localities, lpn,
-            test_size, iterations, result);
+            test_size, warmup_iterations, iterations, result);
     }
 }
 
@@ -1221,7 +1252,7 @@ void test_multiple_use_with_generation_gather(
     if (this_locality == 0)
     {
         write_to_file(operation, "multi_use", -1, num_localities, lpn,
-            test_size, iterations, result);
+            test_size, warmup_iterations, iterations, result);
     }
 }
 
@@ -1277,7 +1308,7 @@ void test_multiple_use_with_generation_all_reduce(int lpn,
     if (this_locality == 0)
     {
         write_to_file(operation, "multi_use", -1, num_localities, lpn,
-            test_size, iterations, result);
+            test_size, warmup_iterations, iterations, result);
     }
 }
 
@@ -1316,7 +1347,7 @@ void test_multiple_use_with_generation_barrier(int lpn, std::size_t iterations, 
     if (this_locality == 0)
     {
         write_to_file(operation, "multi_use", -1, num_localities, lpn,
-            test_size, iterations, result);
+            test_size, warmup_iterations, iterations, result);
     }
 }
 
@@ -1381,7 +1412,7 @@ void test_all_gather_hierarchical(int arity, int lpn, std::size_t iterations, st
             std::string("hierarchical") :
             "hierarchical_t" + std::to_string(fallback_threshold);
         write_to_file(operation, mod_name, arity, num_localities, lpn,
-            test_size, iterations, result);
+            test_size, warmup_iterations, iterations, result);
     }
 }
 
@@ -1458,7 +1489,7 @@ void test_all_to_all_hierarchical(int arity, int lpn, std::size_t iterations, st
             std::string("hierarchical") :
             "hierarchical_t" + std::to_string(fallback_threshold);
         write_to_file(operation, mod_name, arity, num_localities, lpn,
-            test_size, iterations, result);
+            test_size, warmup_iterations, iterations, result);
     }
 }
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -1511,7 +1542,7 @@ void test_one_shot_use_all_gather(int lpn, std::size_t iterations, std::size_t w
     if (this_locality == 0)
     {
         write_to_file(operation, "single_use", -1, num_localities, lpn,
-            test_size, iterations, result);
+            test_size, warmup_iterations, iterations, result);
     }
 }
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -1567,7 +1598,7 @@ void test_multiple_use_with_generation_all_gather(int lpn,
     if (this_locality == 0)
     {
         write_to_file(operation, "multi_use", -1, num_localities, lpn,
-            test_size, iterations, result);
+            test_size, warmup_iterations, iterations, result);
     }
 }
 int hpx_main(hpx::program_options::variables_map& vm)
