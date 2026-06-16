@@ -166,9 +166,10 @@ void write_to_file(std::string const& collective, std::string const& type,
             pp_type = pp->type();
     }
 
-    // Create directory: result/hpx/<parcelport>/<collective>/
+    // Create directory: result/hpx/<parcelport>/<num_localities>/<collective>/
     std::string runtime_file_path =
-        "result/hpx/" + pp_type + "/" + collective + "/runtimes_" +
+        "result/hpx/" + pp_type + "/" + std::to_string(num_l) + "/" +
+        collective + "/runtimes_" +
         collective + "_" + type;
     if (arity != -1 && type == "hierarchical")
     {
@@ -237,7 +238,6 @@ void test_scatter_hierarchical(int arity, int lpn, std::size_t iterations, std::
     std::vector<double> result(iterations, 0.0);
     // Data
     std::vector<std::vector<int>> send_data;
-    // Pre-allocate scatter send buffer once (root only); refill each iteration
     if (this_locality == 0)
     {
         send_data.assign(num_localities,
@@ -262,11 +262,11 @@ void test_scatter_hierarchical(int arity, int lpn, std::size_t iterations, std::
 
         barrier.wait();
         // Time collective
+        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
         if (this_locality == 0)
         {
-            // NOLINTNEXTLINE(bugprone-use-after-move)
-            ft_data = scatter_to(communicators, std::move(send_data),
+            ft_data = scatter_to(communicators, std::move(iter_data),
                 this_site_arg(this_locality), generation_arg(i + 1));
         }
         else
@@ -346,20 +346,19 @@ void test_reduce_hierarchical(int arity, int lpn, std::size_t iterations, std::s
 
         barrier.wait();
         // Time collective
+        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
         if (this_locality == 0)
         {
             ft_data =
-                // NOLINTNEXTLINE(bugprone-use-after-move)
-                reduce_here(communicators, std::move(send_data), vector_adder{},
+                    reduce_here(communicators, std::move(iter_data), vector_adder{},
                     this_site_arg(this_locality), generation_arg(i + 1));
             recv_data = ft_data.get();
         }
         else
         {
             hpx::future<void> finished = reduce_there(communicators,
-                // NOLINTNEXTLINE(bugprone-use-after-move)
-                std::move(send_data), vector_adder{},
+                    std::move(iter_data), vector_adder{},
                 this_site_arg(this_locality), generation_arg(i + 1));
             finished.get();
         }
@@ -438,11 +437,11 @@ void test_broadcast_hierarchical(int arity, int lpn, std::size_t iterations, std
 
         barrier.wait();
         // Time collective
+        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
         if (this_locality == 0)
         {
-            // NOLINTNEXTLINE(bugprone-use-after-move)
-            ft_data = broadcast_to(communicators, std::move(send_data),
+            ft_data = broadcast_to(communicators, std::move(iter_data),
                 this_site_arg(this_locality), generation_arg(i + 1));
         }
         else
@@ -523,19 +522,18 @@ void test_gather_hierarchical(int arity, int lpn, std::size_t iterations, std::s
 
         barrier.wait();
         // Time collective
+        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
         if (this_locality == 0)
         {
-            // NOLINTNEXTLINE(bugprone-use-after-move)
-            ft_data = gather_here(communicators, std::move(send_data),
+            ft_data = gather_here(communicators, std::move(iter_data),
                 this_site_arg(this_locality), generation_arg(i + 1));
             recv_data = ft_data.get();
         }
         else
         {
             hpx::future<void> finished =
-                // NOLINTNEXTLINE(bugprone-use-after-move)
-                gather_there(communicators, std::move(send_data),
+                    gather_there(communicators, std::move(iter_data),
                     this_site_arg(this_locality), generation_arg(i + 1));
             finished.get();
         }
@@ -612,10 +610,10 @@ void test_all_reduce_hierarchical(int arity, int lpn, std::size_t iterations, st
 
         barrier.wait();
         // Time collective
+        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
-        // NOLINTNEXTLINE(bugprone-use-after-move)
         hpx::future<std::vector<int>> ft_data =
-            all_reduce(communicators, std::move(send_data), vector_adder{},
+            all_reduce(communicators, std::move(iter_data), vector_adder{},
                 this_site_arg(this_locality), generation_arg(i + 1));
         recv_data = ft_data.get();
 
@@ -728,7 +726,6 @@ void test_one_shot_use_scatter(int lpn, std::size_t iterations, std::size_t warm
     std::vector<double> result(iterations, 0.0);
     // Data
     std::vector<std::vector<int>> send_data;
-    // Pre-allocate scatter send buffer once (root only); refill each iteration
     if (this_locality == 0)
     {
         send_data.assign(num_localities,
@@ -753,11 +750,11 @@ void test_one_shot_use_scatter(int lpn, std::size_t iterations, std::size_t warm
 
         barrier.wait();
         // Time collective
+        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
         if (this_locality == 0)
         {
-            // NOLINTNEXTLINE(bugprone-use-after-move)
-            ft_data = scatter_to(scatter_direct_basename, std::move(send_data),
+            ft_data = scatter_to(scatter_direct_basename, std::move(iter_data),
                 num_sites_arg(num_localities), this_site_arg(this_locality),
                 generation_arg(i + 1));
         }
@@ -826,11 +823,11 @@ void test_one_shot_use_reduce(int lpn, std::size_t iterations, std::size_t warmu
 
         barrier.wait();
         // Time collective
+        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
         if (this_locality == 0)
         {
-            // NOLINTNEXTLINE(bugprone-use-after-move)
-            ft_data = reduce_here(reduce_direct_basename, std::move(send_data),
+            ft_data = reduce_here(reduce_direct_basename, std::move(iter_data),
                 vector_adder{}, num_sites_arg(num_localities),
                 this_site_arg(this_locality), generation_arg(i + 1));
             recv_data = ft_data.get();
@@ -838,8 +835,7 @@ void test_one_shot_use_reduce(int lpn, std::size_t iterations, std::size_t warmu
         else
         {
             hpx::future<void> finished =
-                // NOLINTNEXTLINE(bugprone-use-after-move)
-                reduce_there(reduce_direct_basename, std::move(send_data),
+                    reduce_there(reduce_direct_basename, std::move(iter_data),
                     this_site_arg(this_locality), generation_arg(i + 1));
             finished.get();
         }
@@ -906,12 +902,12 @@ void test_one_shot_use_broadcast(int lpn, std::size_t iterations, std::size_t wa
 
         barrier.wait();
         // Time collective
+        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
         if (this_locality == 0)
         {
             ft_data = broadcast_to(broadcast_direct_basename,
-                // NOLINTNEXTLINE(bugprone-use-after-move)
-                std::move(send_data), num_sites_arg(num_localities),
+                    std::move(iter_data), num_sites_arg(num_localities),
                 this_site_arg(this_locality), generation_arg(i + 1));
         }
         else
@@ -981,11 +977,11 @@ void test_one_shot_use_gather(int lpn, std::size_t iterations, std::size_t warmu
 
         barrier.wait();
         // Time collective
+        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
         if (this_locality == 0)
         {
-            // NOLINTNEXTLINE(bugprone-use-after-move)
-            ft_data = gather_here(gather_direct_basename, std::move(send_data),
+            ft_data = gather_here(gather_direct_basename, std::move(iter_data),
                 num_sites_arg(num_localities), this_site_arg(this_locality),
                 generation_arg(i + 1));
             recv_data = ft_data.get();
@@ -993,8 +989,7 @@ void test_one_shot_use_gather(int lpn, std::size_t iterations, std::size_t warmu
         else
         {
             hpx::future<void> finished =
-                // NOLINTNEXTLINE(bugprone-use-after-move)
-                gather_there(gather_direct_basename, std::move(send_data),
+                    gather_there(gather_direct_basename, std::move(iter_data),
                     this_site_arg(this_locality), generation_arg(i + 1));
             finished.get();
         }
@@ -1059,10 +1054,10 @@ void test_one_shot_use_all_reduce(int lpn, std::size_t iterations, std::size_t w
 
         barrier.wait();
         // Time collective
+        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
         hpx::future<std::vector<int>> ft_data =
-            // NOLINTNEXTLINE(bugprone-use-after-move)
-            all_reduce(all_reduce_direct_basename, std::move(send_data),
+            all_reduce(all_reduce_direct_basename, std::move(iter_data),
                 vector_adder{}, num_sites_arg(num_localities),
                 this_site_arg(this_locality), generation_arg(i + 1));
         recv_data = ft_data.get();
@@ -1119,7 +1114,6 @@ void test_multiple_use_with_generation_scatter(int lpn, std::size_t iterations, 
     std::vector<double> result(iterations, 0.0);
     // Data
     std::vector<std::vector<int>> send_data;
-    // Pre-allocate scatter send buffer once (root only); refill each iteration
     if (this_locality == 0)
     {
         send_data.assign(num_localities,
@@ -1144,11 +1138,11 @@ void test_multiple_use_with_generation_scatter(int lpn, std::size_t iterations, 
 
         barrier.wait();
         // Time collective
+        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
         if (this_locality == 0)
         {
-            // NOLINTNEXTLINE(bugprone-use-after-move)
-            ft_data = scatter_to(scatter_direct_client, std::move(send_data),
+            ft_data = scatter_to(scatter_direct_client, std::move(iter_data),
                 generation_arg(i + 1));
         }
         else
@@ -1220,19 +1214,18 @@ void test_multiple_use_with_generation_reduce(int lpn, std::size_t iterations, s
 
         barrier.wait();
         // Time collective
+        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
         if (this_locality == 0)
         {
-            // NOLINTNEXTLINE(bugprone-use-after-move)
-            ft_data = reduce_here(reduce_direct_client, std::move(send_data),
+            ft_data = reduce_here(reduce_direct_client, std::move(iter_data),
                 vector_adder{}, generation_arg(i + 1));
             recv_data = ft_data.get();
         }
         else
         {
             hpx::future<void> finished = reduce_there(reduce_direct_client,
-                // NOLINTNEXTLINE(bugprone-use-after-move)
-                std::move(send_data), generation_arg(i + 1));
+                    std::move(iter_data), generation_arg(i + 1));
             finished.get();
         }
         // Reduce max elapsed time to root
@@ -1302,12 +1295,12 @@ void test_multiple_use_with_generation_broadcast(int lpn,
 
         barrier.wait();
         // Time collective
+        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
         if (this_locality == 0)
         {
             ft_data = broadcast_to(broadcast_direct_client,
-                // NOLINTNEXTLINE(bugprone-use-after-move)
-                std::move(send_data), generation_arg(i + 1));
+                    std::move(iter_data), generation_arg(i + 1));
         }
         else
         {
@@ -1379,19 +1372,18 @@ void test_multiple_use_with_generation_gather(
 
         barrier.wait();
         // Time collective
+        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
         if (this_locality == 0)
         {
-            // NOLINTNEXTLINE(bugprone-use-after-move)
-            ft_data = gather_here(gather_direct_client, std::move(send_data),
+            ft_data = gather_here(gather_direct_client, std::move(iter_data),
                 generation_arg(i + 1));
             recv_data = ft_data.get();
         }
         else
         {
             hpx::future<void> finished = gather_there(gather_direct_client,
-                // NOLINTNEXTLINE(bugprone-use-after-move)
-                std::move(send_data), generation_arg(i + 1));
+                    std::move(iter_data), generation_arg(i + 1));
             finished.get();
         }
         // Reduce max elapsed time to root
@@ -1459,10 +1451,10 @@ void test_multiple_use_with_generation_all_reduce(int lpn,
 
         barrier.wait();
         // Time collective
+        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
         hpx::future<std::vector<int>> ft_data =
-            // NOLINTNEXTLINE(bugprone-use-after-move)
-            all_reduce(all_reduce_direct_client, std::move(send_data),
+            all_reduce(all_reduce_direct_client, std::move(iter_data),
                 vector_adder{}, generation_arg(i + 1));
         recv_data = ft_data.get();
         // Reduce max elapsed time to root
@@ -1576,10 +1568,10 @@ void test_all_gather_hierarchical(int arity, int lpn, std::size_t iterations, st
             static_cast<int>(i + this_locality));
         barrier.wait();
         // Time collective
+        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
-        // NOLINTNEXTLINE(bugprone-use-after-move)
         hpx::future<std::vector<std::vector<int>>> ft_data =
-            all_gather(communicators, std::move(send_data),
+            all_gather(communicators, std::move(iter_data),
                 this_site_arg(this_locality), generation_arg(i + 1));
         recv_data = ft_data.get();
         // Reduce max elapsed time to root
@@ -1732,10 +1724,10 @@ void test_one_shot_use_all_gather(int lpn, std::size_t iterations, std::size_t w
             static_cast<int>(i + this_locality));
         barrier.wait();
         // Time collective
+        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
         hpx::future<std::vector<std::vector<int>>> ft_data =
-            // NOLINTNEXTLINE(bugprone-use-after-move)
-            all_gather(all_gather_direct_basename, std::move(send_data),
+            all_gather(all_gather_direct_basename, std::move(iter_data),
                 num_sites_arg(num_localities), this_site_arg(this_locality),
                 generation_arg(i + 1));
         recv_data = ft_data.get();
@@ -1798,10 +1790,10 @@ void test_multiple_use_with_generation_all_gather(int lpn,
             static_cast<int>(i + this_locality));
         barrier.wait();
         // Time collective
+        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
         hpx::future<std::vector<std::vector<int>>> ft_data =
-            // NOLINTNEXTLINE(bugprone-use-after-move)
-            all_gather(all_gather_direct_client, std::move(send_data),
+            all_gather(all_gather_direct_client, std::move(iter_data),
                 generation_arg(i + 1));
         recv_data = ft_data.get();
         // Reduce max elapsed time to root
@@ -1844,7 +1836,7 @@ int hpx_main(hpx::program_options::variables_map& vm)
 
     if (iterations <= 0 || warmup_iterations < 0 || test_size <= 0 || lpn <= 0)
     {
-        hpx::cout << "error: iterations and test_size and lpn must be > 0; "
+        std::cout << "error: iterations and test_size and lpn must be > 0; "
                      "warmup_iterations must be >= 0\n";
         return hpx::finalize();
     }
@@ -1948,7 +1940,7 @@ int hpx_main(hpx::program_options::variables_map& vm)
             }
             else
             {
-                hpx::cout << "warning: all_to_all requires --arity to select "
+                std::cout << "warning: all_to_all requires --arity to select "
                              "an algorithm; no flat variant is implemented\n";
             }
         }
