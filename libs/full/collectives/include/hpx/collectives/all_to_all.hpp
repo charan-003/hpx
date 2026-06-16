@@ -447,12 +447,12 @@ namespace hpx::collectives {
         std::vector<T>&& local_result, this_site_arg this_site,
         generation_arg const generation)
     {
-        if (generation.is_default())
+        if (generation.is_default() || generation == 0)
         {
             return hpx::make_exceptional_future<std::vector<T>>(
                 HPX_GET_EXCEPTION(hpx::error::bad_parameter,
                     "hpx::collectives::all_to_all (hierarchical)",
-                    "hierarchical all_to_all requires an explicit "
+                    "hierarchical all_to_all requires an explicit, positive "
                     "generation number for its internal generation "
                     "mapping"));
         }

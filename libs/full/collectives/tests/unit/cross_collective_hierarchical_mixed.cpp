@@ -373,6 +373,66 @@ void test_local_flat_fallback_sharing(std::uint32_t const num_sites)
     hpx::wait_all(HPX_MOVE(sites));
 }
 
+// Generation 0 is invalid (generations must be positive). The hierarchical
+// collectives must reject it with bad_parameter, not silently treat it as an
+// auto generation -- both the collectives that require an explicit generation
+// (all_gather here) and the single-pass ones that map through
+// hierarchical_run_params (broadcast here).
+void test_local_zero_generation_rejected(std::uint32_t const num_sites)
+{
+    std::string const basename =
+        "/test/cross_collective_hierarchical_mixed/zero_gen/" +
+        std::to_string(num_sites) + "/";
+
+    std::vector<hpx::future<void>> sites;
+    sites.reserve(num_sites);
+
+    for (std::uint32_t site = 0; site != num_sites; ++site)
+    {
+        sites.push_back(hpx::async([=]() {
+            auto const comms = create_hierarchical_communicator(
+                basename.c_str(), num_sites_arg(num_sites), this_site_arg(site),
+                arity_arg(2), generation_arg(), root_site_arg(),
+                flat_fallback_threshold_arg(0));
+
+            bool all_gather_rejected = false;
+            try
+            {
+                all_gather(hpx::launch::sync, comms,
+                    static_cast<std::int32_t>(site), this_site_arg(site),
+                    generation_arg(0));
+            }
+            catch (hpx::exception const&)
+            {
+                all_gather_rejected = true;
+            }
+            HPX_TEST(all_gather_rejected);
+
+            bool broadcast_rejected = false;
+            try
+            {
+                if (site == 0)
+                {
+                    broadcast_to(hpx::launch::sync, comms, std::int32_t(1),
+                        this_site_arg(site), generation_arg(0));
+                }
+                else
+                {
+                    broadcast_from<std::int32_t>(hpx::launch::sync, comms,
+                        this_site_arg(site), generation_arg(0));
+                }
+            }
+            catch (hpx::exception const&)
+            {
+                broadcast_rejected = true;
+            }
+            HPX_TEST(broadcast_rejected);
+        }));
+    }
+
+    hpx::wait_all(HPX_MOVE(sites));
+}
+
 int hpx_main()
 {
     if (hpx::get_locality_id() == 0)
@@ -385,6 +445,7 @@ int hpx_main()
                 test_local_default_generation(num_sites, arity);
             }
             test_local_flat_fallback_sharing(num_sites);
+            test_local_zero_generation_rejected(num_sites);
         }
     }
 

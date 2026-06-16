@@ -410,13 +410,13 @@ namespace hpx::collectives {
     {
         using arg_type = std::decay_t<T>;
 
-        if (generation.is_default())
+        if (generation.is_default() || generation == 0)
         {
             return hpx::make_exceptional_future<std::vector<arg_type>>(
                 HPX_GET_EXCEPTION(hpx::error::bad_parameter,
                     "hpx::collectives::all_gather (hierarchical)",
-                    "hierarchical all_gather requires an explicit generation "
-                    "number for the 2k-1/2k internal mapping"));
+                    "hierarchical all_gather requires an explicit, positive "
+                    "generation number for the 2k-1/2k internal mapping"));
         }
 
         if (this_site.is_default())

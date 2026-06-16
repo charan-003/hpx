@@ -36,11 +36,13 @@ namespace hpx::collectives::detail {
     // the identity for a step of one). A default (auto) generation is passed
     // through unchanged and always advances by one, preserving the single-step
     // behavior for instances that are not shared across collectives (sharing
-    // requires explicit, consecutive generations).
+    // requires explicit, consecutive generations). Generation 0 is also passed
+    // through so the downstream flat operation rejects it with bad_parameter
+    // rather than the mapping silently wrapping it onto the default sentinel.
     HPX_CXX_EXPORT inline hierarchical_run hierarchical_run_params(
         generation_arg const generation, std::size_t const num_generations)
     {
-        if (generation.is_default())
+        if (generation.is_default() || generation == 0)
         {
             return {generation, 1};
         }
