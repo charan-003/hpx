@@ -259,7 +259,7 @@ namespace hpx::traits {
     {
         template <typename Result, typename T, typename F>
         static Result get(Communicator& communicator, std::size_t which,
-            std::size_t generation, T&& t, F&& op)
+            std::size_t generation, std::size_t num_generations, T&& t, F&& op)
         {
             return communicator.template handle_data<std::decay_t<T>>(
                 communication::communicator_data<
@@ -304,7 +304,8 @@ namespace hpx::traits {
                         }
                         return static_cast<bool>(data[0]);
                     }
-                });
+                },
+                static_cast<std::size_t>(-1), num_generations);
         }
     };
 }    // namespace hpx::traits
@@ -316,7 +317,8 @@ namespace hpx::collectives {
     HPX_CXX_EXPORT template <typename T, typename F>
     hpx::future<std::decay_t<T>> all_reduce(communicator fid, T&& local_result,
         F&& op, this_site_arg this_site = this_site_arg(),
-        generation_arg const generation = generation_arg())
+        generation_arg const generation = generation_arg(),
+        std::size_t num_generations = 1)
     {
         using arg_type = std::decay_t<T>;
 
@@ -347,17 +349,18 @@ namespace hpx::collectives {
 
         auto all_reduce_data =
             [local_result = HPX_FORWARD(T, local_result),
-                op = HPX_FORWARD(F, op), generation,
+                op = HPX_FORWARD(F, op), generation, num_generations,
                 this_site](communicator&& c) mutable -> hpx::future<arg_type> {
             using func_type = std::decay_t<F>;
             using action_type =
                 detail::communicator_server::communication_get_direct_action<
                     traits::communication::all_reduce_tag,
-                    hpx::future<arg_type>, arg_type, func_type>;
+                    hpx::future<arg_type>, std::size_t, arg_type, func_type>;
 
             // explicitly unwrap returned future
-            hpx::future<arg_type> result = hpx::async(action_type(), c,
-                this_site, generation, HPX_MOVE(local_result), HPX_MOVE(op));
+            hpx::future<arg_type> result =
+                hpx::async(action_type(), c, this_site, generation,
+                    num_generations, HPX_MOVE(local_result), HPX_MOVE(op));
 
             if (!result.is_ready())
             {
@@ -484,22 +487,24 @@ namespace hpx::collectives {
                     "participating sites"));
         }
 
+        generation_arg const reduce_gen(2 * generation - 1);
+        generation_arg const broadcast_gen(2 * generation);
+
         // Flat fast path: when arity >= num_sites, the tree builder's leaf
         // condition (right - left < arity) fired at the root call and
         // produced a single flat communicator spanning all sites. The
         // reduce+broadcast decomposition then collapses to a single flat
         // all_reduce; dispatch directly to avoid the two separate gate
-        // synchronizations.
+        // synchronizations, but still advance the gate by two (run at 2k-1,
+        // num_generations == 2) so the flat instance stays shareable with
+        // other collectives.
         if (arity_val >= num_sites_val)
         {
             HPX_ASSERT(communicators.size() == 1);
             return all_reduce(communicators.get(0),
                 HPX_FORWARD(T, local_result), HPX_FORWARD(F, op),
-                communicators.site(0), generation);
+                communicators.site(0), reduce_gen, /*num_generations=*/2);
         }
-
-        generation_arg const reduce_gen(2 * generation - 1);
-        generation_arg const broadcast_gen(2 * generation);
 
         if (this_site == root_site)
         {

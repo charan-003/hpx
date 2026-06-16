@@ -114,7 +114,8 @@ void run_explicit_mixed_sequence(std::string const& basename,
 void test_local_explicit_mixed_sequence(
     std::uint32_t const num_sites, int const arity)
 {
-    std::string const basename = "/test/independent_cross_collective/local/" +
+    std::string const basename =
+        "/test/cross_collective_hierarchical_mixed/local/" +
         std::to_string(num_sites) + "/" + std::to_string(arity) + "/";
 
     std::vector<hpx::future<void>> sites;
@@ -228,7 +229,7 @@ void test_local_default_generation(
     std::uint32_t const num_sites, int const arity)
 {
     std::string const basename =
-        "/test/independent_cross_collective/default/local/" +
+        "/test/cross_collective_hierarchical_mixed/default/local/" +
         std::to_string(num_sites) + "/" + std::to_string(arity) + "/";
 
     std::vector<hpx::future<void>> sites;
@@ -256,8 +257,8 @@ void test_distributed_explicit_mixed_sequence()
 
     int const arity = num_sites % 3 == 1 ? 2 : 3;
     run_explicit_mixed_sequence(
-        "/test/independent_cross_collective/distributed/explicit/", num_sites,
-        site, arity);
+        "/test/cross_collective_hierarchical_mixed/distributed/explicit/",
+        num_sites, site, arity);
 }
 
 void test_distributed_default_generation()
@@ -272,8 +273,104 @@ void test_distributed_default_generation()
 
     int const arity = num_sites % 3 == 1 ? 2 : 3;
     run_default_generation_sequence(
-        "/test/independent_cross_collective/distributed/default/", num_sites,
-        site, arity);
+        "/test/cross_collective_hierarchical_mixed/distributed/default/",
+        num_sites, site, arity);
+}
+
+// Flat-fallback sharing. With the default threshold (16), a small site count
+// collapses to a single flat communicator (create_hierarchical_communicator
+// overrides arity to num_sites). Mixing collectives on that flat instance must
+// still keep the shared generation sequence gap-free: every collective has to
+// advance the flat gate by two per call, just like in tree mode. This is a
+// regression guard for the flat fast paths of all_gather/all_reduce/all_to_all,
+// which previously advanced the flat gate by only one.
+void test_local_flat_fallback_sharing(std::uint32_t const num_sites)
+{
+    std::string const basename =
+        "/test/cross_collective_hierarchical_mixed/flat_fallback/" +
+        std::to_string(num_sites) + "/";
+
+    std::vector<hpx::future<void>> sites;
+    sites.reserve(num_sites);
+
+    for (std::uint32_t site = 0; site != num_sites; ++site)
+    {
+        sites.push_back(hpx::async([=]() {
+            // No flat_fallback_threshold_arg, so the default (16) applies and a
+            // site count below it produces a single flat communicator.
+            auto const comms = create_hierarchical_communicator(
+                basename.c_str(), num_sites_arg(num_sites), this_site_arg(site),
+                arity_arg(2), generation_arg(), root_site_arg());
+
+            std::size_t generation = 0;
+            for (std::uint32_t i = 0; i != iterations; ++i)
+            {
+                // all_gather (flat fast path) mixed with broadcast (step 2).
+                std::vector<std::int32_t> const gathered =
+                    all_gather(hpx::launch::sync, comms,
+                        static_cast<std::int32_t>(site + i),
+                        this_site_arg(site), generation_arg(++generation));
+                HPX_TEST_EQ(
+                    gathered.size(), static_cast<std::size_t>(num_sites));
+                for (std::uint32_t source = 0; source != num_sites; ++source)
+                {
+                    HPX_TEST_EQ(gathered[source],
+                        static_cast<std::int32_t>(source + i));
+                }
+
+                // all_reduce (flat fast path).
+                std::int32_t const reduced = all_reduce(hpx::launch::sync,
+                    comms, static_cast<std::int32_t>(site + i),
+                    std::plus<std::int32_t>{}, this_site_arg(site),
+                    generation_arg(++generation));
+                std::int32_t expected_sum = 0;
+                for (std::uint32_t source = 0; source != num_sites; ++source)
+                {
+                    expected_sum += static_cast<std::int32_t>(source + i);
+                }
+                HPX_TEST_EQ(reduced, expected_sum);
+
+                // all_to_all (flat fast path).
+                std::vector<std::int32_t> outgoing(num_sites);
+                for (std::uint32_t dest = 0; dest != num_sites; ++dest)
+                {
+                    outgoing[dest] =
+                        static_cast<std::int32_t>(1000 * i + 10 * site + dest);
+                }
+                std::vector<std::int32_t> const exchanged =
+                    all_to_all(hpx::launch::sync, comms, HPX_MOVE(outgoing),
+                        this_site_arg(site), generation_arg(++generation));
+                HPX_TEST_EQ(
+                    exchanged.size(), static_cast<std::size_t>(num_sites));
+                for (std::uint32_t source = 0; source != num_sites; ++source)
+                {
+                    HPX_TEST_EQ(exchanged[source],
+                        static_cast<std::int32_t>(
+                            1000 * i + 10 * source + site));
+                }
+
+                // broadcast (single-pass, step 2).
+                std::int32_t const broadcast_value =
+                    50000 + static_cast<std::int32_t>(i);
+                std::int32_t received = 0;
+                if (site == 0)
+                {
+                    received = broadcast_to(hpx::launch::sync, comms,
+                        std::int32_t(broadcast_value), this_site_arg(site),
+                        generation_arg(++generation));
+                }
+                else
+                {
+                    received =
+                        broadcast_from<std::int32_t>(hpx::launch::sync, comms,
+                            this_site_arg(site), generation_arg(++generation));
+                }
+                HPX_TEST_EQ(received, broadcast_value);
+            }
+        }));
+    }
+
+    hpx::wait_all(HPX_MOVE(sites));
 }
 
 int hpx_main()
@@ -287,6 +384,7 @@ int hpx_main()
                 test_local_explicit_mixed_sequence(num_sites, arity);
                 test_local_default_generation(num_sites, arity);
             }
+            test_local_flat_fallback_sharing(num_sites);
         }
     }
 

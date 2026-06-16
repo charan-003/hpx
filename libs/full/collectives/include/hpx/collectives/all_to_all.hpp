@@ -488,20 +488,6 @@ namespace hpx::collectives {
                     "num_sites elements"));
         }
 
-        // Flat fast path: when arity >= num_sites (either because the user
-        // chose a large arity or because the factory overrode arity to
-        // num_sites for the flat fallback), the tree builder's leaf condition
-        // (right - left < arity) fired at the root call and produced a single
-        // flat communicator spanning all sites. The 3-phase algorithm then
-        // collapses to a flat all_to_all; dispatch directly to avoid the
-        // intermediate allocations.
-        if (arity_val >= num_sites_val)
-        {
-            HPX_ASSERT(communicators.size() == 1);
-            return all_to_all(communicators.get(0), HPX_MOVE(local_result),
-                communicators.site(0), generation);
-        }
-
         // Generation mapping: each communicator must see consecutive
         // generation numbers starting from 1 (the gate blocks until all
         // prior generations complete).  Subtree communicators participate
@@ -514,6 +500,22 @@ namespace hpx::collectives {
         generation_arg const gather_gen(2 * generation - 1);
         generation_arg const exchange_gen(2 * generation - 1);
         generation_arg const scatter_gen(2 * generation);
+
+        // Flat fast path: when arity >= num_sites (either because the user
+        // chose a large arity or because the factory overrode arity to
+        // num_sites for the flat fallback), the tree builder's leaf condition
+        // (right - left < arity) fired at the root call and produced a single
+        // flat communicator spanning all sites. The 3-phase algorithm then
+        // collapses to a flat all_to_all; dispatch directly to avoid the
+        // intermediate allocations, but still advance the gate by two (run at
+        // 2k-1, num_generations == 2) so the flat instance stays shareable
+        // with other collectives.
+        if (arity_val >= num_sites_val)
+        {
+            HPX_ASSERT(communicators.size() == 1);
+            return all_to_all(communicators.get(0), HPX_MOVE(local_result),
+                communicators.site(0), exchange_gen, /*num_generations=*/2);
+        }
 
         auto const groups =
             detail::get_top_level_groups(num_sites_val, arity_val);
