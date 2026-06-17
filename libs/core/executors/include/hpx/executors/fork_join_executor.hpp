@@ -1251,7 +1251,7 @@ namespace hpx::execution::experimental {
             fork_join_executor const& exec, F&& f, Ts&&... ts)
         {
             exec.shared_data_->async_invoke(
-                HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...);
+                hpx::bind_back(HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...));
         }
 
     public:
