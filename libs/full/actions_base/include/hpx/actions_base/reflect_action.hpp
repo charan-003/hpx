@@ -157,7 +157,7 @@ namespace hpx::actions {
             using result_type = [:std::meta::return_type_of(F):];
             reflect_component_action::increment_invocation_count();
             return detail::component_invoke<Component, result_type>(
-                lva, comptype, [:F:], HPX_FORWARD(Ts, vs)...);
+                lva, comptype, &[:F:], HPX_FORWARD(Ts, vs)...);
         }
 
         static detail::register_action_invocation_count<
