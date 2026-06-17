@@ -208,6 +208,40 @@ The most important macro invocation is the :c:macro:`HPX_DEFINE_COMPONENT_ACTION
 as this defines the action type we need to invoke the member function. For a
 complete example of a simple component action see :download:`component_in_executable.cpp <../../examples/quickstart/component_in_executable.cpp>`.
 
+.. _reflection_based_component_actions:
+
+Reflection-based component actions (experimental)
+---------------------------------------------------
+
+.. note::
+
+   This feature requires a compiler with C++26 reflection support
+   (``HPX_HAVE_CXX26_REFLECTION``) and is currently experimental.
+
+When reflection support is available, component actions can be defined with
+a single macro instead of the three-step process described above::
+
+    namespace app
+    {
+        struct some_component
+          : hpx::components::component_base<some_component>
+        {
+            int some_member_function(std::string s)
+            {
+                return boost::lexical_cast<int>(s);
+            }
+            // This single line replaces HPX_DEFINE_COMPONENT_ACTION,
+            // HPX_REGISTER_ACTION_DECLARATION, and HPX_REGISTER_ACTION.
+            HPX_COMPONENT_ACTION(some_component, some_member_function,
+                some_member_action);
+        };
+    }
+
+The resulting ``some_member_action`` type can be used exactly like an action
+type created with :c:macro:`HPX_DEFINE_COMPONENT_ACTION`, with :cpp:func:`hpx::post`,
+:cpp:func:`hpx::async`, and :cpp:func:`hpx::sync`, or by invoking it directly. No
+separate registration step is required in the source file.
+
 .. _action_invocation:
 
 Action invocation
