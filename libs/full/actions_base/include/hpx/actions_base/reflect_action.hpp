@@ -109,7 +109,7 @@ namespace hpx::actions {
         struct reflect_component_action_base
         {
             using func_type =
-                unqualify_function_type_t<([:std::meta::type_of(F):])>;
+                unqualify_function_type_t<typename[:std::meta::type_of(F):]>;
             using component_type = [:std::meta::parent_of(F):];
         };
     }    // namespace detail
