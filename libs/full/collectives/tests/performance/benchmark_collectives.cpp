@@ -336,17 +336,16 @@ void test_reduce_hierarchical(int arity, int lpn, std::size_t iterations, std::s
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
-    std::vector<int> send_data(static_cast<std::size_t>(test_size), 0);
     std::vector<int> recv_data;
     hpx::future<std::vector<int>> ft_data;
 
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        std::fill(send_data.begin(), send_data.end(), static_cast<int>(i));
+        std::vector<int> iter_data(
+            static_cast<std::size_t>(test_size), static_cast<int>(i));
 
         barrier.wait();
         // Time collective
-        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
         if (this_locality == 0)
         {
@@ -424,24 +423,18 @@ void test_broadcast_hierarchical(int arity, int lpn, std::size_t iterations, std
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
-    std::vector<int> send_data(static_cast<std::size_t>(test_size), 0);
     std::vector<int> recv_data;
     hpx::future<std::vector<int>> ft_data;
 
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        if (this_locality == 0)
-        {
-            std::fill(send_data.begin(), send_data.end(), static_cast<int>(i));
-        }
-
         barrier.wait();
         // Time collective
-        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
         if (this_locality == 0)
         {
-            ft_data = broadcast_to(communicators, std::move(iter_data),
+            ft_data = broadcast_to(communicators,
+                std::vector<int>(static_cast<std::size_t>(test_size), static_cast<int>(i)),
                 this_site_arg(this_locality), generation_arg(i + 1));
         }
         else
@@ -511,18 +504,16 @@ void test_gather_hierarchical(int arity, int lpn, std::size_t iterations, std::s
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
-    std::vector<int> send_data(static_cast<std::size_t>(test_size), 0);
     std::vector<std::vector<int>> recv_data;
     hpx::future<std::vector<std::vector<int>>> ft_data;
 
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        std::fill(send_data.begin(), send_data.end(),
+        std::vector<int> iter_data(static_cast<std::size_t>(test_size),
             static_cast<int>(i + this_locality));
 
         barrier.wait();
         // Time collective
-        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
         if (this_locality == 0)
         {
@@ -601,16 +592,15 @@ void test_all_reduce_hierarchical(int arity, int lpn, std::size_t iterations, st
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
-    std::vector<int> send_data(static_cast<std::size_t>(test_size), 0);
     std::vector<int> recv_data;
 
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        std::fill(send_data.begin(), send_data.end(), static_cast<int>(i));
+        std::vector<int> iter_data(
+            static_cast<std::size_t>(test_size), static_cast<int>(i));
 
         barrier.wait();
         // Time collective
-        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
         hpx::future<std::vector<int>> ft_data =
             all_reduce(communicators, std::move(iter_data), vector_adder{},
@@ -813,17 +803,16 @@ void test_one_shot_use_reduce(int lpn, std::size_t iterations, std::size_t warmu
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
-    std::vector<int> send_data(static_cast<std::size_t>(test_size), 0);
     std::vector<int> recv_data;
     hpx::future<std::vector<int>> ft_data;
 
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        std::fill(send_data.begin(), send_data.end(), static_cast<int>(i));
+        std::vector<int> iter_data(
+            static_cast<std::size_t>(test_size), static_cast<int>(i));
 
         barrier.wait();
         // Time collective
-        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
         if (this_locality == 0)
         {
@@ -889,25 +878,19 @@ void test_one_shot_use_broadcast(int lpn, std::size_t iterations, std::size_t wa
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
-    std::vector<int> send_data(static_cast<std::size_t>(test_size), 0);
     std::vector<int> recv_data;
     hpx::future<std::vector<int>> ft_data;
 
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        if (this_locality == 0)
-        {
-            std::fill(send_data.begin(), send_data.end(), static_cast<int>(i));
-        }
-
         barrier.wait();
         // Time collective
-        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
         if (this_locality == 0)
         {
             ft_data = broadcast_to(broadcast_direct_basename,
-                    std::move(iter_data), num_sites_arg(num_localities),
+                std::vector<int>(static_cast<std::size_t>(test_size), static_cast<int>(i)),
+                num_sites_arg(num_localities),
                 this_site_arg(this_locality), generation_arg(i + 1));
         }
         else
@@ -966,18 +949,16 @@ void test_one_shot_use_gather(int lpn, std::size_t iterations, std::size_t warmu
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
-    std::vector<int> send_data(static_cast<std::size_t>(test_size), 0);
     std::vector<std::vector<int>> recv_data;
     hpx::future<std::vector<std::vector<int>>> ft_data;
 
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        std::fill(send_data.begin(), send_data.end(),
+        std::vector<int> iter_data(static_cast<std::size_t>(test_size),
             static_cast<int>(i + this_locality));
 
         barrier.wait();
         // Time collective
-        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
         if (this_locality == 0)
         {
@@ -1045,16 +1026,15 @@ void test_one_shot_use_all_reduce(int lpn, std::size_t iterations, std::size_t w
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
-    std::vector<int> send_data(static_cast<std::size_t>(test_size), 0);
     std::vector<int> recv_data;
 
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        std::fill(send_data.begin(), send_data.end(), static_cast<int>(i));
+        std::vector<int> iter_data(
+            static_cast<std::size_t>(test_size), static_cast<int>(i));
 
         barrier.wait();
         // Time collective
-        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
         hpx::future<std::vector<int>> ft_data =
             all_reduce(all_reduce_direct_basename, std::move(iter_data),
@@ -1204,17 +1184,16 @@ void test_multiple_use_with_generation_reduce(int lpn, std::size_t iterations, s
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
-    std::vector<int> send_data(static_cast<std::size_t>(test_size), 0);
     std::vector<int> recv_data;
     hpx::future<std::vector<int>> ft_data;
 
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        std::fill(send_data.begin(), send_data.end(), static_cast<int>(i));
+        std::vector<int> iter_data(
+            static_cast<std::size_t>(test_size), static_cast<int>(i));
 
         barrier.wait();
         // Time collective
-        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
         if (this_locality == 0)
         {
@@ -1282,25 +1261,19 @@ void test_multiple_use_with_generation_broadcast(int lpn,
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
-    std::vector<int> send_data(static_cast<std::size_t>(test_size), 0);
     std::vector<int> recv_data;
     hpx::future<std::vector<int>> ft_data;
 
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        if (this_locality == 0)
-        {
-            std::fill(send_data.begin(), send_data.end(), static_cast<int>(i));
-        }
-
         barrier.wait();
         // Time collective
-        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
         if (this_locality == 0)
         {
             ft_data = broadcast_to(broadcast_direct_client,
-                    std::move(iter_data), generation_arg(i + 1));
+                std::vector<int>(static_cast<std::size_t>(test_size), static_cast<int>(i)),
+                generation_arg(i + 1));
         }
         else
         {
@@ -1361,18 +1334,16 @@ void test_multiple_use_with_generation_gather(
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
-    std::vector<int> send_data(static_cast<std::size_t>(test_size), 0);
     std::vector<std::vector<int>> recv_data;
     hpx::future<std::vector<std::vector<int>>> ft_data;
 
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        std::fill(send_data.begin(), send_data.end(),
+        std::vector<int> iter_data(static_cast<std::size_t>(test_size),
             static_cast<int>(i + this_locality));
 
         barrier.wait();
         // Time collective
-        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
         if (this_locality == 0)
         {
@@ -1442,16 +1413,15 @@ void test_multiple_use_with_generation_all_reduce(int lpn,
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
-    std::vector<int> send_data(static_cast<std::size_t>(test_size), 0);
     std::vector<int> recv_data;
 
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        std::fill(send_data.begin(), send_data.end(), static_cast<int>(i));
+        std::vector<int> iter_data(
+            static_cast<std::size_t>(test_size), static_cast<int>(i));
 
         barrier.wait();
         // Time collective
-        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
         hpx::future<std::vector<int>> ft_data =
             all_reduce(all_reduce_direct_client, std::move(iter_data),
@@ -1560,15 +1530,13 @@ void test_all_gather_hierarchical(int arity, int lpn, std::size_t iterations, st
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
-    std::vector<int> send_data(static_cast<std::size_t>(test_size), 0);
     std::vector<std::vector<int>> recv_data;
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        std::fill(send_data.begin(), send_data.end(),
+        std::vector<int> iter_data(static_cast<std::size_t>(test_size),
             static_cast<int>(i + this_locality));
         barrier.wait();
         // Time collective
-        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
         hpx::future<std::vector<std::vector<int>>> ft_data =
             all_gather(communicators, std::move(iter_data),
@@ -1716,15 +1684,13 @@ void test_one_shot_use_all_gather(int lpn, std::size_t iterations, std::size_t w
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
-    std::vector<int> send_data(static_cast<std::size_t>(test_size), 0);
     std::vector<std::vector<int>> recv_data;
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        std::fill(send_data.begin(), send_data.end(),
+        std::vector<int> iter_data(static_cast<std::size_t>(test_size),
             static_cast<int>(i + this_locality));
         barrier.wait();
         // Time collective
-        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
         hpx::future<std::vector<std::vector<int>>> ft_data =
             all_gather(all_gather_direct_basename, std::move(iter_data),
@@ -1782,15 +1748,13 @@ void test_multiple_use_with_generation_all_gather(int lpn,
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
     // Data
-    std::vector<int> send_data(static_cast<std::size_t>(test_size), 0);
     std::vector<std::vector<int>> recv_data;
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        std::fill(send_data.begin(), send_data.end(),
+        std::vector<int> iter_data(static_cast<std::size_t>(test_size),
             static_cast<int>(i + this_locality));
         barrier.wait();
         // Time collective
-        auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
         hpx::future<std::vector<std::vector<int>>> ft_data =
             all_gather(all_gather_direct_client, std::move(iter_data),
