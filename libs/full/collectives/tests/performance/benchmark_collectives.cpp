@@ -1297,6 +1297,46 @@ void test_multiple_use_with_generation_all_reduce(int lpn,
     }
 }
 
+void test_one_shot_use_barrier(int lpn, std::size_t iterations,
+    std::size_t warmup_iterations, int test_size, std::string const& operation)
+{
+    std::size_t const num_localities =
+        hpx::get_num_localities(hpx::launch::sync);
+    std::size_t const this_locality = hpx::get_locality_id();
+    HPX_TEST_LTE(static_cast<std::size_t>(2), num_localities);
+    char const* const barrier_sync_name = "/test/barrier/single";
+    hpx::distributed::barrier sync(barrier_sync_name);
+    auto const timing_comm =
+        create_communicator("/test/timing_reduce/barrier/one_shot/",
+            num_sites_arg(num_localities), this_site_arg(this_locality));
+    std::vector<double> result(iterations, 0.0);
+
+    for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
+    {
+        // Create a new communicator per iteration (one-shot semantics)
+        auto const barrier_comm = create_communicator(barrier_bench_basename,
+            num_sites_arg(num_localities), this_site_arg(this_locality),
+            generation_arg(i + 1));
+        sync.wait();
+        hpx::chrono::high_resolution_timer const timer;
+        hpx::collectives::barrier(
+            barrier_comm, this_site_arg(this_locality), generation_arg(1))
+            .get();
+        // Reduce max elapsed time to root
+        double max_elapsed = timer.elapsed();
+        reduce(timing_comm, max_elapsed, double_max{},
+            this_site_arg(this_locality), generation_arg(i + 1));
+        if (i >= warmup_iterations)
+            result[i - warmup_iterations] = max_elapsed;
+    }
+
+    if (this_locality == 0)
+    {
+        write_to_file(operation, "single_use", -1, num_localities, lpn,
+            test_size, warmup_iterations, iterations, std::move(result));
+    }
+}
+
 void test_multiple_use_with_generation_barrier(int lpn, std::size_t iterations,
     std::size_t warmup_iterations, int test_size, std::string const& operation)
 {
@@ -1853,6 +1893,9 @@ int hpx_main(hpx::program_options::variables_map& vm)
         {
             if (arity == -1)
             {
+                test_one_shot_use_barrier(lpn, iterations,
+                    static_cast<std::size_t>(warmup_iterations), test_size,
+                    operation);
                 test_multiple_use_with_generation_barrier(lpn, iterations,
                     static_cast<std::size_t>(warmup_iterations), test_size,
                     operation);
