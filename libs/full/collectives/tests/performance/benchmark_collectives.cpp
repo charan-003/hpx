@@ -265,19 +265,11 @@ void test_scatter_hierarchical(int arity, int lpn, std::size_t iterations,
         }
         recv_data = ft_data.get();
         // Reduce max elapsed time to root
-        if (this_locality == 0)
-        {
-            double const max_elapsed = reduce_here(hpx::launch::sync,
-                timing_comm, timer.elapsed(), double_max{},
-                generation_arg(i + 1));
-            if (i >= warmup_iterations)
-                result[i - warmup_iterations] = max_elapsed;
-        }
-        else
-        {
-            reduce_there(hpx::launch::sync, timing_comm,
-                timer.elapsed(), generation_arg(i + 1));
-        }
+        double max_elapsed = timer.elapsed();
+        reduce(timing_comm, max_elapsed, double_max{},
+            this_site_arg(this_locality), generation_arg(i + 1));
+        if (i >= warmup_iterations)
+            result[i - warmup_iterations] = max_elapsed;
 
         // Check for correctness
         for (int check : recv_data)
@@ -352,19 +344,11 @@ void test_reduce_hierarchical(int arity, int lpn, std::size_t iterations,
             finished.get();
         }
         // Reduce max elapsed time to root
-        if (this_locality == 0)
-        {
-            double const max_elapsed = reduce_here(hpx::launch::sync,
-                timing_comm, timer.elapsed(), double_max{},
-                generation_arg(i + 1));
-            if (i >= warmup_iterations)
-                result[i - warmup_iterations] = max_elapsed;
-        }
-        else
-        {
-            reduce_there(hpx::launch::sync, timing_comm,
-                timer.elapsed(), generation_arg(i + 1));
-        }
+        double max_elapsed = timer.elapsed();
+        reduce(timing_comm, max_elapsed, double_max{},
+            this_site_arg(this_locality), generation_arg(i + 1));
+        if (i >= warmup_iterations)
+            result[i - warmup_iterations] = max_elapsed;
 
         // Check for correctness
         if (this_locality == 0)
@@ -434,19 +418,11 @@ void test_broadcast_hierarchical(int arity, int lpn, std::size_t iterations,
         }
         recv_data = ft_data.get();
         // Reduce max elapsed time to root
-        if (this_locality == 0)
-        {
-            double const max_elapsed = reduce_here(hpx::launch::sync,
-                timing_comm, timer.elapsed(), double_max{},
-                generation_arg(i + 1));
-            if (i >= warmup_iterations)
-                result[i - warmup_iterations] = max_elapsed;
-        }
-        else
-        {
-            reduce_there(hpx::launch::sync, timing_comm,
-                timer.elapsed(), generation_arg(i + 1));
-        }
+        double max_elapsed = timer.elapsed();
+        reduce(timing_comm, max_elapsed, double_max{},
+            this_site_arg(this_locality), generation_arg(i + 1));
+        if (i >= warmup_iterations)
+            result[i - warmup_iterations] = max_elapsed;
 
         // Check for correctness
         if (this_locality == 0)
@@ -518,19 +494,11 @@ void test_gather_hierarchical(int arity, int lpn, std::size_t iterations,
             finished.get();
         }
         // Reduce max elapsed time to root
-        if (this_locality == 0)
-        {
-            double const max_elapsed = reduce_here(hpx::launch::sync,
-                timing_comm, timer.elapsed(), double_max{},
-                generation_arg(i + 1));
-            if (i >= warmup_iterations)
-                result[i - warmup_iterations] = max_elapsed;
-        }
-        else
-        {
-            reduce_there(hpx::launch::sync, timing_comm,
-                timer.elapsed(), generation_arg(i + 1));
-        }
+        double max_elapsed = timer.elapsed();
+        reduce(timing_comm, max_elapsed, double_max{},
+            this_site_arg(this_locality), generation_arg(i + 1));
+        if (i >= warmup_iterations)
+            result[i - warmup_iterations] = max_elapsed;
 
         // Check for correctness
         if (this_locality == 0)
@@ -596,19 +564,11 @@ void test_all_reduce_hierarchical(int arity, int lpn, std::size_t iterations,
         recv_data = ft_data.get();
 
         // Reduce max elapsed time to root
-        if (this_locality == 0)
-        {
-            double const max_elapsed = reduce_here(hpx::launch::sync,
-                timing_comm, timer.elapsed(), double_max{},
-                generation_arg(i + 1));
-            if (i >= warmup_iterations)
-                result[i - warmup_iterations] = max_elapsed;
-        }
-        else
-        {
-            reduce_there(hpx::launch::sync, timing_comm,
-                timer.elapsed(), generation_arg(i + 1));
-        }
+        double max_elapsed = timer.elapsed();
+        reduce(timing_comm, max_elapsed, double_max{},
+            this_site_arg(this_locality), generation_arg(i + 1));
+        if (i >= warmup_iterations)
+            result[i - warmup_iterations] = max_elapsed;
 
         // Check for correctness: every site should have the sum
         HPX_TEST_EQ(static_cast<int>(i) * static_cast<int>(num_localities),
@@ -656,19 +616,11 @@ void test_barrier_hierarchical(int arity, int lpn, std::size_t iterations,
             communicators, this_site_arg(this_locality), generation_arg(i + 1))
             .get();
         // Reduce max elapsed time to root
-        if (this_locality == 0)
-        {
-            double const max_elapsed = reduce_here(hpx::launch::sync,
-                timing_comm, timer.elapsed(), double_max{},
-                generation_arg(i + 1));
-            if (i >= warmup_iterations)
-                result[i - warmup_iterations] = max_elapsed;
-        }
-        else
-        {
-            reduce_there(hpx::launch::sync, timing_comm,
-                timer.elapsed(), generation_arg(i + 1));
-        }
+        double max_elapsed = timer.elapsed();
+        reduce(timing_comm, max_elapsed, double_max{},
+            this_site_arg(this_locality), generation_arg(i + 1));
+        if (i >= warmup_iterations)
+            result[i - warmup_iterations] = max_elapsed;
     }
 
     if (this_locality == 0)
@@ -738,19 +690,11 @@ void test_one_shot_use_scatter(int lpn, std::size_t iterations,
         }
         recv_data = ft_data.get();
         // Reduce max elapsed time to root
-        if (this_locality == 0)
-        {
-            double const max_elapsed = reduce_here(hpx::launch::sync,
-                timing_comm, timer.elapsed(), double_max{},
-                generation_arg(i + 1));
-            if (i >= warmup_iterations)
-                result[i - warmup_iterations] = max_elapsed;
-        }
-        else
-        {
-            reduce_there(hpx::launch::sync, timing_comm,
-                timer.elapsed(), generation_arg(i + 1));
-        }
+        double max_elapsed = timer.elapsed();
+        reduce(timing_comm, max_elapsed, double_max{},
+            this_site_arg(this_locality), generation_arg(i + 1));
+        if (i >= warmup_iterations)
+            result[i - warmup_iterations] = max_elapsed;
 
         // Check for correctness
         for (int check : recv_data)
@@ -812,19 +756,11 @@ void test_one_shot_use_reduce(int lpn, std::size_t iterations,
             finished.get();
         }
         // Reduce max elapsed time to root
-        if (this_locality == 0)
-        {
-            double const max_elapsed = reduce_here(hpx::launch::sync,
-                timing_comm, timer.elapsed(), double_max{},
-                generation_arg(i + 1));
-            if (i >= warmup_iterations)
-                result[i - warmup_iterations] = max_elapsed;
-        }
-        else
-        {
-            reduce_there(hpx::launch::sync, timing_comm,
-                timer.elapsed(), generation_arg(i + 1));
-        }
+        double max_elapsed = timer.elapsed();
+        reduce(timing_comm, max_elapsed, double_max{},
+            this_site_arg(this_locality), generation_arg(i + 1));
+        if (i >= warmup_iterations)
+            result[i - warmup_iterations] = max_elapsed;
 
         // Check for correctness
         if (this_locality == 0)
@@ -883,19 +819,11 @@ void test_one_shot_use_broadcast(int lpn, std::size_t iterations,
         }
         recv_data = ft_data.get();
         // Reduce max elapsed time to root
-        if (this_locality == 0)
-        {
-            double const max_elapsed = reduce_here(hpx::launch::sync,
-                timing_comm, timer.elapsed(), double_max{},
-                generation_arg(i + 1));
-            if (i >= warmup_iterations)
-                result[i - warmup_iterations] = max_elapsed;
-        }
-        else
-        {
-            reduce_there(hpx::launch::sync, timing_comm,
-                timer.elapsed(), generation_arg(i + 1));
-        }
+        double max_elapsed = timer.elapsed();
+        reduce(timing_comm, max_elapsed, double_max{},
+            this_site_arg(this_locality), generation_arg(i + 1));
+        if (i >= warmup_iterations)
+            result[i - warmup_iterations] = max_elapsed;
 
         // Check for correctness
         if (this_locality == 0)
@@ -955,19 +883,11 @@ void test_one_shot_use_gather(int lpn, std::size_t iterations,
             finished.get();
         }
         // Reduce max elapsed time to root
-        if (this_locality == 0)
-        {
-            double const max_elapsed = reduce_here(hpx::launch::sync,
-                timing_comm, timer.elapsed(), double_max{},
-                generation_arg(i + 1));
-            if (i >= warmup_iterations)
-                result[i - warmup_iterations] = max_elapsed;
-        }
-        else
-        {
-            reduce_there(hpx::launch::sync, timing_comm,
-                timer.elapsed(), generation_arg(i + 1));
-        }
+        double max_elapsed = timer.elapsed();
+        reduce(timing_comm, max_elapsed, double_max{},
+            this_site_arg(this_locality), generation_arg(i + 1));
+        if (i >= warmup_iterations)
+            result[i - warmup_iterations] = max_elapsed;
 
         // Check for correctness
         if (this_locality == 0)
@@ -1020,19 +940,11 @@ void test_one_shot_use_all_reduce(int lpn, std::size_t iterations,
                 this_site_arg(this_locality), generation_arg(i + 1));
         recv_data = ft_data.get();
         // Reduce max elapsed time to root
-        if (this_locality == 0)
-        {
-            double const max_elapsed = reduce_here(hpx::launch::sync,
-                timing_comm, timer.elapsed(), double_max{},
-                generation_arg(i + 1));
-            if (i >= warmup_iterations)
-                result[i - warmup_iterations] = max_elapsed;
-        }
-        else
-        {
-            reduce_there(hpx::launch::sync, timing_comm,
-                timer.elapsed(), generation_arg(i + 1));
-        }
+        double max_elapsed = timer.elapsed();
+        reduce(timing_comm, max_elapsed, double_max{},
+            this_site_arg(this_locality), generation_arg(i + 1));
+        if (i >= warmup_iterations)
+            result[i - warmup_iterations] = max_elapsed;
 
         // Check for correctness
         HPX_TEST_EQ(static_cast<int>(i) * static_cast<int>(num_localities),
@@ -1106,19 +1018,11 @@ void test_multiple_use_with_generation_scatter(int lpn, std::size_t iterations,
         }
         recv_data = ft_data.get();
         // Reduce max elapsed time to root
-        if (this_locality == 0)
-        {
-            double const max_elapsed = reduce_here(hpx::launch::sync,
-                timing_comm, timer.elapsed(), double_max{},
-                generation_arg(i + 1));
-            if (i >= warmup_iterations)
-                result[i - warmup_iterations] = max_elapsed;
-        }
-        else
-        {
-            reduce_there(hpx::launch::sync, timing_comm,
-                timer.elapsed(), generation_arg(i + 1));
-        }
+        double max_elapsed = timer.elapsed();
+        reduce(timing_comm, max_elapsed, double_max{},
+            this_site_arg(this_locality), generation_arg(i + 1));
+        if (i >= warmup_iterations)
+            result[i - warmup_iterations] = max_elapsed;
 
         // Check for correctness
         for (int check : recv_data)
@@ -1182,19 +1086,11 @@ void test_multiple_use_with_generation_reduce(int lpn, std::size_t iterations,
             finished.get();
         }
         // Reduce max elapsed time to root
-        if (this_locality == 0)
-        {
-            double const max_elapsed = reduce_here(hpx::launch::sync,
-                timing_comm, timer.elapsed(), double_max{},
-                generation_arg(i + 1));
-            if (i >= warmup_iterations)
-                result[i - warmup_iterations] = max_elapsed;
-        }
-        else
-        {
-            reduce_there(hpx::launch::sync, timing_comm,
-                timer.elapsed(), generation_arg(i + 1));
-        }
+        double max_elapsed = timer.elapsed();
+        reduce(timing_comm, max_elapsed, double_max{},
+            this_site_arg(this_locality), generation_arg(i + 1));
+        if (i >= warmup_iterations)
+            result[i - warmup_iterations] = max_elapsed;
 
         // Check for correctness
         if (this_locality == 0)
@@ -1256,19 +1152,11 @@ void test_multiple_use_with_generation_broadcast(int lpn,
         }
         recv_data = ft_data.get();
         // Reduce max elapsed time to root
-        if (this_locality == 0)
-        {
-            double const max_elapsed = reduce_here(hpx::launch::sync,
-                timing_comm, timer.elapsed(), double_max{},
-                generation_arg(i + 1));
-            if (i >= warmup_iterations)
-                result[i - warmup_iterations] = max_elapsed;
-        }
-        else
-        {
-            reduce_there(hpx::launch::sync, timing_comm,
-                timer.elapsed(), generation_arg(i + 1));
-        }
+        double max_elapsed = timer.elapsed();
+        reduce(timing_comm, max_elapsed, double_max{},
+            this_site_arg(this_locality), generation_arg(i + 1));
+        if (i >= warmup_iterations)
+            result[i - warmup_iterations] = max_elapsed;
 
         // Check for correctness
         if (this_locality == 0)
@@ -1330,19 +1218,11 @@ void test_multiple_use_with_generation_gather(int lpn, std::size_t iterations,
             finished.get();
         }
         // Reduce max elapsed time to root
-        if (this_locality == 0)
-        {
-            double const max_elapsed = reduce_here(hpx::launch::sync,
-                timing_comm, timer.elapsed(), double_max{},
-                generation_arg(i + 1));
-            if (i >= warmup_iterations)
-                result[i - warmup_iterations] = max_elapsed;
-        }
-        else
-        {
-            reduce_there(hpx::launch::sync, timing_comm,
-                timer.elapsed(), generation_arg(i + 1));
-        }
+        double max_elapsed = timer.elapsed();
+        reduce(timing_comm, max_elapsed, double_max{},
+            this_site_arg(this_locality), generation_arg(i + 1));
+        if (i >= warmup_iterations)
+            result[i - warmup_iterations] = max_elapsed;
 
         // Check for correctness
         if (this_locality == 0)
@@ -1399,19 +1279,11 @@ void test_multiple_use_with_generation_all_reduce(int lpn,
                 vector_adder{}, generation_arg(i + 1));
         recv_data = ft_data.get();
         // Reduce max elapsed time to root
-        if (this_locality == 0)
-        {
-            double const max_elapsed = reduce_here(hpx::launch::sync,
-                timing_comm, timer.elapsed(), double_max{},
-                generation_arg(i + 1));
-            if (i >= warmup_iterations)
-                result[i - warmup_iterations] = max_elapsed;
-        }
-        else
-        {
-            reduce_there(hpx::launch::sync, timing_comm,
-                timer.elapsed(), generation_arg(i + 1));
-        }
+        double max_elapsed = timer.elapsed();
+        reduce(timing_comm, max_elapsed, double_max{},
+            this_site_arg(this_locality), generation_arg(i + 1));
+        if (i >= warmup_iterations)
+            result[i - warmup_iterations] = max_elapsed;
 
         // Check for correctness
         HPX_TEST_EQ(static_cast<int>(i) * static_cast<int>(num_localities),
@@ -1449,19 +1321,11 @@ void test_multiple_use_with_generation_barrier(int lpn, std::size_t iterations,
             barrier_client, this_site_arg(this_locality), generation_arg(i + 1))
             .get();
         // Reduce max elapsed time to root
-        if (this_locality == 0)
-        {
-            double const max_elapsed = reduce_here(hpx::launch::sync,
-                timing_comm, timer.elapsed(), double_max{},
-                generation_arg(i + 1));
-            if (i >= warmup_iterations)
-                result[i - warmup_iterations] = max_elapsed;
-        }
-        else
-        {
-            reduce_there(hpx::launch::sync, timing_comm,
-                timer.elapsed(), generation_arg(i + 1));
-        }
+        double max_elapsed = timer.elapsed();
+        reduce(timing_comm, max_elapsed, double_max{},
+            this_site_arg(this_locality), generation_arg(i + 1));
+        if (i >= warmup_iterations)
+            result[i - warmup_iterations] = max_elapsed;
     }
 
     if (this_locality == 0)
@@ -1512,19 +1376,11 @@ void test_all_gather_hierarchical(int arity, int lpn, std::size_t iterations,
                 this_site_arg(this_locality), generation_arg(i + 1));
         recv_data = ft_data.get();
         // Reduce max elapsed time to root
-        if (this_locality == 0)
-        {
-            double const max_elapsed = reduce_here(hpx::launch::sync,
-                timing_comm, timer.elapsed(), double_max{},
-                generation_arg(i + 1));
-            if (i >= warmup_iterations)
-                result[i - warmup_iterations] = max_elapsed;
-        }
-        else
-        {
-            reduce_there(hpx::launch::sync, timing_comm,
-                timer.elapsed(), generation_arg(i + 1));
-        }
+        double max_elapsed = timer.elapsed();
+        reduce(timing_comm, max_elapsed, double_max{},
+            this_site_arg(this_locality), generation_arg(i + 1));
+        if (i >= warmup_iterations)
+            result[i - warmup_iterations] = max_elapsed;
         // Check for correctness: every site contributed (i + site), so
         // recv_data[j][0] must equal (i + j) at every site.
         for (int j = 0; j < static_cast<int>(num_localities); ++j)
@@ -1596,19 +1452,11 @@ void test_all_to_all_hierarchical(int arity, int lpn, std::size_t iterations,
                 this_site_arg(this_locality), generation_arg(i + 1));
         recv_data = ft_data.get();
         // Reduce max elapsed time to root
-        if (this_locality == 0)
-        {
-            double const max_elapsed = reduce_here(hpx::launch::sync,
-                timing_comm, timer.elapsed(), double_max{},
-                generation_arg(i + 1));
-            if (i >= warmup_iterations)
-                result[i - warmup_iterations] = max_elapsed;
-        }
-        else
-        {
-            reduce_there(hpx::launch::sync, timing_comm,
-                timer.elapsed(), generation_arg(i + 1));
-        }
+        double max_elapsed = timer.elapsed();
+        reduce(timing_comm, max_elapsed, double_max{},
+            this_site_arg(this_locality), generation_arg(i + 1));
+        if (i >= warmup_iterations)
+            result[i - warmup_iterations] = max_elapsed;
         // Correctness: recv_data[s][*] == s + this_locality + i
         HPX_TEST_EQ(recv_data.size(), num_localities);
         for (std::size_t s = 0; s != num_localities; ++s)
@@ -1660,19 +1508,11 @@ void test_one_shot_use_all_gather(int lpn, std::size_t iterations,
                 generation_arg(i + 1));
         recv_data = ft_data.get();
         // Reduce max elapsed time to root
-        if (this_locality == 0)
-        {
-            double const max_elapsed = reduce_here(hpx::launch::sync,
-                timing_comm, timer.elapsed(), double_max{},
-                generation_arg(i + 1));
-            if (i >= warmup_iterations)
-                result[i - warmup_iterations] = max_elapsed;
-        }
-        else
-        {
-            reduce_there(hpx::launch::sync, timing_comm,
-                timer.elapsed(), generation_arg(i + 1));
-        }
+        double max_elapsed = timer.elapsed();
+        reduce(timing_comm, max_elapsed, double_max{},
+            this_site_arg(this_locality), generation_arg(i + 1));
+        if (i >= warmup_iterations)
+            result[i - warmup_iterations] = max_elapsed;
         // Check for correctness
         for (int j = 0; j < static_cast<int>(num_localities); ++j)
         {
@@ -1722,19 +1562,11 @@ void test_multiple_use_with_generation_all_gather(int lpn,
                 generation_arg(i + 1));
         recv_data = ft_data.get();
         // Reduce max elapsed time to root
-        if (this_locality == 0)
-        {
-            double const max_elapsed = reduce_here(hpx::launch::sync,
-                timing_comm, timer.elapsed(), double_max{},
-                generation_arg(i + 1));
-            if (i >= warmup_iterations)
-                result[i - warmup_iterations] = max_elapsed;
-        }
-        else
-        {
-            reduce_there(hpx::launch::sync, timing_comm,
-                timer.elapsed(), generation_arg(i + 1));
-        }
+        double max_elapsed = timer.elapsed();
+        reduce(timing_comm, max_elapsed, double_max{},
+            this_site_arg(this_locality), generation_arg(i + 1));
+        if (i >= warmup_iterations)
+            result[i - warmup_iterations] = max_elapsed;
         // Check for correctness
         for (int j = 0; j < static_cast<int>(num_localities); ++j)
         {
