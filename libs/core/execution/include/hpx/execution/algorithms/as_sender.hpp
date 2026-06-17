@@ -256,7 +256,7 @@ namespace hpx::execution::experimental { namespace detail {
         // Environment that answers get_completion_scheduler queries.
         struct env
         {
-            scheduler_type const& sched;
+            scheduler_type sched;
 
             auto query(
                 hpx::execution::experimental::get_domain_t) const noexcept
