@@ -22,6 +22,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <numeric>
 #include <string>
 #include <vector>
@@ -1744,6 +1745,17 @@ void test_multiple_use_with_generation_all_gather(int lpn,
             test_size, warmup_iterations, iterations, std::move(result));
     }
 }
+struct benchmarking_functions
+{
+    hpx::function<void(int, std::size_t, std::size_t, int, std::string const&)>
+        one_shot;
+    hpx::function<void(int, std::size_t, std::size_t, int, std::string const&)>
+        multiple_use;
+    hpx::function<void(
+        int, int, std::size_t, std::size_t, int, std::string const&, int)>
+        hierarchical;
+};
+
 int hpx_main(hpx::program_options::variables_map& vm)
 {
     int const arity = vm["arity"].as<int>();
@@ -1763,149 +1775,61 @@ int hpx_main(hpx::program_options::variables_map& vm)
 
     if (hpx::get_num_localities(hpx::launch::sync) > 1)
     {
-        if (operation == "scatter")
+        std::map<std::string, benchmarking_functions> const benchmarking = {
+            {"scatter",
+                {test_one_shot_use_scatter,
+                    test_multiple_use_with_generation_scatter,
+                    test_scatter_hierarchical}},
+            {"reduce",
+                {test_one_shot_use_reduce,
+                    test_multiple_use_with_generation_reduce,
+                    test_reduce_hierarchical}},
+            {"broadcast",
+                {test_one_shot_use_broadcast,
+                    test_multiple_use_with_generation_broadcast,
+                    test_broadcast_hierarchical}},
+            {"gather",
+                {test_one_shot_use_gather,
+                    test_multiple_use_with_generation_gather,
+                    test_gather_hierarchical}},
+            {"all_reduce",
+                {test_one_shot_use_all_reduce,
+                    test_multiple_use_with_generation_all_reduce,
+                    test_all_reduce_hierarchical}},
+            {"all_gather",
+                {test_one_shot_use_all_gather,
+                    test_multiple_use_with_generation_all_gather,
+                    test_all_gather_hierarchical}},
+            {"all_to_all",
+                {test_one_shot_use_all_to_all,
+                    test_multiple_use_with_generation_all_to_all,
+                    test_all_to_all_hierarchical}},
+            {"barrier",
+                {test_one_shot_use_barrier,
+                    test_multiple_use_with_generation_barrier,
+                    test_barrier_hierarchical}},
+        };
+
+        auto it = benchmarking.find(operation);
+        if (it == benchmarking.end())
         {
-            if (arity == -1)
-            {
-                test_one_shot_use_scatter(lpn, iterations,
-                    static_cast<std::size_t>(warmup_iterations), test_size,
-                    operation);
-                test_multiple_use_with_generation_scatter(lpn, iterations,
-                    static_cast<std::size_t>(warmup_iterations), test_size,
-                    operation);
-            }
-            else
-            {
-                test_scatter_hierarchical(arity, lpn, iterations,
-                    static_cast<std::size_t>(warmup_iterations), test_size,
-                    operation, fallback_threshold);
-            }
+            std::cout << "error: unknown operation '" << operation << "'\n";
+            return hpx::finalize();
         }
-        else if (operation == "reduce")
+        if (arity == -1)
         {
-            if (arity == -1)
-            {
-                test_one_shot_use_reduce(lpn, iterations,
-                    static_cast<std::size_t>(warmup_iterations), test_size,
-                    operation);
-                test_multiple_use_with_generation_reduce(lpn, iterations,
-                    static_cast<std::size_t>(warmup_iterations), test_size,
-                    operation);
-            }
-            else
-            {
-                test_reduce_hierarchical(arity, lpn, iterations,
-                    static_cast<std::size_t>(warmup_iterations), test_size,
-                    operation, fallback_threshold);
-            }
+            it->second.one_shot(lpn, iterations,
+                static_cast<std::size_t>(warmup_iterations), test_size,
+                operation);
+            it->second.multiple_use(lpn, iterations,
+                static_cast<std::size_t>(warmup_iterations), test_size,
+                operation);
         }
-        else if (operation == "broadcast")
+        else
         {
-            if (arity == -1)
-            {
-                test_one_shot_use_broadcast(lpn, iterations,
-                    static_cast<std::size_t>(warmup_iterations), test_size,
-                    operation);
-                test_multiple_use_with_generation_broadcast(lpn, iterations,
-                    static_cast<std::size_t>(warmup_iterations), test_size,
-                    operation);
-            }
-            else
-            {
-                test_broadcast_hierarchical(arity, lpn, iterations,
-                    static_cast<std::size_t>(warmup_iterations), test_size,
-                    operation, fallback_threshold);
-            }
-        }
-        else if (operation == "gather")
-        {
-            if (arity == -1)
-            {
-                test_one_shot_use_gather(lpn, iterations,
-                    static_cast<std::size_t>(warmup_iterations), test_size,
-                    operation);
-                test_multiple_use_with_generation_gather(lpn, iterations,
-                    static_cast<std::size_t>(warmup_iterations), test_size,
-                    operation);
-            }
-            else
-            {
-                test_gather_hierarchical(arity, lpn, iterations,
-                    static_cast<std::size_t>(warmup_iterations), test_size,
-                    operation, fallback_threshold);
-            }
-        }
-        else if (operation == "all_reduce")
-        {
-            if (arity == -1)
-            {
-                test_one_shot_use_all_reduce(lpn, iterations,
-                    static_cast<std::size_t>(warmup_iterations), test_size,
-                    operation);
-                test_multiple_use_with_generation_all_reduce(lpn, iterations,
-                    static_cast<std::size_t>(warmup_iterations), test_size,
-                    operation);
-            }
-            else
-            {
-                test_all_reduce_hierarchical(arity, lpn, iterations,
-                    static_cast<std::size_t>(warmup_iterations), test_size,
-                    operation, fallback_threshold);
-            }
-        }
-        else if (operation == "all_gather")
-        {
-            if (arity == -1)
-            {
-                test_one_shot_use_all_gather(lpn, iterations,
-                    static_cast<std::size_t>(warmup_iterations), test_size,
-                    operation);
-                test_multiple_use_with_generation_all_gather(lpn, iterations,
-                    static_cast<std::size_t>(warmup_iterations), test_size,
-                    operation);
-            }
-            else
-            {
-                test_all_gather_hierarchical(arity, lpn, iterations,
-                    static_cast<std::size_t>(warmup_iterations), test_size,
-                    operation, fallback_threshold);
-            }
-        }
-        else if (operation == "all_to_all")
-        {
-            if (arity == -1)
-            {
-                test_one_shot_use_all_to_all(lpn, iterations,
-                    static_cast<std::size_t>(warmup_iterations), test_size,
-                    operation);
-                test_multiple_use_with_generation_all_to_all(lpn, iterations,
-                    static_cast<std::size_t>(warmup_iterations), test_size,
-                    operation);
-            }
-            else
-            {
-                test_all_to_all_hierarchical(arity, lpn, iterations,
-                    static_cast<std::size_t>(warmup_iterations), test_size,
-                    operation, fallback_threshold);
-            }
-        }
-        else if (operation == "barrier")
-        {
-            if (arity == -1)
-            {
-                test_one_shot_use_barrier(lpn, iterations,
-                    static_cast<std::size_t>(warmup_iterations), test_size,
-                    operation);
-                test_multiple_use_with_generation_barrier(lpn, iterations,
-                    static_cast<std::size_t>(warmup_iterations), test_size,
-                    operation);
-            }
-            else
-            {
-                test_barrier_hierarchical(arity, lpn, iterations,
-                    static_cast<std::size_t>(warmup_iterations), test_size,
-                    operation, fallback_threshold);
-            }
+            it->second.hierarchical(arity, lpn, iterations,
+                static_cast<std::size_t>(warmup_iterations), test_size,
+                operation, fallback_threshold);
         }
     }
 
