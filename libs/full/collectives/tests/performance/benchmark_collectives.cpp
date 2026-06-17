@@ -18,11 +18,11 @@
 
 #include <algorithm>
 #include <cmath>
-#include <numeric>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <numeric>
 #include <string>
 #include <vector>
 
@@ -117,9 +117,9 @@ Stats compute_moments(std::vector<double> const& data)
     std::vector<double> sorted(data);
     std::sort(sorted.begin(), sorted.end());
     std::size_t const mid = sorted.size() / 2;
-    double const median = (sorted.size() % 2 == 0)
-        ? 0.5 * (sorted[mid - 1] + sorted[mid])
-        : sorted[mid];
+    double const median = (sorted.size() % 2 == 0) ?
+        0.5 * (sorted[mid - 1] + sorted[mid]) :
+        sorted[mid];
 
     return Stats{mean, variance, stddev, min_val, max_val, median};
 }
@@ -167,10 +167,9 @@ void write_to_file(std::string const& collective, std::string const& type,
     }
 
     // Create directory: result/hpx/<parcelport>/<num_localities>/<collective>/
-    std::string runtime_file_path =
-        "result/hpx/" + pp_type + "/" + std::to_string(num_l) + "/" +
-        collective + "/runtimes_" +
-        collective + "_" + type;
+    std::string runtime_file_path = "result/hpx/" + pp_type + "/" +
+        std::to_string(num_l) + "/" + collective + "/runtimes_" + collective +
+        "_" + type;
     if (arity != -1 && type == "hierarchical")
     {
         runtime_file_path = runtime_file_path + "_" + std::to_string(arity);
@@ -201,17 +200,17 @@ void write_to_file(std::string const& collective, std::string const& type,
     outfile.open(runtime_file_path, std::ios_base::app);
     outfile << collective << ";" << type << ";" << arity << ";" << nodes << ";"
             << num_l << ";" << lpn << ";" << threads << ";" << size << ";"
-            << warmup_iterations << ";" << iterations << ";"
-            << stats.mean << ";" << stats.variance << ";" << stats.stddev
-            << ";" << stats.min << ";" << stats.max << ";" << stats.median
-            << "\n";
+            << warmup_iterations << ";" << iterations << ";" << stats.mean
+            << ";" << stats.variance << ";" << stats.stddev << ";" << stats.min
+            << ";" << stats.max << ";" << stats.median << "\n";
     outfile.close();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // Hierarchical collectives
-void test_scatter_hierarchical(int arity, int lpn, std::size_t iterations, std::size_t warmup_iterations,
-    int test_size, std::string const& operation, int fallback_threshold)
+void test_scatter_hierarchical(int arity, int lpn, std::size_t iterations,
+    std::size_t warmup_iterations, int test_size, std::string const& operation,
+    int fallback_threshold)
 {
     // Get parameters
     std::size_t const num_localities =
@@ -251,10 +250,9 @@ void test_scatter_hierarchical(int arity, int lpn, std::size_t iterations, std::
         if (this_locality == 0)
         {
             for (std::ptrdiff_t j = 0;
-                 j < static_cast<std::ptrdiff_t>(num_localities); ++j)
+                j < static_cast<std::ptrdiff_t>(num_localities); ++j)
             {
-                std::fill(
-                    send_data[static_cast<std::size_t>(j)].begin(),
+                std::fill(send_data[static_cast<std::size_t>(j)].begin(),
                     send_data[static_cast<std::size_t>(j)].end(),
                     static_cast<int>(42 + i) + static_cast<int>(j));
             }
@@ -278,24 +276,24 @@ void test_scatter_hierarchical(int arity, int lpn, std::size_t iterations, std::
         // Reduce max elapsed time to root
         if (this_locality == 0)
         {
-            double const max_elapsed =
-                reduce_here(timing_comm, timer.elapsed(), double_max{},
-                    generation_arg(i + 1))
-                    .get();
+            double const max_elapsed = reduce_here(timing_comm, timer.elapsed(),
+                double_max{}, generation_arg(i + 1))
+                                           .get();
             if (i >= warmup_iterations)
                 result[i - warmup_iterations] = max_elapsed;
         }
         else
         {
-            reduce_there(timing_comm, timer.elapsed(),
-                generation_arg(i + 1))
+            reduce_there(timing_comm, timer.elapsed(), generation_arg(i + 1))
                 .get();
         }
 
         // Check for correctness
         for (int check : recv_data)
         {
-            HPX_TEST_EQ(static_cast<int>(42 + i) + static_cast<int>(this_locality), check);
+            HPX_TEST_EQ(
+                static_cast<int>(42 + i) + static_cast<int>(this_locality),
+                check);
         }
     }
 
@@ -309,8 +307,9 @@ void test_scatter_hierarchical(int arity, int lpn, std::size_t iterations, std::
     }
 }
 
-void test_reduce_hierarchical(int arity, int lpn, std::size_t iterations, std::size_t warmup_iterations,
-    int test_size, std::string const& operation, int fallback_threshold)
+void test_reduce_hierarchical(int arity, int lpn, std::size_t iterations,
+    std::size_t warmup_iterations, int test_size, std::string const& operation,
+    int fallback_threshold)
 {
     // Get parameters
     std::size_t const num_localities =
@@ -350,39 +349,37 @@ void test_reduce_hierarchical(int arity, int lpn, std::size_t iterations, std::s
         if (this_locality == 0)
         {
             ft_data =
-                    reduce_here(communicators, std::move(iter_data), vector_adder{},
+                reduce_here(communicators, std::move(iter_data), vector_adder{},
                     this_site_arg(this_locality), generation_arg(i + 1));
             recv_data = ft_data.get();
         }
         else
         {
             hpx::future<void> finished = reduce_there(communicators,
-                    std::move(iter_data), vector_adder{},
+                std::move(iter_data), vector_adder{},
                 this_site_arg(this_locality), generation_arg(i + 1));
             finished.get();
         }
         // Reduce max elapsed time to root
         if (this_locality == 0)
         {
-            double const max_elapsed =
-                reduce_here(timing_comm, timer.elapsed(), double_max{},
-                    generation_arg(i + 1))
-                    .get();
+            double const max_elapsed = reduce_here(timing_comm, timer.elapsed(),
+                double_max{}, generation_arg(i + 1))
+                                           .get();
             if (i >= warmup_iterations)
                 result[i - warmup_iterations] = max_elapsed;
         }
         else
         {
-            reduce_there(timing_comm, timer.elapsed(),
-                generation_arg(i + 1))
+            reduce_there(timing_comm, timer.elapsed(), generation_arg(i + 1))
                 .get();
         }
 
         // Check for correctness
         if (this_locality == 0)
         {
-            HPX_TEST_EQ(
-                static_cast<int>(i) * static_cast<int>(num_localities), recv_data[0]);
+            HPX_TEST_EQ(static_cast<int>(i) * static_cast<int>(num_localities),
+                recv_data[0]);
         }
     }
 
@@ -396,8 +393,9 @@ void test_reduce_hierarchical(int arity, int lpn, std::size_t iterations, std::s
     }
 }
 
-void test_broadcast_hierarchical(int arity, int lpn, std::size_t iterations, std::size_t warmup_iterations,
-    int test_size, std::string const& operation, int fallback_threshold)
+void test_broadcast_hierarchical(int arity, int lpn, std::size_t iterations,
+    std::size_t warmup_iterations, int test_size, std::string const& operation,
+    int fallback_threshold)
 {
     // Get parameters
     std::size_t const num_localities =
@@ -434,7 +432,8 @@ void test_broadcast_hierarchical(int arity, int lpn, std::size_t iterations, std
         if (this_locality == 0)
         {
             ft_data = broadcast_to(communicators,
-                std::vector<int>(static_cast<std::size_t>(test_size), static_cast<int>(i)),
+                std::vector<int>(
+                    static_cast<std::size_t>(test_size), static_cast<int>(i)),
                 this_site_arg(this_locality), generation_arg(i + 1));
         }
         else
@@ -446,17 +445,15 @@ void test_broadcast_hierarchical(int arity, int lpn, std::size_t iterations, std
         // Reduce max elapsed time to root
         if (this_locality == 0)
         {
-            double const max_elapsed =
-                reduce_here(timing_comm, timer.elapsed(), double_max{},
-                    generation_arg(i + 1))
-                    .get();
+            double const max_elapsed = reduce_here(timing_comm, timer.elapsed(),
+                double_max{}, generation_arg(i + 1))
+                                           .get();
             if (i >= warmup_iterations)
                 result[i - warmup_iterations] = max_elapsed;
         }
         else
         {
-            reduce_there(timing_comm, timer.elapsed(),
-                generation_arg(i + 1))
+            reduce_there(timing_comm, timer.elapsed(), generation_arg(i + 1))
                 .get();
         }
 
@@ -477,8 +474,9 @@ void test_broadcast_hierarchical(int arity, int lpn, std::size_t iterations, std
     }
 }
 
-void test_gather_hierarchical(int arity, int lpn, std::size_t iterations, std::size_t warmup_iterations,
-    int test_size, std::string const& operation, int fallback_threshold)
+void test_gather_hierarchical(int arity, int lpn, std::size_t iterations,
+    std::size_t warmup_iterations, int test_size, std::string const& operation,
+    int fallback_threshold)
 {
     // Get parameters
     std::size_t const num_localities =
@@ -524,24 +522,22 @@ void test_gather_hierarchical(int arity, int lpn, std::size_t iterations, std::s
         else
         {
             hpx::future<void> finished =
-                    gather_there(communicators, std::move(iter_data),
+                gather_there(communicators, std::move(iter_data),
                     this_site_arg(this_locality), generation_arg(i + 1));
             finished.get();
         }
         // Reduce max elapsed time to root
         if (this_locality == 0)
         {
-            double const max_elapsed =
-                reduce_here(timing_comm, timer.elapsed(), double_max{},
-                    generation_arg(i + 1))
-                    .get();
+            double const max_elapsed = reduce_here(timing_comm, timer.elapsed(),
+                double_max{}, generation_arg(i + 1))
+                                           .get();
             if (i >= warmup_iterations)
                 result[i - warmup_iterations] = max_elapsed;
         }
         else
         {
-            reduce_there(timing_comm, timer.elapsed(),
-                generation_arg(i + 1))
+            reduce_there(timing_comm, timer.elapsed(), generation_arg(i + 1))
                 .get();
         }
 
@@ -565,8 +561,9 @@ void test_gather_hierarchical(int arity, int lpn, std::size_t iterations, std::s
     }
 }
 
-void test_all_reduce_hierarchical(int arity, int lpn, std::size_t iterations, std::size_t warmup_iterations,
-    int test_size, std::string const& operation, int fallback_threshold)
+void test_all_reduce_hierarchical(int arity, int lpn, std::size_t iterations,
+    std::size_t warmup_iterations, int test_size, std::string const& operation,
+    int fallback_threshold)
 {
     // Get parameters
     std::size_t const num_localities =
@@ -610,22 +607,21 @@ void test_all_reduce_hierarchical(int arity, int lpn, std::size_t iterations, st
         // Reduce max elapsed time to root
         if (this_locality == 0)
         {
-            double const max_elapsed =
-                reduce_here(timing_comm, timer.elapsed(), double_max{},
-                    generation_arg(i + 1))
-                    .get();
+            double const max_elapsed = reduce_here(timing_comm, timer.elapsed(),
+                double_max{}, generation_arg(i + 1))
+                                           .get();
             if (i >= warmup_iterations)
                 result[i - warmup_iterations] = max_elapsed;
         }
         else
         {
-            reduce_there(timing_comm, timer.elapsed(),
-                generation_arg(i + 1))
+            reduce_there(timing_comm, timer.elapsed(), generation_arg(i + 1))
                 .get();
         }
 
         // Check for correctness: every site should have the sum
-        HPX_TEST_EQ(static_cast<int>(i) * static_cast<int>(num_localities), recv_data[0]);
+        HPX_TEST_EQ(static_cast<int>(i) * static_cast<int>(num_localities),
+            recv_data[0]);
     }
 
     if (this_locality == 0)
@@ -638,8 +634,9 @@ void test_all_reduce_hierarchical(int arity, int lpn, std::size_t iterations, st
     }
 }
 
-void test_barrier_hierarchical(int arity, int lpn, std::size_t iterations, std::size_t warmup_iterations,
-    int test_size, std::string const& operation, int fallback_threshold)
+void test_barrier_hierarchical(int arity, int lpn, std::size_t iterations,
+    std::size_t warmup_iterations, int test_size, std::string const& operation,
+    int fallback_threshold)
 {
     std::size_t const num_localities =
         hpx::get_num_localities(hpx::launch::sync);
@@ -670,17 +667,15 @@ void test_barrier_hierarchical(int arity, int lpn, std::size_t iterations, std::
         // Reduce max elapsed time to root
         if (this_locality == 0)
         {
-            double const max_elapsed =
-                reduce_here(timing_comm, timer.elapsed(), double_max{},
-                    generation_arg(i + 1))
-                    .get();
+            double const max_elapsed = reduce_here(timing_comm, timer.elapsed(),
+                double_max{}, generation_arg(i + 1))
+                                           .get();
             if (i >= warmup_iterations)
                 result[i - warmup_iterations] = max_elapsed;
         }
         else
         {
-            reduce_there(timing_comm, timer.elapsed(),
-                generation_arg(i + 1))
+            reduce_there(timing_comm, timer.elapsed(), generation_arg(i + 1))
                 .get();
         }
     }
@@ -697,8 +692,8 @@ void test_barrier_hierarchical(int arity, int lpn, std::size_t iterations, std::
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // One shot collectives
-void test_one_shot_use_scatter(int lpn, std::size_t iterations, std::size_t warmup_iterations, int test_size,
-    std::string const& operation)
+void test_one_shot_use_scatter(int lpn, std::size_t iterations,
+    std::size_t warmup_iterations, int test_size, std::string const& operation)
 {
     // Get parameters
     std::size_t const num_localities =
@@ -729,10 +724,9 @@ void test_one_shot_use_scatter(int lpn, std::size_t iterations, std::size_t warm
         if (this_locality == 0)
         {
             for (std::ptrdiff_t j = 0;
-                 j < static_cast<std::ptrdiff_t>(num_localities); ++j)
+                j < static_cast<std::ptrdiff_t>(num_localities); ++j)
             {
-                std::fill(
-                    send_data[static_cast<std::size_t>(j)].begin(),
+                std::fill(send_data[static_cast<std::size_t>(j)].begin(),
                     send_data[static_cast<std::size_t>(j)].end(),
                     static_cast<int>(42 + i) + static_cast<int>(j));
             }
@@ -757,24 +751,24 @@ void test_one_shot_use_scatter(int lpn, std::size_t iterations, std::size_t warm
         // Reduce max elapsed time to root
         if (this_locality == 0)
         {
-            double const max_elapsed =
-                reduce_here(timing_comm, timer.elapsed(), double_max{},
-                    generation_arg(i + 1))
-                    .get();
+            double const max_elapsed = reduce_here(timing_comm, timer.elapsed(),
+                double_max{}, generation_arg(i + 1))
+                                           .get();
             if (i >= warmup_iterations)
                 result[i - warmup_iterations] = max_elapsed;
         }
         else
         {
-            reduce_there(timing_comm, timer.elapsed(),
-                generation_arg(i + 1))
+            reduce_there(timing_comm, timer.elapsed(), generation_arg(i + 1))
                 .get();
         }
 
         // Check for correctness
         for (int check : recv_data)
         {
-            HPX_TEST_EQ(static_cast<int>(42 + i) + static_cast<int>(this_locality), check);
+            HPX_TEST_EQ(
+                static_cast<int>(42 + i) + static_cast<int>(this_locality),
+                check);
         }
     }
 
@@ -785,8 +779,8 @@ void test_one_shot_use_scatter(int lpn, std::size_t iterations, std::size_t warm
     }
 }
 
-void test_one_shot_use_reduce(int lpn, std::size_t iterations, std::size_t warmup_iterations, int test_size,
-    std::string const& operation)
+void test_one_shot_use_reduce(int lpn, std::size_t iterations,
+    std::size_t warmup_iterations, int test_size, std::string const& operation)
 {
     // Get parameters
     std::size_t const num_localities =
@@ -824,32 +818,30 @@ void test_one_shot_use_reduce(int lpn, std::size_t iterations, std::size_t warmu
         else
         {
             hpx::future<void> finished =
-                    reduce_there(reduce_direct_basename, std::move(iter_data),
+                reduce_there(reduce_direct_basename, std::move(iter_data),
                     this_site_arg(this_locality), generation_arg(i + 1));
             finished.get();
         }
         // Reduce max elapsed time to root
         if (this_locality == 0)
         {
-            double const max_elapsed =
-                reduce_here(timing_comm, timer.elapsed(), double_max{},
-                    generation_arg(i + 1))
-                    .get();
+            double const max_elapsed = reduce_here(timing_comm, timer.elapsed(),
+                double_max{}, generation_arg(i + 1))
+                                           .get();
             if (i >= warmup_iterations)
                 result[i - warmup_iterations] = max_elapsed;
         }
         else
         {
-            reduce_there(timing_comm, timer.elapsed(),
-                generation_arg(i + 1))
+            reduce_there(timing_comm, timer.elapsed(), generation_arg(i + 1))
                 .get();
         }
 
         // Check for correctness
         if (this_locality == 0)
         {
-            HPX_TEST_EQ(
-                static_cast<int>(i) * static_cast<int>(num_localities), recv_data[0]);
+            HPX_TEST_EQ(static_cast<int>(i) * static_cast<int>(num_localities),
+                recv_data[0]);
         }
     }
 
@@ -860,8 +852,8 @@ void test_one_shot_use_reduce(int lpn, std::size_t iterations, std::size_t warmu
     }
 }
 
-void test_one_shot_use_broadcast(int lpn, std::size_t iterations, std::size_t warmup_iterations, int test_size,
-    std::string const& operation)
+void test_one_shot_use_broadcast(int lpn, std::size_t iterations,
+    std::size_t warmup_iterations, int test_size, std::string const& operation)
 {
     // Get parameters
     std::size_t const num_localities =
@@ -889,9 +881,10 @@ void test_one_shot_use_broadcast(int lpn, std::size_t iterations, std::size_t wa
         if (this_locality == 0)
         {
             ft_data = broadcast_to(broadcast_direct_basename,
-                std::vector<int>(static_cast<std::size_t>(test_size), static_cast<int>(i)),
-                num_sites_arg(num_localities),
-                this_site_arg(this_locality), generation_arg(i + 1));
+                std::vector<int>(
+                    static_cast<std::size_t>(test_size), static_cast<int>(i)),
+                num_sites_arg(num_localities), this_site_arg(this_locality),
+                generation_arg(i + 1));
         }
         else
         {
@@ -903,17 +896,15 @@ void test_one_shot_use_broadcast(int lpn, std::size_t iterations, std::size_t wa
         // Reduce max elapsed time to root
         if (this_locality == 0)
         {
-            double const max_elapsed =
-                reduce_here(timing_comm, timer.elapsed(), double_max{},
-                    generation_arg(i + 1))
-                    .get();
+            double const max_elapsed = reduce_here(timing_comm, timer.elapsed(),
+                double_max{}, generation_arg(i + 1))
+                                           .get();
             if (i >= warmup_iterations)
                 result[i - warmup_iterations] = max_elapsed;
         }
         else
         {
-            reduce_there(timing_comm, timer.elapsed(),
-                generation_arg(i + 1))
+            reduce_there(timing_comm, timer.elapsed(), generation_arg(i + 1))
                 .get();
         }
 
@@ -931,8 +922,8 @@ void test_one_shot_use_broadcast(int lpn, std::size_t iterations, std::size_t wa
     }
 }
 
-void test_one_shot_use_gather(int lpn, std::size_t iterations, std::size_t warmup_iterations, int test_size,
-    std::string const& operation)
+void test_one_shot_use_gather(int lpn, std::size_t iterations,
+    std::size_t warmup_iterations, int test_size, std::string const& operation)
 {
     // Get parameters
     std::size_t const num_localities =
@@ -970,24 +961,22 @@ void test_one_shot_use_gather(int lpn, std::size_t iterations, std::size_t warmu
         else
         {
             hpx::future<void> finished =
-                    gather_there(gather_direct_basename, std::move(iter_data),
+                gather_there(gather_direct_basename, std::move(iter_data),
                     this_site_arg(this_locality), generation_arg(i + 1));
             finished.get();
         }
         // Reduce max elapsed time to root
         if (this_locality == 0)
         {
-            double const max_elapsed =
-                reduce_here(timing_comm, timer.elapsed(), double_max{},
-                    generation_arg(i + 1))
-                    .get();
+            double const max_elapsed = reduce_here(timing_comm, timer.elapsed(),
+                double_max{}, generation_arg(i + 1))
+                                           .get();
             if (i >= warmup_iterations)
                 result[i - warmup_iterations] = max_elapsed;
         }
         else
         {
-            reduce_there(timing_comm, timer.elapsed(),
-                generation_arg(i + 1))
+            reduce_there(timing_comm, timer.elapsed(), generation_arg(i + 1))
                 .get();
         }
 
@@ -1008,8 +997,8 @@ void test_one_shot_use_gather(int lpn, std::size_t iterations, std::size_t warmu
     }
 }
 
-void test_one_shot_use_all_reduce(int lpn, std::size_t iterations, std::size_t warmup_iterations,
-    int test_size, std::string const& operation)
+void test_one_shot_use_all_reduce(int lpn, std::size_t iterations,
+    std::size_t warmup_iterations, int test_size, std::string const& operation)
 {
     // Get parameters
     std::size_t const num_localities =
@@ -1044,22 +1033,21 @@ void test_one_shot_use_all_reduce(int lpn, std::size_t iterations, std::size_t w
         // Reduce max elapsed time to root
         if (this_locality == 0)
         {
-            double const max_elapsed =
-                reduce_here(timing_comm, timer.elapsed(), double_max{},
-                    generation_arg(i + 1))
-                    .get();
+            double const max_elapsed = reduce_here(timing_comm, timer.elapsed(),
+                double_max{}, generation_arg(i + 1))
+                                           .get();
             if (i >= warmup_iterations)
                 result[i - warmup_iterations] = max_elapsed;
         }
         else
         {
-            reduce_there(timing_comm, timer.elapsed(),
-                generation_arg(i + 1))
+            reduce_there(timing_comm, timer.elapsed(), generation_arg(i + 1))
                 .get();
         }
 
         // Check for correctness
-        HPX_TEST_EQ(static_cast<int>(i) * static_cast<int>(num_localities), recv_data[0]);
+        HPX_TEST_EQ(static_cast<int>(i) * static_cast<int>(num_localities),
+            recv_data[0]);
     }
 
     if (this_locality == 0)
@@ -1071,8 +1059,8 @@ void test_one_shot_use_all_reduce(int lpn, std::size_t iterations, std::size_t w
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // Multi-use shot collectives
-void test_multiple_use_with_generation_scatter(int lpn, std::size_t iterations, std::size_t warmup_iterations,
-    int test_size, std::string const& operation)
+void test_multiple_use_with_generation_scatter(int lpn, std::size_t iterations,
+    std::size_t warmup_iterations, int test_size, std::string const& operation)
 {
     // Get parameters
     std::size_t const num_localities =
@@ -1107,10 +1095,9 @@ void test_multiple_use_with_generation_scatter(int lpn, std::size_t iterations, 
         if (this_locality == 0)
         {
             for (std::ptrdiff_t j = 0;
-                 j < static_cast<std::ptrdiff_t>(num_localities); ++j)
+                j < static_cast<std::ptrdiff_t>(num_localities); ++j)
             {
-                std::fill(
-                    send_data[static_cast<std::size_t>(j)].begin(),
+                std::fill(send_data[static_cast<std::size_t>(j)].begin(),
                     send_data[static_cast<std::size_t>(j)].end(),
                     static_cast<int>(42 + i) + static_cast<int>(j));
             }
@@ -1134,24 +1121,24 @@ void test_multiple_use_with_generation_scatter(int lpn, std::size_t iterations, 
         // Reduce max elapsed time to root
         if (this_locality == 0)
         {
-            double const max_elapsed =
-                reduce_here(timing_comm, timer.elapsed(), double_max{},
-                    generation_arg(i + 1))
-                    .get();
+            double const max_elapsed = reduce_here(timing_comm, timer.elapsed(),
+                double_max{}, generation_arg(i + 1))
+                                           .get();
             if (i >= warmup_iterations)
                 result[i - warmup_iterations] = max_elapsed;
         }
         else
         {
-            reduce_there(timing_comm, timer.elapsed(),
-                generation_arg(i + 1))
+            reduce_there(timing_comm, timer.elapsed(), generation_arg(i + 1))
                 .get();
         }
 
         // Check for correctness
         for (int check : recv_data)
         {
-            HPX_TEST_EQ(static_cast<int>(42 + i) + static_cast<int>(this_locality), check);
+            HPX_TEST_EQ(
+                static_cast<int>(42 + i) + static_cast<int>(this_locality),
+                check);
         }
     }
 
@@ -1162,8 +1149,8 @@ void test_multiple_use_with_generation_scatter(int lpn, std::size_t iterations, 
     }
 }
 
-void test_multiple_use_with_generation_reduce(int lpn, std::size_t iterations, std::size_t warmup_iterations,
-    int test_size, std::string const& operation)
+void test_multiple_use_with_generation_reduce(int lpn, std::size_t iterations,
+    std::size_t warmup_iterations, int test_size, std::string const& operation)
 {
     // Get parameters
     std::size_t const num_localities =
@@ -1204,31 +1191,29 @@ void test_multiple_use_with_generation_reduce(int lpn, std::size_t iterations, s
         else
         {
             hpx::future<void> finished = reduce_there(reduce_direct_client,
-                    std::move(iter_data), generation_arg(i + 1));
+                std::move(iter_data), generation_arg(i + 1));
             finished.get();
         }
         // Reduce max elapsed time to root
         if (this_locality == 0)
         {
-            double const max_elapsed =
-                reduce_here(timing_comm, timer.elapsed(), double_max{},
-                    generation_arg(i + 1))
-                    .get();
+            double const max_elapsed = reduce_here(timing_comm, timer.elapsed(),
+                double_max{}, generation_arg(i + 1))
+                                           .get();
             if (i >= warmup_iterations)
                 result[i - warmup_iterations] = max_elapsed;
         }
         else
         {
-            reduce_there(timing_comm, timer.elapsed(),
-                generation_arg(i + 1))
+            reduce_there(timing_comm, timer.elapsed(), generation_arg(i + 1))
                 .get();
         }
 
         // Check for correctness
         if (this_locality == 0)
         {
-            HPX_TEST_EQ(
-                static_cast<int>(i) * static_cast<int>(num_localities), recv_data[0]);
+            HPX_TEST_EQ(static_cast<int>(i) * static_cast<int>(num_localities),
+                recv_data[0]);
         }
     }
 
@@ -1240,7 +1225,8 @@ void test_multiple_use_with_generation_reduce(int lpn, std::size_t iterations, s
 }
 
 void test_multiple_use_with_generation_broadcast(int lpn,
-    std::size_t iterations, std::size_t warmup_iterations, int test_size, std::string const& operation)
+    std::size_t iterations, std::size_t warmup_iterations, int test_size,
+    std::string const& operation)
 {
     // Get parameters
     std::size_t const num_localities =
@@ -1272,7 +1258,8 @@ void test_multiple_use_with_generation_broadcast(int lpn,
         if (this_locality == 0)
         {
             ft_data = broadcast_to(broadcast_direct_client,
-                std::vector<int>(static_cast<std::size_t>(test_size), static_cast<int>(i)),
+                std::vector<int>(
+                    static_cast<std::size_t>(test_size), static_cast<int>(i)),
                 generation_arg(i + 1));
         }
         else
@@ -1284,17 +1271,15 @@ void test_multiple_use_with_generation_broadcast(int lpn,
         // Reduce max elapsed time to root
         if (this_locality == 0)
         {
-            double const max_elapsed =
-                reduce_here(timing_comm, timer.elapsed(), double_max{},
-                    generation_arg(i + 1))
-                    .get();
+            double const max_elapsed = reduce_here(timing_comm, timer.elapsed(),
+                double_max{}, generation_arg(i + 1))
+                                           .get();
             if (i >= warmup_iterations)
                 result[i - warmup_iterations] = max_elapsed;
         }
         else
         {
-            reduce_there(timing_comm, timer.elapsed(),
-                generation_arg(i + 1))
+            reduce_there(timing_comm, timer.elapsed(), generation_arg(i + 1))
                 .get();
         }
 
@@ -1312,8 +1297,8 @@ void test_multiple_use_with_generation_broadcast(int lpn,
     }
 }
 
-void test_multiple_use_with_generation_gather(
-    int lpn, std::size_t iterations, std::size_t warmup_iterations, int test_size, std::string const& operation)
+void test_multiple_use_with_generation_gather(int lpn, std::size_t iterations,
+    std::size_t warmup_iterations, int test_size, std::string const& operation)
 {
     // Get parameters
     std::size_t const num_localities =
@@ -1354,23 +1339,21 @@ void test_multiple_use_with_generation_gather(
         else
         {
             hpx::future<void> finished = gather_there(gather_direct_client,
-                    std::move(iter_data), generation_arg(i + 1));
+                std::move(iter_data), generation_arg(i + 1));
             finished.get();
         }
         // Reduce max elapsed time to root
         if (this_locality == 0)
         {
-            double const max_elapsed =
-                reduce_here(timing_comm, timer.elapsed(), double_max{},
-                    generation_arg(i + 1))
-                    .get();
+            double const max_elapsed = reduce_here(timing_comm, timer.elapsed(),
+                double_max{}, generation_arg(i + 1))
+                                           .get();
             if (i >= warmup_iterations)
                 result[i - warmup_iterations] = max_elapsed;
         }
         else
         {
-            reduce_there(timing_comm, timer.elapsed(),
-                generation_arg(i + 1))
+            reduce_there(timing_comm, timer.elapsed(), generation_arg(i + 1))
                 .get();
         }
 
@@ -1392,7 +1375,8 @@ void test_multiple_use_with_generation_gather(
 }
 
 void test_multiple_use_with_generation_all_reduce(int lpn,
-    std::size_t iterations, std::size_t warmup_iterations, int test_size, std::string const& operation)
+    std::size_t iterations, std::size_t warmup_iterations, int test_size,
+    std::string const& operation)
 {
     // Get parameters
     std::size_t const num_localities =
@@ -1430,22 +1414,21 @@ void test_multiple_use_with_generation_all_reduce(int lpn,
         // Reduce max elapsed time to root
         if (this_locality == 0)
         {
-            double const max_elapsed =
-                reduce_here(timing_comm, timer.elapsed(), double_max{},
-                    generation_arg(i + 1))
-                    .get();
+            double const max_elapsed = reduce_here(timing_comm, timer.elapsed(),
+                double_max{}, generation_arg(i + 1))
+                                           .get();
             if (i >= warmup_iterations)
                 result[i - warmup_iterations] = max_elapsed;
         }
         else
         {
-            reduce_there(timing_comm, timer.elapsed(),
-                generation_arg(i + 1))
+            reduce_there(timing_comm, timer.elapsed(), generation_arg(i + 1))
                 .get();
         }
 
         // Check for correctness
-        HPX_TEST_EQ(static_cast<int>(i) * static_cast<int>(num_localities), recv_data[0]);
+        HPX_TEST_EQ(static_cast<int>(i) * static_cast<int>(num_localities),
+            recv_data[0]);
     }
 
     if (this_locality == 0)
@@ -1455,8 +1438,8 @@ void test_multiple_use_with_generation_all_reduce(int lpn,
     }
 }
 
-void test_multiple_use_with_generation_barrier(int lpn, std::size_t iterations, std::size_t warmup_iterations,
-    int test_size, std::string const& operation)
+void test_multiple_use_with_generation_barrier(int lpn, std::size_t iterations,
+    std::size_t warmup_iterations, int test_size, std::string const& operation)
 {
     std::size_t const num_localities =
         hpx::get_num_localities(hpx::launch::sync);
@@ -1481,17 +1464,15 @@ void test_multiple_use_with_generation_barrier(int lpn, std::size_t iterations, 
         // Reduce max elapsed time to root
         if (this_locality == 0)
         {
-            double const max_elapsed =
-                reduce_here(timing_comm, timer.elapsed(), double_max{},
-                    generation_arg(i + 1))
-                    .get();
+            double const max_elapsed = reduce_here(timing_comm, timer.elapsed(),
+                double_max{}, generation_arg(i + 1))
+                                           .get();
             if (i >= warmup_iterations)
                 result[i - warmup_iterations] = max_elapsed;
         }
         else
         {
-            reduce_there(timing_comm, timer.elapsed(),
-                generation_arg(i + 1))
+            reduce_there(timing_comm, timer.elapsed(), generation_arg(i + 1))
                 .get();
         }
     }
@@ -1503,8 +1484,9 @@ void test_multiple_use_with_generation_barrier(int lpn, std::size_t iterations, 
     }
 }
 
-void test_all_gather_hierarchical(int arity, int lpn, std::size_t iterations, std::size_t warmup_iterations,
-    int test_size, std::string const& operation, int fallback_threshold)
+void test_all_gather_hierarchical(int arity, int lpn, std::size_t iterations,
+    std::size_t warmup_iterations, int test_size, std::string const& operation,
+    int fallback_threshold)
 {
     // Get parameters
     std::size_t const num_localities =
@@ -1545,17 +1527,15 @@ void test_all_gather_hierarchical(int arity, int lpn, std::size_t iterations, st
         // Reduce max elapsed time to root
         if (this_locality == 0)
         {
-            double const max_elapsed =
-                reduce_here(timing_comm, timer.elapsed(), double_max{},
-                    generation_arg(i + 1))
-                    .get();
+            double const max_elapsed = reduce_here(timing_comm, timer.elapsed(),
+                double_max{}, generation_arg(i + 1))
+                                           .get();
             if (i >= warmup_iterations)
                 result[i - warmup_iterations] = max_elapsed;
         }
         else
         {
-            reduce_there(timing_comm, timer.elapsed(),
-                generation_arg(i + 1))
+            reduce_there(timing_comm, timer.elapsed(), generation_arg(i + 1))
                 .get();
         }
         // Check for correctness: every site contributed (i + site), so
@@ -1575,8 +1555,9 @@ void test_all_gather_hierarchical(int arity, int lpn, std::size_t iterations, st
     }
 }
 
-void test_all_to_all_hierarchical(int arity, int lpn, std::size_t iterations, std::size_t warmup_iterations,
-    int test_size, std::string const& operation, int fallback_threshold)
+void test_all_to_all_hierarchical(int arity, int lpn, std::size_t iterations,
+    std::size_t warmup_iterations, int test_size, std::string const& operation,
+    int fallback_threshold)
 {
     // Get parameters
     std::size_t const num_localities =
@@ -1613,10 +1594,9 @@ void test_all_to_all_hierarchical(int arity, int lpn, std::size_t iterations, st
     {
         // Refill: block j carries (this_locality + j + i)
         for (std::ptrdiff_t j = 0;
-             j < static_cast<std::ptrdiff_t>(num_localities); ++j)
+            j < static_cast<std::ptrdiff_t>(num_localities); ++j)
         {
-            std::fill(
-                send_data[static_cast<std::size_t>(j)].begin(),
+            std::fill(send_data[static_cast<std::size_t>(j)].begin(),
                 send_data[static_cast<std::size_t>(j)].end(),
                 static_cast<int>(
                     this_locality + static_cast<std::size_t>(j) + i));
@@ -1634,17 +1614,15 @@ void test_all_to_all_hierarchical(int arity, int lpn, std::size_t iterations, st
         // Reduce max elapsed time to root
         if (this_locality == 0)
         {
-            double const max_elapsed =
-                reduce_here(timing_comm, timer.elapsed(), double_max{},
-                    generation_arg(i + 1))
-                    .get();
+            double const max_elapsed = reduce_here(timing_comm, timer.elapsed(),
+                double_max{}, generation_arg(i + 1))
+                                           .get();
             if (i >= warmup_iterations)
                 result[i - warmup_iterations] = max_elapsed;
         }
         else
         {
-            reduce_there(timing_comm, timer.elapsed(),
-                generation_arg(i + 1))
+            reduce_there(timing_comm, timer.elapsed(), generation_arg(i + 1))
                 .get();
         }
         // Correctness: recv_data[s][*] == s + this_locality + i
@@ -1652,8 +1630,8 @@ void test_all_to_all_hierarchical(int arity, int lpn, std::size_t iterations, st
         for (std::size_t s = 0; s != num_localities; ++s)
         {
             HPX_TEST_EQ(recv_data[s].size(), block_size);
-            HPX_TEST_EQ(recv_data[s][0],
-                static_cast<int>(s + this_locality + i));
+            HPX_TEST_EQ(
+                recv_data[s][0], static_cast<int>(s + this_locality + i));
         }
     }
     if (this_locality == 0)
@@ -1666,8 +1644,8 @@ void test_all_to_all_hierarchical(int arity, int lpn, std::size_t iterations, st
     }
 }
 ////////////////////////////////////////////////////////////////////////////////////////
-void test_one_shot_use_all_gather(int lpn, std::size_t iterations, std::size_t warmup_iterations,
-    int test_size, std::string const& operation)
+void test_one_shot_use_all_gather(int lpn, std::size_t iterations,
+    std::size_t warmup_iterations, int test_size, std::string const& operation)
 {
     // Get parameters
     std::size_t const num_localities =
@@ -1700,17 +1678,15 @@ void test_one_shot_use_all_gather(int lpn, std::size_t iterations, std::size_t w
         // Reduce max elapsed time to root
         if (this_locality == 0)
         {
-            double const max_elapsed =
-                reduce_here(timing_comm, timer.elapsed(), double_max{},
-                    generation_arg(i + 1))
-                    .get();
+            double const max_elapsed = reduce_here(timing_comm, timer.elapsed(),
+                double_max{}, generation_arg(i + 1))
+                                           .get();
             if (i >= warmup_iterations)
                 result[i - warmup_iterations] = max_elapsed;
         }
         else
         {
-            reduce_there(timing_comm, timer.elapsed(),
-                generation_arg(i + 1))
+            reduce_there(timing_comm, timer.elapsed(), generation_arg(i + 1))
                 .get();
         }
         // Check for correctness
@@ -1727,7 +1703,8 @@ void test_one_shot_use_all_gather(int lpn, std::size_t iterations, std::size_t w
 }
 ////////////////////////////////////////////////////////////////////////////////////////
 void test_multiple_use_with_generation_all_gather(int lpn,
-    std::size_t iterations, std::size_t warmup_iterations, int test_size, std::string const& operation)
+    std::size_t iterations, std::size_t warmup_iterations, int test_size,
+    std::string const& operation)
 {
     // Get parameters
     std::size_t const num_localities =
@@ -1763,17 +1740,15 @@ void test_multiple_use_with_generation_all_gather(int lpn,
         // Reduce max elapsed time to root
         if (this_locality == 0)
         {
-            double const max_elapsed =
-                reduce_here(timing_comm, timer.elapsed(), double_max{},
-                    generation_arg(i + 1))
-                    .get();
+            double const max_elapsed = reduce_here(timing_comm, timer.elapsed(),
+                double_max{}, generation_arg(i + 1))
+                                           .get();
             if (i >= warmup_iterations)
                 result[i - warmup_iterations] = max_elapsed;
         }
         else
         {
-            reduce_there(timing_comm, timer.elapsed(),
-                generation_arg(i + 1))
+            reduce_there(timing_comm, timer.elapsed(), generation_arg(i + 1))
                 .get();
         }
         // Check for correctness
@@ -1811,14 +1786,17 @@ int hpx_main(hpx::program_options::variables_map& vm)
         {
             if (arity == -1)
             {
-                test_one_shot_use_scatter(
-                    lpn, iterations, static_cast<std::size_t>(warmup_iterations), test_size, operation);
-                test_multiple_use_with_generation_scatter(
-                    lpn, iterations, static_cast<std::size_t>(warmup_iterations), test_size, operation);
+                test_one_shot_use_scatter(lpn, iterations,
+                    static_cast<std::size_t>(warmup_iterations), test_size,
+                    operation);
+                test_multiple_use_with_generation_scatter(lpn, iterations,
+                    static_cast<std::size_t>(warmup_iterations), test_size,
+                    operation);
             }
             else
             {
-                test_scatter_hierarchical(arity, lpn, iterations, static_cast<std::size_t>(warmup_iterations), test_size,
+                test_scatter_hierarchical(arity, lpn, iterations,
+                    static_cast<std::size_t>(warmup_iterations), test_size,
                     operation, fallback_threshold);
             }
         }
@@ -1826,13 +1804,17 @@ int hpx_main(hpx::program_options::variables_map& vm)
         {
             if (arity == -1)
             {
-                test_one_shot_use_reduce(lpn, iterations, static_cast<std::size_t>(warmup_iterations), test_size, operation);
-                test_multiple_use_with_generation_reduce(
-                    lpn, iterations, static_cast<std::size_t>(warmup_iterations), test_size, operation);
+                test_one_shot_use_reduce(lpn, iterations,
+                    static_cast<std::size_t>(warmup_iterations), test_size,
+                    operation);
+                test_multiple_use_with_generation_reduce(lpn, iterations,
+                    static_cast<std::size_t>(warmup_iterations), test_size,
+                    operation);
             }
             else
             {
-                test_reduce_hierarchical(arity, lpn, iterations, static_cast<std::size_t>(warmup_iterations), test_size,
+                test_reduce_hierarchical(arity, lpn, iterations,
+                    static_cast<std::size_t>(warmup_iterations), test_size,
                     operation, fallback_threshold);
             }
         }
@@ -1840,14 +1822,17 @@ int hpx_main(hpx::program_options::variables_map& vm)
         {
             if (arity == -1)
             {
-                test_one_shot_use_broadcast(
-                    lpn, iterations, static_cast<std::size_t>(warmup_iterations), test_size, operation);
-                test_multiple_use_with_generation_broadcast(
-                    lpn, iterations, static_cast<std::size_t>(warmup_iterations), test_size, operation);
+                test_one_shot_use_broadcast(lpn, iterations,
+                    static_cast<std::size_t>(warmup_iterations), test_size,
+                    operation);
+                test_multiple_use_with_generation_broadcast(lpn, iterations,
+                    static_cast<std::size_t>(warmup_iterations), test_size,
+                    operation);
             }
             else
             {
-                test_broadcast_hierarchical(arity, lpn, iterations, static_cast<std::size_t>(warmup_iterations), test_size,
+                test_broadcast_hierarchical(arity, lpn, iterations,
+                    static_cast<std::size_t>(warmup_iterations), test_size,
                     operation, fallback_threshold);
             }
         }
@@ -1855,13 +1840,17 @@ int hpx_main(hpx::program_options::variables_map& vm)
         {
             if (arity == -1)
             {
-                test_one_shot_use_gather(lpn, iterations, static_cast<std::size_t>(warmup_iterations), test_size, operation);
-                test_multiple_use_with_generation_gather(
-                    lpn, iterations, static_cast<std::size_t>(warmup_iterations), test_size, operation);
+                test_one_shot_use_gather(lpn, iterations,
+                    static_cast<std::size_t>(warmup_iterations), test_size,
+                    operation);
+                test_multiple_use_with_generation_gather(lpn, iterations,
+                    static_cast<std::size_t>(warmup_iterations), test_size,
+                    operation);
             }
             else
             {
-                test_gather_hierarchical(arity, lpn, iterations, static_cast<std::size_t>(warmup_iterations), test_size,
+                test_gather_hierarchical(arity, lpn, iterations,
+                    static_cast<std::size_t>(warmup_iterations), test_size,
                     operation, fallback_threshold);
             }
         }
@@ -1869,14 +1858,17 @@ int hpx_main(hpx::program_options::variables_map& vm)
         {
             if (arity == -1)
             {
-                test_one_shot_use_all_reduce(
-                    lpn, iterations, static_cast<std::size_t>(warmup_iterations), test_size, operation);
-                test_multiple_use_with_generation_all_reduce(
-                    lpn, iterations, static_cast<std::size_t>(warmup_iterations), test_size, operation);
+                test_one_shot_use_all_reduce(lpn, iterations,
+                    static_cast<std::size_t>(warmup_iterations), test_size,
+                    operation);
+                test_multiple_use_with_generation_all_reduce(lpn, iterations,
+                    static_cast<std::size_t>(warmup_iterations), test_size,
+                    operation);
             }
             else
             {
-                test_all_reduce_hierarchical(arity, lpn, iterations, static_cast<std::size_t>(warmup_iterations), test_size,
+                test_all_reduce_hierarchical(arity, lpn, iterations,
+                    static_cast<std::size_t>(warmup_iterations), test_size,
                     operation, fallback_threshold);
             }
         }
@@ -1884,14 +1876,17 @@ int hpx_main(hpx::program_options::variables_map& vm)
         {
             if (arity == -1)
             {
-                test_one_shot_use_all_gather(
-                    lpn, iterations, static_cast<std::size_t>(warmup_iterations), test_size, operation);
-                test_multiple_use_with_generation_all_gather(
-                    lpn, iterations, static_cast<std::size_t>(warmup_iterations), test_size, operation);
+                test_one_shot_use_all_gather(lpn, iterations,
+                    static_cast<std::size_t>(warmup_iterations), test_size,
+                    operation);
+                test_multiple_use_with_generation_all_gather(lpn, iterations,
+                    static_cast<std::size_t>(warmup_iterations), test_size,
+                    operation);
             }
             else
             {
-                test_all_gather_hierarchical(arity, lpn, iterations, static_cast<std::size_t>(warmup_iterations), test_size,
+                test_all_gather_hierarchical(arity, lpn, iterations,
+                    static_cast<std::size_t>(warmup_iterations), test_size,
                     operation, fallback_threshold);
             }
         }
@@ -1899,7 +1894,8 @@ int hpx_main(hpx::program_options::variables_map& vm)
         {
             if (arity != -1)
             {
-                test_all_to_all_hierarchical(arity, lpn, iterations, static_cast<std::size_t>(warmup_iterations), test_size,
+                test_all_to_all_hierarchical(arity, lpn, iterations,
+                    static_cast<std::size_t>(warmup_iterations), test_size,
                     operation, fallback_threshold);
             }
             else
@@ -1912,12 +1908,14 @@ int hpx_main(hpx::program_options::variables_map& vm)
         {
             if (arity == -1)
             {
-                test_multiple_use_with_generation_barrier(
-                    lpn, iterations, static_cast<std::size_t>(warmup_iterations), test_size, operation);
+                test_multiple_use_with_generation_barrier(lpn, iterations,
+                    static_cast<std::size_t>(warmup_iterations), test_size,
+                    operation);
             }
             else
             {
-                test_barrier_hierarchical(arity, lpn, iterations, static_cast<std::size_t>(warmup_iterations), test_size,
+                test_barrier_hierarchical(arity, lpn, iterations,
+                    static_cast<std::size_t>(warmup_iterations), test_size,
                     operation, fallback_threshold);
             }
         }
