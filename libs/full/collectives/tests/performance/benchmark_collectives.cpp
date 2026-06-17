@@ -1398,6 +1398,131 @@ void test_all_gather_hierarchical(int arity, int lpn, std::size_t iterations,
     }
 }
 
+void test_one_shot_use_all_to_all(int lpn, std::size_t iterations,
+    std::size_t warmup_iterations, int test_size, std::string const& operation)
+{
+    // Get parameters
+    std::size_t const num_localities =
+        hpx::get_num_localities(hpx::launch::sync);
+    std::size_t const this_locality = hpx::get_locality_id();
+    // Ensure at least two localities
+    HPX_TEST_LTE(static_cast<std::size_t>(2), num_localities);
+    // Barrier for synchronization
+    char const* const barrier_test_name = "/test/barrier/single";
+    hpx::distributed::barrier barrier(barrier_test_name);
+    // Result vector
+    auto const timing_comm =
+        create_communicator("/test/timing_reduce/all_to_all/one_shot/",
+            num_sites_arg(num_localities), this_site_arg(this_locality));
+    std::vector<double> result(iterations, 0.0);
+    std::size_t const block_size = static_cast<std::size_t>(test_size);
+    std::vector<std::vector<int>> send_data(
+        num_localities, std::vector<int>(block_size, 0));
+    std::vector<std::vector<int>> recv_data;
+
+    for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
+    {
+        for (std::size_t j = 0; j < num_localities; ++j)
+        {
+            std::fill(send_data[j].begin(), send_data[j].end(),
+                static_cast<int>(this_locality + j + i));
+        }
+        barrier.wait();
+        // Time collective
+        auto iter_data = send_data;
+        hpx::chrono::high_resolution_timer const timer;
+        recv_data =
+            all_to_all(all_to_all_direct_basename, std::move(iter_data),
+                num_sites_arg(num_localities), this_site_arg(this_locality),
+                generation_arg(i + 1))
+                .get();
+        // Reduce max elapsed time to root
+        double max_elapsed = timer.elapsed();
+        reduce(timing_comm, max_elapsed, double_max{},
+            this_site_arg(this_locality), generation_arg(i + 1));
+        if (i >= warmup_iterations)
+            result[i - warmup_iterations] = max_elapsed;
+        // Correctness: recv_data[s][*] == s + this_locality + i
+        HPX_TEST_EQ(recv_data.size(), num_localities);
+        for (std::size_t s = 0; s != num_localities; ++s)
+        {
+            HPX_TEST_EQ(recv_data[s].size(), block_size);
+            HPX_TEST_EQ(
+                recv_data[s][0], static_cast<int>(s + this_locality + i));
+        }
+    }
+
+    if (this_locality == 0)
+    {
+        write_to_file(operation, "single_use", -1, num_localities, lpn,
+            test_size, warmup_iterations, iterations, std::move(result));
+    }
+}
+
+void test_multiple_use_with_generation_all_to_all(int lpn,
+    std::size_t iterations, std::size_t warmup_iterations, int test_size,
+    std::string const& operation)
+{
+    // Get parameters
+    std::size_t const num_localities =
+        hpx::get_num_localities(hpx::launch::sync);
+    std::size_t const this_locality = hpx::get_locality_id();
+    // Ensure at least two localities
+    HPX_TEST_LTE(static_cast<std::size_t>(2), num_localities);
+    // Create communicator once for all iterations
+    auto const comm =
+        create_communicator(all_to_all_direct_basename,
+            num_sites_arg(num_localities), this_site_arg(this_locality));
+    // Barrier for synchronization
+    char const* const barrier_test_name = "/test/barrier/generation";
+    hpx::distributed::barrier barrier(barrier_test_name);
+    // Result vector
+    auto const timing_comm =
+        create_communicator("/test/timing_reduce/all_to_all/multi_use/",
+            num_sites_arg(num_localities), this_site_arg(this_locality));
+    std::vector<double> result(iterations, 0.0);
+    std::size_t const block_size = static_cast<std::size_t>(test_size);
+    std::vector<std::vector<int>> send_data(
+        num_localities, std::vector<int>(block_size, 0));
+    std::vector<std::vector<int>> recv_data;
+
+    for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
+    {
+        for (std::size_t j = 0; j < num_localities; ++j)
+        {
+            std::fill(send_data[j].begin(), send_data[j].end(),
+                static_cast<int>(this_locality + j + i));
+        }
+        barrier.wait();
+        // Time collective
+        auto iter_data = send_data;
+        hpx::chrono::high_resolution_timer const timer;
+        recv_data = all_to_all(comm, std::move(iter_data),
+            this_site_arg(this_locality), generation_arg(i + 1))
+                        .get();
+        // Reduce max elapsed time to root
+        double max_elapsed = timer.elapsed();
+        reduce(timing_comm, max_elapsed, double_max{},
+            this_site_arg(this_locality), generation_arg(i + 1));
+        if (i >= warmup_iterations)
+            result[i - warmup_iterations] = max_elapsed;
+        // Correctness: recv_data[s][*] == s + this_locality + i
+        HPX_TEST_EQ(recv_data.size(), num_localities);
+        for (std::size_t s = 0; s != num_localities; ++s)
+        {
+            HPX_TEST_EQ(recv_data[s].size(), block_size);
+            HPX_TEST_EQ(
+                recv_data[s][0], static_cast<int>(s + this_locality + i));
+        }
+    }
+
+    if (this_locality == 0)
+    {
+        write_to_file(operation, "multi_use", -1, num_localities, lpn,
+            test_size, warmup_iterations, iterations, std::move(result));
+    }
+}
+
 void test_all_to_all_hierarchical(int arity, int lpn, std::size_t iterations,
     std::size_t warmup_iterations, int test_size, std::string const& operation,
     int fallback_threshold)
@@ -1708,16 +1833,20 @@ int hpx_main(hpx::program_options::variables_map& vm)
         }
         else if (operation == "all_to_all")
         {
-            if (arity != -1)
+            if (arity == -1)
+            {
+                test_one_shot_use_all_to_all(lpn, iterations,
+                    static_cast<std::size_t>(warmup_iterations), test_size,
+                    operation);
+                test_multiple_use_with_generation_all_to_all(lpn, iterations,
+                    static_cast<std::size_t>(warmup_iterations), test_size,
+                    operation);
+            }
+            else
             {
                 test_all_to_all_hierarchical(arity, lpn, iterations,
                     static_cast<std::size_t>(warmup_iterations), test_size,
                     operation, fallback_threshold);
-            }
-            else
-            {
-                std::cout << "warning: all_to_all requires --arity to select "
-                             "an algorithm; no flat variant is implemented\n";
             }
         }
         else if (operation == "barrier")
