@@ -205,9 +205,7 @@ namespace hpx::execution::experimental {
                 !has_async_execute_member<Executor>::value &&
                 !exposes_future_type<Executor, T>::value>>
         {
-            using type = hpx::functional::tag_invoke_result_t<
-                hpx::parallel::execution::async_execute_t, Executor,
-                T (*)(Ts...), Ts...>;
+            using type = hpx::future<T>;
         };
 
         template <typename Executor, typename T, typename Ts>

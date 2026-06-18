@@ -162,6 +162,16 @@ namespace hpx::resiliency::experimental {
             return validator_;
         }
 
+        // support scheduling properties via query() for new CPO dispatch
+        template <typename Tag, typename... Args>
+            requires(
+                hpx::execution::experimental::is_scheduling_property_v<Tag>)
+        auto query(Tag tag, Args&&... args) const -> decltype(tag(
+            std::declval<BaseExecutor const&>(), HPX_FORWARD(Args, args)...))
+        {
+            return tag(exec_, HPX_FORWARD(Args, args)...);
+        }
+
     private:
         BaseExecutor exec_;
         std::size_t replay_count_;
