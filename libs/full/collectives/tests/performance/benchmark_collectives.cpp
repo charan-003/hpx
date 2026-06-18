@@ -37,6 +37,7 @@ constexpr char const* all_reduce_direct_basename = "/test/all_reduce_direct/";
 constexpr char const* all_gather_direct_basename = "/test/all_gather_direct/";
 constexpr char const* all_to_all_direct_basename = "/test/all_to_all_direct/";
 constexpr char const* barrier_bench_basename = "/test/barrier_bench/";
+constexpr char const* exclusive_scan_basename = "/test/exclusive_scan_direct/";
 
 struct double_max
 {
@@ -1745,7 +1746,116 @@ void test_multiple_use_with_generation_all_gather(int lpn,
             test_size, warmup_iterations, iterations, std::move(result));
     }
 }
-struct benchmarking_functions
+////////////////////////////////////////////////////////////////////////////////////////
+void test_one_shot_use_exclusive_scan(int lpn, std::size_t iterations,
+    std::size_t warmup_iterations, int test_size, std::string const& operation)
+{
+    // Get parameters
+    std::size_t const num_localities =
+        hpx::get_num_localities(hpx::launch::sync);
+    std::size_t const this_locality = hpx::get_locality_id();
+    // Ensure at least two localities
+    HPX_TEST_LTE(static_cast<std::size_t>(2), num_localities);
+    // Barrier for synchronization
+    char const* const barrier_test_name = "/test/barrier/single";
+    hpx::distributed::barrier barrier(barrier_test_name);
+    // Timing communicator
+    auto const timing_comm =
+        create_communicator("/test/timing_reduce/exclusive_scan/one_shot/",
+            num_sites_arg(num_localities), this_site_arg(this_locality));
+    std::vector<double> result(iterations, 0.0);
+    std::uint32_t recv_data = 0;
+    for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
+    {
+        auto const value =
+            static_cast<std::uint32_t>(this_locality + 1 + i);
+        barrier.wait();
+        // Time collective
+        hpx::chrono::high_resolution_timer const timer;
+        recv_data = exclusive_scan(exclusive_scan_basename, value,
+            static_cast<std::uint32_t>(0), std::plus<std::uint32_t>{},
+            num_sites_arg(num_localities), this_site_arg(this_locality),
+            generation_arg(i + 1))
+                        .get();
+        // Reduce max elapsed time to root
+        double max_elapsed = timer.elapsed();
+        reduce(timing_comm, max_elapsed, double_max{},
+            this_site_arg(this_locality), generation_arg(i + 1));
+        if (i >= warmup_iterations)
+            result[i - warmup_iterations] = max_elapsed;
+        std::uint32_t expected = 0;
+        for (std::size_t j = 0; j < this_locality; ++j)
+            expected += static_cast<std::uint32_t>(j + 1 + i);
+        HPX_TEST_EQ(recv_data, expected);
+    }
+    if (this_locality == 0)
+    {
+        write_to_file(operation, "single_use", -1, num_localities, lpn,
+            test_size, warmup_iterations, iterations, std::move(result));
+    }
+}
+////////////////////////////////////////////////////////////////////////////////////////
+void test_multiple_use_with_generation_exclusive_scan(int lpn,
+    std::size_t iterations, std::size_t warmup_iterations, int test_size,
+    std::string const& operation)
+{
+    // Get parameters
+    std::size_t const num_localities =
+        hpx::get_num_localities(hpx::launch::sync);
+    std::size_t const this_locality = hpx::get_locality_id();
+    // Ensure at least two localities
+    HPX_TEST_LTE(static_cast<std::size_t>(2), num_localities);
+    // Create communicator
+    auto const exclusive_scan_client =
+        create_communicator(exclusive_scan_basename,
+            num_sites_arg(num_localities), this_site_arg(this_locality));
+    // Barrier for synchronization
+    char const* const barrier_test_name = "/test/barrier/generation";
+    hpx::distributed::barrier barrier(barrier_test_name);
+    // Timing communicator
+    auto const timing_comm =
+        create_communicator("/test/timing_reduce/exclusive_scan/multi_use/",
+            num_sites_arg(num_localities), this_site_arg(this_locality));
+    std::vector<double> result(iterations, 0.0);
+    std::uint32_t recv_data = 0;
+    for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
+    {
+        auto const value =
+            static_cast<std::uint32_t>(this_locality + 1 + i);
+        barrier.wait();
+        // Time collective
+        hpx::chrono::high_resolution_timer const timer;
+        recv_data = exclusive_scan(exclusive_scan_client, value,
+            static_cast<std::uint32_t>(0), std::plus<std::uint32_t>{},
+            generation_arg(i + 1))
+                        .get();
+        // Reduce max elapsed time to root
+        double max_elapsed = timer.elapsed();
+        reduce(timing_comm, max_elapsed, double_max{},
+            this_site_arg(this_locality), generation_arg(i + 1));
+        if (i >= warmup_iterations)
+            result[i - warmup_iterations] = max_elapsed;
+        std::uint32_t expected = 0;
+        for (std::size_t j = 0; j < this_locality; ++j)
+            expected += static_cast<std::uint32_t>(j + 1 + i);
+        HPX_TEST_EQ(recv_data, expected);
+    }
+    if (this_locality == 0)
+    {
+        write_to_file(operation, "multi_use", -1, num_localities, lpn,
+            test_size, warmup_iterations, iterations, std::move(result));
+    }
+}
+////////////////////////////////////////////////////////////////////////////////////////
+void test_exclusive_scan_hierarchical(int /*arity*/, int /*lpn*/,
+    std::size_t /*iterations*/, std::size_t /*warmup_iterations*/,
+    int /*test_size*/, std::string const& /*operation*/,
+    int /*fallback_threshold*/)
+{
+    std::cout << "error: exclusive_scan does not support hierarchical "
+                 "communicators\n";
+}
+////////////////////////////////////////////////////////////////struct benchmarking_functions
 {
     hpx::function<void(int, std::size_t, std::size_t, int, std::string const&)>
         one_shot;
@@ -1808,6 +1918,10 @@ int hpx_main(hpx::program_options::variables_map& vm)
                 {test_one_shot_use_barrier,
                     test_multiple_use_with_generation_barrier,
                     test_barrier_hierarchical}},
+            {"exclusive_scan",
+                {test_one_shot_use_exclusive_scan,
+                    test_multiple_use_with_generation_exclusive_scan,
+                    test_exclusive_scan_hierarchical}},
         };
 
         auto it = benchmarking.find(operation);
@@ -1852,7 +1966,7 @@ int main(int argc, char* argv[])
             "Number of Iteration the collective is executed")
         ("operation", value<std::string>()->default_value("scatter"),
             "Collective Operation (scatter, reduce, broadcast, gather, "
-            "all_reduce, all_gather, all_to_all, barrier)")
+            "all_reduce, all_gather, all_to_all, barrier, exclusive_scan)")
         ("fallback_threshold", value<int>()->default_value(-1),
             "Flat fallback threshold for hierarchical mode. -1 uses library "
             "default (16). Set to 0 to force tree construction. Only meaningful "
