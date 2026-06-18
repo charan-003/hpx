@@ -171,6 +171,42 @@ namespace hpx::actions {
         reflect_component_action<F, Component,
             Derived>::invocation_count_registrar_;
 
+    /// \brief Reflection-based direct component action template.
+    ///
+    /// Like reflect_component_action, but executes the reflected member
+    /// function directly on the calling thread instead of spawning a new
+    /// thread, mirroring the relationship between basic_action's action
+    /// and direct_action.
+    ///
+    /// \tparam F       A std::meta::info reflection of a member function.
+    /// \tparam Derived CRTP derived type (defaults to void).
+    template <std::meta::info F,
+        typename Component =
+            typename detail::reflect_component_action_base<F>::component_type,
+        typename Derived = void>
+    struct reflect_component_direct_action
+      : reflect_component_action<F, Component,
+            detail::action_type_t<
+                reflect_component_direct_action<F, Component, Derived>,
+                Derived>>
+    {
+        using direct_execution = std::true_type;
+
+        static constexpr actions::action_flavor get_action_type() noexcept
+        {
+            return actions::action_flavor::direct_action;
+        }
+
+        static detail::register_action_invocation_count<
+            reflect_component_direct_action>
+            invocation_count_registrar_;
+    };
+    template <std::meta::info F, typename Component, typename Derived>
+    detail::register_action_invocation_count<
+        reflect_component_direct_action<F, Component, Derived>>
+        reflect_component_direct_action<F, Component,
+            Derived>::invocation_count_registrar_;
+
 /// \brief Convenience macro for component actions.
 /// Usage: HPX_COMPONENT_ACTION(component, func, action_name)
 #define HPX_COMPONENT_ACTION(component, func, name)                            \

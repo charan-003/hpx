@@ -173,7 +173,7 @@ go into the header file::
         {
             int some_member_function(std::string s)
             {
-                return boost::lexical_cast<int>(s);
+                return std::stoi(s);
             }
 
             // This will define the action type 'some_member_action' which
@@ -228,7 +228,7 @@ a single macro instead of the three-step process described above::
         {
             int some_member_function(std::string s)
             {
-                return boost::lexical_cast<int>(s);
+                return std::stoi(s);
             }
             // This single line replaces HPX_DEFINE_COMPONENT_ACTION,
             // HPX_REGISTER_ACTION_DECLARATION, and HPX_REGISTER_ACTION.
@@ -673,7 +673,7 @@ class::
             // This member function is has to be invoked remotely
             int some_member_function(std::string const& s)
             {
-                return boost::lexical_cast<int>(s);
+                return std::stoi(s);
             }
 
             // This will define the action type 'some_member_action' which

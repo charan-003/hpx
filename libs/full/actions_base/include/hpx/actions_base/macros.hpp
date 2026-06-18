@@ -393,17 +393,14 @@
     /**/
 
 #if defined(HPX_HAVE_CXX26_REFLECTION)
-// clang-format off
 /// When C++26 reflection is available, HPX_DEFINE_COMPONENT_ACTION_3 uses
 /// reflect_component_action<^^component::func> instead of make_action_t.
 /// This eliminates the need for HPX_REGISTER_ACTION while keeping the same
 /// user-facing macro syntax.
 #define HPX_DEFINE_COMPONENT_ACTION_3(component, func, name)                   \
-    struct name                                                                \
-      : hpx::actions::reflect_component_action<^^component::func>             \
+    struct name : hpx::actions::reflect_component_action<^^component::func>    \
     {                                                                          \
     }; /**/
-// clang-format on
 #else
 #define HPX_DEFINE_COMPONENT_ACTION_3(component, func, name)                   \
     struct name                                                                \
@@ -428,13 +425,11 @@
     /**/
 
 #if defined(HPX_HAVE_CXX26_REFLECTION)
-// clang-format off
 #define HPX_DEFINE_COMPONENT_DIRECT_ACTION_3(component, func, name)            \
     struct name                                                                \
-      : hpx::actions::reflect_component_action<^^component::func>             \
+      : hpx::actions::reflect_component_direct_action<^^component::func>       \
     {                                                                          \
     }; /**/
-// clang-format on
 #else
 #define HPX_DEFINE_COMPONENT_DIRECT_ACTION_3(component, func, name)            \
     struct name                                                                \
@@ -515,14 +510,12 @@
     /**/
 
 #if defined(HPX_HAVE_CXX26_REFLECTION)
-// clang-format off
 /// When C++26 reflection is available, HPX_DEFINE_PLAIN_ACTION_2 uses
 /// reflect_action<^^func> instead of make_action_t. This eliminates the
 /// need for HPX_REGISTER_ACTION while keeping the same user-facing syntax.
 #define HPX_DEFINE_PLAIN_ACTION_3(Prefix, func, name)                          \
-    Prefix using name = hpx::actions::reflect_action<^^func>                   \
-    ; /**/
-// clang-format on
+    Prefix using name = hpx::actions::reflect_action<^^func>;                  \
+    /**/
 #elif defined(__NVCC__) || defined(__CUDACC__)
 #define HPX_DEFINE_PLAIN_ACTION_3(Prefix, func, name)                          \
     Prefix struct name                                                         \

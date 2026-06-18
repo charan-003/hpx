@@ -164,6 +164,27 @@ int main()
         HPX_TEST_EQ(result, 14);
     }
 
+    // Test: reflect_component_direct_action reports direct-execution
+    // semantics (no thread spawned) and still dispatches correctly.
+    {
+        using direct_action_type =
+            hpx::actions::reflect_component_direct_action<
+                ^^app::compute_server::compute>;
+
+        static_assert(direct_action_type::direct_execution::value,
+            "reflect_component_direct_action must report direct_execution");
+        static_assert(direct_action_type::get_action_type() ==
+                hpx::actions::action_flavor::direct_action,
+            "reflect_component_direct_action must report action_flavor::"
+            "direct_action");
+
+        app::compute_server server{};
+        hpx::naming::address_type lva = static_cast<void*>(&server);
+        int result = direct_action_type::invoke(
+            lva, hpx::naming::component_type{}, 6.0, 8.0);
+        HPX_TEST_EQ(result, 14);
+    }
+
     return hpx::util::report_errors();
 }
 
