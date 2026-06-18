@@ -433,7 +433,9 @@ namespace hpx::traits {
     {
         template <typename Result, typename T, typename F>
         static Result get(Communicator& communicator, std::size_t which,
-            std::size_t generation, std::size_t num_generations, T&& t, F&& op)
+            std::size_t generation,
+            hpx::collectives::detail::generation_mode num_generations, T&& t,
+            F&& op)
         {
             return communicator.template handle_data<std::decay_t<T>>(
                 communication::communicator_data<
@@ -474,12 +476,13 @@ namespace hpx::traits {
                         return static_cast<bool>(data[0]);
                     }
                 },
-                static_cast<std::size_t>(-1), num_generations);
+                num_generations);
         }
 
         template <typename Result, typename T>
         static Result set(Communicator& communicator, std::size_t which,
-            std::size_t generation, std::size_t num_generations, T&& t)
+            std::size_t generation,
+            hpx::collectives::detail::generation_mode num_generations, T&& t)
         {
             return communicator.template handle_data<std::decay_t<T>>(
                 communication::communicator_data<
@@ -490,7 +493,7 @@ namespace hpx::traits {
                     data[site] = HPX_FORWARD(T, t);
                 },
                 // no finalizer
-                nullptr, static_cast<std::size_t>(-1), num_generations);
+                nullptr, num_generations);
         }
     };
 }    // namespace hpx::traits
@@ -499,97 +502,131 @@ namespace hpx::collectives {
 
     ///////////////////////////////////////////////////////////////////////////
     // reduce implementation
-    HPX_CXX_EXPORT template <typename T, typename F>
-    hpx::future<std::decay_t<T>> reduce_here(communicator fid, T&& local_result,
-        F&& op, this_site_arg this_site = this_site_arg(),
-        generation_arg const generation = generation_arg(),
-        std::size_t num_generations = 1)
-    {
-        using arg_type = std::decay_t<T>;
+    namespace detail {
 
-        if (this_site.is_default())
+        // reduce_here: detail entry point carrying the internal generation
+        // step. The public overload forwards with single_step; the hierarchical
+        // reduce_here walks its sub-communicators through this entry with the
+        // mapped step.
+        template <typename T, typename F>
+        hpx::future<std::decay_t<T>> reduce_here(communicator fid,
+            T&& local_result, F&& op, this_site_arg this_site,
+            generation_arg const generation, generation_mode num_generations)
         {
-            this_site = agas::get_locality_id();
-        }
-        if (generation == 0)
-        {
-            return hpx::make_exceptional_future<arg_type>(HPX_GET_EXCEPTION(
-                hpx::error::bad_parameter, "hpx::collectives::reduce_here",
-                "the generation number shouldn't be zero"));
-        }
+            using arg_type = std::decay_t<T>;
 
-        // Handle operation right away if there is only one value.
-        if (auto [num_sites, comm_site] = fid.get_info(); num_sites == 1)
-        {
-            if (this_site != comm_site)
+            if (this_site.is_default())
+            {
+                this_site = agas::get_locality_id();
+            }
+            if (generation == 0)
             {
                 return hpx::make_exceptional_future<arg_type>(HPX_GET_EXCEPTION(
                     hpx::error::bad_parameter, "hpx::collectives::reduce_here",
-                    "the local site should be zero if only one site is "
-                    "involved"));
+                    "the generation number shouldn't be zero"));
             }
 
-            return hpx::make_ready_future(HPX_FORWARD(T, local_result));
-        }
-
-        auto reduction_data =
-            [local_result = HPX_FORWARD(T, local_result),
-                op = HPX_FORWARD(F, op), this_site, generation,
-                num_generations](
-                communicator&& c) mutable -> hpx::future<arg_type> {
-            using func_type = std::decay_t<F>;
-            using action_type =
-                detail::communicator_server::communication_get_direct_action<
-                    traits::communication::reduce_tag, hpx::future<arg_type>,
-                    std::size_t, arg_type, func_type>;
-
-            // explicitly unwrap returned future
-            hpx::future<arg_type> result = hpx::async(action_type(), c,
-                this_site, generation, num_generations,
-                HPX_FORWARD(T, local_result), HPX_FORWARD(F, op));
-
-            if (!result.is_ready())
+            // Handle operation right away if there is only one value.
+            if (auto [num_sites, comm_site] = fid.get_info(); num_sites == 1)
             {
-                // make sure id is kept alive as long as the returned future
-                traits::detail::get_shared_state(result)->set_on_completed(
-                    [client = HPX_MOVE(c)] { HPX_UNUSED(client); });
+                if (this_site != comm_site)
+                {
+                    return hpx::make_exceptional_future<arg_type>(
+                        HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                            "hpx::collectives::reduce_here",
+                            "the local site should be zero if only one site is "
+                            "involved"));
+                }
+
+                return hpx::make_ready_future(HPX_FORWARD(T, local_result));
             }
 
-            return result;
-        };
+            auto reduction_data =
+                [local_result = HPX_FORWARD(T, local_result),
+                    op = HPX_FORWARD(F, op), this_site, generation,
+                    num_generations](
+                    communicator&& c) mutable -> hpx::future<arg_type> {
+                using func_type = std::decay_t<F>;
+                using action_type =
+                    communicator_server::communication_get_direct_action<
+                        traits::communication::reduce_tag,
+                        hpx::future<arg_type>, generation_mode, arg_type,
+                        func_type>;
 
-        return fid.then(hpx::launch::sync, HPX_MOVE(reduction_data));
+                // explicitly unwrap returned future
+                hpx::future<arg_type> result = hpx::async(action_type(), c,
+                    this_site, generation, num_generations,
+                    HPX_FORWARD(T, local_result), HPX_FORWARD(F, op));
+
+                if (!result.is_ready())
+                {
+                    // make sure id is kept alive as long as the returned future
+                    traits::detail::get_shared_state(result)->set_on_completed(
+                        [client = HPX_MOVE(c)] { HPX_UNUSED(client); });
+                }
+
+                return result;
+            };
+
+            return fid.then(hpx::launch::sync, HPX_MOVE(reduction_data));
+        }
+    }    // namespace detail
+
+    ///////////////////////////////////////////////////////////////////////////
+    // reduce implementation
+    HPX_CXX_EXPORT template <typename T, typename F>
+    hpx::future<std::decay_t<T>> reduce_here(communicator fid, T&& local_result,
+        F&& op, this_site_arg this_site = this_site_arg(),
+        generation_arg const generation = generation_arg())
+    {
+        return detail::reduce_here(HPX_MOVE(fid), HPX_FORWARD(T, local_result),
+            HPX_FORWARD(F, op), this_site, generation,
+            detail::generation_mode::single_step);
     }
 
     ////////////////////////////////////////////////////////////////////////////
+    namespace detail {
+
+        // reduce_here over a hierarchical_communicator: detail entry carrying
+        // the internal generation step. The public overload forwards with
+        // double_step; all_reduce reuses it as its reduce phase with
+        // single_step (it passes 2k-1 already).
+        template <typename T, typename F>
+        hpx::future<std::decay_t<T>> reduce_here(
+            hierarchical_communicator const& communicators, T&& local_result,
+            F&& op, this_site_arg this_site, generation_arg const generation,
+            generation_mode num_generations)
+        {
+            if (this_site.is_default())
+            {
+                this_site = agas::get_locality_id();
+            }
+
+            auto const [run_gen, run_step] =
+                hierarchical_run_params(generation, num_generations);
+
+            std::decay_t<T> result = HPX_FORWARD(T, local_result);
+            for (std::size_t i = communicators.size() - 1; i != 0; --i)
+            {
+                result = reduce_here(communicators.get(i), HPX_MOVE(result), op,
+                    this_site_arg(0), run_gen, run_step)
+                             .get();
+            }
+
+            return reduce_here(communicators.get(0), HPX_MOVE(result),
+                HPX_FORWARD(F, op), this_site_arg(0), run_gen, run_step);
+        }
+    }    // namespace detail
+
     HPX_CXX_EXPORT template <typename T, typename F>
     hpx::future<std::decay_t<T>> reduce_here(
         hierarchical_communicator const& communicators, T&& local_result,
         F&& op, this_site_arg this_site = this_site_arg(),
-        generation_arg const generation = generation_arg(),
-        std::size_t num_generations = 2)
+        generation_arg const generation = generation_arg())
     {
-        if (this_site.is_default())
-        {
-            this_site = agas::get_locality_id();
-        }
-
-        // Used standalone (num_generations == 2) the user generation maps to
-        // 2k-1 and the gate advances by two; used as the reduce phase of
-        // all_reduce (num_generations == 1) the caller passes 2k-1 already.
-        auto const [run_gen, run_step] =
-            detail::hierarchical_run_params(generation, num_generations);
-
-        std::decay_t<T> result = HPX_FORWARD(T, local_result);
-        for (std::size_t i = communicators.size() - 1; i != 0; --i)
-        {
-            result = reduce_here(communicators.get(i), HPX_MOVE(result), op,
-                this_site_arg(0), run_gen, run_step)
-                         .get();
-        }
-
-        return reduce_here(communicators.get(0), HPX_MOVE(result),
-            HPX_FORWARD(F, op), this_site_arg(0), run_gen, run_step);
+        return detail::reduce_here(communicators, HPX_FORWARD(T, local_result),
+            HPX_FORWARD(F, op), this_site, generation,
+            detail::generation_mode::double_step);
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -654,77 +691,110 @@ namespace hpx::collectives {
     }
 
     ///////////////////////////////////////////////////////////////////////////
+    namespace detail {
+
+        // reduce_there: detail entry point carrying the internal generation
+        // step. The public overload forwards with single_step; the hierarchical
+        // reduce_there reuses it with the mapped step.
+        template <typename T>
+        hpx::future<void> reduce_there(communicator fid, T&& local_result,
+            this_site_arg this_site, generation_arg const generation,
+            generation_mode num_generations)
+        {
+            if (this_site.is_default())
+            {
+                this_site = agas::get_locality_id();
+            }
+            if (generation == 0)
+            {
+                return hpx::make_exceptional_future<void>(HPX_GET_EXCEPTION(
+                    hpx::error::bad_parameter, "hpx::collectives::reduce_there",
+                    "the generation number shouldn't be zero"));
+            }
+
+            auto reduction_data =
+                [local_result = HPX_FORWARD(T, local_result), this_site,
+                    generation, num_generations](
+                    communicator&& c) mutable -> hpx::future<void> {
+                using action_type =
+                    communicator_server::communication_set_direct_action<
+                        traits::communication::reduce_tag, hpx::future<void>,
+                        generation_mode, std::decay_t<T>>;
+
+                // explicitly unwrap returned future
+                hpx::future<void> result =
+                    hpx::async(action_type(), c, this_site, generation,
+                        num_generations, HPX_MOVE(local_result));
+
+                if (!result.is_ready())
+                {
+                    // make sure id is kept alive as long as the returned future
+                    traits::detail::get_shared_state(result)->set_on_completed(
+                        [client = HPX_MOVE(c)]() { HPX_UNUSED(client); });
+                }
+
+                return result;
+            };
+
+            return fid.then(hpx::launch::sync, HPX_MOVE(reduction_data));
+        }
+    }    // namespace detail
+
+    ///////////////////////////////////////////////////////////////////////////
     // reduce plain values
     HPX_CXX_EXPORT template <typename T>
     hpx::future<void> reduce_there(communicator fid, T&& local_result,
         this_site_arg this_site = this_site_arg(),
-        generation_arg const generation = generation_arg(),
-        std::size_t num_generations = 1)
+        generation_arg const generation = generation_arg())
     {
-        if (this_site.is_default())
-        {
-            this_site = agas::get_locality_id();
-        }
-        if (generation == 0)
-        {
-            return hpx::make_exceptional_future<void>(HPX_GET_EXCEPTION(
-                hpx::error::bad_parameter, "hpx::collectives::reduce_there",
-                "the generation number shouldn't be zero"));
-        }
-
-        auto reduction_data =
-            [local_result = HPX_FORWARD(T, local_result), this_site, generation,
-                num_generations](
-                communicator&& c) mutable -> hpx::future<void> {
-            using action_type =
-                detail::communicator_server::communication_set_direct_action<
-                    traits::communication::reduce_tag, hpx::future<void>,
-                    std::size_t, std::decay_t<T>>;
-
-            // explicitly unwrap returned future
-            hpx::future<void> result = hpx::async(action_type(), c, this_site,
-                generation, num_generations, HPX_MOVE(local_result));
-
-            if (!result.is_ready())
-            {
-                // make sure id is kept alive as long as the returned future
-                traits::detail::get_shared_state(result)->set_on_completed(
-                    [client = HPX_MOVE(c)]() { HPX_UNUSED(client); });
-            }
-
-            return result;
-        };
-
-        return fid.then(hpx::launch::sync, HPX_MOVE(reduction_data));
+        return detail::reduce_there(HPX_MOVE(fid), HPX_FORWARD(T, local_result),
+            this_site, generation, detail::generation_mode::single_step);
     }
 
     ////////////////////////////////////////////////////////////////////////////
+    namespace detail {
+
+        // reduce_there over a hierarchical_communicator: detail entry carrying
+        // the internal generation step. The public overload forwards with
+        // double_step; all_reduce reuses it as its reduce phase with
+        // single_step.
+        template <typename T, typename F>
+        hpx::future<void> reduce_there(
+            hierarchical_communicator const& communicators, T&& local_result,
+            F&& op, this_site_arg this_site, generation_arg const generation,
+            generation_mode num_generations)
+        {
+            if (this_site.is_default())
+            {
+                this_site = agas::get_locality_id();
+            }
+
+            // See reduce_here above for the internal generation mapping.
+            auto const [run_gen, run_step] =
+                hierarchical_run_params(generation, num_generations);
+
+            std::decay_t<T> result = HPX_FORWARD(T, local_result);
+            for (std::size_t i = communicators.size() - 1; i != 0; --i)
+            {
+                result = reduce_here(communicators.get(i), HPX_MOVE(result), op,
+                    this_site_arg(0), run_gen, run_step)
+                             .get();
+            }
+
+            return reduce_there(communicators.get(0), HPX_MOVE(result),
+                communicators.site(0), run_gen, run_step);
+        }
+    }    // namespace detail
+
     HPX_CXX_EXPORT template <typename T, typename F>
     hpx::future<void> reduce_there(
         hierarchical_communicator const& communicators, T&& local_result,
         F&& op, this_site_arg this_site = this_site_arg(),
-        generation_arg const generation = generation_arg(),
-        std::size_t num_generations = 2)
+        generation_arg const generation = generation_arg())
     {
-        if (this_site.is_default())
-        {
-            this_site = agas::get_locality_id();
-        }
-
-        // See reduce_here above for the internal generation mapping.
-        auto const [run_gen, run_step] =
-            detail::hierarchical_run_params(generation, num_generations);
-
-        std::decay_t<T> result = HPX_FORWARD(T, local_result);
-        for (std::size_t i = communicators.size() - 1; i != 0; --i)
-        {
-            result = reduce_here(communicators.get(i), HPX_MOVE(result), op,
-                this_site_arg(0), run_gen, run_step)
-                         .get();
-        }
-
-        return reduce_there(communicators.get(0), HPX_MOVE(result),
-            communicators.site(0), run_gen, run_step);
+        return detail::reduce_there(communicators, HPX_FORWARD(T, local_result),
+            HPX_FORWARD(F, op), this_site, generation,
+            detail::generation_mode::double_step);
     }
 
     ////////////////////////////////////////////////////////////////////////////

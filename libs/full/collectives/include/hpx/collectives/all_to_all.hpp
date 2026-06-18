@@ -249,7 +249,8 @@ namespace hpx::traits {
     {
         template <typename Result, typename T>
         static Result get(Communicator& communicator, std::size_t which,
-            std::size_t generation, std::size_t num_generations,
+            std::size_t generation,
+            hpx::collectives::detail::generation_mode num_generations,
             std::vector<T>&& t)
         {
             return communicator.template handle_data<std::vector<T>>(
@@ -281,7 +282,7 @@ namespace hpx::traits {
                     }
                     return result;
                 },
-                static_cast<std::size_t>(-1), num_generations);
+                num_generations);
         }
     };
 }    // namespace hpx::traits
@@ -289,64 +290,82 @@ namespace hpx::traits {
 namespace hpx::collectives {
 
     ///////////////////////////////////////////////////////////////////////////
+    namespace detail {
+
+        // all_to_all: detail entry point carrying the internal generation step.
+        // The public overload forwards with single_step; the hierarchical
+        // overload passes double_step for the flat fast path and the inter-group
+        // exchange.
+        template <typename T>
+        hpx::future<std::vector<T>> all_to_all(communicator fid,
+            std::vector<T>&& local_result, this_site_arg this_site,
+            generation_arg const generation, generation_mode num_generations)
+        {
+            if (this_site.is_default())
+            {
+                this_site = agas::get_locality_id();
+            }
+            if (generation == 0)
+            {
+                return hpx::make_exceptional_future<std::vector<T>>(
+                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                        "hpx::collectives::all_to_all",
+                        "the generation number shouldn't be zero"));
+            }
+
+            // Handle operation right away if there is only one value.
+            if (auto [num_sites, comm_site] = fid.get_info(); num_sites == 1)
+            {
+                if (this_site != comm_site)
+                {
+                    return hpx::make_exceptional_future<std::vector<T>>(
+                        HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                            "hpx::collectives::all_to_all",
+                            "the local site should be zero if only one site is "
+                            "involved"));
+                }
+                return hpx::make_ready_future(HPX_MOVE(local_result));
+            }
+
+            auto all_to_all_data =
+                [local_result = HPX_MOVE(local_result), this_site, generation,
+                    num_generations](
+                    communicator&& c) mutable -> hpx::future<std::vector<T>> {
+                using action_type =
+                    communicator_server::communication_get_direct_action<
+                        traits::communication::all_to_all_tag,
+                        hpx::future<std::vector<T>>, generation_mode,
+                        std::vector<T>>;
+
+                // explicitly unwrap returned future
+                hpx::future<std::vector<T>> result =
+                    hpx::async(action_type(), c, this_site, generation,
+                        num_generations, HPX_MOVE(local_result));
+
+                if (!result.is_ready())
+                {
+                    // make sure id is kept alive as long as the returned future
+                    traits::detail::get_shared_state(result)->set_on_completed(
+                        [client = HPX_MOVE(c)] { HPX_UNUSED(client); });
+                }
+
+                return result;
+            };
+
+            return fid.then(hpx::launch::sync, HPX_MOVE(all_to_all_data));
+        }
+    }    // namespace detail
+
+    ///////////////////////////////////////////////////////////////////////////
     // all_to_all
     HPX_CXX_EXPORT template <typename T>
     hpx::future<std::vector<T>> all_to_all(communicator fid,
         std::vector<T>&& local_result,
         this_site_arg this_site = this_site_arg(),
-        generation_arg const generation = generation_arg(),
-        std::size_t num_generations = 1)
+        generation_arg const generation = generation_arg())
     {
-        if (this_site.is_default())
-        {
-            this_site = agas::get_locality_id();
-        }
-        if (generation == 0)
-        {
-            return hpx::make_exceptional_future<std::vector<T>>(
-                HPX_GET_EXCEPTION(hpx::error::bad_parameter,
-                    "hpx::collectives::all_to_all",
-                    "the generation number shouldn't be zero"));
-        }
-
-        // Handle operation right away if there is only one value.
-        if (auto [num_sites, comm_site] = fid.get_info(); num_sites == 1)
-        {
-            if (this_site != comm_site)
-            {
-                return hpx::make_exceptional_future<std::vector<T>>(
-                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
-                        "hpx::collectives::all_to_all",
-                        "the local site should be zero if only one site is "
-                        "involved"));
-            }
-            return hpx::make_ready_future(HPX_MOVE(local_result));
-        }
-
-        auto all_to_all_data =
-            [local_result = HPX_MOVE(local_result), this_site, generation,
-                num_generations](
-                communicator&& c) mutable -> hpx::future<std::vector<T>> {
-            using action_type =
-                detail::communicator_server::communication_get_direct_action<
-                    traits::communication::all_to_all_tag,
-                    hpx::future<std::vector<T>>, std::size_t, std::vector<T>>;
-
-            // explicitly unwrap returned future
-            hpx::future<std::vector<T>> result = hpx::async(action_type(), c,
-                this_site, generation, num_generations, HPX_MOVE(local_result));
-
-            if (!result.is_ready())
-            {
-                // make sure id is kept alive as long as the returned future
-                traits::detail::get_shared_state(result)->set_on_completed(
-                    [client = HPX_MOVE(c)] { HPX_UNUSED(client); });
-            }
-
-            return result;
-        };
-
-        return fid.then(hpx::launch::sync, HPX_MOVE(all_to_all_data));
+        return detail::all_to_all(HPX_MOVE(fid), HPX_MOVE(local_result),
+            this_site, generation, detail::generation_mode::single_step);
     }
 
     HPX_CXX_EXPORT template <typename T>
@@ -488,18 +507,19 @@ namespace hpx::collectives {
                     "num_sites elements"));
         }
 
-        // Generation mapping: each communicator must see consecutive
-        // generation numbers starting from 1 (the gate blocks until all
-        // prior generations complete).  Subtree communicators participate
-        // in both gather and scatter, so they use 2k-1 / 2k.  The
-        // inter-group communicator participates only in the exchange, but
-        // advances two generations per call as well so this communicator set
-        // can be shared with other collectives: the exchange runs at 2k-1 and
-        // the gate is advanced past 2k in a single step (num_generations == 2
-        // below).
-        generation_arg const gather_gen(2 * generation - 1);
-        generation_arg const exchange_gen(2 * generation - 1);
-        generation_arg const scatter_gen(2 * generation);
+        // Generation mapping: every communicator advances two generations per
+        // call and must see consecutive generation numbers starting from 1 (the
+        // gate blocks until all prior generations complete). There are only two
+        // distinct internal generations per call -- the first (2k-1) and the
+        // second (2k). The subtree communicators run their gather at the first
+        // and their scatter at the second. The inter-group communicator runs
+        // its single exchange at that same first generation and advances the
+        // gate past the second in one step (double_step below), so it stays in
+        // lock-step with the subtrees and the instance can be shared across
+        // collectives. Gather, exchange and the collapsed flat fast path
+        // therefore share first_gen; only the subtree scatter uses second_gen.
+        generation_arg const first_gen(2 * generation - 1);
+        generation_arg const second_gen(2 * generation);
 
         // Flat fast path: when arity >= num_sites (either because the user
         // chose a large arity or because the factory overrode arity to
@@ -508,13 +528,14 @@ namespace hpx::collectives {
         // flat communicator spanning all sites. The 3-phase algorithm then
         // collapses to a flat all_to_all; dispatch directly to avoid the
         // intermediate allocations, but still advance the gate by two (run at
-        // 2k-1, num_generations == 2) so the flat instance stays shareable
-        // with other collectives.
+        // 2k-1, double_step) so the flat instance stays shareable with other
+        // collectives.
         if (arity_val >= num_sites_val)
         {
             HPX_ASSERT(communicators.size() == 1);
-            return all_to_all(communicators.get(0), HPX_MOVE(local_result),
-                communicators.site(0), exchange_gen, /*num_generations=*/2);
+            return detail::all_to_all(communicators.get(0),
+                HPX_MOVE(local_result), communicators.site(0), first_gen,
+                detail::generation_mode::double_step);
         }
 
         auto const groups =
@@ -528,7 +549,7 @@ namespace hpx::collectives {
             // Phase 1: Gather all subtree sites' data at this rep.
             std::vector<std::vector<T>> gathered =
                 detail::subtree_gather_at_top_rep(
-                    communicators, HPX_MOVE(local_result), gather_gen);
+                    communicators, HPX_MOVE(local_result), first_gen);
 
             std::size_t const my_group_size = groups[gidx].size;
             std::size_t const num_groups = groups.size();
@@ -552,10 +573,11 @@ namespace hpx::collectives {
 
             // The exchange touches the inter-group communicator once but must
             // advance it by two generations to stay in lock-step with the
-            // subtree communicators, so request num_generations == 2.
+            // subtree communicators, so request double_step.
             std::vector<std::vector<T>> received =
-                all_to_all(communicators.get(0), HPX_MOVE(exchange_blocks),
-                    communicators.site(0), exchange_gen, /*num_generations=*/2)
+                detail::all_to_all(communicators.get(0),
+                    HPX_MOVE(exchange_blocks), communicators.site(0), first_gen,
+                    detail::generation_mode::double_step)
                     .get();
 
             // Phase 3: Transpose received blocks back to per-site vectors,
@@ -577,17 +599,17 @@ namespace hpx::collectives {
             }
 
             return detail::subtree_scatter_at_top_rep(
-                communicators, HPX_MOVE(scatter_input), scatter_gen);
+                communicators, HPX_MOVE(scatter_input), second_gen);
         }
         else
         {
             // Non-representative: send data to rep, then receive
             // result from rep.
             detail::subtree_send_to_top_rep(
-                communicators, HPX_MOVE(local_result), gather_gen);
+                communicators, HPX_MOVE(local_result), first_gen);
 
             return detail::subtree_receive_from_top_rep<std::vector<T>>(
-                communicators, scatter_gen);
+                communicators, second_gen);
         }
     }
 }    // namespace hpx::collectives

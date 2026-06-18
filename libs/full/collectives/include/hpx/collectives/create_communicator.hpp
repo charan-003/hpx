@@ -144,7 +144,14 @@ namespace hpx { namespace collectives {
     ///         round-trip). A single hierarchical_communicator instance may
     ///         therefore be shared freely across collective operations,
     ///         provided every call uses an explicit, strictly consecutive
-    ///         generation number so the shared sequence stays gap-free.
+    ///         generation number so the shared sequence stays gap-free. Because
+    ///         the two-phase hierarchical collectives (\a all_gather, \a
+    ///         all_reduce, \a all_to_all and the hierarchical \a barrier)
+    ///         derive their phase generations from that explicit number, they
+    ///         require it and reject an auto (default) generation. The
+    ///         non-hierarchical (flat) collectives keep supporting the default
+    ///         generation, falling back to the internal per-communicator
+    ///         counter maintained in the and_gate.
     ///
     /// \returns    This function returns a new communicator object usable
     ///             with the collective operation.

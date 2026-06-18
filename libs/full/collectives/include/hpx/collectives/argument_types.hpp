@@ -11,11 +11,28 @@
 #include <hpx/config.hpp>
 
 #include <cstddef>
+#include <cstdint>
 
 ///////////////////////////////////////////////////////////////////////////////
 namespace hpx::collectives {
 
     namespace detail {
+
+        // The number of gate generations a single collective call consumes on a
+        // communicator. A hierarchical collective that touches a communicator
+        // only once per user call but has to stay in lock-step with collectives
+        // that touch it twice uses double_step, advancing the gate by two in a
+        // single step. This is an internal knob: the public collective API does
+        // not expose it, it is threaded only through the detail entry points the
+        // hierarchical overloads call. HPX serialization handles scoped enums
+        // natively (they are stored as their underlying integral type), so no
+        // explicit serialize function is required when a generation_mode crosses
+        // the wire as a collective action argument.
+        enum class generation_mode : std::uint8_t
+        {
+            single_step = 1,
+            double_step = 2
+        };
 
         template <typename Tag,
             std::size_t Default = static_cast<std::size_t>(-1)>

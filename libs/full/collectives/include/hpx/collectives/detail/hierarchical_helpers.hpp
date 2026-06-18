@@ -24,31 +24,43 @@ namespace hpx::collectives::detail {
     // The per-call generation parameters a hierarchical sub-communicator uses:
     // the run generation handed to the flat operation, and how many generations
     // the gate advances by in a single step.
-    HPX_CXX_EXPORT struct hierarchical_run
+    struct hierarchical_run
     {
         generation_arg generation;
-        std::size_t num_generations;
+        generation_mode num_generations;
     };
 
     // Map a user generation k to those parameters when the communicator
     // advances num_generations per call: the run generation becomes
-    // num_generations * (k - 1) + 1 (so 2k-1 for the common step of two, and
-    // the identity for a step of one). A default (auto) generation is passed
+    // num_generations * (k - 1) + 1 (so 2k-1 for the common double_step, and
+    // the identity for single_step). A default (auto) generation is passed
     // through unchanged and always advances by one, preserving the single-step
     // behavior for instances that are not shared across collectives (sharing
     // requires explicit, consecutive generations). Generation 0 is also passed
     // through so the downstream flat operation rejects it with bad_parameter
     // rather than the mapping silently wrapping it onto the default sentinel.
-    HPX_CXX_EXPORT inline hierarchical_run hierarchical_run_params(
-        generation_arg const generation, std::size_t const num_generations)
+    inline hierarchical_run hierarchical_run_params(
+        generation_arg const generation, generation_mode const num_generations)
     {
         if (generation.is_default() || generation == 0)
         {
-            return {generation, 1};
+            return {generation, generation_mode::single_step};
         }
-        return {generation_arg(num_generations *
-                        (static_cast<std::size_t>(generation) - 1) +
-                    1),
+
+        // Each hierarchical call consumes `step` consecutive gate generations
+        // on every sub-communicator it touches, so user generation k (>= 1)
+        // owns the gap-free block of internal generations
+        // [step*(k-1) + 1, step*k]: k=1 -> [1, step], k=2 -> [step+1, 2*step],
+        // and so on. The flat operation is launched at the first generation of
+        // that block, step*(k-1) + 1, and `step` (== num_generations) is
+        // reported back so handle_data advances the gate past the remainder of
+        // the block in a single move. So double_step maps k -> 2k-1 (e.g. the
+        // 2k-1 gather/exchange phase, with 2k consumed by the paired
+        // broadcast/scatter) and single_step is the identity k -> k (used when
+        // the caller already passes the mapped generation).
+        std::size_t const step = static_cast<std::size_t>(num_generations);
+        return {generation_arg(
+                    step * (static_cast<std::size_t>(generation) - 1) + 1),
             num_generations};
     }
 
