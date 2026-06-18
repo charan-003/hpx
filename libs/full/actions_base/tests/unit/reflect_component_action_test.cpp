@@ -114,14 +114,54 @@ int main()
             "invocation_count_registrar_ must exist for component actions");
     }
 
-    // Test: Derived = void default -- action_type is reflect_component_action
-    // itself (not a separate derived type)
+    // Test: HPX_COMPONENT_ACTION produces a type derived from
+    // reflect_component_action (the macro always wraps in a named struct,
+    // so it is never the same type as reflect_component_action itself --
+    // this verifies the inheritance relationship instead).
     {
         HPX_COMPONENT_ACTION(app::compute_server, compute, compute_action);
-        static_assert(std::is_same_v<compute_action,
-                          hpx::actions::reflect_component_action<
-                              ^^app::compute_server::compute>>,
-            "default Derived must produce reflect_component_action itself");
+        static_assert(std::is_base_of_v<hpx::actions::reflect_component_action<
+                                            ^^app::compute_server::compute>,
+                          compute_action>,
+            "compute_action must derive from reflect_component_action");
+    }
+
+    // Test: actual runtime invocation through invoke() on a real component
+    // instance. This exercises the component_invoke() dispatch path and
+    // would catch regressions in how the member function is spliced and
+    // called (e.g. missing address-of on a member-function splice).
+    {
+        HPX_COMPONENT_ACTION(app::compute_server, compute, compute_action);
+
+        app::compute_server server{};
+        hpx::naming::address_type lva = static_cast<void*>(&server);
+
+        int result = compute_action::invoke(
+            lva, hpx::naming::component_type{}, 3.0, 4.0);
+        HPX_TEST_EQ(result, 7);
+    }
+
+    // Test: runtime invocation for noexcept void member function
+    {
+        HPX_COMPONENT_ACTION(app::compute_server, broadcast, broadcast_action);
+
+        app::compute_server server{};
+        hpx::naming::address_type lva = static_cast<void*>(&server);
+
+        broadcast_action::invoke(lva, hpx::naming::component_type{}, 42);
+    }
+
+    // Test: runtime invocation for nested-namespace component
+    {
+        HPX_COMPONENT_ACTION(
+            app::nested::deep_server, deep_compute, deep_action);
+
+        app::nested::deep_server server{};
+        hpx::naming::address_type lva = static_cast<void*>(&server);
+
+        int result =
+            deep_action::invoke(lva, hpx::naming::component_type{}, 5, 9);
+        HPX_TEST_EQ(result, 14);
     }
 
     return hpx::util::report_errors();

@@ -18,7 +18,7 @@ foreach(test ${tests})
     ${test}_test INTERNAL_FLAGS
     SOURCES ${sources} ${${test}_FLAGS}
     EXCLUDE_FROM_ALL NOLIBS
-    DEPENDENCIES hpx_core
+    DEPENDENCIES hpx_core hpx_actions_base
     FOLDER "Tests/Unit/Modules/Full/ActionsBase"
   )
 
