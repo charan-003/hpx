@@ -247,13 +247,13 @@ namespace hpx::collectives {
         generation_arg const generation = generation_arg(),
         root_site_arg /*root_site*/ = root_site_arg())
     {
-        if (generation.is_default())
+        if (generation.is_default() || generation == 0)
         {
             return hpx::make_exceptional_future<void>(
                 HPX_GET_EXCEPTION(hpx::error::bad_parameter,
                     "hpx::collectives::barrier (hierarchical)",
-                    "hierarchical barrier requires an explicit generation "
-                    "number for the 2k-1/2k internal mapping"));
+                    "hierarchical barrier requires an explicit, positive "
+                    "generation number for the 2k-1/2k internal mapping"));
         }
 
         if (this_site.is_default())

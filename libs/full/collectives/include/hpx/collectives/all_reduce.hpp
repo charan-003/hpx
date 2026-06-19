@@ -259,7 +259,9 @@ namespace hpx::traits {
     {
         template <typename Result, typename T, typename F>
         static Result get(Communicator& communicator, std::size_t which,
-            std::size_t generation, T&& t, F&& op)
+            std::size_t generation,
+            hpx::collectives::detail::generation_mode num_generations, T&& t,
+            F&& op)
         {
             return communicator.template handle_data<std::decay_t<T>>(
                 communication::communicator_data<
@@ -304,12 +306,84 @@ namespace hpx::traits {
                         }
                         return static_cast<bool>(data[0]);
                     }
-                });
+                },
+                num_generations);
         }
     };
 }    // namespace hpx::traits
 
 namespace hpx::collectives {
+
+    ////////////////////////////////////////////////////////////////////////////
+    namespace detail {
+
+        // all_reduce plain values: detail entry point carrying the internal
+        // generation step. The public overload forwards with single_step; the
+        // hierarchical overload passes double_step where it collapses to a
+        // single flat all_reduce.
+        template <typename T, typename F>
+        hpx::future<std::decay_t<T>> all_reduce(communicator fid,
+            T&& local_result, F&& op, this_site_arg this_site,
+            generation_arg const generation, generation_mode num_generations)
+        {
+            using arg_type = std::decay_t<T>;
+
+            if (this_site.is_default())
+            {
+                this_site = agas::get_locality_id();
+            }
+            if (generation == 0)
+            {
+                return hpx::make_exceptional_future<arg_type>(HPX_GET_EXCEPTION(
+                    hpx::error::bad_parameter, "hpx::collectives::all_reduce",
+                    "the generation number shouldn't be zero"));
+            }
+
+            // Handle operation right away if there is only one value.
+            if (auto [num_sites, comm_site] = fid.get_info(); num_sites == 1)
+            {
+                if (this_site != comm_site)
+                {
+                    return hpx::make_exceptional_future<arg_type>(
+                        HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                            "hpx::collectives::all_reduce",
+                            "the local site should be zero if only one site is "
+                            "involved"));
+                }
+
+                return hpx::make_ready_future(HPX_FORWARD(T, local_result));
+            }
+
+            auto all_reduce_data =
+                [local_result = HPX_FORWARD(T, local_result),
+                    op = HPX_FORWARD(F, op), generation, num_generations,
+                    this_site](
+                    communicator&& c) mutable -> hpx::future<arg_type> {
+                using func_type = std::decay_t<F>;
+                using action_type =
+                    communicator_server::communication_get_direct_action<
+                        traits::communication::all_reduce_tag,
+                        hpx::future<arg_type>, generation_mode, arg_type,
+                        func_type>;
+
+                // explicitly unwrap returned future
+                hpx::future<arg_type> result =
+                    hpx::async(action_type(), c, this_site, generation,
+                        num_generations, HPX_MOVE(local_result), HPX_MOVE(op));
+
+                if (!result.is_ready())
+                {
+                    // make sure id is kept alive as long as the returned future
+                    traits::detail::get_shared_state(result)->set_on_completed(
+                        [client = HPX_MOVE(c)] { HPX_UNUSED(client); });
+                }
+
+                return result;
+            };
+
+            return fid.then(hpx::launch::sync, HPX_MOVE(all_reduce_data));
+        }
+    }    // namespace detail
 
     ////////////////////////////////////////////////////////////////////////////
     // all_reduce plain values
@@ -318,58 +392,9 @@ namespace hpx::collectives {
         F&& op, this_site_arg this_site = this_site_arg(),
         generation_arg const generation = generation_arg())
     {
-        using arg_type = std::decay_t<T>;
-
-        if (this_site.is_default())
-        {
-            this_site = agas::get_locality_id();
-        }
-        if (generation == 0)
-        {
-            return hpx::make_exceptional_future<arg_type>(HPX_GET_EXCEPTION(
-                hpx::error::bad_parameter, "hpx::collectives::all_reduce",
-                "the generation number shouldn't be zero"));
-        }
-
-        // Handle operation right away if there is only one value.
-        if (auto [num_sites, comm_site] = fid.get_info(); num_sites == 1)
-        {
-            if (this_site != comm_site)
-            {
-                return hpx::make_exceptional_future<arg_type>(HPX_GET_EXCEPTION(
-                    hpx::error::bad_parameter, "hpx::collectives::all_reduce",
-                    "the local site should be zero if only one site is "
-                    "involved"));
-            }
-
-            return hpx::make_ready_future(HPX_FORWARD(T, local_result));
-        }
-
-        auto all_reduce_data =
-            [local_result = HPX_FORWARD(T, local_result),
-                op = HPX_FORWARD(F, op), generation,
-                this_site](communicator&& c) mutable -> hpx::future<arg_type> {
-            using func_type = std::decay_t<F>;
-            using action_type =
-                detail::communicator_server::communication_get_direct_action<
-                    traits::communication::all_reduce_tag,
-                    hpx::future<arg_type>, arg_type, func_type>;
-
-            // explicitly unwrap returned future
-            hpx::future<arg_type> result = hpx::async(action_type(), c,
-                this_site, generation, HPX_MOVE(local_result), HPX_MOVE(op));
-
-            if (!result.is_ready())
-            {
-                // make sure id is kept alive as long as the returned future
-                traits::detail::get_shared_state(result)->set_on_completed(
-                    [client = HPX_MOVE(c)] { HPX_UNUSED(client); });
-            }
-
-            return result;
-        };
-
-        return fid.then(hpx::launch::sync, HPX_MOVE(all_reduce_data));
+        return detail::all_reduce(HPX_MOVE(fid), HPX_FORWARD(T, local_result),
+            HPX_FORWARD(F, op), this_site, generation,
+            detail::generation_mode::single_step);
     }
 
     HPX_CXX_EXPORT template <typename T, typename F>
@@ -435,9 +460,9 @@ namespace hpx::collectives {
     // Uses 2k-1/2k generation mapping: user generation k maps to
     // internal generation 2k-1 (reduce phase) and 2k (broadcast phase)
     //
-    // An instance may be shared between all_reduce and all_gather (identical
-    // generation scheme), but not with other collectives; see the note on
-    // create_hierarchical_communicator.
+    // Every hierarchical collective advances each communicator by two
+    // generations per call, so an instance may be shared freely across
+    // collectives; see the note on create_hierarchical_communicator.
     HPX_CXX_EXPORT template <typename T, typename F>
     hpx::future<std::decay_t<T>> all_reduce(
         hierarchical_communicator const& communicators, T&& local_result,
@@ -447,13 +472,13 @@ namespace hpx::collectives {
     {
         using arg_type = std::decay_t<T>;
 
-        if (generation.is_default())
+        if (generation.is_default() || generation == 0)
         {
             return hpx::make_exceptional_future<arg_type>(
                 HPX_GET_EXCEPTION(hpx::error::bad_parameter,
                     "hpx::collectives::all_reduce (hierarchical)",
-                    "hierarchical all_reduce requires an explicit generation "
-                    "number for the 2k-1/2k internal mapping"));
+                    "hierarchical all_reduce requires an explicit, positive "
+                    "generation number for the 2k-1/2k internal mapping"));
         }
 
         if (this_site.is_default())
@@ -484,41 +509,49 @@ namespace hpx::collectives {
                     "participating sites"));
         }
 
+        generation_arg const reduce_gen(2 * generation - 1);
+        generation_arg const broadcast_gen(2 * generation);
+
         // Flat fast path: when arity >= num_sites, the tree builder's leaf
         // condition (right - left < arity) fired at the root call and
         // produced a single flat communicator spanning all sites. The
         // reduce+broadcast decomposition then collapses to a single flat
         // all_reduce; dispatch directly to avoid the two separate gate
-        // synchronizations.
+        // synchronizations, but still advance the gate by two (run at 2k-1,
+        // double_step) so the flat instance stays shareable with
+        // other collectives.
         if (arity_val >= num_sites_val)
         {
             HPX_ASSERT(communicators.size() == 1);
-            return all_reduce(communicators.get(0),
+            return detail::all_reduce(communicators.get(0),
                 HPX_FORWARD(T, local_result), HPX_FORWARD(F, op),
-                communicators.site(0), generation);
+                communicators.site(0), reduce_gen,
+                detail::generation_mode::double_step);
         }
-
-        generation_arg const reduce_gen(2 * generation - 1);
-        generation_arg const broadcast_gen(2 * generation);
 
         if (this_site == root_site)
         {
-            arg_type reduced =
-                reduce_here(communicators, HPX_FORWARD(T, local_result),
-                    HPX_FORWARD(F, op), this_site, reduce_gen)
-                    .get();
+            // reduce phase advances each communicator by one (the broadcast
+            // phase consumes 2k), so pass single_step.
+            arg_type reduced = detail::reduce_here(communicators,
+                HPX_FORWARD(T, local_result), HPX_FORWARD(F, op), this_site,
+                reduce_gen, detail::generation_mode::single_step)
+                                   .get();
 
-            return broadcast_to(
-                communicators, HPX_MOVE(reduced), this_site, broadcast_gen);
+            // broadcast phase advances each communicator by one (the reduce
+            // phase already consumed 2k-1), so pass single_step.
+            return detail::broadcast_to(communicators, HPX_MOVE(reduced),
+                this_site, broadcast_gen, detail::generation_mode::single_step);
         }
         else
         {
-            reduce_there(communicators, HPX_FORWARD(T, local_result),
-                HPX_FORWARD(F, op), this_site, reduce_gen)
+            detail::reduce_there(communicators, HPX_FORWARD(T, local_result),
+                HPX_FORWARD(F, op), this_site, reduce_gen,
+                detail::generation_mode::single_step)
                 .get();
 
-            return broadcast_from<arg_type>(
-                communicators, this_site, broadcast_gen);
+            return detail::broadcast_from<arg_type>(communicators, this_site,
+                broadcast_gen, detail::generation_mode::single_step);
         }
     }
 
