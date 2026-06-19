@@ -56,9 +56,32 @@ namespace hpx::parallel::util::detail {
                                    cores);
                            })
         {
-            policy = policy.query(
+            // For policies that support query(), check if the query returns
+            // a policy with the same executor type. If not (e.g., for
+            // resiliency executors), use the executor's query directly.
+            using queried_policy_type = decltype(policy.query(
                 hpx::execution::experimental::with_processing_units_count_t{},
-                cores);
+                cores));
+            using queried_exec_type =
+                typename std::decay_t<queried_policy_type>::executor_type;
+
+            if constexpr (std::is_same_v<queried_exec_type, exec_type>)
+            {
+                // Same executor type, direct assignment is safe
+                policy = policy.query(hpx::execution::experimental::
+                                          with_processing_units_count_t{},
+                    cores);
+            }
+            else
+            {
+                // Different executor type (e.g., resiliency executor),
+                // use the executor's query and rebound the policy
+                auto updated_exec =
+                    hpx::execution::experimental::with_processing_units_count(
+                        policy.executor(), cores);
+                policy = hpx::execution::experimental::create_rebound_policy(
+                    policy, HPX_MOVE(updated_exec), policy.parameters());
+            }
         }
         else if constexpr (
             hpx::execution::experimental::has_query_v<exec_type const&,

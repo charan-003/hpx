@@ -66,13 +66,24 @@ namespace hpx::execution::experimental {
                             hpx::execution::experimental::set_value(
                                 HPX_MOVE(receiver_));
                         }
-                        else
+                        else if constexpr (hpx::traits::is_one_way_executor_v<
+                                               std::decay_t<Executor>> ||
+                            hpx::traits::is_two_way_executor_v<
+                                std::decay_t<Executor>>)
                         {
+                            // For executors that support post(), use post
                             hpx::parallel::execution::post(exec_,
                                 [receiver = HPX_MOVE(receiver_)]() mutable {
                                     hpx::execution::experimental::set_value(
                                         HPX_MOVE(receiver));
                                 });
+                        }
+                        else
+                        {
+                            // For bulk-only executors (e.g., fork_join_executor),
+                            // invoke inline since they don't support post()
+                            hpx::execution::experimental::set_value(
+                                HPX_MOVE(receiver_));
                         }
                     },
                     [&](std::exception_ptr ep) {

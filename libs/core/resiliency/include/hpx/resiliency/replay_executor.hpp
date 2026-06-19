@@ -166,10 +166,15 @@ namespace hpx::resiliency::experimental {
         template <typename Tag, typename... Args>
             requires(
                 hpx::execution::experimental::is_scheduling_property_v<Tag>)
-        auto query(Tag tag, Args&&... args) const -> decltype(tag(
-            std::declval<BaseExecutor const&>(), HPX_FORWARD(Args, args)...))
+        auto query(Tag tag, Args&&... args) const
+            -> decltype(replay_executor<BaseExecutor, Validate>(
+                std::declval<Tag>()(
+                    std::declval<BaseExecutor>(), HPX_FORWARD(Args, args)...),
+                std::declval<std::size_t>(), std::declval<Validate>()))
         {
-            return tag(exec_, HPX_FORWARD(Args, args)...);
+            return replay_executor<BaseExecutor, Validate>(
+                tag(exec_, HPX_FORWARD(Args, args)...), replay_count_,
+                validator_);
         }
 
     private:
