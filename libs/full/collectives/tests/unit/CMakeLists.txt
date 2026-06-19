@@ -18,6 +18,7 @@ set(tests
     broadcast_sync
     channel_communicator
     cross_collective_hierarchical
+    cross_collective_hierarchical_mixed
     fold
     global_spmd_block
     hierarchical_helpers
