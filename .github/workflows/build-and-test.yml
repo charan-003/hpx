@@ -26,7 +26,7 @@ jobs:
       test_matrix: ${{ steps.gen_matrix.outputs.matrix }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Configure (Running CMake)
         shell: bash
@@ -126,7 +126,7 @@ jobs:
       matrix: ${{ fromJson(needs.configure-core-core_local-components.outputs.test_matrix) }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           sparse-checkout: |
             .github

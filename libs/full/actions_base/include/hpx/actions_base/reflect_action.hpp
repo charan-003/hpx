@@ -14,8 +14,10 @@
 #if defined(HPX_HAVE_CXX26_REFLECTION)
 
 #include <hpx/actions_base/basic_action.hpp>
+#include <hpx/actions_base/component_action.hpp>
 #include <hpx/actions_base/detail/invocation_count_registry.hpp>
 #include <hpx/actions_base/plain_action.hpp>
+#include <hpx/modules/format.hpp>
 #include <hpx/modules/serialization.hpp>
 
 #include <cstddef>
@@ -41,6 +43,176 @@ namespace hpx::actions {
 
     }    // namespace detail
     /// \endcond
+    /// \cond NOINTERNAL
+    namespace detail {
+        /// Strips cv/ref/noexcept qualifiers from a (possibly qualified)
+        /// member function type, producing the plain "R(Args...)" form
+        /// that matches basic_action's partial specialization. Member
+        /// function reflections carry these qualifiers in their type_of()
+        /// (e.g. "R(Args...) const"), but basic_action only has a partial
+        /// specialization for the unqualified signature.
+        template <typename T>
+        struct unqualify_function_type
+        {
+            using type = T;
+        };
+
+        template <typename R, typename... Args>
+        struct unqualify_function_type<R(Args...) const>
+        {
+            using type = R(Args...);
+        };
+
+        template <typename R, typename... Args>
+        struct unqualify_function_type<R(Args...) volatile>
+        {
+            using type = R(Args...);
+        };
+
+        template <typename R, typename... Args>
+        struct unqualify_function_type<R(Args...) const volatile>
+        {
+            using type = R(Args...);
+        };
+
+        template <typename R, typename... Args>
+        struct unqualify_function_type<R(Args...) noexcept>
+        {
+            using type = R(Args...);
+        };
+
+        template <typename R, typename... Args>
+        struct unqualify_function_type<R(Args...) const noexcept>
+        {
+            using type = R(Args...);
+        };
+
+        template <typename R, typename... Args>
+        struct unqualify_function_type<R(Args...) volatile noexcept>
+        {
+            using type = R(Args...);
+        };
+
+        template <typename R, typename... Args>
+        struct unqualify_function_type<R(Args...) const volatile noexcept>
+        {
+            using type = R(Args...);
+        };
+
+        template <typename T>
+        using unqualify_function_type_t =
+            typename unqualify_function_type<T>::type;
+
+        /// Helper to extract component type and function type from a member
+        /// function reflection for use as basic_action template arguments.
+        template <std::meta::info F>
+        struct reflect_component_action_base
+        {
+            using func_type =
+                unqualify_function_type_t<typename[:std::meta::type_of(F):]>;
+            using component_type = [:std::meta::parent_of(F):];
+        };
+    }    // namespace detail
+    /// \endcond
+
+    /// \brief Reflection-based component action template.
+    ///
+    /// Replaces HPX_DEFINE_COMPONENT_ACTION with a single line:
+    ///
+    /// \code
+    /// // Old:
+    /// HPX_DEFINE_COMPONENT_ACTION(server, compute, compute_action)
+    ///
+    /// // New:
+    /// HPX_COMPONENT_ACTION(server, compute, compute_action);
+    /// \endcode
+    ///
+    /// \tparam F       A std::meta::info reflection of a member function.
+    /// \tparam Derived CRTP derived type (defaults to void).
+    template <std::meta::info F,
+        typename Component =
+            typename detail::reflect_component_action_base<F>::component_type,
+        typename Derived = void>
+    struct reflect_component_action
+      : basic_action<Component,
+            typename detail::reflect_component_action_base<F>::func_type,
+            detail::action_type_t<
+                reflect_component_action<F, Component, Derived>, Derived>>
+    {
+    public:
+        static constexpr std::size_t arity = std::meta::parameters_of(F).size();
+
+        static std::string get_action_name(naming::address_type lva)
+        {
+            return hpx::util::format("component action({}) lva({})",
+                hpx::serialization::detail::scope_builder<F>::value.data, lva);
+        }
+
+        /// Invokes the reflected member function on the component located
+        /// at \a lva, mirroring component_action.hpp's action::invoke.
+        template <typename... Ts>
+        static auto invoke(naming::address_type lva,
+            naming::component_type comptype, Ts&&... vs)
+        {
+            using result_type = [:std::meta::return_type_of(F):];
+            reflect_component_action::increment_invocation_count();
+            return detail::component_invoke<Component, result_type>(
+                lva, comptype, &[:F:], HPX_FORWARD(Ts, vs)...);
+        }
+
+        static detail::register_action_invocation_count<
+            reflect_component_action>
+            invocation_count_registrar_;
+    };
+
+    template <std::meta::info F, typename Component, typename Derived>
+    detail::register_action_invocation_count<
+        reflect_component_action<F, Component, Derived>>
+        reflect_component_action<F, Component,
+            Derived>::invocation_count_registrar_;
+
+    /// \brief Reflection-based direct component action template.
+    ///
+    /// Like reflect_component_action, but executes the reflected member
+    /// function directly on the calling thread instead of spawning a new
+    /// thread, mirroring the relationship between basic_action's action
+    /// and direct_action.
+    ///
+    /// \tparam F       A std::meta::info reflection of a member function.
+    /// \tparam Derived CRTP derived type (defaults to void).
+    template <std::meta::info F,
+        typename Component =
+            typename detail::reflect_component_action_base<F>::component_type,
+        typename Derived = void>
+    struct reflect_component_direct_action
+      : reflect_component_action<F, Component,
+            detail::action_type_t<
+                reflect_component_direct_action<F, Component, Derived>,
+                Derived>>
+    {
+        using direct_execution = std::true_type;
+
+        static constexpr actions::action_flavor get_action_type() noexcept
+        {
+            return actions::action_flavor::direct_action;
+        }
+
+        static detail::register_action_invocation_count<
+            reflect_component_direct_action>
+            invocation_count_registrar_;
+    };
+    template <std::meta::info F, typename Component, typename Derived>
+    detail::register_action_invocation_count<
+        reflect_component_direct_action<F, Component, Derived>>
+        reflect_component_direct_action<F, Component,
+            Derived>::invocation_count_registrar_;
+
+/// \brief Convenience macro for component actions.
+/// Usage: HPX_COMPONENT_ACTION(component, func, action_name)
+#define HPX_COMPONENT_ACTION(component, func, name)                            \
+    struct name : ::hpx::actions::reflect_component_action<^^component::func>  \
+    {                                                                          \
+    } /**/
 
     /// \brief Reflection-based action template.
     ///
