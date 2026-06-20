@@ -57,6 +57,16 @@ namespace hpx::util::external_timer {
     HPX_CXX_CORE_EXPORT struct task_wrapper;
 }    // namespace hpx::util::external_timer
 
+#if defined(HPX_HAVE_TRACY)
+#include <hpx/tracing/backends/tracy.hpp>
+#elif defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0
+#include <hpx/tracing/backends/ittnotify.hpp>
+#elif defined(HPX_HAVE_APEX)
+#include <hpx/tracing/backends/apex.hpp>
+#else
+#include <hpx/tracing/backends/empty.hpp>
+#endif
+
 #include <hpx/tracing/macros.hpp>
 
 #endif

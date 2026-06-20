@@ -13,6 +13,7 @@
 #include <hpx/init.hpp>
 #include <hpx/modules/schedulers.hpp>
 #include <hpx/modules/testing.hpp>
+#include <hpx/modules/tracing.hpp>
 #include <hpx/program_options.hpp>
 
 #include <algorithm>
@@ -291,6 +292,8 @@ void run_benchmark(std::size_t vector_size1, std::size_t vector_size2,
 
     std::cout << "--- run_merge_benchmark_par ---" << std::endl;
 
+    HPX_TRACING_RESUME();
+
     //hpx::threads::thread_schedule_hint hint(
     //    hpx::threads::thread_sharing_hint::do_not_share_function);
     //auto policy = hpx::execution::experimental::with_hint(par, hint);
@@ -302,9 +305,13 @@ void run_benchmark(std::size_t vector_size1, std::size_t vector_size2,
     double const time_par = run_merge_benchmark_hpx(
         test_count, policy.with(ccs), first1, last1, first2, last2, dest);
 
+    HPX_TRACING_PAUSE();
+
     std::cout << "--- run_merge_benchmark_par_stackless ---" << std::endl;
 
     hpx::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+    HPX_TRACING_RESUME();
 
     double time_par_stackless = 0;
     {
@@ -315,10 +322,14 @@ void run_benchmark(std::size_t vector_size1, std::size_t vector_size2,
             stackless_policy.with(ccs), first1, last1, first2, last2, dest);
     }
 
+    HPX_TRACING_PAUSE();
+
     std::cout << "--- run_merge_benchmark_par_stackless_fast_idle ---"
               << std::endl;
 
     hpx::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+    HPX_TRACING_RESUME();
 
     double time_par_stackless_fast_idle = 0;
     {
@@ -330,6 +341,8 @@ void run_benchmark(std::size_t vector_size1, std::size_t vector_size2,
             stackless_policy.with(ccs, efim), first1, last1, first2, last2,
             dest);
     }
+
+    HPX_TRACING_PAUSE();
 
     std::cout << "--- run_merge_benchmark_par_fork_join ---" << std::endl;
     double time_par_fork_join = 0;
@@ -364,6 +377,8 @@ void run_benchmark(std::size_t vector_size1, std::size_t vector_size2,
 ///////////////////////////////////////////////////////////////////////////////
 int hpx_main(hpx::program_options::variables_map& vm)
 {
+    HPX_TRACING_PAUSE();
+
     if (vm.count("seed"))
         seed = vm["seed"].as<unsigned int>();
 

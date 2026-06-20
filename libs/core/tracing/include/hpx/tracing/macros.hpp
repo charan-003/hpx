@@ -12,19 +12,6 @@
 
 #if defined(HPX_HAVE_MODULE_TRACING)
 
-#if !defined(HPX_HAVE_CXX_MODULES) || defined(HPX_CORE_EXPORTS) ||             \
-    (defined(HPX_COMPILE_BMI) && defined(HPX_COMPILE_CORE_WITH_MODULES))
-#if defined(HPX_HAVE_TRACY)
-#include <hpx/tracing/backends/tracy.hpp>
-#elif defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0
-#include <hpx/tracing/backends/ittnotify.hpp>
-#elif defined(HPX_HAVE_APEX)
-#include <hpx/tracing/backends/apex.hpp>
-#else
-#include <hpx/tracing/backends/empty.hpp>
-#endif
-#endif
-
 #if defined(HPX_HAVE_TRACY)
 #define HPX_TRACING_MARK_EVENT(name)                                           \
     hpx::tracing::mark_event HPX_PP_CAT(hpx_trace_mark_, __LINE__)(name)
