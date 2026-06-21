@@ -10,8 +10,6 @@
 #include <hpx/config.hpp>
 #include <hpx/preprocessor/cat.hpp>
 
-#if defined(HPX_HAVE_MODULE_TRACING)
-
 #if defined(HPX_HAVE_TRACY)
 #define HPX_TRACING_MARK_EVENT(name)                                           \
     hpx::tracing::mark_event HPX_PP_CAT(hpx_trace_mark_, __LINE__)(name)
@@ -32,6 +30,4 @@
 #define HPX_TRACING_MARK_EVENT(name)
 #define HPX_TRACING_PAUSE()
 #define HPX_TRACING_RESUME()
-#endif
-
 #endif

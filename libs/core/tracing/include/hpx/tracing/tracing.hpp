@@ -44,8 +44,6 @@
 /// - \b sample_counter: Updates a registered metric with a new double value.
 #endif
 
-#if defined(HPX_HAVE_MODULE_TRACING)
-
 namespace hpx::threads {
 
     HPX_CXX_CORE_EXPORT struct thread_description;
@@ -68,5 +66,3 @@ namespace hpx::util::external_timer {
 #endif
 
 #include <hpx/tracing/macros.hpp>
-
-#endif
