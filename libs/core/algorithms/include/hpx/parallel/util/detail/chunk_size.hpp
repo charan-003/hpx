@@ -1,4 +1,5 @@
 //  Copyright (c) 2007-2025 Hartmut Kaiser
+//  Copyright (c) 2026 Sai Charan Arvapally
 //
 //  SPDX-License-Identifier: BSL-1.0
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -75,12 +76,12 @@ namespace hpx::parallel::util::detail {
             else
             {
                 // Different executor type (e.g., resiliency executor),
-                // use the executor's query and rebound the policy
-                auto updated_exec =
-                    hpx::execution::experimental::with_processing_units_count(
-                        policy.executor(), cores);
+                // use the executor's query and rebind the policy
+                auto updated_exec = hpx::experimental::prefer(
+                    hpx::execution::experimental::with_processing_units_count,
+                    policy.executor(), cores);
                 policy = hpx::execution::experimental::create_rebound_policy(
-                    policy, HPX_MOVE(updated_exec), policy.parameters());
+                    policy, HPX_MOVE(updated_exec));
             }
         }
         else if constexpr (
@@ -90,8 +91,7 @@ namespace hpx::parallel::util::detail {
         {
             policy = hpx::execution::experimental::create_rebound_policy(policy,
                 hpx::execution::experimental::with_processing_units_count(
-                    policy.executor(), cores),
-                policy.parameters());
+                    policy.executor(), cores));
         }
     }
 

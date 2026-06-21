@@ -1,4 +1,5 @@
 //  Copyright (c) 2007-2025 Hartmut Kaiser
+//  Copyright (c) 2026 Sai Charan Arvapally
 //
 //  SPDX-License-Identifier: BSL-1.0
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -88,9 +89,8 @@ namespace hpx::execution {
                 hpx::chrono::null_duration,
             std::size_t num_tasks = 0) const
         {
-            using exec_type = std::decay_t<decltype(*this)>;
             if constexpr (requires(std::decay_t<Parameters> const& p,
-                              exec_type const& e,
+                              sequenced_executor const& e,
                               hpx::chrono::steady_duration const& d) {
                               p.processing_units_count(e, d, std::size_t{});
                           })

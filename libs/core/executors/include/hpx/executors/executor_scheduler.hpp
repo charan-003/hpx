@@ -1,4 +1,5 @@
 //  Copyright (c) 2007-2025 Hartmut Kaiser
+//  Copyright (c) 2026 Sai Charan Arvapally
 //  Copyright (c) 2026 The STE||AR-Group
 //
 //  SPDX-License-Identifier: BSL-1.0
@@ -66,10 +67,8 @@ namespace hpx::execution::experimental {
                             hpx::execution::experimental::set_value(
                                 HPX_MOVE(receiver_));
                         }
-                        else if constexpr (hpx::traits::is_one_way_executor_v<
-                                               std::decay_t<Executor>> ||
-                            hpx::traits::is_two_way_executor_v<
-                                std::decay_t<Executor>>)
+                        else if constexpr (hpx::traits::has_post_member_v<
+                                               std::decay_t<Executor>>)
                         {
                             // For executors that support post(), use post
                             hpx::parallel::execution::post(exec_,

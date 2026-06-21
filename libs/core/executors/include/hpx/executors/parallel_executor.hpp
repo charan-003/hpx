@@ -1,4 +1,5 @@
 //  Copyright (c) 2019-2020 ETH Zurich
+//  Copyright (c) 2026 Sai Charan Arvapally
 //  Copyright (c) 2007-2026 Hartmut Kaiser
 //  Copyright (c) 2019 Agustin Berge
 //
@@ -509,8 +510,8 @@ namespace hpx::execution {
         [[nodiscard]] auto query(experimental::with_processing_units_count_t,
             std::size_t num_cores) const
         {
-            using self_type = std::decay_t<decltype(*this)>;
-            return base_type::with_num_cores(self_type(*this), num_cores);
+            return base_type::with_num_cores(
+                parallel_policy_executor(*this), num_cores);
         }
 
         template <typename Parameters>
@@ -521,9 +522,8 @@ namespace hpx::execution {
                 hpx::chrono::null_duration,
             std::size_t num_tasks = 0) const
         {
-            using exec_type = std::decay_t<decltype(*this)>;
             if constexpr (requires(std::decay_t<Parameters> const& p,
-                              exec_type const& e,
+                              parallel_policy_executor const& e,
                               hpx::chrono::steady_duration const& d) {
                               p.processing_units_count(e, d, std::size_t{});
                           })
@@ -540,8 +540,8 @@ namespace hpx::execution {
         [[nodiscard]] auto query(experimental::with_first_core_t,
             std::size_t first_core) const noexcept
         {
-            using self_type = std::decay_t<decltype(*this)>;
-            return base_type::with_first_core(self_type(*this), first_core);
+            return base_type::with_first_core(
+                parallel_policy_executor(*this), first_core);
         }
 
         [[nodiscard]] constexpr std::size_t query(
@@ -837,8 +837,8 @@ namespace hpx::execution {
         [[nodiscard]] auto query(experimental::with_processing_units_count_t,
             std::size_t num_cores) const
         {
-            using self_type = std::decay_t<decltype(*this)>;
-            return base_type::with_num_cores(self_type(*this), num_cores);
+            return base_type::with_num_cores(
+                parallel_policy_executor(*this), num_cores);
         }
 
         template <typename Parameters>
@@ -849,9 +849,8 @@ namespace hpx::execution {
                 hpx::chrono::null_duration,
             std::size_t num_tasks = 0) const
         {
-            using exec_type = std::decay_t<decltype(*this)>;
             if constexpr (requires(std::decay_t<Parameters> const& p,
-                              exec_type const& e,
+                              parallel_policy_executor const& e,
                               hpx::chrono::steady_duration const& d) {
                               p.processing_units_count(e, d, std::size_t{});
                           })
@@ -868,8 +867,8 @@ namespace hpx::execution {
         [[nodiscard]] auto query(experimental::with_first_core_t,
             std::size_t first_core) const noexcept
         {
-            using self_type = std::decay_t<decltype(*this)>;
-            return base_type::with_first_core(self_type(*this), first_core);
+            return base_type::with_first_core(
+                parallel_policy_executor(*this), first_core);
         }
 
         [[nodiscard]] constexpr std::size_t query(
