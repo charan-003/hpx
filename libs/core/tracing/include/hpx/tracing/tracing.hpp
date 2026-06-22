@@ -66,3 +66,50 @@ namespace hpx::util::external_timer {
 #endif
 
 #include <hpx/tracing/macros.hpp>
+
+#if defined(DOXYGEN)
+namespace hpx::tracing {
+
+    /// \brief Context for annotating lock acquisitions and releases.
+    ///
+    /// This struct is used to provide tracing annotations for synchronization
+    /// primitives such as spinlocks and mutexes. It registers the creation,
+    /// acquisition, and release of locks to the active tracing backend.
+    struct lock_context
+    {
+        /// \brief Constructs a lock context.
+        ///
+        /// \param name The name or description of the lock.
+        /// \param addr The memory address of the lock, used to track it uniquely.
+        explicit lock_context(
+            char const* name = nullptr, void const* addr = nullptr) noexcept;
+
+        /// \brief Constructs a lock context with a dynamic name.
+        ///
+        /// \param prefix The prefix for the lock name.
+        /// \param suffix The suffix for the lock name.
+        /// \param addr The memory address of the lock, used to track it uniquely.
+        explicit lock_context(char const* prefix, char const* suffix,
+            void const* addr = nullptr) noexcept;
+
+        /// \brief Called immediately before attempting to acquire the lock.
+        ///
+        /// \returns true if the prepare event was recorded and after_lock should be called.
+        bool before_lock() const noexcept;
+
+        /// \brief Called immediately after the lock is successfully acquired.
+        void after_lock() const noexcept;
+
+        /// \brief Called after a try-lock operation completes.
+        ///
+        /// \param success true if the lock was acquired, false if it failed.
+        void after_try_lock(bool success) const noexcept;
+
+        /// \brief Called immediately before releasing the lock.
+        void before_unlock() const noexcept;
+
+        /// \brief Called immediately after releasing the lock.
+        void after_unlock() const noexcept;
+    };
+}    // namespace hpx::tracing
+#endif
