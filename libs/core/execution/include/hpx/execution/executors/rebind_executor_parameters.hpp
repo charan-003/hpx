@@ -129,11 +129,10 @@ namespace hpx::execution::experimental {
 
     // wrapping get_chunk_size
     HPX_CXX_CORE_EXPORT template <typename Params, typename Executor>
-    inline constexpr bool supports_get_chunk_size_v =
-        requires(Params&& p, Executor&& e,
-            hpx::chrono::steady_duration const& d) {
-            p.get_chunk_size(e, d, std::size_t{}, std::size_t{});
-        };
+    inline constexpr bool supports_get_chunk_size_v = requires(
+        Params&& p, Executor&& e, hpx::chrono::steady_duration const& d) {
+        p.get_chunk_size(e, d, std::size_t{}, std::size_t{});
+    };
 
     HPX_CXX_CORE_EXPORT template <typename Params, typename InnerParams,
         typename Executor>
@@ -225,11 +224,10 @@ namespace hpx::execution::experimental {
 
     // wrapping processing_units_count
     HPX_CXX_CORE_EXPORT template <typename Params, typename Executor>
-    inline constexpr bool supports_processing_units_count_v =
-        requires(Params&& p, Executor&& e,
-            hpx::chrono::steady_duration const& d) {
-            p.processing_units_count(e, d, std::size_t{});
-        };
+    inline constexpr bool supports_processing_units_count_v = requires(
+        Params&& p, Executor&& e, hpx::chrono::steady_duration const& d) {
+        p.processing_units_count(e, d, std::size_t{});
+    };
 
     HPX_CXX_CORE_EXPORT template <typename Params, typename InnerParams,
         typename Executor>
@@ -242,9 +240,7 @@ namespace hpx::execution::experimental {
     // wrapping reset_thread_distribution
     HPX_CXX_CORE_EXPORT template <typename Params, typename Executor>
     inline constexpr bool supports_reset_thread_distribution_v =
-        requires(Params&& p, Executor&& e) {
-            p.reset_thread_distribution(e);
-        };
+        requires(Params&& p, Executor&& e) { p.reset_thread_distribution(e); };
 
     HPX_CXX_CORE_EXPORT template <typename Params, typename InnerParams,
         typename Executor>
