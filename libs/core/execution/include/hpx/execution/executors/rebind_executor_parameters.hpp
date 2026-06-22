@@ -130,8 +130,7 @@ namespace hpx::execution::experimental {
     // wrapping get_chunk_size
     HPX_CXX_CORE_EXPORT template <typename Params, typename Executor>
     inline constexpr bool supports_get_chunk_size_v =
-        requires(std::remove_reference_t<Params>& p,
-            std::remove_reference_t<Executor>& e,
+        requires(Params&& p, Executor&& e,
             hpx::chrono::steady_duration const& d) {
             p.get_chunk_size(e, d, std::size_t{}, std::size_t{});
         };
@@ -139,9 +138,7 @@ namespace hpx::execution::experimental {
     HPX_CXX_CORE_EXPORT template <typename Params, typename InnerParams,
         typename Executor>
     inline constexpr bool supports_wrapping_get_chunk_size_v =
-        requires(std::remove_reference_t<Params>& p,
-            std::remove_reference_t<InnerParams>& ip,
-            std::remove_reference_t<Executor>& e,
+        requires(Params&& p, InnerParams&& ip, Executor&& e,
             hpx::chrono::steady_duration const& d) {
             p.get_chunk_size(ip, e, d, std::size_t{}, std::size_t{});
         };
@@ -150,103 +147,86 @@ namespace hpx::execution::experimental {
     HPX_CXX_CORE_EXPORT template <typename Params, typename Executor,
         typename F>
     inline constexpr bool supports_measure_iteration_v =
-        requires(std::remove_reference_t<Params>& p,
-            std::remove_reference_t<Executor>& e, F&& f) {
+        requires(Params&& p, Executor&& e, F&& f) {
             p.measure_iteration(e, HPX_FORWARD(F, f), std::size_t{});
         };
 
     HPX_CXX_CORE_EXPORT template <typename Params, typename InnerParams,
         typename Executor, typename F>
     inline constexpr bool supports_wrapping_measure_iteration_v =
-        requires(std::remove_reference_t<Params>& p,
-            std::remove_reference_t<InnerParams>& ip,
-            std::remove_reference_t<Executor>& e, F&& f) {
+        requires(Params&& p, InnerParams&& ip, Executor&& e, F&& f) {
             p.measure_iteration(ip, e, HPX_FORWARD(F, f), std::size_t{});
         };
 
     // maximal_number_of_chunks
     HPX_CXX_CORE_EXPORT template <typename Params, typename Executor>
     inline constexpr bool supports_maximal_number_of_chunks_v =
-        requires(std::remove_reference_t<Params>& p,
-            std::remove_reference_t<Executor>& e) {
+        requires(Params&& p, Executor&& e) {
             p.maximal_number_of_chunks(e, std::size_t{}, std::size_t{});
         };
 
     HPX_CXX_CORE_EXPORT template <typename Params, typename InnerParams,
         typename Executor>
     inline constexpr bool supports_wrapping_maximal_number_of_chunks_v =
-        requires(std::remove_reference_t<Params>& p,
-            std::remove_reference_t<InnerParams>& ip,
-            std::remove_reference_t<Executor>& e) {
+        requires(Params&& p, InnerParams&& ip, Executor&& e) {
             p.maximal_number_of_chunks(ip, e, std::size_t{}, std::size_t{});
         };
 
     // execution_markers: begin_execution
     HPX_CXX_CORE_EXPORT template <typename Params, typename Executor>
-    inline constexpr bool supports_mark_begin_execution_v = requires(
-        std::remove_reference_t<Params>& p,
-        std::remove_reference_t<Executor>& e) { p.mark_begin_execution(e); };
+    inline constexpr bool supports_mark_begin_execution_v =
+        requires(Params&& p, Executor&& e) { p.mark_begin_execution(e); };
 
     HPX_CXX_CORE_EXPORT template <typename Params, typename InnerParams,
         typename Executor>
     inline constexpr bool supports_wrapping_mark_begin_execution_v =
-        requires(std::remove_reference_t<Params>& p,
-            std::remove_reference_t<InnerParams>& ip,
-            std::remove_reference_t<Executor>& e) {
+        requires(Params&& p, InnerParams&& ip, Executor&& e) {
             p.mark_begin_execution(ip, e);
         };
 
     // execution_markers: end_of_scheduling
     HPX_CXX_CORE_EXPORT template <typename Params, typename Executor>
-    inline constexpr bool supports_mark_end_of_scheduling_v = requires(
-        std::remove_reference_t<Params>& p,
-        std::remove_reference_t<Executor>& e) { p.mark_end_of_scheduling(e); };
+    inline constexpr bool supports_mark_end_of_scheduling_v =
+        requires(Params&& p, Executor&& e) { p.mark_end_of_scheduling(e); };
 
     HPX_CXX_CORE_EXPORT template <typename Params, typename InnerParams,
         typename Executor>
     inline constexpr bool supports_wrapping_mark_end_of_scheduling_v =
-        requires(std::remove_reference_t<Params>& p,
-            std::remove_reference_t<InnerParams>& ip,
-            std::remove_reference_t<Executor>& e) {
+        requires(Params&& p, InnerParams&& ip, Executor&& e) {
             p.mark_end_of_scheduling(ip, e);
         };
 
     // execution_markers: end_execution
     HPX_CXX_CORE_EXPORT template <typename Params, typename Executor>
     inline constexpr bool supports_mark_end_execution_v =
-        requires(std::remove_reference_t<Params>& p,
-            std::remove_reference_t<Executor>& e) { p.mark_end_execution(e); };
+        requires(Params&& p, Executor&& e) { p.mark_end_execution(e); };
 
     HPX_CXX_CORE_EXPORT template <typename Params, typename InnerParams,
         typename Executor>
-    inline constexpr bool supports_wrapping_mark_end_execution_v = requires(
-        std::remove_reference_t<Params>& p,
-        std::remove_reference_t<InnerParams>& ip,
-        std::remove_reference_t<Executor>& e) { p.mark_end_execution(ip, e); };
+    inline constexpr bool supports_wrapping_mark_end_execution_v =
+        requires(Params&& p, InnerParams&& ip, Executor&& e) {
+            p.mark_end_execution(ip, e);
+        };
 
     // execution_markers: partition
     HPX_CXX_CORE_EXPORT template <typename Params, typename Executor,
         typename... Args>
     inline constexpr bool supports_mark_partition_v =
-        requires(std::remove_reference_t<Params>& p,
-            std::remove_reference_t<Executor>& e, Args&&... args) {
+        requires(Params&& p, Executor&& e, Args&&... args) {
             p.mark_partition(e, std::size_t{}, HPX_FORWARD(Args, args)...);
         };
 
     HPX_CXX_CORE_EXPORT template <typename Params, typename InnerParams,
         typename Executor, typename... Args>
     inline constexpr bool supports_wrapping_mark_partition_v =
-        requires(std::remove_reference_t<Params>& p,
-            std::remove_reference_t<InnerParams>& ip,
-            std::remove_reference_t<Executor>& e, Args&&... args) {
+        requires(Params&& p, InnerParams&& ip, Executor&& e, Args&&... args) {
             p.mark_partition(ip, e, std::size_t{}, HPX_FORWARD(Args, args)...);
         };
 
     // wrapping processing_units_count
     HPX_CXX_CORE_EXPORT template <typename Params, typename Executor>
     inline constexpr bool supports_processing_units_count_v =
-        requires(std::remove_reference_t<Params>& p,
-            std::remove_reference_t<Executor>& e,
+        requires(Params&& p, Executor&& e,
             hpx::chrono::steady_duration const& d) {
             p.processing_units_count(e, d, std::size_t{});
         };
@@ -254,9 +234,7 @@ namespace hpx::execution::experimental {
     HPX_CXX_CORE_EXPORT template <typename Params, typename InnerParams,
         typename Executor>
     inline constexpr bool supports_wrapping_processing_units_count_v =
-        requires(std::remove_reference_t<Params>& p,
-            std::remove_reference_t<InnerParams>& ip,
-            std::remove_reference_t<Executor>& e,
+        requires(Params&& p, InnerParams&& ip, Executor&& e,
             hpx::chrono::steady_duration const& d) {
             p.processing_units_count(ip, e, d, std::size_t{});
         };
@@ -264,25 +242,21 @@ namespace hpx::execution::experimental {
     // wrapping reset_thread_distribution
     HPX_CXX_CORE_EXPORT template <typename Params, typename Executor>
     inline constexpr bool supports_reset_thread_distribution_v =
-        requires(std::remove_reference_t<Params>& p,
-            std::remove_reference_t<Executor>& e) {
+        requires(Params&& p, Executor&& e) {
             p.reset_thread_distribution(e);
         };
 
     HPX_CXX_CORE_EXPORT template <typename Params, typename InnerParams,
         typename Executor>
     inline constexpr bool supports_wrapping_reset_thread_distribution_v =
-        requires(std::remove_reference_t<Params>& p,
-            std::remove_reference_t<InnerParams>& ip,
-            std::remove_reference_t<Executor>& e) {
+        requires(Params&& p, InnerParams&& ip, Executor&& e) {
             p.reset_thread_distribution(ip, e);
         };
 
     // wrapping collect_execution_parameters
     HPX_CXX_CORE_EXPORT template <typename Params, typename Executor>
     inline constexpr bool supports_collect_execution_parameters_v =
-        requires(std::remove_reference_t<Params>& p,
-            std::remove_reference_t<Executor>& e) {
+        requires(Params&& p, Executor&& e) {
             p.collect_execution_parameters(
                 e, std::size_t{}, std::size_t{}, std::size_t{}, std::size_t{});
         };
@@ -290,9 +264,7 @@ namespace hpx::execution::experimental {
     HPX_CXX_CORE_EXPORT template <typename Params, typename InnerParams,
         typename Executor>
     inline constexpr bool supports_wrapping_collect_execution_parameters_v =
-        requires(std::remove_reference_t<Params>& p,
-            std::remove_reference_t<InnerParams>& ip,
-            std::remove_reference_t<Executor>& e) {
+        requires(Params&& p, InnerParams&& ip, Executor&& e) {
             p.collect_execution_parameters(ip, e, std::size_t{}, std::size_t{},
                 std::size_t{}, std::size_t{});
         };
