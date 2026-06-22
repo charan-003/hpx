@@ -64,10 +64,10 @@ namespace hpx::collectives {
         }
 
         communicator_server::communicator_server(
-            std::size_t num_sites, char const* basename) noexcept
+            std::size_t num_sites, char const* basename)
           : gate_(num_sites)
           , num_sites_(num_sites)
-          , basename_(basename)
+          , basename_(basename != nullptr ? basename : "")
         {
             HPX_ASSERT(
                 num_sites != 0 && num_sites != static_cast<std::size_t>(-1));
@@ -160,7 +160,7 @@ namespace hpx::collectives {
             // involved.
             if (num_sites == 1)
             {
-                c.set_info(num_sites, this_site);
+                c.set_info(num_sites, this_site, root_site);
                 return c;
             }
 
@@ -286,7 +286,7 @@ namespace hpx::collectives {
             // involved.
             if (num_sites == 1)
             {
-                c.set_info(num_sites, this_site);
+                c.set_info(num_sites, this_site, root_site);
                 return c;
             }
 
@@ -375,7 +375,7 @@ namespace hpx::collectives {
         void recursively_fill_communicators(
             std::vector<hpx::tuple<communicator, this_site_arg>>& communicators,
             std::size_t left, std::size_t right, std::string const& basename,
-            arity_arg arity, this_site_arg this_site, num_sites_arg num_sites,
+            arity_arg arity, this_site_arg this_site,
             generation_arg generation)
         {
             std::string name(basename);
@@ -413,8 +413,7 @@ namespace hpx::collectives {
                 if (this_site >= current_left && this_site <= current_right)
                 {
                     recursively_fill_communicators(communicators, current_left,
-                        current_right, basename, arity, this_site, num_sites,
-                        generation);
+                        current_right, basename, arity, this_site, generation);
                     break;
                 }
             }
@@ -455,6 +454,13 @@ namespace hpx::collectives {
                 "than the number of participating sites");
         }
 
+        if (arity < 2)
+        {
+            HPX_THROW_EXCEPTION(hpx::error::bad_parameter,
+                "hpx::collectives::create_hierarchical_communicator",
+                "hierarchical communicators require arity >= 2");
+        }
+
         std::string name(basename);
         if (!generation.is_default())
         {
@@ -475,7 +481,7 @@ namespace hpx::collectives {
 
         std::vector<hpx::tuple<communicator, this_site_arg>> communicators;
         recursively_fill_communicators(communicators, 0, num_sites - 1, name,
-            arity, this_site, num_sites, generation);
+            arity, this_site, generation);
         return hierarchical_communicator(
             HPX_MOVE(communicators), arity, root_site, num_sites, this_site);
     }
