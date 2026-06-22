@@ -296,7 +296,9 @@ namespace hpx::execution::experimental {
 
         ///////////////////////////////////////////////////////////////////////
         HPX_CXX_CORE_EXPORT template <typename Sender, typename Allocator>
-        auto make_future_with_run_loop(run_loop_scheduler_type const& sched,
+        auto make_future_with_run_loop(
+            decltype(std::declval<hpx::execution::experimental::run_loop>()
+                    .get_scheduler()) const& sched,
             Sender&& sender, Allocator const& allocator)
         {
             using allocator_type = Allocator;
