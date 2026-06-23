@@ -10,8 +10,8 @@
 #include <hpx/chrono.hpp>
 #include <hpx/format.hpp>
 #include <hpx/init.hpp>
-#include <hpx/modules/itt_notify.hpp>
 #include <hpx/modules/testing.hpp>
+#include <hpx/modules/tracing.hpp>
 #include <hpx/program_options.hpp>
 
 #include <algorithm>
@@ -504,7 +504,7 @@ void run_benchmark(Policy policy, std::size_t vector_size1,
 ///////////////////////////////////////////////////////////////////////////////
 int hpx_main(hpx::program_options::variables_map& vm)
 {
-    HPX_ITT_PAUSE();
+    HPX_TRACING_PAUSE();
 
     if (vm.count("seed"))
         seed = vm["seed"].as<unsigned int>();
