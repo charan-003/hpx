@@ -67,6 +67,7 @@ struct vector_adder
     }
 };
 
+
 void create_parent_dir(std::filesystem::path const& file_path)
 {
     // Create parent directory if does not exist
@@ -1764,17 +1765,18 @@ void test_one_shot_use_exclusive_scan(int lpn, std::size_t iterations,
     auto const timing_comm =
         create_communicator("/test/timing_reduce/exclusive_scan/one_shot/",
             num_sites_arg(num_localities), this_site_arg(this_locality));
+    std::size_t const block_size = static_cast<std::size_t>(test_size);
     std::vector<double> result(iterations, 0.0);
-    std::uint32_t recv_data = 0;
+    std::vector<int> recv_data;
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        auto const value =
-            static_cast<std::uint32_t>(this_locality + 1 + i);
+        std::vector<int> value(
+            block_size, static_cast<int>(this_locality + 1 + i));
         barrier.wait();
         // Time collective
         hpx::chrono::high_resolution_timer const timer;
-        recv_data = exclusive_scan(exclusive_scan_basename, value,
-            static_cast<std::uint32_t>(0), std::plus<std::uint32_t>{},
+        recv_data = exclusive_scan(exclusive_scan_basename, std::move(value),
+            std::vector<int>(block_size, 0), vector_adder{},
             num_sites_arg(num_localities), this_site_arg(this_locality),
             generation_arg(i + 1))
                         .get();
@@ -1784,10 +1786,11 @@ void test_one_shot_use_exclusive_scan(int lpn, std::size_t iterations,
             this_site_arg(this_locality), generation_arg(i + 1));
         if (i >= warmup_iterations)
             result[i - warmup_iterations] = max_elapsed;
-        std::uint32_t expected = 0;
+        int expected = 0;
         for (std::size_t j = 0; j < this_locality; ++j)
-            expected += static_cast<std::uint32_t>(j + 1 + i);
-        HPX_TEST_EQ(recv_data, expected);
+            expected += static_cast<int>(j + 1 + i);
+        HPX_TEST_EQ(recv_data.size(), block_size);
+        HPX_TEST_EQ(recv_data[0], expected);
     }
     if (this_locality == 0)
     {
@@ -1817,17 +1820,18 @@ void test_multiple_use_with_generation_exclusive_scan(int lpn,
     auto const timing_comm =
         create_communicator("/test/timing_reduce/exclusive_scan/multi_use/",
             num_sites_arg(num_localities), this_site_arg(this_locality));
+    std::size_t const block_size = static_cast<std::size_t>(test_size);
     std::vector<double> result(iterations, 0.0);
-    std::uint32_t recv_data = 0;
+    std::vector<int> recv_data;
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        auto const value =
-            static_cast<std::uint32_t>(this_locality + 1 + i);
+        std::vector<int> value(
+            block_size, static_cast<int>(this_locality + 1 + i));
         barrier.wait();
         // Time collective
         hpx::chrono::high_resolution_timer const timer;
-        recv_data = exclusive_scan(exclusive_scan_client, value,
-            static_cast<std::uint32_t>(0), std::plus<std::uint32_t>{},
+        recv_data = exclusive_scan(exclusive_scan_client, std::move(value),
+            std::vector<int>(block_size, 0), vector_adder{},
             generation_arg(i + 1))
                         .get();
         // Reduce max elapsed time to root
@@ -1836,10 +1840,11 @@ void test_multiple_use_with_generation_exclusive_scan(int lpn,
             this_site_arg(this_locality), generation_arg(i + 1));
         if (i >= warmup_iterations)
             result[i - warmup_iterations] = max_elapsed;
-        std::uint32_t expected = 0;
+        int expected = 0;
         for (std::size_t j = 0; j < this_locality; ++j)
-            expected += static_cast<std::uint32_t>(j + 1 + i);
-        HPX_TEST_EQ(recv_data, expected);
+            expected += static_cast<int>(j + 1 + i);
+        HPX_TEST_EQ(recv_data.size(), block_size);
+        HPX_TEST_EQ(recv_data[0], expected);
     }
     if (this_locality == 0)
     {
@@ -1873,17 +1878,18 @@ void test_one_shot_use_inclusive_scan(int lpn, std::size_t iterations,
     auto const timing_comm =
         create_communicator("/test/timing_reduce/inclusive_scan/one_shot/",
             num_sites_arg(num_localities), this_site_arg(this_locality));
+    std::size_t const block_size = static_cast<std::size_t>(test_size);
     std::vector<double> result(iterations, 0.0);
-    std::uint32_t recv_data = 0;
+    std::vector<int> recv_data;
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        auto const value =
-            static_cast<std::uint32_t>(this_locality + 1 + i);
+        std::vector<int> value(
+            block_size, static_cast<int>(this_locality + 1 + i));
         barrier.wait();
         // Time collective
         hpx::chrono::high_resolution_timer const timer;
-        recv_data = inclusive_scan(inclusive_scan_basename, value,
-            std::plus<std::uint32_t>{}, num_sites_arg(num_localities),
+        recv_data = inclusive_scan(inclusive_scan_basename, std::move(value),
+            vector_adder{}, num_sites_arg(num_localities),
             this_site_arg(this_locality), generation_arg(i + 1))
                         .get();
         // Reduce max elapsed time to root
@@ -1892,10 +1898,11 @@ void test_one_shot_use_inclusive_scan(int lpn, std::size_t iterations,
             this_site_arg(this_locality), generation_arg(i + 1));
         if (i >= warmup_iterations)
             result[i - warmup_iterations] = max_elapsed;
-        std::uint32_t expected = 0;
+        int expected = 0;
         for (std::size_t j = 0; j <= this_locality; ++j)
-            expected += static_cast<std::uint32_t>(j + 1 + i);
-        HPX_TEST_EQ(recv_data, expected);
+            expected += static_cast<int>(j + 1 + i);
+        HPX_TEST_EQ(recv_data.size(), block_size);
+        HPX_TEST_EQ(recv_data[0], expected);
     }
     if (this_locality == 0)
     {
@@ -1925,18 +1932,19 @@ void test_multiple_use_with_generation_inclusive_scan(int lpn,
     auto const timing_comm =
         create_communicator("/test/timing_reduce/inclusive_scan/multi_use/",
             num_sites_arg(num_localities), this_site_arg(this_locality));
+    std::size_t const block_size = static_cast<std::size_t>(test_size);
     std::vector<double> result(iterations, 0.0);
-    std::uint32_t recv_data = 0;
+    std::vector<int> recv_data;
     for (std::size_t i = 0; i != warmup_iterations + iterations; ++i)
     {
-        auto const value =
-            static_cast<std::uint32_t>(this_locality + 1 + i);
+        std::vector<int> value(
+            block_size, static_cast<int>(this_locality + 1 + i));
         barrier.wait();
         // Time collective
         hpx::chrono::high_resolution_timer const timer;
         recv_data =
-            inclusive_scan(inclusive_scan_client, value,
-                std::plus<std::uint32_t>{}, generation_arg(i + 1))
+            inclusive_scan(inclusive_scan_client, std::move(value),
+                vector_adder{}, generation_arg(i + 1))
                 .get();
         // Reduce max elapsed time to root
         double max_elapsed = timer.elapsed();
@@ -1944,10 +1952,11 @@ void test_multiple_use_with_generation_inclusive_scan(int lpn,
             this_site_arg(this_locality), generation_arg(i + 1));
         if (i >= warmup_iterations)
             result[i - warmup_iterations] = max_elapsed;
-        std::uint32_t expected = 0;
+        int expected = 0;
         for (std::size_t j = 0; j <= this_locality; ++j)
-            expected += static_cast<std::uint32_t>(j + 1 + i);
-        HPX_TEST_EQ(recv_data, expected);
+            expected += static_cast<int>(j + 1 + i);
+        HPX_TEST_EQ(recv_data.size(), block_size);
+        HPX_TEST_EQ(recv_data[0], expected);
     }
     if (this_locality == 0)
     {
