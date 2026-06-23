@@ -39,11 +39,11 @@ struct partition_hooks_parameters
     friend void tag_override_invoke(
         hpx::execution::experimental::mark_partition_t,
         partition_hooks_parameters& self, Executor&&, std::size_t partition,
-        auto state, std::size_t a, std::size_t b, auto) noexcept
+        auto state, std::size_t chunk) noexcept
     {
         HPX_TEST_LT(partition, self.values_.size());
         HPX_TEST_EQ(std::uint8_t(1), static_cast<std::uint8_t>(state));
-        self.values_[partition] = {a, b};
+        self.values_[partition] = chunk;
         self.seen_[partition] = 1;
     }
 
@@ -55,7 +55,7 @@ struct partition_hooks_parameters
         return c;
     }
 
-    std::vector<std::pair<std::size_t, std::size_t>> values_;
+    std::vector<std::size_t> values_;
     std::vector<unsigned char> seen_;
     std::size_t num_chunks_ = 0;
 };
