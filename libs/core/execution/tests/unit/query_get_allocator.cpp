@@ -22,7 +22,9 @@ struct custom_allocator
     custom_allocator() = default;
 
     template <typename U>
-    constexpr custom_allocator(custom_allocator const&) noexcept {}
+    constexpr custom_allocator(custom_allocator const&) noexcept
+    {
+    }
 
     [[nodiscard]] std::byte* allocate(std::size_t n)
     {
@@ -34,12 +36,14 @@ struct custom_allocator
         ::operator delete(p);
     }
 
-    friend constexpr bool operator==(custom_allocator const&, custom_allocator const&) noexcept
+    friend constexpr bool operator==(
+        custom_allocator const&, custom_allocator const&) noexcept
     {
         return true;
     }
 
-    friend constexpr bool operator!=(custom_allocator const&, custom_allocator const&) noexcept
+    friend constexpr bool operator!=(
+        custom_allocator const&, custom_allocator const&) noexcept
     {
         return false;
     }
@@ -57,7 +61,7 @@ struct custom_env
 struct custom_sender
 {
     using sender_concept = ex::sender_t;
-    
+
     constexpr custom_env get_env() const noexcept
     {
         return custom_env{};
@@ -67,11 +71,13 @@ struct custom_sender
 // Custom scheduler wrapper that provides the custom environment
 struct custom_scheduler
 {
-    friend constexpr bool operator==(custom_scheduler const&, custom_scheduler const&) noexcept
+    friend constexpr bool operator==(
+        custom_scheduler const&, custom_scheduler const&) noexcept
     {
         return true;
     }
-    friend constexpr bool operator!=(custom_scheduler const&, custom_scheduler const&) noexcept
+    friend constexpr bool operator!=(
+        custom_scheduler const&, custom_scheduler const&) noexcept
     {
         return false;
     }
@@ -98,7 +104,7 @@ int hpx_main()
 
         // The query should return std::allocator<std::byte> for thread_pool_scheduler
         auto alloc = ex::get_allocator(env);
-        HPX_TEST((std::is_same_v<decltype(alloc), std::allocator<std::byte>>));
+        HPX_TEST((std::is_same_v<decltype(alloc), std::allocator<std::byte>>) );
     }
 
     {
@@ -108,7 +114,7 @@ int hpx_main()
         auto env = ex::get_env(sndr);
 
         auto alloc = ex::get_allocator(env);
-        HPX_TEST((std::is_same_v<decltype(alloc), custom_allocator>));
+        HPX_TEST((std::is_same_v<decltype(alloc), custom_allocator>) );
     }
 
     return hpx::local::finalize();
