@@ -44,7 +44,7 @@ struct double_max
 {
     double operator()(double a, double b) const
     {
-        return (std::max)(a, b);
+        return (std::max) (a, b);
     }
 };
 
@@ -66,7 +66,6 @@ struct vector_adder
         return result;
     }
 };
-
 
 void create_parent_dir(std::filesystem::path const& file_path)
 {
@@ -114,9 +113,8 @@ Stats compute_moments(std::vector<double> data)
     // Median and min/max: sort in place (data is a local copy)
     std::sort(data.begin(), data.end());
     std::size_t const mid = data.size() / 2;
-    double const median = (data.size() % 2 == 0) ?
-        0.5 * (data[mid - 1] + data[mid]) :
-        data[mid];
+    double const median =
+        (data.size() % 2 == 0) ? 0.5 * (data[mid - 1] + data[mid]) : data[mid];
 
     return Stats{mean, variance, stddev, data.front(), data.back(), median};
 }
@@ -196,7 +194,8 @@ void write_to_file(std::string const& collective, std::string const& type,
     std::ofstream outfile;
     outfile.open(runtime_file_path, std::ios_base::app);
     hpx::util::format_to(outfile,
-        "{1};{2};{3};{4};{5};{6};{7};{8};{9};{10};{11};{12};{13};{14};{15};{16}\n",
+        "{1};{2};{3};{4};{5};{6};{7};{8};{9};{10};{11};{12};{13};{14};{15};{16}"
+        "\n",
         collective, type, arity, nodes, num_l, lpn, threads, size,
         warmup_iterations, iterations, stats.mean, stats.variance, stats.stddev,
         stats.min, stats.max, stats.median);
@@ -1475,11 +1474,10 @@ void test_one_shot_use_all_to_all(int lpn, std::size_t iterations,
         // Time collective
         auto iter_data = send_data;
         hpx::chrono::high_resolution_timer const timer;
-        recv_data =
-            all_to_all(all_to_all_direct_basename, std::move(iter_data),
-                num_sites_arg(num_localities), this_site_arg(this_locality),
-                generation_arg(i + 1))
-                .get();
+        recv_data = all_to_all(all_to_all_direct_basename, std::move(iter_data),
+            num_sites_arg(num_localities), this_site_arg(this_locality),
+            generation_arg(i + 1))
+                        .get();
         // Reduce max elapsed time to root
         double max_elapsed = timer.elapsed();
         reduce(timing_comm, max_elapsed, double_max{},
@@ -1514,9 +1512,8 @@ void test_multiple_use_with_generation_all_to_all(int lpn,
     // Ensure at least two localities
     HPX_TEST_LTE(static_cast<std::size_t>(2), num_localities);
     // Create communicator once for all iterations
-    auto const comm =
-        create_communicator(all_to_all_direct_basename,
-            num_sites_arg(num_localities), this_site_arg(this_locality));
+    auto const comm = create_communicator(all_to_all_direct_basename,
+        num_sites_arg(num_localities), this_site_arg(this_locality));
     // Barrier for synchronization
     char const* const barrier_test_name = "/test/barrier/generation";
     hpx::distributed::barrier barrier(barrier_test_name);
@@ -1594,11 +1591,8 @@ void test_all_to_all_hierarchical(int arity, int lpn, std::size_t iterations,
         create_communicator("/test/timing_reduce/all_to_all/hierarchical/",
             num_sites_arg(num_localities), this_site_arg(this_locality));
     std::vector<double> result(iterations, 0.0);
-    // Each destination block carries test_size ints, matching MPI's
-    // MPI_Alltoall with sendcount=test_size per rank.
+    // Each destination block carries test_size ints
     std::size_t const block_size = static_cast<std::size_t>(test_size);
-    // Data – pre-allocate shape; refill each iteration so payload varies
-    // with i (matching the MPI benchmark: block j carries this_locality+j+i).
     std::vector<std::vector<int>> send_data(
         num_localities, std::vector<int>(block_size, 0));
     std::vector<std::vector<int>> recv_data;
@@ -1942,10 +1936,9 @@ void test_multiple_use_with_generation_inclusive_scan(int lpn,
         barrier.wait();
         // Time collective
         hpx::chrono::high_resolution_timer const timer;
-        recv_data =
-            inclusive_scan(inclusive_scan_client, std::move(value),
-                vector_adder{}, generation_arg(i + 1))
-                .get();
+        recv_data = inclusive_scan(inclusive_scan_client, std::move(value),
+            vector_adder{}, generation_arg(i + 1))
+                        .get();
         // Reduce max elapsed time to root
         double max_elapsed = timer.elapsed();
         reduce(timing_comm, max_elapsed, double_max{},
