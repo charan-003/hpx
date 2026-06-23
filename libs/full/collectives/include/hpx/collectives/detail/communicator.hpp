@@ -10,6 +10,8 @@
 
 #if !defined(HPX_COMPUTE_DEVICE_CODE)
 
+#include <hpx/assert.hpp>
+#include <hpx/collectives/argument_types.hpp>
 #include <hpx/modules/actions_base.hpp>
 #include <hpx/modules/async_base.hpp>
 #include <hpx/modules/components_base.hpp>
@@ -238,7 +240,7 @@ namespace hpx::collectives::detail {
             HPX_ASSERT_OWNS_LOCK(l);
 
             // Wait for the requested generation to be processed.
-            gate_.synchronize(generation == static_cast<std::size_t>(-1) ?
+            gate_.synchronize(generation == generation_arg{} ?
                     gate_.generation(l) :
                     generation,
                 l);
@@ -271,7 +273,7 @@ namespace hpx::collectives::detail {
                         basename_, operation, which, generation);
                 }
 
-                if (generation == static_cast<std::size_t>(-1) ||
+                if (generation == generation_arg{} ||
                     generation == gate_.generation(l))
                 {
                     current_operation_ = operation;
@@ -287,10 +289,20 @@ namespace hpx::collectives::detail {
         // set or get).
         //
         // Finalizer will be invoked under lock after all sites have checked in.
+        // num_generations is how many internal generations this operation
+        // consumes on this communicator's gate (default generation_mode::
+        // single_step). A hierarchical collective that touches a communicator
+        // only once per user call but has to stay in lock-step with collectives
+        // that touch it twice passes generation_mode::double_step, advancing the
+        // gate by two in a single step so the skipped generation is consumed
+        // here instead of through a second round-trip. It comes before
+        // num_values so the common callers (which never override num_values) can
+        // leave that argument off.
         template <typename Data, typename Step, typename Finalizer>
         auto handle_data(char const* operation, std::size_t which,
             std::size_t generation, [[maybe_unused]] Step&& step,
             Finalizer&& finalizer,
+            generation_mode num_generations = generation_mode::single_step,
             std::size_t num_values = static_cast<std::size_t>(-1))
         {
             auto on_ready = [this, operation, which, generation, num_values,
@@ -414,7 +426,7 @@ namespace hpx::collectives::detail {
             // Make sure next generation is enabled only after previous
             // generation has finished executing.
             gate_.set(which, l,
-                [this, operation, which, generation](
+                [this, operation, which, generation, num_generations](
                     auto& l, auto& gate, error_code& ec) {
                     // This callback is invoked synchronously once for each
                     // collective operation after all data has been received and
@@ -443,8 +455,22 @@ namespace hpx::collectives::detail {
                     invalidate_data(l);
 
                     // Release threads possibly waiting for the next generation
-                    // to be handled.
-                    gate.next_generation(l, generation, ec);
+                    // to be handled. When this operation consumes more than one
+                    // generation, advance the gate past the skipped ones in a
+                    // single step (the gate only requires that the next value
+                    // is not smaller than the current one). An auto generation
+                    // (the default sentinel) always advances by one; the assert
+                    // enforces that a multi-generation step is only requested
+                    // with an explicit generation. Note that the step reduces to
+                    // generation when num_generations == single_step.
+                    HPX_ASSERT(
+                        num_generations == generation_mode::single_step ||
+                        generation != generation_arg{});
+                    std::size_t const next_gen =
+                        generation == generation_arg{} ? generation :
+                                                         generation +
+                            static_cast<std::size_t>(num_generations) - 1;
+                    gate.next_generation(l, next_gen, ec);
                 });
 
             return f;
