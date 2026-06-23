@@ -22,6 +22,7 @@
 #include <hpx/modules/runtime_local.hpp>
 #include <hpx/modules/threading.hpp>
 #include <hpx/modules/threading_base.hpp>
+#include <hpx/modules/tracing.hpp>
 
 #include <cstddef>
 #include <utility>

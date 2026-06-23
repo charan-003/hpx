@@ -20,6 +20,7 @@
 #include <hpx/functional/traits/is_placeholder.hpp>
 #include <hpx/modules/datastructures.hpp>
 #include <hpx/modules/tag_invoke.hpp>
+#include <hpx/modules/tracing.hpp>
 #include <hpx/modules/type_support.hpp>
 
 #include <cstddef>
