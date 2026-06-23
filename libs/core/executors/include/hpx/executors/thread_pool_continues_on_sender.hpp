@@ -99,8 +99,7 @@ namespace hpx::execution::experimental::detail {
             {
                 // We are on an HPX thread. Use hpx::this_thread::get_pool()
                 // to retrieve the pool this thread belongs to.
-                auto* current_pool =
-                    hpx::this_thread::get_pool();
+                auto* current_pool = hpx::this_thread::get_pool();
                 if (current_pool == target_pool)
                 {
                     // Fast path: same pool — forward inline.
