@@ -184,7 +184,7 @@ namespace hpx::execution::experimental {
                     std::decay_t<decltype(original_sender)>,
                     std::decay_t<decltype(sched)>>{
                     HPX_FORWARD(decltype(original_sender), original_sender),
-                    std::decay_t<decltype(sched)>(sched)};
+                    HPX_FORWARD(decltype(sched), sched)};
         }
     };
 
