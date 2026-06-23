@@ -31,6 +31,7 @@
 
 #include <hpx/execution/algorithms/bulk.hpp>
 #include <hpx/execution_base/stdexec_forward.hpp>
+#include <hpx/executors/thread_pool_continues_on_sender.hpp>
 
 #include <ranges>
 
@@ -143,6 +144,47 @@ namespace hpx::execution::experimental {
                     is_unsequenced>{HPX_MOVE(sched),
                     HPX_FORWARD(decltype(child), child), HPX_MOVE(iota_shape),
                     HPX_FORWARD(decltype(f), f), HPX_MOVE(pu_mask)};
+        }
+
+        // transform_sender for continues_on operations.
+        //
+        // When stdexec's domain resolution encounters
+        //   continues_on(sender, hpx_thread_pool_scheduler)
+        // it calls this transform_sender to replace the generic double-state
+        // continues_on with our optimized single-state implementation.
+        //
+        // The continues_on expression tree is:
+        //   continues_on_t [ scheduler, schedule_from_t [ {}, original_sender ] ]
+        //
+        // We extract the original sender and scheduler, then return our
+        // thread_pool_continues_on_sender which uses a single operation
+        // state and inline forwarding when already on an HPX thread.
+        //
+        // Note: We constrain on the sender being a continues_on expression
+        // only. The scheduler type check is done inside the body since the
+        // domain dispatch already ensures we are in thread_pool_domain.
+        template <typename Sender, typename Env>
+            requires sender_invokes_algorithm_v<Sender,
+                hpx::execution::experimental::continues_on_t>
+        constexpr auto transform_sender(
+            hpx::execution::experimental::set_value_t, Sender&& sndr,
+            Env const& /*env*/) const noexcept
+        {
+            // Destructure the continues_on expression:
+            //   [continues_on_tag, scheduler, schedule_from_child]
+            auto&& [tag, sched, schedule_from_child] = sndr;
+
+            // Destructure the schedule_from wrapper to get the original
+            // predecessor sender:
+            //   [schedule_from_tag, empty_data, original_sender]
+            auto&& [sf_tag, sf_data, original_sender] = schedule_from_child;
+
+            return hpx::execution::experimental::detail::
+                thread_pool_continues_on_sender<
+                    std::decay_t<decltype(original_sender)>,
+                    std::decay_t<decltype(sched)>>{
+                    HPX_FORWARD(decltype(original_sender), original_sender),
+                    std::decay_t<decltype(sched)>(sched)};
         }
     };
 
