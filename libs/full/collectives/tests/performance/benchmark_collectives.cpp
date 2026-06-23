@@ -507,7 +507,7 @@ void test_gather_hierarchical(int arity, int lpn, std::size_t iterations,
         // Check for correctness
         if (this_locality == 0)
         {
-            for (int j = 0; j < static_cast<int>(num_localities); ++j)
+            for (std::size_t j = 0; j < num_localities; ++j)
             {
                 HPX_TEST_EQ(static_cast<int>(i + j), recv_data[j][0]);
             }
@@ -896,7 +896,7 @@ void test_one_shot_use_gather(int lpn, std::size_t iterations,
         // Check for correctness
         if (this_locality == 0)
         {
-            for (int j = 0; j < static_cast<int>(num_localities); ++j)
+            for (std::size_t j = 0; j < num_localities; ++j)
             {
                 HPX_TEST_EQ(static_cast<int>(i + j), recv_data[j][0]);
             }
@@ -1231,7 +1231,7 @@ void test_multiple_use_with_generation_gather(int lpn, std::size_t iterations,
         // Check for correctness
         if (this_locality == 0)
         {
-            for (int j = 0; j < static_cast<int>(num_localities); ++j)
+            for (std::size_t j = 0; j < num_localities; ++j)
             {
                 HPX_TEST_EQ(static_cast<int>(i + j), recv_data[j][0]);
             }
@@ -1427,7 +1427,7 @@ void test_all_gather_hierarchical(int arity, int lpn, std::size_t iterations,
             result[i - warmup_iterations] = max_elapsed;
         // Check for correctness: every site contributed (i + site), so
         // recv_data[j][0] must equal (i + j) at every site.
-        for (int j = 0; j < static_cast<int>(num_localities); ++j)
+        for (std::size_t j = 0; j < num_localities; ++j)
         {
             HPX_TEST_EQ(static_cast<int>(i + j), recv_data[j][0]);
         }
@@ -1683,7 +1683,7 @@ void test_one_shot_use_all_gather(int lpn, std::size_t iterations,
         if (i >= warmup_iterations)
             result[i - warmup_iterations] = max_elapsed;
         // Check for correctness
-        for (int j = 0; j < static_cast<int>(num_localities); ++j)
+        for (std::size_t j = 0; j < num_localities; ++j)
         {
             HPX_TEST_EQ(static_cast<int>(i + j), recv_data[j][0]);
         }
@@ -1737,7 +1737,7 @@ void test_multiple_use_with_generation_all_gather(int lpn,
         if (i >= warmup_iterations)
             result[i - warmup_iterations] = max_elapsed;
         // Check for correctness
-        for (int j = 0; j < static_cast<int>(num_localities); ++j)
+        for (std::size_t j = 0; j < num_localities; ++j)
         {
             HPX_TEST_EQ(static_cast<int>(i + j), recv_data[j][0]);
         }
