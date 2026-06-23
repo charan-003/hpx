@@ -111,10 +111,10 @@ void run_microbenchmark()
         timer t;
         for (std::size_t i = 0; i < N; ++i)
         {
-            ex::sync_wait(                       //
-                ex::just()                       //
-                | ex::continues_on(sched)        //
-                | ex::then([] {})                //
+            ex::sync_wait(                   //
+                ex::just()                   //
+                | ex::continues_on(sched)    //
+                | ex::then([] {})            //
             );
         }
         return t.elapsed_ms();
@@ -142,17 +142,17 @@ void run_microbenchmark()
         for (std::size_t b = 0; b < fan_out_N; b += batch)
         {
             std::size_t const count =
-                (std::min)(batch, static_cast<std::size_t>(fan_out_N - b));
+                (std::min) (batch, static_cast<std::size_t>(fan_out_N - b));
 
             std::vector<hpx::future<void>> futs;
             futs.reserve(count);
             for (std::size_t i = 0; i < count; ++i)
             {
                 futs.push_back(hpx::async([&] {
-                    ex::sync_wait(                       //
-                        ex::just()                       //
-                        | ex::continues_on(sched)        //
-                        | ex::then([] {})                //
+                    ex::sync_wait(                   //
+                        ex::just()                   //
+                        | ex::continues_on(sched)    //
+                        | ex::then([] {})            //
                     );
                 }));
             }
@@ -224,13 +224,13 @@ void run_macrobenchmark()
         for (std::size_t tid = 0; tid < num_threads; ++tid)
         {
             std::size_t const begin = tid * chunk;
-            std::size_t const end = (std::min)(begin + chunk, N);
+            std::size_t const end = (std::min) (begin + chunk, N);
             if (begin >= N)
                 break;
 
             futs.push_back(hpx::async([&, begin, end] {
-                daxpy_kernel(alpha, x.data() + begin,
-                    y_native.data() + begin, end - begin);
+                daxpy_kernel(alpha, x.data() + begin, y_native.data() + begin,
+                    end - begin);
             }));
         }
         hpx::wait_all(futs);
@@ -263,18 +263,18 @@ void run_macrobenchmark()
         for (std::size_t tid = 0; tid < num_threads; ++tid)
         {
             std::size_t const begin = tid * chunk;
-            std::size_t const end = (std::min)(begin + chunk, N);
+            std::size_t const end = (std::min) (begin + chunk, N);
             if (begin >= N)
                 break;
 
             futs.push_back(hpx::async([&, begin, end] {
-                ex::sync_wait(                          //
-                    ex::just()                          //
-                    | ex::continues_on(sched)           //
+                ex::sync_wait(                   //
+                    ex::just()                   //
+                    | ex::continues_on(sched)    //
                     | ex::then([&, begin, end] {
                           daxpy_kernel(alpha, x.data() + begin,
                               y_p2300.data() + begin, end - begin);
-                      })                                //
+                      })    //
                 );
             }));
         }
@@ -301,17 +301,15 @@ void run_macrobenchmark()
 
         timer t;
         auto bulk_n = static_cast<int>(N);
-        ex::sync_wait(                                 //
-            ex::starts_on(sched,                       //
-                ex::just()                             //
-                | ex::bulk(bulk_n,                     //
-                      [&](int i) {
-                          auto const idx =
-                              static_cast<std::size_t>(i);
-                          y_bulk[idx] =
-                              alpha * x[idx] + y_bulk[idx];
-                      })                               //
-                )                                      //
+        ex::sync_wait(                    //
+            ex::starts_on(sched,          //
+                ex::just()                //
+                    | ex::bulk(bulk_n,    //
+                          [&](int i) {
+                              auto const idx = static_cast<std::size_t>(i);
+                              y_bulk[idx] = alpha * x[idx] + y_bulk[idx];
+                          })    //
+                )               //
         );
         return t.elapsed_ms();
     };
@@ -346,8 +344,8 @@ void run_macrobenchmark()
 
     // Summary ratios
     std::cout << "\n  Overhead ratio (P2300 continues_on / native): "
-              << std::fixed << std::setprecision(2)
-              << (p2300_avg / native_avg) << "x\n";
+              << std::fixed << std::setprecision(2) << (p2300_avg / native_avg)
+              << "x\n";
     std::cout << "  Speedup ratio (P2300 bulk / native):          "
               << std::fixed << std::setprecision(2)
               << (native_avg / p2300_bulk_avg) << "x\n";

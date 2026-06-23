@@ -251,8 +251,8 @@ namespace hpx::execution::experimental::detail {
         template <typename Self, typename... Env>
         static consteval auto get_completion_signatures() noexcept
         {
-            return hpx::execution::experimental::
-                get_completion_signatures<Sender, Env...>();
+            return hpx::execution::experimental::get_completion_signatures<
+                Sender, Env...>();
         }
 
         // connect: produce the single-state operation state.
