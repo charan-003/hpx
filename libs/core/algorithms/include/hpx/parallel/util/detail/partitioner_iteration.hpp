@@ -10,6 +10,7 @@
 #include <hpx/datastructures/traits/is_tuple_like.hpp>
 #include <hpx/modules/functional.hpp>
 #include <hpx/modules/type_support.hpp>
+#include <hpx/modules/tracing.hpp>
 
 #include <concepts>
 #include <cstddef>
