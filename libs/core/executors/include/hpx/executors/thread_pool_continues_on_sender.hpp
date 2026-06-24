@@ -81,7 +81,7 @@ namespace hpx::execution::experimental::detail {
         //
         // Fast path: if the current HPX thread belongs to the same thread
         // pool as the scheduler's target pool, forward the values inline
-        // — no scheduling hop needed.
+        // -- no scheduling hop needed.
         //
         // Slow path: if we are NOT on the target HPX pool (different pool,
         // or an external OS thread), post a task to the target pool that
@@ -102,7 +102,7 @@ namespace hpx::execution::experimental::detail {
                 auto* current_pool = hpx::this_thread::get_pool();
                 if (current_pool == target_pool)
                 {
-                    // Fast path: same pool — forward inline.
+                    // Fast path: same pool -- forward inline.
                     hpx::detail::try_catch_exception_ptr(
                         [&]() {
                             hpx::execution::experimental::set_value(
@@ -116,33 +116,30 @@ namespace hpx::execution::experimental::detail {
                 }
             }
 
-            // Slow path: not on target pool — schedule onto it.
+            // Slow path: not on target pool -- schedule onto it.
             //
-            // Use C++20 pack init-capture to avoid std::tuple overhead.
-            // Move receiver_ into a local before try_catch so the catch
-            // block does not access a moved-from member.
-            auto captured_receiver = HPX_MOVE(receiver_);
+            // Capture receiver_ by reference in the outer lambda so
+            // that if scheduler_.execute() throws synchronously, the
+            // catch block can still deliver set_error on the valid
+            // receiver. The values are captured by value using C++20
+            // pack init-capture to avoid std::tuple overhead.
             hpx::detail::try_catch_exception_ptr(
-                [&captured_receiver, &scheduler_ = scheduler_,
-                    ... vals = HPX_FORWARD(Ts, ts)]() mutable {
-                    scheduler_.execute([r = HPX_MOVE(captured_receiver),
-                                           ... vs = HPX_MOVE(vals)]() mutable {
-                        hpx::execution::experimental::set_value(
-                            HPX_MOVE(r), HPX_MOVE(vs)...);
-                    });
+                [&]() {
+                    auto& rcvr = receiver_;
+                    scheduler_.execute(
+                        [&rcvr, ... vals = HPX_FORWARD(Ts, ts)]() mutable {
+                            hpx::execution::experimental::set_value(
+                                HPX_MOVE(rcvr), HPX_MOVE(vals)...);
+                        });
                 },
-                [&captured_receiver](std::exception_ptr ep) {
-                    // If scheduler_.execute() threw synchronously
-                    // (before the inner lambda was fully constructed),
-                    // captured_receiver has not been moved from yet
-                    // and is still valid for error delivery.
+                [&](std::exception_ptr ep) {
                     hpx::execution::experimental::set_error(
-                        HPX_MOVE(captured_receiver), HPX_MOVE(ep));
+                        HPX_MOVE(receiver_), HPX_MOVE(ep));
                 });
         }
 
         // set_error: Forward errors directly. Errors are delivered on
-        // whichever context the source sender completed — this matches
+        // whichever context the source sender completed -- this matches
         // stdexec semantics (errors bypass the scheduling hop).
         void set_error(std::exception_ptr ep) && noexcept
         {
@@ -169,7 +166,7 @@ namespace hpx::execution::experimental::detail {
     // optimized receiver, and delegates start() to the resulting inner
     // operation state.
     //
-    // Single operation state — this is the key difference from generic
+    // Single operation state -- this is the key difference from generic
     // stdexec which creates TWO operation states (one for source, one for
     // the schedule hop).
     template <typename Sender, typename Receiver, typename Scheduler>
