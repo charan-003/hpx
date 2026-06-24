@@ -26,9 +26,11 @@
 
 #include <hpx/config.hpp>
 #include <hpx/assert.hpp>
+#include <hpx/functional/bind_back.hpp>
 #include <hpx/modules/errors.hpp>
 #include <hpx/modules/execution_base.hpp>
 #include <hpx/modules/threading_base.hpp>
+#include <hpx/type_support/detail/with_result_of.hpp>
 
 #include <exception>
 #include <type_traits>
@@ -72,8 +74,8 @@ namespace hpx::execution::experimental::detail {
 
         continues_on_receiver(continues_on_receiver&&) = default;
         continues_on_receiver& operator=(continues_on_receiver&&) = default;
-        continues_on_receiver(continues_on_receiver const&) = delete;
-        continues_on_receiver& operator=(continues_on_receiver const&) = delete;
+        continues_on_receiver(continues_on_receiver const&) = default;
+        continues_on_receiver& operator=(continues_on_receiver const&) = default;
 
         ~continues_on_receiver() = default;
 
@@ -121,15 +123,18 @@ namespace hpx::execution::experimental::detail {
             // Capture receiver_ by reference in the outer lambda so
             // that if scheduler_.execute() throws synchronously, the
             // catch block can still deliver set_error on the valid
-            // receiver. The values are captured by value using C++20
-            // pack init-capture to avoid std::tuple overhead.
+            // receiver. Use hpx::bind_back to safely capture the
+            // forwarded values by value instead of C++20 pack
+            // init-capture.
             hpx::detail::try_catch_exception_ptr(
                 [&]() {
                     auto& rcvr = receiver_;
                     scheduler_.execute(
-                        [&rcvr, ... vals = HPX_FORWARD(Ts, ts)]() mutable {
-                            hpx::execution::experimental::set_value(
-                                HPX_MOVE(rcvr), HPX_MOVE(vals)...);
+                        [&rcvr,
+                            f = hpx::bind_back(
+                                hpx::execution::experimental::set_value,
+                                HPX_FORWARD(Ts, ts)...)]() mutable {
+                            HPX_MOVE(f)(HPX_MOVE(rcvr));
                         });
                 },
                 [&](std::exception_ptr ep) {
@@ -184,10 +189,19 @@ namespace hpx::execution::experimental::detail {
         template <typename Sender_, typename Receiver_, typename Scheduler_>
         continues_on_operation_state(
             Sender_&& sndr, Receiver_&& rcvr, Scheduler_&& sched)
+#if defined(HPX_HAVE_CXX17_COPY_ELISION)
+          : inner_op_(hpx::util::detail::with_result_of([&]() {
+              return hpx::execution::experimental::connect(
+                  HPX_FORWARD(Sender_, sndr),
+                  receiver_type{HPX_FORWARD(Receiver_, rcvr),
+                      HPX_FORWARD(Scheduler_, sched)});
+          }))
+#else
           : inner_op_(hpx::execution::experimental::connect(
                 HPX_FORWARD(Sender_, sndr),
                 receiver_type{HPX_FORWARD(Receiver_, rcvr),
                     HPX_FORWARD(Scheduler_, sched)}))
+#endif
         {
         }
 
