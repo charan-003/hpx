@@ -11,6 +11,7 @@
 
 #include <hpx/config.hpp>
 #include <hpx/assert.hpp>
+#include <hpx/executors/executor_scheduler.hpp>
 #include <hpx/executors/parallel_executor.hpp>
 #include <hpx/modules/async_base.hpp>
 #include <hpx/modules/concurrency.hpp>
@@ -21,7 +22,8 @@
 #include <hpx/modules/format.hpp>
 #include <hpx/modules/functional.hpp>
 #include <hpx/modules/hardware.hpp>
-#include <hpx/modules/itt_notify.hpp>
+#include <hpx/modules/tracing.hpp>
+
 #include <hpx/modules/resource_partitioner.hpp>
 #include <hpx/modules/synchronization.hpp>
 #include <hpx/modules/threading.hpp>
@@ -279,12 +281,9 @@ namespace hpx::execution::experimental {
                     while (HPX_LIKELY(state != thread_state::stopping))
                     {
                         {
-#if HPX_HAVE_ITTNOTIFY != 0 && !defined(HPX_HAVE_APEX)
-                            static hpx::util::itt::event notify_event(
+                            HPX_TRACING_MARK_EVENT(
                                 "fork_join_executor::invoke_work");
 
-                            hpx::util::itt::mark_event e(notify_event);
-#endif
                             data.thread_function_helper_(region_data_,
                                 thread_index_, num_threads_, queues_,
                                 exception_mutex_, exception_);
@@ -1245,6 +1244,14 @@ namespace hpx::execution::experimental {
     private:
         std::shared_ptr<shared_data> shared_data_ = nullptr;
 
+        template <typename F, typename... Ts>
+        friend void tag_invoke(hpx::parallel::execution::post_t,
+            fork_join_executor const& exec, F&& f, Ts&&... ts)
+        {
+            exec.shared_data_->async_invoke(
+                hpx::bind_back(HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...));
+        }
+
     public:
         bool operator==(fork_join_executor const& rhs) const noexcept
         {
@@ -1372,6 +1379,15 @@ namespace hpx::execution::experimental {
         };
 
         explicit fork_join_executor(init_mode) {}
+
+    public:
+        /// P2300 get_scheduler bridge
+        hpx::execution::experimental::executor_scheduler<fork_join_executor>
+        query(hpx::execution::experimental::get_scheduler_t) const noexcept
+        {
+            return hpx::execution::experimental::executor_scheduler<
+                fork_join_executor>(*this);
+        }
         /// \endcond
     };
 
@@ -1379,6 +1395,13 @@ namespace hpx::execution::experimental {
         std::ostream& os, fork_join_executor::loop_schedule schedule);
 
     /// \cond NOINTERNAL
+
+    template <>
+    struct is_never_blocking_one_way_executor<fork_join_executor>
+      : std::true_type
+    {
+    };
+
     template <>
     struct is_bulk_one_way_executor<fork_join_executor> : std::true_type
     {

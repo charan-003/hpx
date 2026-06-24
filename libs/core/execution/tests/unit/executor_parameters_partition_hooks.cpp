@@ -33,18 +33,18 @@ struct partition_hooks_parameters
         seen_.resize(num_chunks);
     }
 
-    template <typename Executor, typename State, typename Extra>
+    template <typename Executor, typename State>
     void mark_partition(Executor&&, std::size_t partition, State state,
-        std::size_t a, std::size_t b, Extra) noexcept
+        std::size_t chunk) noexcept
     {
         HPX_TEST_LT(partition, values_.size());
         HPX_TEST_EQ(std::uint8_t(1), static_cast<std::uint8_t>(state));
-        values_[partition] = {a, b};
+        values_[partition] = chunk;
         seen_[partition] = 1;
     }
 
-    template <typename Executor, typename State, typename Extra>
-    void mark_partition(Executor&&, std::size_t, State, Extra) noexcept
+    template <typename Executor, typename State>
+    void mark_partition(Executor&&, std::size_t, State) noexcept
     {
     }
 
@@ -56,7 +56,7 @@ struct partition_hooks_parameters
         return c;
     }
 
-    std::vector<std::pair<std::size_t, std::size_t>> values_;
+    std::vector<std::size_t> values_;
     std::vector<unsigned char> seen_;
     std::size_t num_chunks_ = 0;
 };
