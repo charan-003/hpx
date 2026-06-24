@@ -172,12 +172,14 @@ namespace hpx::execution::experimental {
         {
             // Destructure the continues_on expression:
             //   [continues_on_tag, scheduler, schedule_from_child]
-            auto&& [tag, sched, schedule_from_child] = sndr;
+            auto&& [tag, sched, schedule_from_child] =
+                HPX_FORWARD(Sender, sndr);
 
             // Destructure the schedule_from wrapper to get the original
             // predecessor sender:
             //   [schedule_from_tag, empty_data, original_sender]
-            auto&& [sf_tag, sf_data, original_sender] = schedule_from_child;
+            auto&& [sf_tag, sf_data, original_sender] =
+                HPX_FORWARD(decltype(schedule_from_child), schedule_from_child);
 
             return hpx::execution::experimental::detail::
                 thread_pool_continues_on_sender<

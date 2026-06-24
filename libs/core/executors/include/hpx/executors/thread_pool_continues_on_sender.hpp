@@ -123,24 +123,19 @@ namespace hpx::execution::experimental::detail {
             // block does not access a moved-from member.
             auto captured_receiver = HPX_MOVE(receiver_);
             hpx::detail::try_catch_exception_ptr(
-                [&]() {
-                    scheduler_.execute(
-                        [r = HPX_MOVE(captured_receiver),
-                            ... vals = HPX_FORWARD(Ts, ts)]() mutable {
-                            hpx::execution::experimental::set_value(
-                                HPX_MOVE(r), HPX_MOVE(vals)...);
-                        });
+                [&captured_receiver, &scheduler_ = scheduler_,
+                    ... vals = HPX_FORWARD(Ts, ts)]() mutable {
+                    scheduler_.execute([r = HPX_MOVE(captured_receiver),
+                                           ... vs = HPX_MOVE(vals)]() mutable {
+                        hpx::execution::experimental::set_value(
+                            HPX_MOVE(r), HPX_MOVE(vs)...);
+                    });
                 },
-                [&](std::exception_ptr ep) {
-                    // If scheduler_.execute() itself threw (e.g. lambda
-                    // construction failed), captured_receiver has been
-                    // moved into the lambda. In that case we cannot deliver
-                    // the error. But if the lambda was never fully
-                    // constructed, captured_receiver is still valid.
-                    // try_catch_exception_ptr guarantees we enter here only
-                    // if the try-block threw, so if execute() threw during
-                    // the function call itself (not inside the lambda),
-                    // captured_receiver is still valid.
+                [&captured_receiver](std::exception_ptr ep) {
+                    // If scheduler_.execute() threw synchronously
+                    // (before the inner lambda was fully constructed),
+                    // captured_receiver has not been moved from yet
+                    // and is still valid for error delivery.
                     hpx::execution::experimental::set_error(
                         HPX_MOVE(captured_receiver), HPX_MOVE(ep));
                 });
@@ -187,7 +182,7 @@ namespace hpx::execution::experimental::detail {
             hpx::execution::experimental::connect_result_t<Sender,
                 receiver_type>;
 
-        inner_op_state_type inner_op_;
+        HPX_NO_UNIQUE_ADDRESS inner_op_state_type inner_op_;
 
         template <typename Sender_, typename Receiver_, typename Scheduler_>
         continues_on_operation_state(
