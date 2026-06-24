@@ -31,6 +31,7 @@
 #include <cstdint>
 #include <exception>
 #include <iterator>
+#include <memory>
 #include <optional>
 #include <ranges>
 #include <string>
@@ -845,6 +846,13 @@ namespace hpx::execution::experimental::detail {
                 return sch.query(
                     hpx::execution::experimental::get_completion_domain_t<
                         CPO>{});
+            }
+
+            // P2300 get_allocator query
+            constexpr auto query(
+                hpx::execution::experimental::get_allocator_t) const noexcept
+            {
+                return std::allocator<std::byte>{};
             }
         };
 
