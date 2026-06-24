@@ -9,6 +9,7 @@
 #include <hpx/executors/thread_pool_scheduler.hpp>
 #include <hpx/modules/testing.hpp>
 
+#include <cstddef>
 #include <memory>
 #include <type_traits>
 
