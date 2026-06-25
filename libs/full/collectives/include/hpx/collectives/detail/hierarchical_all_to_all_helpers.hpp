@@ -55,7 +55,6 @@ namespace hpx::collectives::detail {
         // Wrap local value in a vector (same pattern as hierarchical
         // gather_here).
         std::vector<value_type> result;
-        result.reserve(1);
         result.emplace_back(HPX_FORWARD(T, local_result));
 
         // Walk bottom-up from leaf (size()-1) to level 1, skipping level 0
