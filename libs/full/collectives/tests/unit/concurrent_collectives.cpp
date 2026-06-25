@@ -120,9 +120,7 @@ private:
         template <typename Archive>
         void serialize(Archive& ar, unsigned)
         {
-            // clang-format off
             ar & generations;
-            // clang-format on
         }
 
         std::size_t current = 0;
