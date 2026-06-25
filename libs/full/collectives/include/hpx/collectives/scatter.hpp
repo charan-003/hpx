@@ -544,11 +544,11 @@ namespace hpx::collectives {
 
                 std::size_t const current_left = offset;
                 std::size_t const current_right =
-                    current_left + current_group_size - 1;
+                    current_left + current_group_size;
                 offset += current_group_size;
 
                 std::move(data.begin() + current_left,
-                    data.begin() + current_right + 1,
+                    data.begin() + current_right,
                     std::back_inserter(grouped[i]));
             }
 
