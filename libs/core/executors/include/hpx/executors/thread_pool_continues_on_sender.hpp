@@ -26,11 +26,11 @@
 
 #include <hpx/config.hpp>
 #include <hpx/assert.hpp>
-#include <hpx/functional/bind_back.hpp>
 #include <hpx/modules/errors.hpp>
 #include <hpx/modules/execution_base.hpp>
+#include <hpx/modules/functional.hpp>
 #include <hpx/modules/threading_base.hpp>
-#include <hpx/type_support/detail/with_result_of.hpp>
+#include <hpx/modules/type_support.hpp>
 
 #include <exception>
 #include <type_traits>
@@ -75,7 +75,8 @@ namespace hpx::execution::experimental::detail {
         continues_on_receiver(continues_on_receiver&&) = default;
         continues_on_receiver& operator=(continues_on_receiver&&) = default;
         continues_on_receiver(continues_on_receiver const&) = default;
-        continues_on_receiver& operator=(continues_on_receiver const&) = default;
+        continues_on_receiver& operator=(
+            continues_on_receiver const&) = default;
 
         ~continues_on_receiver() = default;
 
