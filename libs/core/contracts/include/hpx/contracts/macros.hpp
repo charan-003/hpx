@@ -21,16 +21,21 @@
 ///   dispatches on HPX_WITH_CONTRACTS_MODE in fallback mode)
 ///
 /// ## Configuration:
-/// Enable native contracts with: `cmake -DHPX_WITH_CONTRACTS=ON -DCMAKE_CXX_STANDARD=26`
-/// Set fallback mode with: `cmake -DHPX_WITH_CONTRACTS_MODE=ENFORCE|OBSERVE|IGNORE`
+/// Enable native contracts with:
+///     `cmake -DHPX_WITH_CONTRACTS=ON -DCMAKE_CXX_STANDARD=26`
+/// Set fallback mode with:
+///     `cmake -DHPX_WITH_CONTRACTS_MODE=ENFORCE|OBSERVE|IGNORE`
 ///
 /// See docs/index.rst for comprehensive usage guide.
+
+// Don't report missing #include for HPX_ASSERT macro
+// hpxinspect:noinclude:HPX_ASSERT
 
 #pragma once
 
 #include <hpx/config.hpp>
 #include <hpx/contracts/config/defines.hpp>
-#include <hpx/assert.hpp>
+#include <hpx/assertion/macros.hpp>
 
 #if defined(HPX_HAVE_CXX26_CONTRACTS)
 
@@ -61,16 +66,14 @@
 #else    // ENFORCE (0) or OBSERVE (1): runtime checking via violation handler
 
 #include <hpx/contracts/violation_handler.hpp>
+#include <hpx/modules/preprocessor.hpp>
 
-// clang-format off
-#define HPX_CONTRACT_ASSERT(x)                                                 \
-    do {                                                                       \
-        if (!(x))                                                              \
-            ::hpx::contracts::invoke_violation_handler(                       \
-                {::hpx::contracts::contract_kind::assertion, #x,              \
-                    HPX_CURRENT_SOURCE_LOCATION()});                           \
-    } while (false)
-// clang-format on
+#define HPX_CONTRACT_ASSERT(expr, ...)                                         \
+    (!!(expr) ? void() :                                                       \
+                ::hpx::contracts::handle_contract_violation(                   \
+                    {::hpx::contracts::contract_kind::assertion,               \
+                        HPX_PP_STRINGIZE(expr), HPX_CURRENT_SOURCE_LOCATION(), \
+                        hpx::util::format(__VA_ARGS__)})) /**/
 
 #endif    // HPX_HAVE_CONTRACTS_MODE
 

@@ -20,10 +20,10 @@ int main()
 #else
 
 namespace {
-    hpx::contracts::violation_info captured{
-        hpx::contracts::contract_kind::assertion, nullptr, {}};
+    hpx::contracts::contract_violation captured{
+        hpx::contracts::contract_kind::assertion, nullptr, {}, {}};
 
-    void capturing_handler(hpx::contracts::violation_info const& info)
+    void capturing_handler(hpx::contracts::contract_violation const& info)
     {
         captured = info;
     }

@@ -69,7 +69,7 @@ namespace hpx::lcos::detail {
     };
 
     HPX_CXX_CORE_EXPORT template <typename Future>
-    using future_unwrap_result_t = typename future_unwrap_result<Future>::type;
+    using future_unwrap_result_t = future_unwrap_result<Future>::type;
 
     ///////////////////////////////////////////////////////////////////////////
     HPX_CXX_CORE_EXPORT template <typename T>
@@ -148,8 +148,7 @@ namespace hpx::lcos::detail {
     };
 
     HPX_CXX_CORE_EXPORT template <typename ContResult>
-    using continuation_result_t =
-        typename continuation_result<ContResult>::type;
+    using continuation_result_t = continuation_result<ContResult>::type;
 
     template <typename ContResult>
     struct continuation_result<hpx::future<ContResult>>
@@ -330,7 +329,7 @@ namespace hpx::lcos::detail {
                     "this future has no valid shared state");
             }
 
-            using result_type = typename shared_state_type::result_type;
+            using result_type = shared_state_type::result_type;
 
             error_code ec(throwmode::lightweight);
             lcos::detail::future_get_result<result_type>::call(
@@ -544,7 +543,7 @@ namespace hpx {
 
     public:
         using result_type = R;
-        using shared_state_type = typename base_type::shared_state_type;
+        using shared_state_type = base_type::shared_state_type;
 
     private:
         template <typename Future>
@@ -662,7 +661,7 @@ namespace hpx {
         // Throws: the stored exception, if an exception was stored in the
         //         shared state.
         // Postcondition: valid() == false.
-        typename hpx::traits::future_traits<future>::result_type get()
+        hpx::traits::future_traits<future>::result_type get()
             HPX_PRE(this->valid())
         {
             if (!this->shared_state_)
@@ -674,7 +673,7 @@ namespace hpx {
             auto on_exit = hpx::experimental::scope_exit(
                 [this] { this->shared_state_.reset(); });
 
-            using result_type = typename shared_state_type::result_type;
+            using result_type = shared_state_type::result_type;
             auto* result = lcos::detail::future_get_result<result_type>::call(
                 this->shared_state_);
 
@@ -682,8 +681,8 @@ namespace hpx {
             return lcos::detail::future_value<R>::get(HPX_MOVE(*result));
         }
 
-        typename hpx::traits::future_traits<future>::result_type get(
-            error_code& ec)
+        hpx::traits::future_traits<future>::result_type get(error_code& ec)
+            HPX_PRE(this->valid())
         {
             if (!this->shared_state_)
             {
@@ -695,7 +694,7 @@ namespace hpx {
             auto on_exit = hpx::experimental::scope_exit(
                 [this] { this->shared_state_.reset(); });
 
-            using result_type = typename shared_state_type::result_type;
+            using result_type = shared_state_type::result_type;
             result_type* result =
                 lcos::detail::future_get_result<result_type>::call(
                     this->shared_state_, ec);
@@ -743,7 +742,6 @@ namespace hpx {
         /// \tparam F           The type of the function/function object to use
         ///                     (deduced). F must meet requirements of
         ///                     \a MoveConstructible.
-        /// \tparam error_code  The type of error code.
         ///
         /// \param f            A continuation to be attached.
         /// \param ec           Used to hold error code value originated during the
@@ -758,6 +756,7 @@ namespace hpx {
         ///                          after it returns.
         template <typename F>
         decltype(auto) then(F&& f, error_code& ec = throws)
+            HPX_PRE(this->valid()) HPX_POST(!this->valid())
         {
 #if defined(HPX_COMPUTE_DEVICE_CODE)
             // This and the similar ifdefs below for future::then and
@@ -786,7 +785,6 @@ namespace hpx {
         /// \tparam F           The type of the function/function object to use
         ///                     (deduced). F must meet requirements of
         ///                     \a MoveConstructible.
-        /// \tparam error_code  The type of error code.
         ///
         /// \param t0           The executor or launch policy to be used.
         /// \param f            A continuation to be attached.
@@ -802,6 +800,7 @@ namespace hpx {
         ///                          after it returns.
         template <typename T0, typename F>
         decltype(auto) then(T0&& t0, F&& f, error_code& ec = throws)
+            HPX_PRE(this->valid()) HPX_POST(!this->valid())
         {
 #if defined(HPX_COMPUTE_DEVICE_CODE)
             HPX_ASSERT(false);
@@ -820,11 +819,8 @@ namespace hpx {
         template <typename Allocator, typename F>
         auto then_alloc(Allocator const& alloc, F&& f, error_code& ec = throws)
             -> decltype(base_type::then_alloc(
-#if defined(HPX_CUDA_VERSION) && (HPX_CUDA_VERSION < 1104)
                 alloc, std::move(*this), std::forward<F>(f), ec))
-#else
-                alloc, HPX_MOVE(*this), HPX_FORWARD(F, f), ec))
-#endif
+                HPX_PRE(this->valid()) HPX_POST(!this->valid())
         {
 #if defined(HPX_COMPUTE_DEVICE_CODE)
             HPX_ASSERT(false);
@@ -901,7 +897,7 @@ namespace hpx {
 
     public:
         using result_type = R;
-        using shared_state_type = typename base_type::shared_state_type;
+        using shared_state_type = base_type::shared_state_type;
 
     private:
         template <typename Future>
@@ -1013,8 +1009,9 @@ namespace hpx {
         // Throws: the stored exception, if an exception was stored in the
         //         shared state.
         // Postcondition: valid() == false.
-        typename hpx::traits::future_traits<shared_future>::result_type get()
-            const HPX_PRE(this->valid())    //-V659
+        hpx::traits::future_traits<shared_future>::result_type get()
+            const    //-V659
+            HPX_PRE(this->valid())
         {
             if (!this->shared_state_)
             {
@@ -1023,7 +1020,7 @@ namespace hpx {
                     "this future has no valid shared state");
             }
 
-            using result_type = typename shared_state_type::result_type;
+            using result_type = shared_state_type::result_type;
             result_type* result =
                 lcos::detail::future_get_result<result_type>::call(
                     this->shared_state_);
@@ -1032,10 +1029,11 @@ namespace hpx {
             return lcos::detail::future_value<R>::get(*result);
         }
 
-        typename hpx::traits::future_traits<shared_future>::result_type get(
+        hpx::traits::future_traits<shared_future>::result_type get(
             error_code& ec) const    //-V659
+            HPX_PRE(this->valid())
         {
-            using result_type = typename shared_state_type::result_type;
+            using result_type = shared_state_type::result_type;
             if (!this->shared_state_)
             {
                 HPX_THROWS_IF(ec, hpx::error::no_state, "shared_future<R>::get",
@@ -1069,6 +1067,7 @@ namespace hpx {
         /// \copydoc hpx::future::then(F&& f, error_code& ec = throws)
         template <typename F>
         decltype(auto) then(F&& f, error_code& ec = throws) const
+            HPX_PRE(this->valid())
         {
 #if defined(HPX_COMPUTE_DEVICE_CODE)
             HPX_ASSERT(false);
@@ -1085,6 +1084,7 @@ namespace hpx {
         /// \copydoc hpx::future::then(T0&& t0, F&& f, error_code& ec = throws)
         template <typename T0, typename F>
         decltype(auto) then(T0&& t0, F&& f, error_code& ec = throws) const
+            HPX_PRE(this->valid())
         {
 #if defined(HPX_COMPUTE_DEVICE_CODE)
             HPX_ASSERT(false);
@@ -1099,12 +1099,8 @@ namespace hpx {
 
         template <typename Allocator, typename F>
         auto then_alloc(Allocator const& alloc, F&& f, error_code& ec = throws)
-            -> decltype(base_type::then_alloc(
-#if defined(HPX_CUDA_VERSION) && (HPX_CUDA_VERSION < 1104)
-                alloc, std::move(*this), std::forward<F>(f), ec))
-#else
-                alloc, HPX_MOVE(*this), HPX_FORWARD(F, f), ec))
-#endif
+            -> decltype(base_type::then_alloc(alloc, std::move(*this),
+                std::forward<F>(f), ec)) HPX_PRE(this->valid())
         {
 #if defined(HPX_COMPUTE_DEVICE_CODE)
             HPX_ASSERT(false);
@@ -1224,11 +1220,11 @@ namespace hpx {
         using shared_state = traits::shared_state_allocator_t<
             lcos::detail::future_data<result_type>, base_allocator>;
 
-        using other_allocator = typename std::allocator_traits<
+        using other_allocator = std::allocator_traits<
             base_allocator>::template rebind_alloc<shared_state>;
         using traits = std::allocator_traits<other_allocator>;
 
-        using init_no_addref = typename shared_state::init_no_addref;
+        using init_no_addref = shared_state::init_no_addref;
 
         using unique_ptr = std::unique_ptr<shared_state,
             util::allocator_deleter<other_allocator>>;
@@ -1292,7 +1288,7 @@ namespace hpx {
     future<T> make_exceptional_future(std::exception_ptr const& e)
     {
         using shared_state = lcos::detail::future_data<T>;
-        using init_no_addref = typename shared_state::init_no_addref;
+        using init_no_addref = shared_state::init_no_addref;
 
         hpx::intrusive_ptr<shared_state> p(
             new shared_state(init_no_addref{}, e), false);
@@ -1325,7 +1321,7 @@ namespace hpx {
     {
         using result_type = hpx::util::decay_unwrap_t<T>;
         using shared_state = lcos::detail::timed_future_data<result_type>;
-        using init_no_addref = typename shared_state::init_no_addref;
+        using init_no_addref = shared_state::init_no_addref;
 
         hpx::intrusive_ptr<shared_state> p(
             new shared_state(
@@ -1453,7 +1449,7 @@ namespace hpx::lcos::detail {
             if constexpr (!std::is_void_v<hpx::traits::future_traits_t<Future>>)
             {
                 using value_type =
-                    typename hpx::traits::future_traits<Future>::result_type;
+                    hpx::traits::future_traits<Future>::result_type;
 
                 value_type const& value =
                     *(hpx::traits::future_access<Future>::get_shared_state(f)

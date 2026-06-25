@@ -7,30 +7,43 @@
 #pragma once
 
 #include <hpx/config.hpp>
-#include <hpx/assertion/source_location.hpp>
+#include <hpx/contracts/config/defines.hpp>
+
+// Compile contracts fallback support if C++26 contracts are not available.
+#if !defined(HPX_HAVE_CXX26_CONTRACTS)
+
+#include <hpx/assert.hpp>
+
+#include <cstdint>
+#include <string>
 
 namespace hpx::contracts {
 
-    HPX_CXX_CORE_EXPORT enum class contract_kind { pre, post, assertion };
+    HPX_CXX_CORE_EXPORT enum class contract_kind : std::uint8_t {
+        pre,
+        post,
+        assertion
+    };
 
-    HPX_CXX_CORE_EXPORT struct violation_info
+    HPX_CXX_CORE_EXPORT struct contract_violation
     {
         contract_kind kind;
         char const* condition;
         hpx::source_location location;
+        std::string message;
     };
 
     HPX_CXX_CORE_EXPORT using violation_handler_t =
-        void (*)(violation_info const&);
+        void (*)(contract_violation const&);
 
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT violation_handler_t
     set_violation_handler(violation_handler_t handler) noexcept;
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT violation_handler_t
     get_violation_handler() noexcept;
 
-    HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT void default_violation_handler(
-        violation_info const& info);
-    HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT void invoke_violation_handler(
-        violation_info const& info);
+    HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT void handle_contract_violation(
+        contract_violation const& info);
 
 }    // namespace hpx::contracts
+
+#endif

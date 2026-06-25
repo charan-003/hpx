@@ -57,6 +57,7 @@ endif()
 set(contracts_headers hpx/contracts.hpp hpx/contracts/macros.hpp
                       hpx/contracts/violation_handler.hpp
 )
+set(contracts_exclude_global_header hpx/contracts.hpp)
 set(contracts_macro_headers hpx/contracts/macros.hpp)
 
 # Default location is $HPX_ROOT/libs/contracts/src
@@ -67,10 +68,11 @@ add_hpx_module(
   core contracts
   GLOBAL_HEADER_GEN ON
   GLOBAL_HEADER_MODULE_GEN ON
+  EXCLUDE_FROM_GLOBAL_HEADER ${contracts_exclude_global_header}
   SOURCES ${contracts_sources}
   HEADERS ${contracts_headers}
   MACRO_HEADERS ${contracts_macro_headers}
   COMPAT_HEADERS ${contracts_compat_headers}
-  MODULE_DEPENDENCIES hpx_config hpx_preprocessor hpx_assertion
+  MODULE_DEPENDENCIES hpx_config hpx_format hpx_preprocessor hpx_assertion
   CMAKE_SUBDIRS examples tests
 )

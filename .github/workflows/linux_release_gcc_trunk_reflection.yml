@@ -15,7 +15,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: stellargroup/gcc_trunk_build_env:1
+    container: stellargroup/gcc_trunk_build_env:2
 
     steps:
     - uses: actions/checkout@v7
@@ -40,7 +40,6 @@ jobs:
           -DHPX_WITH_EXAMPLES=OFF \
           -DHPX_WITH_TESTS=ON \
           -DHPX_WITH_TESTS_MAX_THREADS_PER_LOCALITY=2 \
-          -DHPX_SERIALIZATION_WITH_ALLOW_AUTO_GENERATE=ON \
           -DHPX_WITH_CHECK_MODULE_DEPENDENCIES=On
     - name: Build
       shell: bash

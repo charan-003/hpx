@@ -23,7 +23,7 @@ namespace {
     hpx::contracts::contract_kind last_kind =
         hpx::contracts::contract_kind::assertion;
 
-    void recording_handler(hpx::contracts::violation_info const& info)
+    void recording_handler(hpx::contracts::contract_violation const& info)
     {
         ++handler_call_count;
         last_kind = info.kind;
