@@ -250,8 +250,7 @@ namespace hpx::collectives::detail {
             // generation.
             auto sf = gate_.get_shared_future(l);
 
-            traits::detail::get_shared_state(sf)->reserve_callbacks(
-                num_sites_);
+            traits::detail::get_shared_state(sf)->reserve_callbacks(num_sites_);
 
             return sf.then(hpx::launch::sync, HPX_FORWARD(F, f));
         }
@@ -352,8 +351,8 @@ namespace hpx::collectives::detail {
                         "number of on_ready callbacks have been invoked before "
                         "the end of the collective operation {}, which {}, "
                         "generation {}. Expected count {}, received count {}.",
-                        basename_, operation, which, generation,
-                        num_sites_, on_ready_count_);
+                        basename_, operation, which, generation, num_sites_,
+                        on_ready_count_);
                 }
 
                 if constexpr (!std::is_same_v<std::nullptr_t,
@@ -386,8 +385,8 @@ namespace hpx::collectives::detail {
             // operations on the same communicator.
             set_operation_and_check_sequencing(l, operation, which, generation);
 
-            auto f = get_future_and_synchronize(
-                generation, HPX_MOVE(on_ready), l);
+            auto f =
+                get_future_and_synchronize(generation, HPX_MOVE(on_ready), l);
 
             // We may have just finished a different operation, thus we have to
             // possibly reset the operation type stored in this communicator.

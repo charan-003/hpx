@@ -501,8 +501,7 @@ double test_local_all_to_all(std::vector<communicator> const& comms)
 
                 hpx::future<std::vector<std::uint32_t>> overall_result =
                     all_to_all(comms[site], std::move(values),
-                        this_site_arg(site),
-                        generation_arg(gen));
+                        this_site_arg(site), generation_arg(gen));
 
                 std::vector<std::uint32_t> const r = overall_result.get();
                 HPX_TEST_EQ(r.size(), num_sites);

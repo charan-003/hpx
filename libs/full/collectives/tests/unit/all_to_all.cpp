@@ -174,18 +174,17 @@ void test_singleton_payload_validation()
 {
     for (std::size_t size : {0u, 2u})
     {
-        auto const all_to_all_direct_client = create_local_communicator(
-            all_to_all_validation_basename, num_sites_arg(1),
-            this_site_arg(0), generation_arg(size + 1));
+        auto const all_to_all_direct_client =
+            create_local_communicator(all_to_all_validation_basename,
+                num_sites_arg(1), this_site_arg(0), generation_arg(size + 1));
 
         bool caught_exception = false;
         try
         {
-            [[maybe_unused]] auto result =
-                all_to_all(all_to_all_direct_client,
-                    std::vector<std::uint32_t>(size), this_site_arg(0),
-                    generation_arg(size + 1))
-                    .get();
+            [[maybe_unused]] auto result = all_to_all(all_to_all_direct_client,
+                std::vector<std::uint32_t>(size), this_site_arg(0),
+                generation_arg(size + 1))
+                                               .get();
         }
         catch (hpx::exception const& e)
         {

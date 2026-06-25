@@ -483,11 +483,11 @@ namespace hpx::collectives {
 
         if (!detail::is_valid_hierarchical_phase_generation(generation))
         {
-            return hpx::make_exceptional_future<arg_type>(HPX_GET_EXCEPTION(
-                hpx::error::bad_parameter,
-                "hpx::collectives::all_reduce (hierarchical)",
-                "the generation number is too large for the internal "
-                "2k-1/2k generation mapping"));
+            return hpx::make_exceptional_future<arg_type>(
+                HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                    "hpx::collectives::all_reduce (hierarchical)",
+                    "the generation number is too large for the internal "
+                    "2k-1/2k generation mapping"));
         }
 
         if (this_site.is_default())

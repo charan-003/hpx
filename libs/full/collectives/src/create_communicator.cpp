@@ -375,8 +375,7 @@ namespace hpx::collectives {
         void recursively_fill_communicators(
             std::vector<hpx::tuple<communicator, this_site_arg>>& communicators,
             std::size_t left, std::size_t right, std::string const& basename,
-            arity_arg arity, this_site_arg this_site,
-            generation_arg generation)
+            arity_arg arity, this_site_arg this_site, generation_arg generation)
         {
             std::string name(basename);
             name += std::to_string(left) + "-" + std::to_string(right) + "/";
