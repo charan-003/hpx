@@ -39,8 +39,7 @@ void test_one_shot_use()
     // test functionality based on immediate local result value
     for (int i = 0; i != ITERATIONS; ++i)
     {
-        std::vector<std::uint32_t> values(num_localities);
-        std::fill(values.begin(), values.end(), this_locality + i);
+        std::vector<std::uint32_t> values(num_localities, this_locality + i);
 
         hpx::future<std::vector<std::uint32_t>> overall_result =
             all_to_all(all_to_all_direct_basename, std::move(values),
@@ -71,8 +70,7 @@ void test_multiple_use()
     // test functionality based on immediate local result value
     for (int i = 0; i != ITERATIONS; ++i)
     {
-        std::vector<std::uint32_t> values(num_localities);
-        std::fill(values.begin(), values.end(), this_locality + i);
+        std::vector<std::uint32_t> values(num_localities, this_locality + i);
 
         hpx::future<std::vector<std::uint32_t>> overall_result =
             all_to_all(all_to_all_direct_client, std::move(values));
@@ -102,8 +100,7 @@ void test_multiple_use_with_generation()
 
     for (int i = 0; i != ITERATIONS; ++i)
     {
-        std::vector<std::uint32_t> values(num_localities);
-        std::fill(values.begin(), values.end(), this_locality + i);
+        std::vector<std::uint32_t> values(num_localities, this_locality + i);
 
         hpx::future<std::vector<std::uint32_t>> overall_result = all_to_all(
             all_to_all_direct_client, std::move(values), generation_arg(i + 1));
@@ -142,8 +139,7 @@ void test_local_use(std::uint32_t num_sites)
 
             for (std::uint32_t i = 0; i != 10 * ITERATIONS; ++i)
             {
-                std::vector<std::uint32_t> values(num_sites);
-                std::fill(values.begin(), values.end(), site + i);
+                std::vector<std::uint32_t> values(num_sites, site + i);
 
                 hpx::future<std::vector<std::uint32_t>> overall_result =
                     all_to_all(all_to_all_direct_client, std::move(values),
