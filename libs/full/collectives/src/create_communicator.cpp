@@ -67,7 +67,7 @@ namespace hpx::collectives {
             std::size_t num_sites, char const* basename)
           : gate_(num_sites)
           , num_sites_(num_sites)
-          , basename_(basename != nullptr ? basename : "")
+          , basename_(basename)
         {
             HPX_ASSERT(
                 num_sites != 0 && num_sites != static_cast<std::size_t>(-1));

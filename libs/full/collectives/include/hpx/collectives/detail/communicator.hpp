@@ -26,7 +26,6 @@
 
 #include <cstddef>
 #include <mutex>
-#include <string>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -497,7 +496,7 @@ namespace hpx::collectives::detail {
         std::size_t const num_sites_;
         std::size_t on_ready_count_ = 0;
         char const* current_operation_ = nullptr;
-        std::string basename_;
+        char const* basename_ = nullptr;
         mutex_type mtx_;
         bool needs_initialization_ = true;
         bool data_available_ = false;
