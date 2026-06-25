@@ -275,6 +275,8 @@ if(HPX_WITH_CXX_MODULES AND (CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
     is_sorted_sender
     min_element_sender
     none_of_sender
+    reverse_copy_sender
+    transform_sender
   )
     target_compile_definitions(
       ${test}_test PRIVATE HPX_HAVE_FORCE_NO_CXX_MODULES
