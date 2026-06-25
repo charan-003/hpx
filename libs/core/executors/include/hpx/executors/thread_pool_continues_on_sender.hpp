@@ -33,6 +33,7 @@
 #include <hpx/modules/type_support.hpp>
 
 #include <exception>
+#include <optional>
 #include <type_traits>
 #include <utility>
 
@@ -185,25 +186,18 @@ namespace hpx::execution::experimental::detail {
             hpx::execution::experimental::connect_result_t<Sender,
                 receiver_type>;
 
-        HPX_NO_UNIQUE_ADDRESS inner_op_state_type inner_op_;
+        std::optional<inner_op_state_type> inner_op_;
 
         template <typename Sender_, typename Receiver_, typename Scheduler_>
         continues_on_operation_state(
             Sender_&& sndr, Receiver_&& rcvr, Scheduler_&& sched)
-#if defined(HPX_HAVE_CXX17_COPY_ELISION)
-          : inner_op_(hpx::util::detail::with_result_of([&]() {
-              return hpx::execution::experimental::connect(
-                  HPX_FORWARD(Sender_, sndr),
-                  receiver_type{HPX_FORWARD(Receiver_, rcvr),
-                      HPX_FORWARD(Scheduler_, sched)});
-          }))
-#else
-          : inner_op_(hpx::execution::experimental::connect(
-                HPX_FORWARD(Sender_, sndr),
-                receiver_type{HPX_FORWARD(Receiver_, rcvr),
-                    HPX_FORWARD(Scheduler_, sched)}))
-#endif
         {
+            inner_op_.emplace(hpx::util::detail::with_result_of([&]() {
+                return hpx::execution::experimental::connect(
+                    HPX_FORWARD(Sender_, sndr),
+                    receiver_type{HPX_FORWARD(Receiver_, rcvr),
+                        HPX_FORWARD(Scheduler_, sched)});
+            }));
         }
 
         continues_on_operation_state(continues_on_operation_state&&) = delete;
@@ -218,7 +212,7 @@ namespace hpx::execution::experimental::detail {
 
         void start() & noexcept
         {
-            hpx::execution::experimental::start(inner_op_);
+            hpx::execution::experimental::start(*inner_op_);
         }
     };
 
