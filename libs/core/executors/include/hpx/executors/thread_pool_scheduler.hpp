@@ -1,4 +1,5 @@
 //  Copyright (c) 2020 ETH Zurich
+//  Copyright (c) 2026 Sai Charan Arvapally
 //  Copyright (c) 2022-2025 Hartmut Kaiser
 //
 //  SPDX-License-Identifier: BSL-1.0
@@ -212,11 +213,26 @@ namespace hpx::execution::experimental {
         }
 
         template <executor_parameters Parameters>
-        [[nodiscard]] std::size_t query(processing_units_count_t, Parameters&&,
-            hpx::chrono::steady_duration const& = hpx::chrono::null_duration,
-            std::size_t = 0) const
+        [[nodiscard]] std::size_t query(processing_units_count_t,
+            Parameters&& params,
+            hpx::chrono::steady_duration const& iter_dur =
+                hpx::chrono::null_duration,
+            std::size_t num_tasks = 0) const
         {
-            return get_num_cores();
+            using exec_type = std::decay_t<decltype(*this)>;
+            if constexpr (requires(std::decay_t<Parameters> const& p,
+                              exec_type const& e,
+                              hpx::chrono::steady_duration const& d) {
+                              p.processing_units_count(e, d, std::size_t{});
+                          })
+            {
+                return HPX_FORWARD(Parameters, params)
+                    .processing_units_count(*this, iter_dur, num_tasks);
+            }
+            else
+            {
+                return get_num_cores();
+            }
         }
 
         [[nodiscard]] auto query(
@@ -275,7 +291,8 @@ namespace hpx::execution::experimental {
         template <typename Tag, typename Property>
             requires(
                 hpx::execution::experimental::is_scheduling_property_v<Tag> &&
-                hpx::functional::is_tag_invocable_v<Tag, Policy, Property>)
+                hpx::execution::experimental::has_query_v<Policy const&, Tag,
+                    Property>)
         [[nodiscard]] auto query(Tag tag, Property&& prop) const
         {
             auto scheduler_with_prop = *this;
@@ -287,7 +304,7 @@ namespace hpx::execution::experimental {
         template <typename Tag>
             requires(
                 hpx::execution::experimental::is_scheduling_property_v<Tag> &&
-                hpx::functional::is_tag_invocable_v<Tag, Policy>)
+                hpx::execution::experimental::has_query_v<Policy const&, Tag>)
         [[nodiscard]] auto query(Tag tag) const
         {
             return tag(policy());
