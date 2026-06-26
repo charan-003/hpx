@@ -83,45 +83,13 @@ namespace hpx::execution::experimental::detail {
 
         // set_value: The source sender completed with values.
         //
-        // Fast path: if the current HPX thread belongs to the same thread
-        // pool as the scheduler's target pool, forward the values inline
-        // -- no scheduling hop needed.
-        //
-        // Slow path: if we are NOT on the target HPX pool (different pool,
-        // or an external OS thread), post a task to the target pool that
-        // forwards the values to the downstream receiver.
+        // Always post a new task to the target pool via
+        // scheduler_.execute(). P2300 continues_on semantics require a
+        // scheduling hop (new task) even when already on the target pool,
+        // guaranteeing fairness and observable thread-id transitions.
         template <typename... Ts>
         void set_value(Ts&&... ts) && noexcept
         {
-            // Resolve the target pool using the same fallback pattern
-            // as thread_pool_policy_scheduler::execute().
-            auto* target_pool = scheduler_.get_thread_pool();
-
-            // Check if we are already running on the target pool.
-            auto* self = hpx::threads::get_self_ptr();
-            if (self != nullptr)
-            {
-                // We are on an HPX thread. Use hpx::this_thread::get_pool()
-                // to retrieve the pool this thread belongs to.
-                auto* current_pool = hpx::this_thread::get_pool();
-                if (current_pool == target_pool)
-                {
-                    // Fast path: same pool -- forward inline.
-                    hpx::detail::try_catch_exception_ptr(
-                        [&]() {
-                            hpx::execution::experimental::set_value(
-                                HPX_MOVE(receiver_), HPX_FORWARD(Ts, ts)...);
-                        },
-                        [&](std::exception_ptr ep) {
-                            hpx::execution::experimental::set_error(
-                                HPX_MOVE(receiver_), HPX_MOVE(ep));
-                        });
-                    return;
-                }
-            }
-
-            // Slow path: not on target pool -- schedule onto it.
-            //
             // Capture receiver_ by reference in the outer lambda so
             // that if scheduler_.execute() throws synchronously, the
             // catch block can still deliver set_error on the valid
