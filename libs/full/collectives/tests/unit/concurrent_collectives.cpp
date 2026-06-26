@@ -120,6 +120,8 @@ private:
         template <typename Archive>
         void serialize(Archive& ar, unsigned)
         {
+            // Only serialize the generated sequence; current is a local
+            // cursor and is reset after deserialization.
             ar & generations;
         }
 
