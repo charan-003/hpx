@@ -6,9 +6,6 @@
 
 #pragma once
 
-#ifndef HPX_EXECUTION_BASE_STDEXEC_FORWARD_HPP
-#define HPX_EXECUTION_BASE_STDEXEC_FORWARD_HPP
-
 #include <hpx/config.hpp>
 
 /* TODO: Find out what diagnostics should be disabled for stdexec to compile.
@@ -381,5 +378,3 @@ namespace hpx::execution::experimental {
 // Leaving this as a placeholder
 namespace hpx::this_thread {
 }
-
-#endif    // HPX_EXECUTION_BASE_STDEXEC_FORWARD_HPP

@@ -29,9 +29,9 @@
 #include <utility>
 #include <variant>
 
-#include <hpx/execution/algorithms/bulk.hpp>
-#include <hpx/execution_base/stdexec_forward.hpp>
 #include <hpx/executors/thread_pool_continues_on_sender.hpp>
+#include <hpx/modules/execution.hpp>
+#include <hpx/modules/execution_base.hpp>
 
 #include <ranges>
 
