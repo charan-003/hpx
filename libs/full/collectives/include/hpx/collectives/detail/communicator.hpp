@@ -62,7 +62,7 @@ namespace hpx::collectives::detail {
         HPX_EXPORT communicator_server() noexcept;
 
         HPX_EXPORT explicit communicator_server(
-            std::size_t num_sites, char const* basename);
+            std::size_t num_sites, char const* basename) noexcept;
 
         communicator_server(communicator_server const&) = delete;
         communicator_server(communicator_server&&) = delete;

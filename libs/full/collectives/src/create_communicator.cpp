@@ -64,7 +64,7 @@ namespace hpx::collectives {
         }
 
         communicator_server::communicator_server(
-            std::size_t num_sites, char const* basename)
+            std::size_t num_sites, char const* basename) noexcept
           : gate_(num_sites)
           , num_sites_(num_sites)
           , basename_(basename)
