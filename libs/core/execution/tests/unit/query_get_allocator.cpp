@@ -1,4 +1,4 @@
-//  Copyright (c) 2025 Shivansh Singh
+//  Copyright (c) 2026 Shivansh Singh
 //
 //  SPDX-License-Identifier: BSL-1.0
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -6,7 +6,6 @@
 
 #include <hpx/config.hpp>
 #include <hpx/execution.hpp>
-#include <hpx/executors/thread_pool_scheduler.hpp>
 #include <hpx/modules/testing.hpp>
 
 #include <cstddef>
