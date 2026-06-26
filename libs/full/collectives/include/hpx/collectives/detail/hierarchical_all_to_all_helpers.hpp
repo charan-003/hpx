@@ -93,7 +93,6 @@ namespace hpx::collectives::detail {
         using value_type = std::decay_t<T>;
 
         std::vector<value_type> data;
-        data.reserve(1);
         data.emplace_back(HPX_FORWARD(T, local_result));
 
         // Walk bottom-up from leaf to level 1, calling gather_here

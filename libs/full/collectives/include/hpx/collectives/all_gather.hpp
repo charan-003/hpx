@@ -306,7 +306,6 @@ namespace hpx::collectives {
                 }
 
                 std::vector<arg_type> result;
-                result.reserve(1);
                 result.emplace_back(HPX_FORWARD(T, local_result));
                 return hpx::make_ready_future(HPX_MOVE(result));
             }

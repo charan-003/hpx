@@ -516,7 +516,6 @@ namespace hpx::collectives {
                 }
 
                 std::vector<arg_type> result;
-                result.reserve(1);
                 result.emplace_back(HPX_FORWARD(T, local_result));
                 return hpx::make_ready_future(HPX_MOVE(result));
             }
@@ -621,7 +620,6 @@ namespace hpx::collectives {
                 hierarchical_run_params(generation, num_generations);
 
             std::vector<std::decay_t<T>> result;
-            result.reserve(1);
             result.emplace_back(HPX_FORWARD(T, local_result));
             for (std::size_t i = communicators.size() - 1; i != 0; --i)
             {
@@ -786,7 +784,6 @@ namespace hpx::collectives {
                 hierarchical_run_params(generation, num_generations);
 
             std::vector<std::decay_t<T>> data;
-            data.reserve(1);
             data.emplace_back(HPX_FORWARD(T, local_result));
             for (std::size_t i = communicators.size() - 1; i != 0; --i)
             {
