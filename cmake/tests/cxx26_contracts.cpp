@@ -6,6 +6,9 @@
 
 // test for availability of C++26 contracts (compiler and library support)
 
+#include <version>
+#include <contracts>
+
 #if !defined(__cpp_contracts)
 #error "__cpp_contracts not defined, assume contracts are not supported"
 #endif
@@ -13,8 +16,6 @@
 #if !defined(__cpp_lib_contracts)
 #error "__cpp_lib_contracts not defined, assume contracts are not supported"
 #endif
-
-#include <contracts>
 
 // Test actual contract syntax support (for experimental implementations)
 int main() pre(true) post(r : r == 0)
