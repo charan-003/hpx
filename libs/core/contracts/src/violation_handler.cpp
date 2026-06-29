@@ -21,7 +21,8 @@ namespace hpx::contracts {
 
     namespace {
 
-        char const* get_contract_violation_name(contract_kind kind) noexcept
+        char const* get_contract_violation_kind_name(
+            contract_kind kind) noexcept
         {
             char const* kind_str = "unknown";
             switch (kind)
@@ -41,8 +42,31 @@ namespace hpx::contracts {
             default:
                 HPX_ASSERT(false);
             }
-
             return kind_str;
+        }
+
+        constexpr char const* get_contracts_violation_mode_name() noexcept
+        {
+            char const* semantic_str = nullptr;
+            switch (HPX_HAVE_CONTRACTS_MODE)
+            {
+            case HPX_HAVE_CONTRACTS_MODE_ENFORCE:
+                semantic_str = "enforce";
+                break;
+
+            case HPX_HAVE_CONTRACTS_MODE_OBSERVE:
+                semantic_str = "observe";
+                break;
+
+            case HPX_HAVE_CONTRACTS_MODE_IGNORE:
+                semantic_str = "ignore";
+                break;
+
+            default:
+                semantic_str = "unknown";
+                break;
+            }
+            return semantic_str;
         }
 
         [[nodiscard]] violation_handler_t& get_handler() noexcept
@@ -51,7 +75,8 @@ namespace hpx::contracts {
             return handler;
         }
 
-#if !defined(HPX_HAVE_CONTRACTS_MODE) || HPX_HAVE_CONTRACTS_MODE != 2
+#if !defined(HPX_HAVE_CONTRACTS_MODE) ||                                       \
+    HPX_HAVE_CONTRACTS_MODE != HPX_HAVE_CONTRACTS_MODE_OBSERVE
         [[noreturn]]
 #endif
         void default_violation_handler(contract_violation const& info)
@@ -67,9 +92,12 @@ namespace hpx::contracts {
 
             handling_violation = true;
 
-            char const* kind_str = get_contract_violation_name(info.kind);
+            char const* kind_str = get_contract_violation_kind_name(info.kind);
+            constexpr char const* semantic_str =
+                get_contracts_violation_mode_name();
+
             strm << info.location << ": Contract " << kind_str << " '"
-                 << info.condition << "' violated";
+                 << info.condition << "' violated, semantic: " << semantic_str;
             if (!info.message.empty())
             {
                 strm << " (" << info.message << ")";
@@ -78,7 +106,8 @@ namespace hpx::contracts {
 
             std::cerr << strm.str() << std::flush;
 
-#if !defined(HPX_HAVE_CONTRACTS_MODE) || HPX_HAVE_CONTRACTS_MODE != 2
+#if !defined(HPX_HAVE_CONTRACTS_MODE) ||                                       \
+    HPX_HAVE_CONTRACTS_MODE != HPX_HAVE_CONTRACTS_MODE_OBSERVE
             // abort in ENFORCE (and by default); continue in OBSERVE
             std::abort();
 #endif

@@ -32,23 +32,45 @@ else()
 
   # Note: values start at 1 because hpx_add_config_define_namespace treats a
   # numeric "0" as falsy and would emit a valueless #define.
+
+  # define readable contract mode constants
+  hpx_add_config_define_namespace(
+    DEFINE HPX_HAVE_CONTRACTS_MODE_ENFORCE
+    VALUE 1
+    NAMESPACE CONTRACTS
+  )
+  hpx_add_config_define_namespace(
+    DEFINE HPX_HAVE_CONTRACTS_MODE_OBSERVE
+    VALUE 2
+    NAMESPACE CONTRACTS
+  )
+  hpx_add_config_define_namespace(
+    DEFINE HPX_HAVE_CONTRACTS_MODE_IGNORE
+    VALUE 3
+    NAMESPACE CONTRACTS
+  )
+
   if(HPX_WITH_CONTRACTS_MODE STREQUAL "ENFORCE")
     hpx_add_config_define_namespace(
       DEFINE HPX_HAVE_CONTRACTS_MODE
-      VALUE 1
+      VALUE HPX_HAVE_CONTRACTS_MODE_ENFORCE
       NAMESPACE CONTRACTS
     )
   elseif(HPX_WITH_CONTRACTS_MODE STREQUAL "OBSERVE")
     hpx_add_config_define_namespace(
       DEFINE HPX_HAVE_CONTRACTS_MODE
-      VALUE 2
+      VALUE HPX_HAVE_CONTRACTS_MODE_OBSERVE
       NAMESPACE CONTRACTS
     )
   elseif(HPX_WITH_CONTRACTS_MODE STREQUAL "IGNORE")
     hpx_add_config_define_namespace(
       DEFINE HPX_HAVE_CONTRACTS_MODE
-      VALUE 3
+      VALUE HPX_HAVE_CONTRACTS_MODE_IGNORE
       NAMESPACE CONTRACTS
+    )
+  else()
+    hpx_error(
+      "HPX_WITH_CONTRACTS_MODE must be one of ENFORCE, OBSERVE, or IGNORE"
     )
   endif()
 endif()

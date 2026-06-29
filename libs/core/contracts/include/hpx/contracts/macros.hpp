@@ -59,7 +59,7 @@
 #define HPX_POST(x)
 
 #if defined(HPX_HAVE_CONTRACTS_MODE) &&                                        \
-    HPX_HAVE_CONTRACTS_MODE == 3    // IGNORE
+    HPX_HAVE_CONTRACTS_MODE == HPX_HAVE_CONTRACTS_MODE_IGNORE
 
 #define HPX_CONTRACT_ASSERT(x)
 
