@@ -141,7 +141,10 @@ namespace hpx::parallel::detail {
             bool const last_partition = end1 == static_cast<std::size_t>(len1);
 
             auto start_value = HPX_INVOKE(proj1, first1[start1]);
-            auto end_value = HPX_INVOKE(proj1, first1[end1]);
+            // When last_partition, end1 == len1 so first1[end1] is past-the-end.
+            // Use end1-1 as a safe index; end_value is unused when last_partition.
+            auto end_value =
+                HPX_INVOKE(proj1, first1[last_partition ? end1 - 1 : end1]);
 
             // all but the last chunk require special handling
             if (!last_partition)
