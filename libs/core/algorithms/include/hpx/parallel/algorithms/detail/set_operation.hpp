@@ -93,11 +93,9 @@ namespace hpx::parallel::detail {
         typename Sent1, typename Iter2, typename Sent2, typename Iter3,
         typename F, typename Proj1, typename Proj2, typename Combiner,
         typename SetOp>
-    util::detail::algorithm_result_t<ExPolicy,
-        util::in_in_out_result<Iter1, Iter2, Iter3>>
-    set_operation(ExPolicy&& policy, Iter1 first1, Sent1 last1, Iter2 first2,
-        Sent2 last2, Iter3 dest, F&& f, Proj1&& proj1, Proj2&& proj2,
-        Combiner&& combiner, SetOp&& setop)
+    decltype(auto) set_operation(ExPolicy&& policy, Iter1 first1, Sent1 last1,
+        Iter2 first2, Sent2 last2, Iter3 dest, F&& f, Proj1&& proj1,
+        Proj2&& proj2, Combiner&& combiner, SetOp&& setop)
     {
         using result_type = util::in_in_out_result<Iter1, Iter2, Iter3>;
 
