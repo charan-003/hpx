@@ -103,15 +103,9 @@ namespace hpx::execution::experimental::detail {
                 if (current_pool == target_pool)
                 {
                     // Fast path: same pool -- forward inline.
-                    hpx::detail::try_catch_exception_ptr(
-                        [&]() {
-                            hpx::execution::experimental::set_value(
-                                HPX_MOVE(receiver_), HPX_FORWARD(Ts, ts)...);
-                        },
-                        [&](std::exception_ptr ep) {
-                            hpx::execution::experimental::set_error(
-                                HPX_MOVE(receiver_), HPX_MOVE(ep));
-                        });
+                    // set_value is noexcept per P2300, no try-catch needed.
+                    hpx::execution::experimental::set_value(
+                        HPX_MOVE(receiver_), HPX_FORWARD(Ts, ts)...);
                     return;
                 }
             }
