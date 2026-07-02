@@ -243,25 +243,50 @@ namespace hpx::parallel::detail {
             }
 
             // finally, copy data to destination
-            parallel::util::
-                foreach_partitioner<hpx::execution::parallel_policy>::call(
-                    hpx::execution::par, chunks.get(), cores,
-                    [buffer, dest](
-                        set_chunk_data* ch, std::size_t, std::size_t) {
-                        if (ch->start == set_chunk_data::uninit_start ||
-                            ch->start_index ==
-                                set_chunk_data::uninit_start_index ||
-                            ch->len == set_chunk_data::uninit_len)
-                        {
-                            return;
-                        }
-                        std::copy(buffer.get() + ch->start,
-                            buffer.get() + ch->start + ch->len,
-                            dest + ch->start_index);
-                    },
-                    [](set_chunk_data* last) -> set_chunk_data* {
-                        return last;
-                    });
+            // In the scheduler-executor (S/R) path, foreach_partitioner<par>
+            // would call parallel_executor::bulk_sync_execute which creates
+            // index_queue_bulk_state<true,...> with a TU-local lambda type
+            // whose vtable destructor cannot be resolved from the shared
+            // library. Use a sequential loop in that path instead.
+            if constexpr (hpx::execution_policy_has_scheduler_executor_v<
+                              ExPolicy>)
+            {
+                set_chunk_data* ch = chunks.get();
+                for (std::size_t i = 0; i != cores; ++i, ++ch)
+                {
+                    if (ch->start == set_chunk_data::uninit_start ||
+                        ch->start_index == set_chunk_data::uninit_start_index ||
+                        ch->len == set_chunk_data::uninit_len)
+                    {
+                        continue;
+                    }
+                    std::copy(buffer.get() + ch->start,
+                        buffer.get() + ch->start + ch->len,
+                        dest + ch->start_index);
+                }
+            }
+            else
+            {
+                parallel::util::
+                    foreach_partitioner<hpx::execution::parallel_policy>::call(
+                        hpx::execution::par, chunks.get(), cores,
+                        [buffer, dest](
+                            set_chunk_data* ch, std::size_t, std::size_t) {
+                            if (ch->start == set_chunk_data::uninit_start ||
+                                ch->start_index ==
+                                    set_chunk_data::uninit_start_index ||
+                                ch->len == set_chunk_data::uninit_len)
+                            {
+                                return;
+                            }
+                            std::copy(buffer.get() + ch->start,
+                                buffer.get() + ch->start + ch->len,
+                                dest + ch->start_index);
+                        },
+                        [](set_chunk_data* last) -> set_chunk_data* {
+                            return last;
+                        });
+            }
 
             return {std::next(first1, first1_pos),
                 std::next(first2, first2_pos),
