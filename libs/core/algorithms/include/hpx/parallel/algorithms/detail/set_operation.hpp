@@ -89,10 +89,9 @@ namespace hpx::parallel::detail {
     };
 
     ///////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT template <typename ExPolicy, typename Iter1,
-        typename Sent1, typename Iter2, typename Sent2, typename Iter3,
-        typename F, typename Proj1, typename Proj2, typename Combiner,
-        typename SetOp>
+    template <typename ExPolicy, typename Iter1, typename Sent1, typename Iter2,
+        typename Sent2, typename Iter3, typename F, typename Proj1,
+        typename Proj2, typename Combiner, typename SetOp>
     decltype(auto) set_operation(ExPolicy&& policy, Iter1 first1, Sent1 last1,
         Iter2 first2, Sent2 last2, Iter3 dest, F&& f, Proj1&& proj1,
         Proj2&& proj2, Combiner&& combiner, SetOp&& setop)
