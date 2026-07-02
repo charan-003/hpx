@@ -33,15 +33,6 @@ using namespace hpx::collectives;
 
 constexpr int ITERATIONS = 4;
 
-void wait_for_sites(std::vector<hpx::future<void>>& sites)
-{
-    hpx::wait_all(sites);
-    for (auto& site : sites)
-    {
-        site.get();
-    }
-}
-
 // Interleave all_reduce and all_gather on one hierarchical communicator
 // instance, advancing a single shared, strictly consecutive user-generation
 // counter. This is legal because both operations consume the identical
@@ -92,7 +83,7 @@ void test_same_instance_all_reduce_all_gather()
         }));
     }
 
-    wait_for_sites(sites);
+    hpx::wait_all(std::move(sites));
 }
 
 // Interleave all_to_all and all_reduce, each on its own hierarchical
@@ -157,7 +148,7 @@ void test_separate_instances_all_to_all_all_reduce()
         }));
     }
 
-    wait_for_sites(sites);
+    hpx::wait_all(std::move(sites));
 }
 
 // Interleave all_to_all and all_reduce on ONE hierarchical communicator
@@ -216,7 +207,7 @@ void test_same_instance_all_to_all_all_reduce()
         }));
     }
 
-    wait_for_sites(sites);
+    hpx::wait_all(std::move(sites));
 }
 
 // Interleave broadcast and all_gather on ONE hierarchical communicator
@@ -273,7 +264,7 @@ void test_same_instance_broadcast_all_gather()
         }));
     }
 
-    wait_for_sites(sites);
+    hpx::wait_all(std::move(sites));
 }
 
 // Interleave gather and all_reduce on ONE hierarchical communicator instance
@@ -335,7 +326,7 @@ void test_same_instance_gather_all_reduce()
         }));
     }
 
-    wait_for_sites(sites);
+    hpx::wait_all(std::move(sites));
 }
 
 // Interleave scatter and all_reduce on ONE hierarchical communicator instance
@@ -398,7 +389,7 @@ void test_same_instance_scatter_all_reduce()
         }));
     }
 
-    wait_for_sites(sites);
+    hpx::wait_all(std::move(sites));
 }
 
 // Interleave inclusive_scan, exclusive_scan and all_reduce on ONE
@@ -465,7 +456,11 @@ void test_same_instance_scans_all_reduce()
         }));
     }
 
-    wait_for_sites(sites);
+    hpx::wait_all(sites);
+    for (auto& site : sites)
+    {
+        site.get();
+    }
 }
 
 int hpx_main()

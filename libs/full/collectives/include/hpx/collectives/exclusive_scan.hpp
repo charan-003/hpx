@@ -305,11 +305,12 @@ namespace hpx::collectives::detail {
         InIter first, Sent last, OutIter dest, Op&& op)
     {
         // the first value given goes to the second destination
-        T temp = *first++;
+        T temp = handle_bool<T>(HPX_MOVE(*first++));
         ++dest;    // the first output is ignored
         for (/* */; first != last; (void) ++first, ++dest)
         {
-            T next = HPX_INVOKE(op, temp, *first);
+            T next =
+                HPX_INVOKE(op, handle_bool<T>(temp), handle_bool<T>(*first));
             *dest = HPX_MOVE(temp);
             temp = HPX_MOVE(next);
         }
@@ -323,7 +324,8 @@ namespace hpx::collectives::detail {
         T temp = init;
         for (/* */; first != last; (void) ++first, ++dest)
         {
-            init = HPX_INVOKE(op, HPX_MOVE(init), *first);
+            init = HPX_INVOKE(
+                op, handle_bool<T>(HPX_MOVE(init)), handle_bool<T>(*first));
             *dest = HPX_MOVE(temp);
             temp = init;
         }
@@ -374,7 +376,6 @@ namespace hpx::traits {
                 // received)
                 [op = HPX_FORWARD(F, op)](auto& data, bool& data_available,
                     std::size_t which) mutable {
-                    auto& scan_op = op;
                     if (!data_available)
                     {
                         using T_ = std::decay_t<T>;
@@ -382,21 +383,8 @@ namespace hpx::traits {
                         std::vector<T_> dest;
                         dest.resize(data.size());
 
-                        if constexpr (!std::same_as<T_, bool>)
-                        {
-                            collectives::detail::exclusive_scan<T_>(
-                                data.begin(), data.end(), dest.begin(),
-                                scan_op);
-                        }
-                        else
-                        {
-                            collectives::detail::exclusive_scan<bool>(
-                                data.begin(), data.end(), dest.begin(),
-                                [&scan_op](auto lhs, auto rhs) {
-                                    return scan_op(static_cast<bool>(lhs),
-                                        static_cast<bool>(rhs));
-                                });
-                        }
+                        collectives::detail::exclusive_scan<T_>(
+                            data.begin(), data.end(), dest.begin(), op);
                         std::swap(data, dest);
                         data_available = true;
                     }
@@ -430,7 +418,6 @@ namespace hpx::traits {
                 [op = HPX_FORWARD(F, op), init = HPX_FORWARD(Init, init)](
                     auto& data, bool& data_available,
                     std::size_t which) mutable {
-                    auto& scan_op = op;
                     if (!data_available)
                     {
                         using T_ = std::decay_t<T>;
@@ -438,23 +425,9 @@ namespace hpx::traits {
                         std::vector<T_> dest;
                         dest.resize(data.size());
 
-                        if constexpr (!std::same_as<T_, bool>)
-                        {
-                            collectives::detail::exclusive_scan_init(
-                                data.begin(), data.end(), dest.begin(),
-                                static_cast<T_>(HPX_FORWARD(Init, init)),
-                                scan_op);
-                        }
-                        else
-                        {
-                            collectives::detail::exclusive_scan_init(
-                                data.begin(), data.end(), dest.begin(),
-                                static_cast<bool>(init),
-                                [&scan_op](auto lhs, auto rhs) {
-                                    return scan_op(static_cast<bool>(lhs),
-                                        static_cast<bool>(rhs));
-                                });
-                        }
+                        collectives::detail::exclusive_scan_init(data.begin(),
+                            data.end(), dest.begin(),
+                            static_cast<T_>(HPX_FORWARD(Init, init)), op);
                         std::swap(data, dest);
                         data_available = true;
                     }

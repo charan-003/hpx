@@ -39,7 +39,20 @@ namespace hpx::collectives::detail {
         generation_arg second;
     };
 
-    [[nodiscard]] inline bool is_valid_hierarchical_phase_generation(
+    template <typename ValueType, typename Data>
+    constexpr decltype(auto) handle_bool(Data&& data) noexcept
+    {
+        if constexpr (std::is_same_v<ValueType, bool>)
+        {
+            return static_cast<bool>(data);
+        }
+        else
+        {
+            return HPX_FORWARD(Data, data);
+        }
+    }
+
+    [[nodiscard]] constexpr bool is_valid_hierarchical_phase_generation(
         generation_arg const generation) noexcept
     {
         return !generation.is_default() && generation != 0 &&
@@ -47,7 +60,7 @@ namespace hpx::collectives::detail {
             (std::numeric_limits<std::size_t>::max)() / 2;
     }
 
-    [[nodiscard]] inline bool is_valid_hierarchical_run_generation(
+    [[nodiscard]] constexpr bool is_valid_hierarchical_run_generation(
         generation_arg const generation,
         generation_mode const num_generations) noexcept
     {
@@ -62,7 +75,7 @@ namespace hpx::collectives::detail {
             (std::numeric_limits<std::size_t>::max)() / step;
     }
 
-    inline hierarchical_phase_generation_pair hierarchical_phase_generations(
+    constexpr hierarchical_phase_generation_pair hierarchical_phase_generations(
         generation_arg const generation) noexcept
     {
         HPX_ASSERT(is_valid_hierarchical_phase_generation(generation));
@@ -80,7 +93,7 @@ namespace hpx::collectives::detail {
     // requires explicit, consecutive generations). Generation 0 is also passed
     // through so the downstream flat operation rejects it with bad_parameter
     // rather than the mapping silently wrapping it onto the default sentinel.
-    inline hierarchical_run hierarchical_run_params(
+    constexpr hierarchical_run hierarchical_run_params(
         generation_arg const generation, generation_mode const num_generations)
     {
         HPX_ASSERT(
@@ -193,27 +206,14 @@ namespace hpx::collectives::detail {
             return results;
         }
 
-        if constexpr (std::is_same_v<T, bool>)
-        {
-            bool prefix = static_cast<bool>(*it);
-            results.emplace_back(prefix);
+        T prefix = handle_bool<T>(HPX_MOVE(*it));
+        results.emplace_back(prefix);
 
-            for (++it; it != values.end(); ++it)
-            {
-                prefix = HPX_INVOKE(op, prefix, static_cast<bool>(*it));
-                results.emplace_back(prefix);
-            }
-        }
-        else
+        for (++it; it != values.end(); ++it)
         {
-            T prefix = HPX_MOVE(*it);
+            prefix = HPX_INVOKE(
+                op, handle_bool<T>(HPX_MOVE(prefix)), handle_bool<T>(*it));
             results.emplace_back(prefix);
-
-            for (++it; it != values.end(); ++it)
-            {
-                prefix = HPX_INVOKE(op, HPX_MOVE(prefix), *it);
-                results.emplace_back(prefix);
-            }
         }
 
         return results;
@@ -231,27 +231,14 @@ namespace hpx::collectives::detail {
             return results;
         }
 
-        if constexpr (std::is_same_v<T, bool>)
-        {
-            results.emplace_back(false);
+        results.emplace_back(T{});
 
-            bool prefix = static_cast<bool>(*it);
-            for (++it; it != values.end(); ++it)
-            {
-                results.emplace_back(prefix);
-                prefix = HPX_INVOKE(op, prefix, static_cast<bool>(*it));
-            }
-        }
-        else
+        T prefix = handle_bool<T>(HPX_MOVE(*it));
+        for (++it; it != values.end(); ++it)
         {
-            results.emplace_back(T{});
-
-            T prefix = HPX_MOVE(*it);
-            for (++it; it != values.end(); ++it)
-            {
-                results.emplace_back(prefix);
-                prefix = HPX_INVOKE(op, HPX_MOVE(prefix), *it);
-            }
+            results.emplace_back(prefix);
+            prefix = HPX_INVOKE(
+                op, handle_bool<T>(HPX_MOVE(prefix)), handle_bool<T>(*it));
         }
 
         return results;
@@ -264,23 +251,12 @@ namespace hpx::collectives::detail {
         std::vector<T> results;
         results.reserve(values.size());
 
-        if constexpr (std::is_same_v<T, bool>)
+        T prefix = handle_bool<T>(static_cast<T>(HPX_FORWARD(U, init)));
+        for (auto&& value : values)
         {
-            bool prefix = static_cast<bool>(init);
-            for (auto const value : values)
-            {
-                results.emplace_back(prefix);
-                prefix = HPX_INVOKE(op, prefix, static_cast<bool>(value));
-            }
-        }
-        else
-        {
-            T prefix = static_cast<T>(HPX_FORWARD(U, init));
-            for (auto& value : values)
-            {
-                results.emplace_back(prefix);
-                prefix = HPX_INVOKE(op, HPX_MOVE(prefix), value);
-            }
+            results.emplace_back(prefix);
+            prefix = HPX_INVOKE(
+                op, handle_bool<T>(HPX_MOVE(prefix)), handle_bool<T>(value));
         }
 
         return results;

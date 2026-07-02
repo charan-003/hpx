@@ -248,11 +248,12 @@ namespace hpx::collectives::detail {
     {
         if (first != last)
         {
-            T init = *first++;
+            T init = handle_bool<T>(HPX_MOVE(*first++));
             *dest++ = init;
             for (/* */; first != last; (void) ++first, ++dest)
             {
-                init = HPX_INVOKE(op, HPX_MOVE(init), *first);
+                init = HPX_INVOKE(
+                    op, handle_bool<T>(HPX_MOVE(init)), handle_bool<T>(*first));
                 *dest = init;
             }
         }
@@ -295,7 +296,6 @@ namespace hpx::traits {
                 // finalizer (invoked after all data has been received)
                 [op = HPX_FORWARD(F, op)](auto& data, bool& data_available,
                     std::size_t which) mutable {
-                    auto& scan_op = op;
                     if (!data_available)
                     {
                         using T_ = std::decay_t<T>;
@@ -303,21 +303,8 @@ namespace hpx::traits {
                         std::vector<T_> dest;
                         dest.resize(data.size());
 
-                        if constexpr (!std::is_same_v<T_, bool>)
-                        {
-                            collectives::detail::inclusive_scan<T_>(
-                                data.begin(), data.end(), dest.begin(),
-                                scan_op);
-                        }
-                        else
-                        {
-                            collectives::detail::inclusive_scan<T_>(
-                                data.begin(), data.end(), dest.begin(),
-                                [&scan_op](auto lhs, auto rhs) {
-                                    return scan_op(static_cast<bool>(lhs),
-                                        static_cast<bool>(rhs));
-                                });
-                        }
+                        collectives::detail::inclusive_scan<T_>(
+                            data.begin(), data.end(), dest.begin(), op);
 
                         std::swap(data, dest);
                         data_available = true;

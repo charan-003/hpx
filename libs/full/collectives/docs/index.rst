@@ -81,11 +81,3 @@ generation numbers. Two-phase hierarchical collectives, including
 :cpp:func:`hpx::collectives::exclusive_scan`, and
 :cpp:class:`hpx::distributed::barrier`, reject the default generation because
 their phase generations are derived from the explicit user generation.
-
-Blocking behavior
-~~~~~~~~~~~~~~~~~
-
-The future-returning hierarchical overloads may perform internal waits while
-walking the communicator tree. They should not be treated as fully non-blocking:
-argument validation and phase hand-offs can throw or block before the returned
-future is delivered.
