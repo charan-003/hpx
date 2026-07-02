@@ -126,13 +126,12 @@ namespace hpx::execution::experimental::detail {
             // init-capture.
             hpx::detail::try_catch_exception_ptr(
                 [&]() {
-                    auto& rcvr = receiver_;
                     scheduler_.execute(
-                        [&rcvr,
+                        [this,
                             f = hpx::bind_back(
                                 hpx::execution::experimental::set_value,
                                 HPX_FORWARD(Ts, ts)...)]() mutable {
-                            HPX_MOVE(f)(HPX_MOVE(rcvr));
+                            HPX_MOVE(f)(HPX_MOVE(receiver_));
                         });
                 },
                 [&](std::exception_ptr ep) {
