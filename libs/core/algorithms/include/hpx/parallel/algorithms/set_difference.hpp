@@ -271,10 +271,29 @@ namespace hpx::parallel {
 
                 using result_type = util::in_out_result<Iter1, Iter3>;
 
-                // Edge cases (first1==last1, first2==last2) are handled inside
-                // set_operation: set_chunk_data initializes to sentinel values
-                // so empty range1 produces {first1,first2,dest} naturally, and
-                // sequential_set_difference with empty range2 copies range1.
+                // Fast early exits for the general executors. For the S/R path
+                // these are skipped (they would break sender pass-through);
+                // set_operation handles the edge cases there via its sentinel-
+                // initialized set_chunk_data.
+                if constexpr (!hpx::execution_policy_has_scheduler_executor_v<
+                                  ExPolicy>)
+                {
+                    using result =
+                        util::detail::algorithm_result<ExPolicy, result_type>;
+
+                    if (first1 == last1)
+                    {
+                        return result::get(
+                            result_type{HPX_MOVE(first1), HPX_MOVE(dest)});
+                    }
+
+                    if (first2 == last2)
+                    {
+                        return detail::copy<result_type>().call(
+                            HPX_FORWARD(ExPolicy, policy), first1, last1, dest);
+                    }
+                }
+
                 using buffer_type = typename set_operations_buffer<Iter3>::type;
                 using func_type = std::decay_t<F>;
 

@@ -243,11 +243,12 @@ namespace hpx::parallel::detail {
             }
 
             // finally, copy data to destination
-            // In the scheduler-executor (S/R) path, foreach_partitioner<par>
-            // would call parallel_executor::bulk_sync_execute which creates
-            // index_queue_bulk_state<true,...> with a TU-local lambda type
-            // whose vtable destructor cannot be resolved from the shared
-            // library. Use a sequential loop in that path instead.
+            //
+            // Scheduler-executor (S/R) policies copy sequentially: the
+            // parallel path would instantiate index_queue_bulk_state whose
+            // D0/D1 destructors are homed to libhpx_core and are missing for
+            // this policy, breaking the link under clang -fvisibility=hidden.
+            // See #7344.
             if constexpr (hpx::execution_policy_has_scheduler_executor_v<
                               ExPolicy>)
             {
