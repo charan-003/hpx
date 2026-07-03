@@ -440,7 +440,7 @@ namespace hpx::this_thread {
         char const* get_tracy_suspend_reason(
             threads::thread_description const& description) noexcept
         {
-            return threads::thread_data::get_tracy_description_name(
+            return threads::thread_data::get_safe_description(
                 description, "this_thread::suspend");
         }
 #else

@@ -318,8 +318,7 @@ namespace hpx::threads {
     }
 #endif
 
-#if defined(HPX_HAVE_TRACY)
-    char const* thread_data::get_tracy_description_name(
+    char const* thread_data::get_safe_description(
         threads::thread_description const& description,
         char const* fallback) noexcept
     {
@@ -343,12 +342,13 @@ namespace hpx::threads {
         return fallback;
     }
 
+#if defined(HPX_HAVE_TRACY)
+
     char const* thread_data::get_tracy_fiber_name() const noexcept
     {
         if (tracy_fiber_name_[0] == '\0')
         {
-            char const* name =
-                get_tracy_description_name(get_description(), "fiber");
+            char const* name = get_safe_description(get_description(), "fiber");
             // Use the HPX thread_id pointer as the unique numeric suffix
             // so each HPX task gets its own fiber track in Tracy.
             std::snprintf(tracy_fiber_name_, sizeof(tracy_fiber_name_), "%s_%p",
