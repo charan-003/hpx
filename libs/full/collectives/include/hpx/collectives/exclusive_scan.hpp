@@ -388,8 +388,8 @@ namespace hpx::traits {
                         std::swap(data, dest);
                         data_available = true;
                     }
-                    return Communicator::template handle_bool<std::decay_t<T>>(
-                        HPX_MOVE(data[which]));
+                    return hpx::collectives::detail::handle_bool<
+                        std::decay_t<T>>(HPX_MOVE(data[which]));
                 },
                 num_generations);
         }
@@ -431,8 +431,8 @@ namespace hpx::traits {
                         std::swap(data, dest);
                         data_available = true;
                     }
-                    return Communicator::template handle_bool<std::decay_t<T>>(
-                        HPX_MOVE(data[which]));
+                    return hpx::collectives::detail::handle_bool<
+                        std::decay_t<T>>(HPX_MOVE(data[which]));
                 },
                 num_generations);
         }

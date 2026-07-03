@@ -437,7 +437,7 @@ namespace hpx::traits {
                 nullptr,
                 // finalizer (invoked after all sites have checked in)
                 [](auto& data, bool&, std::size_t which) {
-                    return Communicator::template handle_bool<data_type>(
+                    return hpx::collectives::detail::handle_bool<data_type>(
                         HPX_MOVE(data[which]));
                 },
                 num_generations);
@@ -457,7 +457,7 @@ namespace hpx::traits {
                 [&t](auto& data, std::size_t) { data = HPX_MOVE(t); },
                 // finalizer (invoked after all sites have checked in)
                 [](auto& data, bool&, std::size_t which) {
-                    return Communicator::template handle_bool<T>(
+                    return hpx::collectives::detail::handle_bool<T>(
                         HPX_MOVE(data[which]));
                 },
                 num_generations);
