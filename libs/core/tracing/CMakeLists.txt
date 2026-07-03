@@ -13,8 +13,10 @@ set(tracing_headers
 set(tracing_sources backends/ittnotify.cpp backends/tracy.cpp)
 
 set(tracing_module_dependencies hpx_config)
+set(tracing_private_dependencies)
 if(HPX_WITH_TRACY)
   list(APPEND tracing_module_dependencies hpx_tracy)
+  list(APPEND tracing_private_dependencies tracy::tracy)
 endif()
 if(HPX_WITH_ITTNOTIFY)
   list(APPEND tracing_module_dependencies hpx_itt_notify)
@@ -32,4 +34,5 @@ add_hpx_module(
     hpx/tracing/backends/apex.hpp hpx/tracing/backends/empty.hpp
     hpx/tracing/backends/ittnotify.hpp hpx/tracing/backends/tracy.hpp
   MODULE_DEPENDENCIES ${tracing_module_dependencies}
+  PRIVATE_DEPENDENCIES ${tracing_private_dependencies}
 )
