@@ -239,27 +239,6 @@ namespace hpx { namespace collectives {
 #include <utility>
 #include <vector>
 
-namespace hpx::collectives::detail {
-
-    template <typename T, typename InIter, typename Sent, typename OutIter,
-        typename Op>
-    constexpr void inclusive_scan(
-        InIter first, Sent last, OutIter dest, Op&& op)
-    {
-        if (first != last)
-        {
-            T init = handle_bool<T>(HPX_MOVE(*first++));
-            *dest++ = init;
-            for (/* */; first != last; (void) ++first, ++dest)
-            {
-                init = HPX_INVOKE(
-                    op, handle_bool<T>(HPX_MOVE(init)), handle_bool<T>(*first));
-                *dest = init;
-            }
-        }
-    }
-}    // namespace hpx::collectives::detail
-
 namespace hpx::traits {
 
     namespace communication {
@@ -300,13 +279,8 @@ namespace hpx::traits {
                     {
                         using T_ = std::decay_t<T>;
 
-                        std::vector<T_> dest;
-                        dest.resize(data.size());
-
-                        collectives::detail::inclusive_scan<T_>(
-                            data.begin(), data.end(), dest.begin(), op);
-
-                        std::swap(data, dest);
+                        data = collectives::detail::make_inclusive_scan_results<
+                            T_>(HPX_MOVE(data), op);
                         data_available = true;
                     }
                     return hpx::collectives::detail::handle_bool<

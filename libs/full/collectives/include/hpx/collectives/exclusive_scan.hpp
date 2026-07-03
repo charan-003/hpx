@@ -297,41 +297,6 @@ namespace hpx { namespace collectives {
 #include <utility>
 #include <vector>
 
-namespace hpx::collectives::detail {
-
-    template <typename T, typename InIter, typename Sent, typename OutIter,
-        typename Op>
-    constexpr void exclusive_scan(
-        InIter first, Sent last, OutIter dest, Op&& op)
-    {
-        // the first value given goes to the second destination
-        T temp = handle_bool<T>(HPX_MOVE(*first++));
-        ++dest;    // the first output is ignored
-        for (/* */; first != last; (void) ++first, ++dest)
-        {
-            T next =
-                HPX_INVOKE(op, handle_bool<T>(temp), handle_bool<T>(*first));
-            *dest = HPX_MOVE(temp);
-            temp = HPX_MOVE(next);
-        }
-    }
-
-    template <typename InIter, typename Sent, typename OutIter, typename T,
-        typename Op>
-    constexpr void exclusive_scan_init(
-        InIter first, Sent last, OutIter dest, T init, Op&& op)
-    {
-        T temp = init;
-        for (/* */; first != last; (void) ++first, ++dest)
-        {
-            init = HPX_INVOKE(
-                op, handle_bool<T>(HPX_MOVE(init)), handle_bool<T>(*first));
-            *dest = HPX_MOVE(temp);
-            temp = init;
-        }
-    }
-}    // namespace hpx::collectives::detail
-
 namespace hpx::traits {
 
     namespace communication {
@@ -380,12 +345,8 @@ namespace hpx::traits {
                     {
                         using T_ = std::decay_t<T>;
 
-                        std::vector<T_> dest;
-                        dest.resize(data.size());
-
-                        collectives::detail::exclusive_scan<T_>(
-                            data.begin(), data.end(), dest.begin(), op);
-                        std::swap(data, dest);
+                        data = collectives::detail::make_exclusive_scan_results<
+                            T_>(HPX_MOVE(data), op);
                         data_available = true;
                     }
                     return hpx::collectives::detail::handle_bool<
@@ -422,13 +383,8 @@ namespace hpx::traits {
                     {
                         using T_ = std::decay_t<T>;
 
-                        std::vector<T_> dest;
-                        dest.resize(data.size());
-
-                        collectives::detail::exclusive_scan_init(data.begin(),
-                            data.end(), dest.begin(),
-                            static_cast<T_>(HPX_FORWARD(Init, init)), op);
-                        std::swap(data, dest);
+                        data = collectives::detail::make_exclusive_scan_results<
+                            T_>(HPX_MOVE(data), HPX_FORWARD(Init, init), op);
                         data_available = true;
                     }
                     return hpx::collectives::detail::handle_bool<
