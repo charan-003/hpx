@@ -11,8 +11,8 @@
 
 #include <hpx/tracing/tracing.hpp>
 
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <string>
