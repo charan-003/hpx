@@ -18,16 +18,18 @@ int main()
 #include <hpx/contracts.hpp>
 #include <hpx/modules/testing.hpp>
 
+#include <atomic>
+
 namespace {
 
-    int handler_call_count = 0;
-    hpx::contracts::contract_kind last_kind =
-        hpx::contracts::contract_kind::assertion;
+    std::atomic<int> handler_call_count = 0;
+    auto last_kind = hpx::contracts::assertion_kind::unknown;
 
     void recording_handler(hpx::contracts::contract_violation const& info)
     {
         ++handler_call_count;
-        last_kind = info.kind;
+        last_kind = info.kind();
+
         // deliberately does not abort so the test can continue
     }
 }    // namespace
@@ -39,7 +41,7 @@ int main()
     HPX_CONTRACT_ASSERT(false);    // should invoke recording_handler
 
     HPX_TEST_EQ(handler_call_count, 1);
-    HPX_TEST(last_kind == hpx::contracts::contract_kind::assertion);
+    HPX_TEST(last_kind == hpx::contracts::assertion_kind::assertion);
 
     return hpx::util::report_errors();
 }

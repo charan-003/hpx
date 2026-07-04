@@ -36,7 +36,8 @@ else()
   #
   # HPX_CONTRACT_ASSERT routes through invoke_violation_handler, whose default
   # handler aborts unless HPX_WITH_CONTRACTS_MODE=OBSERVE.
-  if(HPX_WITH_CONTRACTS_MODE STREQUAL "ENFORCE")
+  string(FIND "${HPX_WITH_CONTRACTS_MODE}" "ENFORCE" _is_enforce)
+  if(NOT (_is_enforce EQUAL -1))
     set(default_handler_aborts_PARAMETERS FAILURE_EXPECTED)
     set(fallback_contracts_fail_PARAMETERS FAILURE_EXPECTED)
   endif()

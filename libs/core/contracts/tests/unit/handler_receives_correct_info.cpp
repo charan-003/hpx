@@ -18,15 +18,24 @@ int main()
 #include <hpx/contracts.hpp>
 #include <hpx/modules/testing.hpp>
 
-#include <cstring>
+#include <atomic>
+#include <string>
 
 namespace {
-    hpx::contracts::contract_violation captured{
-        hpx::contracts::contract_kind::assertion, nullptr, {}};
+
+    std::atomic<int> handler_call_count = 0;
 
     void capturing_handler(hpx::contracts::contract_violation const& info)
     {
-        captured = info;
+        HPX_TEST(info.condition() != nullptr);
+        HPX_TEST_EQ(std::string(info.condition()), std::string("1 == 2"));
+
+        HPX_TEST(info.kind() == hpx::contracts::assertion_kind::assertion);
+        HPX_TEST(info.location().line() > 0);
+
+        ++handler_call_count;
+
+        // deliberately does not abort so the test can continue
     }
 }    // namespace
 
@@ -36,10 +45,7 @@ int main()
 
     HPX_CONTRACT_ASSERT(1 == 2);    // NOLINT: intentional false assertion
 
-    HPX_TEST(captured.condition != nullptr);
-    HPX_TEST(std::strstr(captured.condition, "1 == 2") != nullptr);
-    HPX_TEST(captured.kind == hpx::contracts::contract_kind::assertion);
-    HPX_TEST(captured.location.line() > 0);
+    HPX_TEST_EQ(handler_call_count.load(), 1);
 
     return hpx::util::report_errors();
 }

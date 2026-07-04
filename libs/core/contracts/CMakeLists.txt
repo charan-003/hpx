@@ -25,9 +25,9 @@ else()
   hpx_option(
     HPX_WITH_CONTRACTS_MODE
     STRING
-    "Contract evaluation mode for pre-C++26 compilers, options are: ENFORCE, OBSERVE, IGNORE"
+    "Contract evaluation mode for pre-C++26 compilers, options are: ENFORCE, QUICK_ENFORCE, OBSERVE, IGNORE"
     "ENFORCE"
-    STRINGS "ENFORCE;OBSERVE;IGNORE"
+    STRINGS "ENFORCE;QUICK_ENFORCE;OBSERVE;IGNORE"
   )
 
   # Note: values start at 1 because hpx_add_config_define_namespace treats a
@@ -35,7 +35,7 @@ else()
 
   # define readable contract mode constants
   hpx_add_config_define_namespace(
-    DEFINE HPX_HAVE_CONTRACTS_MODE_ENFORCE
+    DEFINE HPX_HAVE_CONTRACTS_MODE_IGNORE
     VALUE 1
     NAMESPACE CONTRACTS
   )
@@ -45,8 +45,13 @@ else()
     NAMESPACE CONTRACTS
   )
   hpx_add_config_define_namespace(
-    DEFINE HPX_HAVE_CONTRACTS_MODE_IGNORE
+    DEFINE HPX_HAVE_CONTRACTS_MODE_ENFORCE
     VALUE 3
+    NAMESPACE CONTRACTS
+  )
+  hpx_add_config_define_namespace(
+    DEFINE HPX_HAVE_CONTRACTS_MODE_QUICK_ENFORCE
+    VALUE 4
     NAMESPACE CONTRACTS
   )
 
@@ -54,6 +59,12 @@ else()
     hpx_add_config_define_namespace(
       DEFINE HPX_HAVE_CONTRACTS_MODE
       VALUE HPX_HAVE_CONTRACTS_MODE_ENFORCE
+      NAMESPACE CONTRACTS
+    )
+  elseif(HPX_WITH_CONTRACTS_MODE STREQUAL "QUICK_ENFORCE")
+    hpx_add_config_define_namespace(
+      DEFINE HPX_HAVE_CONTRACTS_MODE
+      VALUE HPX_HAVE_CONTRACTS_MODE_QUICK_ENFORCE
       NAMESPACE CONTRACTS
     )
   elseif(HPX_WITH_CONTRACTS_MODE STREQUAL "OBSERVE")
@@ -70,7 +81,7 @@ else()
     )
   else()
     hpx_error(
-      "HPX_WITH_CONTRACTS_MODE must be one of ENFORCE, OBSERVE, or IGNORE"
+      "HPX_WITH_CONTRACTS_MODE must be one of ENFORCE, QUICK_ENFORCE, OBSERVE, or IGNORE"
     )
   endif()
 endif()

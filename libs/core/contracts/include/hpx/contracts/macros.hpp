@@ -24,9 +24,7 @@
 /// Enable native contracts with:
 ///     `cmake -DHPX_WITH_CONTRACTS=ON -DCMAKE_CXX_STANDARD=26`
 /// Set fallback mode with:
-///     `cmake -DHPX_WITH_CONTRACTS_MODE=ENFORCE|OBSERVE|IGNORE`
-///
-/// See docs/index.rst for comprehensive usage guide.
+///     `cmake -DHPX_WITH_CONTRACTS_MODE=ENFORCE|QUICK_ENFORCE|OBSERVE|IGNORE`
 
 // Don't report missing #include for HPX_ASSERT macro
 // hpxinspect:noinclude:HPX_ASSERT
@@ -63,17 +61,38 @@
 
 #define HPX_CONTRACT_ASSERT(x)
 
-#else    // ENFORCE (0) or OBSERVE (1): runtime checking via violation handler
+#else    // ENFORCE, QUICK_ENFORCE or OBSERVE: runtime checking
 
-#include <hpx/contracts/violation_handler.hpp>
 #include <hpx/modules/preprocessor.hpp>
 
-#define HPX_CONTRACT_ASSERT(expr, ...)                                         \
-    (!!(expr) ? void() :                                                       \
-                ::hpx::contracts::handle_contract_violation(                   \
-                    {::hpx::contracts::contract_kind::assertion,               \
-                        HPX_PP_STRINGIZE(expr), HPX_CURRENT_SOURCE_LOCATION(), \
-                        hpx::util::format(__VA_ARGS__)})) /**/
+// https://eel.is/c%2B%2Bdraft/basic.contract.eval#7 states:
+//
+// A contract violation occurs when:
+// - (7.1) expr is false,
+// - (7.2) the evaluation of the predicate exits via an exception,
+// - ...
+
+#define HPX_CONTRACT_ASSERT(expr)                                              \
+    do                                                                         \
+    {                                                                          \
+        ::hpx::contracts::detection_mode mode =                                \
+            ::hpx::contracts::detection_mode::unknown;                         \
+        try                                                                    \
+        {                                                                      \
+            if (!!(expr))                                                      \
+                break;                                                         \
+            mode = ::hpx::contracts::detection_mode::predicate_false;          \
+        }                                                                      \
+        catch (...)                                                            \
+        {                                                                      \
+            mode = ::hpx::contracts::detection_mode::evaluation_exception;     \
+        }                                                                      \
+                                                                               \
+        ::hpx::contracts::invoke_contract_violation_handler(                   \
+            ::hpx::contracts::detail::construct_contract_violation(            \
+                mode, HPX_PP_STRINGIZE(expr)));                                \
+                                                                               \
+    } while (false) /**/
 
 #endif    // HPX_HAVE_CONTRACTS_MODE
 
