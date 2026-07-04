@@ -291,15 +291,11 @@ namespace hpx::threads {
 
 #if defined(HPX_HAVE_TRACY)
     private:
-        mutable char tracy_fiber_name_[64];
+        mutable char fiber_name_[64];
+#endif
 
     public:
-        // Returns a unique, stable string identifying this HPX task as a Tracy
-        // fiber. Built lazily on first call and cached in tracy_fiber_name_.
-        // Format: "<description>_<thread_id_ptr>" so each HPX task gets its
-        // own fiber track in the Tracy profiler.
-        char const* get_tracy_fiber_name() const noexcept;
-#endif
+        char const* get_fiber_name() const noexcept;
 
 #if !defined(HPX_HAVE_THREAD_PARENT_REFERENCE)
         /// Return the locality of the parent thread
@@ -658,18 +654,6 @@ namespace hpx::threads {
     get_thread_id_data(thread_id_type const& tid) noexcept
     {
         return static_cast<thread_data*>(tid.get());
-    }
-
-    HPX_CXX_CORE_EXPORT HPX_FORCEINLINE constexpr void const* get_task_id(
-        thread_id_ref_type const& id) noexcept
-    {
-        return id.get().get();
-    }
-
-    HPX_CXX_CORE_EXPORT HPX_FORCEINLINE constexpr void const* get_task_id(
-        thread_id_type const& id) noexcept
-    {
-        return id.get();
     }
 
 #if defined(HPX_HAVE_TRACY)
