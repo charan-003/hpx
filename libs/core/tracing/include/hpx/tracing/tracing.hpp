@@ -29,7 +29,6 @@
 /// \b Task \b Lifecycle \b Hooks:
 /// - \b task_staged: Task description is registered.
 /// - \b task_created: Thread object is fully constructed.
-/// - \b task_scheduled: Task is pushed into a scheduler queue.
 /// - \b task_executing: Task begins execution on a worker thread.
 /// - \b task_yielded: Task voluntarily yields to the scheduler.
 /// - \b task_suspended: Task is blocked on an external resource.

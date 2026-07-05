@@ -149,7 +149,6 @@ namespace hpx::tracing {
         {
             staged = 0x808080,
             created = 0x00FF00,
-            scheduled = 0x0000FF,
             executing = 0xFF00FF,
             yielded = 0xFFA500,
             suspended = 0xFF0000,
@@ -200,15 +199,6 @@ namespace hpx::tracing {
         }
         hpx::tracy::message(buffer, std::strlen(buffer),
             static_cast<std::uint32_t>(detail::color::created));
-    }
-
-    void task_scheduled(void const* task_id, char const* description) noexcept
-    {
-        char buffer[256];
-        std::snprintf(buffer, sizeof(buffer), "Task Scheduled: %p - %s",
-            task_id, detail::safe_str(description));
-        hpx::tracy::message(buffer, std::strlen(buffer),
-            static_cast<std::uint32_t>(detail::color::scheduled));
     }
 
     void task_executing(void const* task_id, char const* description,

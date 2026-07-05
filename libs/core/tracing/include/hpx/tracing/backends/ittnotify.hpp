@@ -257,11 +257,6 @@ namespace hpx::tracing {
     {
     }
 
-    HPX_CXX_CORE_EXPORT constexpr void task_scheduled(
-        void const*, char const*) noexcept
-    {
-    }
-
     HPX_CXX_CORE_EXPORT constexpr void task_executing(
         void const*, char const*, std::size_t) noexcept
     {

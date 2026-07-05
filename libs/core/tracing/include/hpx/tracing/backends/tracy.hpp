@@ -199,9 +199,6 @@ namespace hpx::tracing {
         char const* description, void const* task_id,
         void const* parent_task_id = nullptr) noexcept;
 
-    HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT void task_scheduled(
-        void const* task_id, char const* description) noexcept;
-
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT void task_executing(void const* task_id,
         char const* description, std::size_t worker_thread) noexcept;
 
