@@ -183,16 +183,6 @@ namespace hpx::cuda::experimental {
         }
 
         // -------------------------------------------------------------------------
-        // TwoWay Execution
-        // -------------------------------------------------------------------------
-        template <typename F, typename... Ts>
-        decltype(auto) async_execute(F&& f, Ts&&... ts) const
-        {
-            return async_impl(HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...);
-        }
-
-    protected:
-        // -------------------------------------------------------------------------
         // launch a cuBlas function and return a future that will become ready
         // when the task completes, this allows integration of GPU kernels with
         // hpx::futures and the tasking DAG.
