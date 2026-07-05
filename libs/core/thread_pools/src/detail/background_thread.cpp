@@ -21,7 +21,7 @@
 namespace hpx::threads::detail {
 
     ///////////////////////////////////////////////////////////////////////////
-    thread_id_ref_type create_background_thread(
+    void create_background_thread(thread_id_ref_type& background_thread,
         threads::policies::scheduler_base& scheduler_base,
         std::size_t const num_thread, scheduling_callbacks const& callbacks,
         std::shared_ptr<bool>& background_running,
@@ -30,12 +30,18 @@ namespace hpx::threads::detail {
         threads::thread_schedule_hint const schedulehint(
             static_cast<std::int16_t>(num_thread));
 
-        thread_id_ref_type background_thread;
         background_running = std::make_shared<bool>(true);
 
         thread_init_data background_init(
-            [&, background_running](
-                thread_restart_state) -> thread_result_type {
+            [&, background_running, keep_alive = thread_id_ref_type()](
+                thread_restart_state) mutable -> thread_result_type {
+                // Assigning keep_alive = background_thread; as the very first
+                // statement ensures the background thread holds a
+                // self-reference before the external background_thread handle
+                // can be reassigned in call_and_create_background_thread, 
+                // preventing premature teardown of a "given back to scheduler"
+                // thread.
+                keep_alive = background_thread;
                 while (*background_running)
                 {
                     if (callbacks.background_())
@@ -58,26 +64,27 @@ namespace hpx::threads::detail {
             hpx::threads::thread_description("background_work"),
             thread_priority::high_recursive, schedulehint,
             thread_stacksize::large,
-            // Create in suspended to prevent the thread from being scheduled
-            // directly...
+            // Create in suspended state to prevent the thread from being
+            // scheduled directly...
             thread_schedule_state::suspended, true, &scheduler_base);
 
         scheduler_base.create_thread(
             background_init, &background_thread, hpx::throws);
         HPX_ASSERT(background_thread);
 
+        auto* thread_ptr = get_thread_id_data(background_thread);
+        thread_ptr->set_is_background();
+
         scheduler_base.increment_background_thread_count();
 
         LTM_(debug).format("create_background_thread: pool({}), "
                            "scheduler({}), worker_thread({}), thread({})",
             scheduler_base.get_parent_pool(), scheduler_base, num_thread,
-            get_thread_id_data(background_thread));
+            thread_ptr);
 
         // We can now set the state to pending
         [[maybe_unused]] auto old_state =
-            get_thread_id_data(background_thread)
-                ->set_state(thread_schedule_state::pending);
-        return background_thread;
+            thread_ptr->set_state(thread_schedule_state::pending);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -306,7 +313,7 @@ namespace hpx::threads::detail {
 
             // Create a new one that will replace the current such we avoid
             // deadlock situations, if all background threads are blocked.
-            background_thread = create_background_thread(scheduler_base,
+            create_background_thread(background_thread, scheduler_base,
                 num_thread, callbacks, running, idle_loop_count);
 
             return true;

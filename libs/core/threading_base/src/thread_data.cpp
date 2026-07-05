@@ -65,6 +65,7 @@ namespace hpx::threads {
       , is_stackless_(is_stackless)
       , running_exit_funcs_(false)
       , ran_exit_funcs_(false)
+      , is_background_(false)
       , runs_as_child_(init_data.schedulehint.runs_as_child_mode() ==
             hpx::threads::thread_execution_hint::run_as_child)
       , last_worker_thread_num_(
@@ -249,6 +250,7 @@ namespace hpx::threads {
         enabled_interrupt_ = true;
         running_exit_funcs_ = false;
         ran_exit_funcs_ = false;
+        is_background_ = false;
 
         runs_as_child_.store(init_data.schedulehint.runs_as_child_mode() ==
                 hpx::threads::thread_execution_hint::run_as_child,
