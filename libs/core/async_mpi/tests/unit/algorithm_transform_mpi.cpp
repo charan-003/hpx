@@ -42,8 +42,8 @@ void test_transform_mpi_forwards_env()
         std::decay_t<decltype(ex::get_completion_scheduler<ex::set_value_t>(
             ex::get_env(std::declval<sender_type&>())))>;
 
-    auto transformed =
-        mpi::transform_mpi(std::move(s), [](MPI_Request* request) {
+    auto transformed = mpi::transform_mpi(std::move(s),
+        [](int*, int, MPI_Datatype, int, MPI_Comm, MPI_Request* request) {
             *request = MPI_REQUEST_NULL;
             return MPI_SUCCESS;
         });
