@@ -1562,12 +1562,21 @@ void test_detach()
 
 void test_keep_future_sender()
 {
-    // the future should be passed to then, not its contained value
+    using sync_wait_domain =
+        hpx::execution::experimental::detail::sync_wait_domain;
+
+    // keep_future still models a sender, and its environment stays empty in
+    // the sense of carrying no scheduler state while advertising the
+    // HPX-aware sync_wait domain.
     {
         auto sender = ex::keep_future(hpx::make_ready_future<void>());
         static_assert(ex::is_sender_v<decltype(sender)>);
-        static_assert(
-            std::is_same_v<decltype(ex::get_env(sender)), ex::empty_env>);
+        static_assert(std::is_empty_v<std::remove_cvref_t<
+                          decltype(ex::get_env(sender))>>);
+        static_assert(std::is_same_v<decltype(
+                              ex::get_completion_domain<ex::set_value_t>(
+                                  ex::get_env(sender)))>,
+            sync_wait_domain);
     }
 
     // the future should be passed to then, not its contained value

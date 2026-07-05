@@ -8,6 +8,7 @@
 
 #include <hpx/assert.hpp>
 #include <hpx/execution/algorithms/detail/partial_algorithm.hpp>
+#include <hpx/execution/algorithms/detail/sync_wait_domain.hpp>
 #include <hpx/modules/concepts.hpp>
 #include <hpx/modules/errors.hpp>
 #include <hpx/modules/execution_base.hpp>
@@ -32,6 +33,17 @@ namespace hpx::execution::experimental {
             {
                 hpx::detail::try_catch_exception_ptr(
                     [&]() {
+                        // Keep the ready-future case cheap: if the shared
+                        // state is already ready we can complete immediately
+                        // instead of installing a callback that fires right
+                        // away anyway.
+                        if (future.is_ready())
+                        {
+                            hpx::execution::experimental::set_value(
+                                HPX_MOVE(receiver), HPX_MOVE(future));
+                            return;
+                        }
+
                         auto state =
                             hpx::traits::detail::get_shared_state(future);
 
@@ -62,7 +74,23 @@ namespace hpx::execution::experimental {
         struct keep_future_sender_base
         {
             std::decay_t<Future> future;
-            using env_type = hpx::execution::experimental::empty_env;
+
+            // Keep the environment structurally empty, but advertise the
+            // HPX sync-wait domain so composed sender chains can route the
+            // final blocking wait through the cooperative HPX-aware path.
+            struct env_type : hpx::execution::experimental::empty_env
+            {
+                template <typename CPO>
+                [[nodiscard]]
+                static constexpr auto query(
+                    hpx::execution::experimental::get_completion_domain_t<CPO>)
+                    noexcept -> hpx::execution::experimental::detail::
+                    sync_wait_domain
+                {
+                    return {};
+                }
+            };
+
             using completion_signatures =
                 hpx::execution::experimental::completion_signatures<
                     hpx::execution::experimental::set_value_t(
