@@ -171,7 +171,7 @@ namespace hpx::tracing {
         {
             std::snprintf(buffer, sizeof(buffer),
                 "Task Staged: %s (Parent: %p)", detail::safe_str(description),
-                parent_task_id);
+                const_cast<void*>(parent_task_id));
         }
         else
         {
@@ -189,13 +189,14 @@ namespace hpx::tracing {
         if (parent_task_id)
         {
             std::snprintf(buffer, sizeof(buffer),
-                "Task Created: %p - %s (Parent: %p)", task_id,
-                detail::safe_str(description), parent_task_id);
+                "Task Created: %p - %s (Parent: %p)",
+                const_cast<void*>(task_id), detail::safe_str(description),
+                const_cast<void*>(parent_task_id));
         }
         else
         {
             std::snprintf(buffer, sizeof(buffer), "Task Created: %p - %s",
-                task_id, detail::safe_str(description));
+                const_cast<void*>(task_id), detail::safe_str(description));
         }
         hpx::tracy::message(buffer, std::strlen(buffer),
             static_cast<std::uint32_t>(detail::color::created));
@@ -206,7 +207,8 @@ namespace hpx::tracing {
     {
         char buffer[256];
         std::snprintf(buffer, sizeof(buffer), "Task Executing (W%zu): %p - %s",
-            worker_thread, task_id, detail::safe_str(description));
+            worker_thread, const_cast<void*>(task_id),
+            detail::safe_str(description));
         hpx::tracy::message(buffer, std::strlen(buffer),
             static_cast<std::uint32_t>(detail::color::executing));
     }
@@ -214,8 +216,8 @@ namespace hpx::tracing {
     void task_yielded(void const* task_id, char const* description) noexcept
     {
         char buffer[256];
-        std::snprintf(buffer, sizeof(buffer), "Task Yielded: %p - %s", task_id,
-            detail::safe_str(description));
+        std::snprintf(buffer, sizeof(buffer), "Task Yielded: %p - %s",
+            const_cast<void*>(task_id), detail::safe_str(description));
         hpx::tracy::message(buffer, std::strlen(buffer),
             static_cast<std::uint32_t>(detail::color::yielded));
     }
@@ -227,13 +229,14 @@ namespace hpx::tracing {
         if (reason)
         {
             std::snprintf(buffer, sizeof(buffer),
-                "Task Suspended: %p - %s (Reason: %s)", task_id,
-                detail::safe_str(description), reason);
+                "Task Suspended: %p - %s (Reason: %s)",
+                const_cast<void*>(task_id), detail::safe_str(description),
+                reason);
         }
         else
         {
             std::snprintf(buffer, sizeof(buffer), "Task Suspended: %p - %s",
-                task_id, detail::safe_str(description));
+                const_cast<void*>(task_id), detail::safe_str(description));
         }
         hpx::tracy::message(buffer, std::strlen(buffer),
             static_cast<std::uint32_t>(detail::color::suspended));
@@ -246,13 +249,13 @@ namespace hpx::tracing {
         if (wake_reason)
         {
             std::snprintf(buffer, sizeof(buffer),
-                "Task Resumed: %p - %s (Wake: %s)", task_id,
+                "Task Resumed: %p - %s (Wake: %s)", const_cast<void*>(task_id),
                 detail::safe_str(description), wake_reason);
         }
         else
         {
             std::snprintf(buffer, sizeof(buffer), "Task Resumed: %p - %s",
-                task_id, detail::safe_str(description));
+                const_cast<void*>(task_id), detail::safe_str(description));
         }
         hpx::tracy::message(buffer, std::strlen(buffer),
             static_cast<std::uint32_t>(detail::color::resumed));
@@ -262,7 +265,7 @@ namespace hpx::tracing {
     {
         char buffer[256];
         std::snprintf(buffer, sizeof(buffer), "Task Completed: %p - %s",
-            task_id, detail::safe_str(description));
+            const_cast<void*>(task_id), detail::safe_str(description));
         hpx::tracy::message(buffer, std::strlen(buffer),
             static_cast<std::uint32_t>(detail::color::completed));
     }
@@ -270,7 +273,8 @@ namespace hpx::tracing {
     void task_deleted(void const* task_id) noexcept
     {
         char buffer[256];
-        std::snprintf(buffer, sizeof(buffer), "Task Deleted: %p", task_id);
+        std::snprintf(buffer, sizeof(buffer), "Task Deleted: %p",
+            const_cast<void*>(task_id));
         hpx::tracy::message(buffer, std::strlen(buffer),
             static_cast<std::uint32_t>(detail::color::deleted));
     }

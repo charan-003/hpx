@@ -351,7 +351,7 @@ namespace hpx::threads {
             // Use the HPX thread_id pointer as the unique numeric suffix
             // so each HPX task gets its own fiber track in Tracy.
             std::snprintf(fiber_name_, sizeof(fiber_name_), "%s_%p", name,
-                get_thread_id().get());
+                static_cast<void*>(get_thread_id().get()));
         }
         return fiber_name_;
 #else

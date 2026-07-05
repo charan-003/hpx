@@ -20,7 +20,7 @@
 #include <tracy/TracyC.h>
 
 namespace tracy_helpers {
-    inline void call_tracy_message_c(
+    static inline void call_tracy_message_c(
         char const* text, std::size_t size, std::uint32_t color) noexcept
     {
         TracyMessageC(text, size, color);
