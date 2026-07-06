@@ -39,10 +39,6 @@ constexpr std::uint32_t iterations = 4;
 void wait_for_sites(std::vector<hpx::future<void>>& sites)
 {
     hpx::wait_all(sites);
-    for (auto& site : sites)
-    {
-        site.get();
-    }
 }
 
 std::vector<std::int32_t> make_scatter_values(
