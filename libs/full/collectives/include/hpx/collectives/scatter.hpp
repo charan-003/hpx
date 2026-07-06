@@ -578,6 +578,16 @@ namespace hpx::collectives {
                 this_site = agas::get_locality_id();
             }
 
+            if (!is_valid_hierarchical_run_generation(
+                    generation, num_generations))
+            {
+                return hpx::make_exceptional_future<T>(
+                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                        "hpx::collectives::scatter_from (hierarchical)",
+                        "the generation number is too large for the internal "
+                        "generation mapping"));
+            }
+
             auto const [run_gen, run_step] =
                 hierarchical_run_params(generation, num_generations);
 
@@ -802,6 +812,16 @@ namespace hpx::collectives {
                         "hpx::collectives::scatter_to (hierarchical)",
                         "the number of values to scatter must be equal to the "
                         "number of participating sites"));
+            }
+
+            if (!is_valid_hierarchical_run_generation(
+                    generation, num_generations))
+            {
+                return hpx::make_exceptional_future<T>(
+                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                        "hpx::collectives::scatter_to (hierarchical)",
+                        "the generation number is too large for the internal "
+                        "generation mapping"));
             }
 
             auto const [run_gen, run_step] =

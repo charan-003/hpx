@@ -231,6 +231,7 @@ namespace hpx { namespace collectives {
 #include <hpx/collectives/argument_types.hpp>
 #include <hpx/collectives/create_communicator.hpp>
 #include <hpx/collectives/detail/hierarchical_helpers.hpp>
+#include <hpx/collectives/detail/hierarchical_scan_helpers.hpp>
 #include <hpx/collectives/gather.hpp>
 #include <hpx/collectives/scatter.hpp>
 
@@ -405,97 +406,22 @@ namespace hpx::collectives {
         root_site_arg root_site = root_site_arg())
     {
         using arg_type = std::decay_t<T>;
+        char const* const operation =
+            "hpx::collectives::inclusive_scan (hierarchical)";
 
-        if (generation.is_default() || generation == 0)
-        {
-            return hpx::make_exceptional_future<arg_type>(
-                HPX_GET_EXCEPTION(hpx::error::bad_parameter,
-                    "hpx::collectives::inclusive_scan (hierarchical)",
-                    "hierarchical inclusive_scan requires an explicit, "
-                    "positive generation number for the 2k-1/2k internal "
-                    "mapping"));
-        }
-
-        if (!detail::is_valid_hierarchical_phase_generation(generation))
-        {
-            return hpx::make_exceptional_future<arg_type>(
-                HPX_GET_EXCEPTION(hpx::error::bad_parameter,
-                    "hpx::collectives::inclusive_scan (hierarchical)",
-                    "the generation number is too large for the internal "
-                    "2k-1/2k generation mapping"));
-        }
-
-        if (this_site.is_default())
-        {
-            this_site = agas::get_locality_id();
-        }
-
-        std::size_t const num_sites_val = hpx::get<0>(communicators.get_info());
-        std::size_t const communicator_site =
-            hpx::get<1>(communicators.get_info());
-        std::size_t const arity_val = communicators.get_arity();
-
-        if (root_site != 0)
-        {
-            return hpx::make_exceptional_future<arg_type>(
-                HPX_GET_EXCEPTION(hpx::error::bad_parameter,
-                    "hpx::collectives::inclusive_scan (hierarchical)",
-                    "hierarchical inclusive_scan currently supports only "
-                    "root_site == 0 (the tree designates site 0 as the root)"));
-        }
-
-        if (this_site >= num_sites_val)
-        {
-            return hpx::make_exceptional_future<arg_type>(
-                HPX_GET_EXCEPTION(hpx::error::bad_parameter,
-                    "hpx::collectives::inclusive_scan (hierarchical)",
-                    "this_site must be smaller than the number of "
-                    "participating sites"));
-        }
-
-        if (this_site != communicator_site)
-        {
-            return hpx::make_exceptional_future<arg_type>(
-                HPX_GET_EXCEPTION(hpx::error::bad_parameter,
-                    "hpx::collectives::inclusive_scan (hierarchical)",
-                    "this_site must match the site used to create the "
-                    "hierarchical communicator"));
-        }
-
-        auto const [gather_gen, scatter_gen] =
-            detail::hierarchical_phase_generations(generation);
-
-        if (arity_val >= num_sites_val)
-        {
-            HPX_ASSERT(communicators.size() == 1);
-            return detail::inclusive_scan(communicators.get(0),
-                HPX_FORWARD(T, local_result), HPX_FORWARD(F, op),
-                communicators.site(0), gather_gen,
-                detail::generation_mode::double_step);
-        }
-
-        if (this_site == root_site)
-        {
-            std::vector<arg_type> gathered =
-                detail::gather_here(communicators, HPX_FORWARD(T, local_result),
-                    this_site, gather_gen, detail::generation_mode::single_step)
-                    .get();
-
-            std::vector<arg_type> results = detail::make_inclusive_scan_results(
-                HPX_MOVE(gathered), HPX_FORWARD(F, op));
-
-            return detail::scatter_to(communicators, HPX_MOVE(results),
-                this_site, scatter_gen, detail::generation_mode::single_step);
-        }
-        else
-        {
-            detail::gather_there(communicators, HPX_FORWARD(T, local_result),
-                this_site, gather_gen, detail::generation_mode::single_step)
-                .get();
-
-            return detail::scatter_from<arg_type>(communicators, this_site,
-                scatter_gen, detail::generation_mode::single_step);
-        }
+        return detail::hierarchical_scan<arg_type>(
+            operation, communicators, HPX_FORWARD(T, local_result), this_site,
+            generation, root_site,
+            [&op](std::vector<arg_type>&& gathered) {
+                return detail::make_inclusive_scan_results(
+                    HPX_MOVE(gathered), HPX_FORWARD(F, op));
+            },
+            [&op](communicator const& comm, T&& result,
+                this_site_arg const flat_site, generation_arg const flat_gen) {
+                return detail::inclusive_scan(comm, HPX_FORWARD(T, result),
+                    HPX_FORWARD(F, op), flat_site, flat_gen,
+                    detail::generation_mode::double_step);
+            });
     }
 
     ////////////////////////////////////////////////////////////////////////////

@@ -27,6 +27,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <limits>
 #include <string>
 #include <utility>
 #include <vector>
@@ -509,6 +510,30 @@ void test_local_zero_generation_rejected(std::uint32_t const num_sites)
                 broadcast_rejected = true;
             }
             HPX_TEST(broadcast_rejected);
+
+            bool oversized_broadcast_rejected = false;
+            try
+            {
+                std::size_t const oversized_generation =
+                    (std::numeric_limits<std::size_t>::max)() / 2 + 1;
+                if (site == 0)
+                {
+                    broadcast_to(hpx::launch::sync, comms, std::int32_t(1),
+                        this_site_arg(site),
+                        generation_arg(oversized_generation));
+                }
+                else
+                {
+                    broadcast_from<std::int32_t>(hpx::launch::sync, comms,
+                        this_site_arg(site),
+                        generation_arg(oversized_generation));
+                }
+            }
+            catch (hpx::exception const&)
+            {
+                oversized_broadcast_rejected = true;
+            }
+            HPX_TEST(oversized_broadcast_rejected);
         }));
     }
 

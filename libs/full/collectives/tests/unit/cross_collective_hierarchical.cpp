@@ -456,11 +456,7 @@ void test_same_instance_scans_all_reduce()
         }));
     }
 
-    hpx::wait_all(sites);
-    for (auto& site : sites)
-    {
-        site.get();
-    }
+    hpx::wait_all(std::move(sites));
 }
 
 int hpx_main()

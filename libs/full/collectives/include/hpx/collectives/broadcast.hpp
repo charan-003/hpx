@@ -564,6 +564,16 @@ namespace hpx::collectives {
             // of its two internal generations (2k-1); used as the broadcast
             // phase of all_gather/all_reduce (single_step) the caller already
             // passes the doubled generation, so the mapping is the identity.
+            if (!is_valid_hierarchical_run_generation(
+                    generation, num_generations))
+            {
+                return hpx::make_exceptional_future<std::decay_t<T>>(
+                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                        "hpx::collectives::broadcast_to (hierarchical)",
+                        "the generation number is too large for the internal "
+                        "generation mapping"));
+            }
+
             auto const [run_gen, run_step] =
                 hierarchical_run_params(generation, num_generations);
 
@@ -722,6 +732,16 @@ namespace hpx::collectives {
             }
 
             // See broadcast_to above for the internal generation mapping.
+            if (!is_valid_hierarchical_run_generation(
+                    generation, num_generations))
+            {
+                return hpx::make_exceptional_future<T>(
+                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                        "hpx::collectives::broadcast_from (hierarchical)",
+                        "the generation number is too large for the internal "
+                        "generation mapping"));
+            }
+
             auto const [run_gen, run_step] =
                 hierarchical_run_params(generation, num_generations);
 
