@@ -71,8 +71,13 @@ namespace hpx::execution::experimental {
                         else if constexpr (hpx::traits::has_post_member_v<
                                                std::decay_t<Executor>>)
                         {
-                            // For executors that support post(), use post
-                            hpx::parallel::execution::post(exec_,
+                            // For executors that support post(), call the
+                            // member function directly. Using the post_t CPO
+                            // here would additionally require the executor to
+                            // satisfy the (Non)BlockingOneWayExecutor
+                            // concept, which not all executors with a post()
+                            // member (e.g. fork_join_executor) do.
+                            exec_.post(
                                 [receiver = HPX_MOVE(receiver_)]() mutable {
                                     hpx::execution::experimental::set_value(
                                         HPX_MOVE(receiver));
@@ -80,8 +85,8 @@ namespace hpx::execution::experimental {
                         }
                         else
                         {
-                            // For bulk-only executors (e.g., fork_join_executor),
-                            // invoke inline since they don't support post()
+                            // For bulk-only executors that don't have a
+                            // post() member, invoke inline
                             hpx::execution::experimental::set_value(
                                 HPX_MOVE(receiver_));
                         }
