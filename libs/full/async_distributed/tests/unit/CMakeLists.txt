@@ -25,6 +25,7 @@ set(tests
     async_remote
     async_remote_client
     async_unwrap_result
+    distributed_scheduler
     post_remote
     post_remote_client
     remote_dataflow

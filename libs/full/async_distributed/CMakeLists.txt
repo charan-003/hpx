@@ -58,6 +58,8 @@ set(async_headers
     hpx/async_distributed/trigger.hpp
     hpx/async_distributed/trigger_lco.hpp
     hpx/async_distributed/trigger_lco_fwd.hpp
+    hpx/async_distributed/detail/transfer_action.hpp
+    hpx/async_distributed/distributed_scheduler.hpp
 )
 
 set(async_macro_headers hpx/async_distributed/macros.hpp)
@@ -116,6 +118,7 @@ set(async_sources
     continuation.cpp
     packaged_action.cpp
     promise.cpp
+    transfer_action.cpp
     trigger_lco.cpp
 )
 

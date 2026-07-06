@@ -452,7 +452,7 @@ foreach(lib ${HPX_LIBS})
       RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime
       FILE_SET hpx_${lib}_public_sources
           DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${HPX_PACKAGE_NAME}/${lib}
-      CXX_MODULES_BMI
+      CXX_MODULES_BMIN
           DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${HPX_PACKAGE_NAME}/${lib}
           COMPONENT runtime
     )
