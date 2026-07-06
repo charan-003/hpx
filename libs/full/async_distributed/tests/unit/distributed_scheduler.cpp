@@ -22,6 +22,7 @@
 
 #include <hpx/async_distributed/distributed_just.hpp>
 #include <hpx/async_distributed/distributed_scheduler.hpp>
+#include <hpx/async_distributed/distributed_transfer_sender.hpp>
 
 #include <atomic>
 #include <exception>
@@ -48,9 +49,8 @@ int hpx_main()
     // Test 2: schedule() piped through then() produces a value.
     {
         hpx::id_type here = hpx::find_here();
-        auto s1 = ex::schedule(
-            hpx::distributed::distributed_scheduler(here));
-        
+        auto s1 = ex::schedule(hpx::distributed::distributed_scheduler(here));
+
         auto s2 = ex::then(s1, []() { return 42; });
         auto result = tt::sync_wait(s2);
 
@@ -73,6 +73,36 @@ int hpx_main()
 
         HPX_TEST(result.has_value());
         HPX_TEST_EQ(std::get<0>(*result), 42);
+    }
+
+    // Test 5: distributed_continues_on pipeline
+    //   distributed_continues_on(just(10), sched)
+    //     | then([](int x) { return x * 2; }) | sync_wait()
+    {
+        auto sched = hpx::distributed::distributed_scheduler{hpx::find_here()};
+
+        auto transferred =
+            hpx::distributed::distributed_continues_on(ex::just(10), sched);
+
+        auto result = tt::sync_wait(
+            HPX_MOVE(transferred) | ex::then([](int x) { return x * 2; }));
+
+        HPX_TEST(result.has_value());
+        HPX_TEST_EQ(std::get<0>(*result), 20);
+    }
+
+    // Test 6: chained distributed_continues_on with additional then()
+    {
+        auto sched = hpx::distributed::distributed_scheduler{hpx::find_here()};
+
+        auto transferred =
+            hpx::distributed::distributed_continues_on(ex::just(7), sched);
+
+        auto result = tt::sync_wait(
+            HPX_MOVE(transferred) | ex::then([](int x) { return x + 3; }));
+
+        HPX_TEST(result.has_value());
+        HPX_TEST_EQ(std::get<0>(*result), 10);
     }
 
     return hpx::finalize();

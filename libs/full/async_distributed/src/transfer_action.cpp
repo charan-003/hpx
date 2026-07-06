@@ -37,8 +37,7 @@ HPX_PLAIN_ACTION(hpx::distributed::detail::distributed_execute_void,
 
 // We explicitly instantiate and register it for `int` for Phase 2 testing.
 HPX_REGISTER_ACTION(
-    distributed_execute_value_action_int,
-    distributed_execute_value_action_int)
+    distributed_execute_value_action_int, distributed_execute_value_action_int)
 
 namespace hpx::distributed::detail {
 

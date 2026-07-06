@@ -51,7 +51,8 @@ struct distributed_execute_value_action_int
         decltype(&hpx::distributed::detail::distributed_execute_value<int>),
         &hpx::distributed::detail::distributed_execute_value<int>,
         distributed_execute_value_action_int>
-{};
+{
+};
 
 HPX_DECLARE_PLAIN_ACTION(hpx::distributed::detail::distributed_execute_void,
     distributed_execute_void_action)
