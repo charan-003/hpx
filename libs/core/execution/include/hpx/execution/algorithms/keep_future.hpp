@@ -16,6 +16,7 @@
 #include <hpx/modules/tag_invoke.hpp>
 
 #include <exception>
+#include <optional>
 #include <type_traits>
 #include <utility>
 
@@ -92,6 +93,9 @@ namespace hpx::execution::experimental {
             HPX_NO_UNIQUE_ADDRESS std::decay_t<Receiver> receiver;
             std::decay_t<Future> future;
             std::decay_t<Scheduler> scheduler;
+            using receiver_type = std::decay_t<Receiver>;
+            using future_type = std::decay_t<Future>;
+            using scheduler_type = std::decay_t<Scheduler>;
 
             struct scheduler_receiver
             {
@@ -100,6 +104,12 @@ namespace hpx::execution::experimental {
 
                 HPX_NO_UNIQUE_ADDRESS std::decay_t<Receiver> receiver;
                 std::decay_t<Future> future;
+
+                [[nodiscard]] constexpr decltype(auto) get_env() const noexcept(
+                    noexcept(hpx::execution::experimental::get_env(receiver)))
+                {
+                    return hpx::execution::experimental::get_env(receiver);
+                }
 
                 void set_value() && noexcept
                 {
@@ -127,14 +137,24 @@ namespace hpx::execution::experimental {
                 }
             };
 
+            using schedule_sender_type =
+                decltype(hpx::execution::experimental::schedule(
+                    std::declval<scheduler_type&>()));
+            using schedule_operation_state_type =
+                decltype(hpx::execution::experimental::connect(
+                    std::declval<schedule_sender_type&&>(),
+                    std::declval<scheduler_receiver>()));
+
+            std::optional<schedule_operation_state_type> schedule_op_state;
+
             void schedule_completion() && noexcept
             {
                 auto schedule_sender =
                     hpx::execution::experimental::schedule(scheduler);
-                auto op = hpx::execution::experimental::connect(
+                schedule_op_state.emplace(hpx::execution::experimental::connect(
                     HPX_MOVE(schedule_sender),
-                    scheduler_receiver{HPX_MOVE(receiver), HPX_MOVE(future)});
-                start_sender_operation_state(op);
+                    scheduler_receiver{HPX_MOVE(receiver), HPX_MOVE(future)}));
+                start_sender_operation_state(*schedule_op_state);
             }
 
             void start() & noexcept
@@ -327,6 +347,20 @@ namespace hpx::execution::experimental {
             constexpr env_type get_env() const noexcept
             {
                 return {scheduler};
+            }
+
+            using completion_signatures =
+                hpx::execution::experimental::completion_signatures<
+                    hpx::execution::experimental::set_value_t(future_type),
+                    hpx::execution::experimental::set_error_t(
+                        std::exception_ptr),
+                    hpx::execution::experimental::set_stopped_t()>;
+
+            template <typename Self, typename... Env>
+            static consteval auto get_completion_signatures() noexcept
+                -> completion_signatures
+            {
+                return {};
             }
 
             template <typename Receiver>
