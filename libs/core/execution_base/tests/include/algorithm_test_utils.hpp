@@ -996,9 +996,9 @@ namespace my_namespace {
         };
 
         template <typename R>
-        auto connect(R&& r) && noexcept
+        operation_state<R> connect(R&& r) && noexcept
         {
-            return {std::forward<R>(r)};
+            return operation_state<R>{std::forward<R>(r)};
         }
 
         template <typename Self, typename... Env>
