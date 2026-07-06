@@ -23,6 +23,19 @@ namespace hpx::execution::experimental {
 
     namespace detail {
 
+        template <typename OperationState>
+        void start_sender_operation_state(OperationState& op_state) noexcept
+        {
+            if constexpr (requires { op_state.start(); })
+            {
+                op_state.start();
+            }
+            else
+            {
+                hpx::execution::experimental::start(op_state);
+            }
+        }
+
         HPX_CXX_CORE_EXPORT template <typename Receiver, typename Future>
         struct operation_state
         {
@@ -70,6 +83,92 @@ namespace hpx::execution::experimental {
             }
         };
 
+        template <typename Future, typename Scheduler>
+        struct keep_future_continues_on_sender;
+
+        template <typename Receiver, typename Future, typename Scheduler>
+        struct keep_future_continues_on_operation_state
+        {
+            HPX_NO_UNIQUE_ADDRESS std::decay_t<Receiver> receiver;
+            std::decay_t<Future> future;
+            std::decay_t<Scheduler> scheduler;
+
+            struct scheduler_receiver
+            {
+                using receiver_concept =
+                    hpx::execution::experimental::receiver_t;
+
+                HPX_NO_UNIQUE_ADDRESS std::decay_t<Receiver> receiver;
+                std::decay_t<Future> future;
+
+                void set_value() && noexcept
+                {
+                    hpx::detail::try_catch_exception_ptr(
+                        [&]() {
+                            hpx::execution::experimental::set_value(
+                                HPX_MOVE(receiver), HPX_MOVE(future));
+                        },
+                        [&](std::exception_ptr ep) {
+                            hpx::execution::experimental::set_error(
+                                HPX_MOVE(receiver), HPX_MOVE(ep));
+                        });
+                }
+
+                void set_error(std::exception_ptr ep) && noexcept
+                {
+                    hpx::execution::experimental::set_error(
+                        HPX_MOVE(receiver), HPX_MOVE(ep));
+                }
+
+                void set_stopped() && noexcept
+                {
+                    hpx::execution::experimental::set_stopped(
+                        HPX_MOVE(receiver));
+                }
+            };
+
+            void schedule_completion() && noexcept
+            {
+                auto schedule_sender =
+                    hpx::execution::experimental::schedule(scheduler);
+                auto op = hpx::execution::experimental::connect(
+                    HPX_MOVE(schedule_sender),
+                    scheduler_receiver{HPX_MOVE(receiver), HPX_MOVE(future)});
+                start_sender_operation_state(op);
+            }
+
+            void start() & noexcept
+            {
+                hpx::detail::try_catch_exception_ptr(
+                    [&]() {
+                        if (future.is_ready())
+                        {
+                            HPX_MOVE(*this).schedule_completion();
+                            return;
+                        }
+
+                        auto state =
+                            hpx::traits::detail::get_shared_state(future);
+
+                        if (!state)
+                        {
+                            HPX_THROW_EXCEPTION(hpx::error::no_state,
+                                "keep_future_continues_on_operation_state::"
+                                "start",
+                                "the future has no valid shared state");
+                        }
+
+                        state->set_on_completed([this]() mutable {
+                            HPX_MOVE(*this).schedule_completion();
+                        });
+                    },
+                    [&](std::exception_ptr ep) {
+                        hpx::execution::experimental::set_error(
+                            HPX_MOVE(receiver), HPX_MOVE(ep));
+                    });
+            }
+        };
+
         HPX_CXX_CORE_EXPORT template <typename Future>
         struct keep_future_sender_base
         {
@@ -83,9 +182,9 @@ namespace hpx::execution::experimental {
                 template <typename CPO>
                 [[nodiscard]]
                 static constexpr auto query(
-                    hpx::execution::experimental::get_completion_domain_t<CPO>)
-                    noexcept -> hpx::execution::experimental::detail::
-                    sync_wait_domain
+                    hpx::execution::experimental::get_completion_domain_t<
+                        CPO>) noexcept
+                    -> hpx::execution::experimental::detail::sync_wait_domain
                 {
                     return {};
                 }
@@ -188,7 +287,73 @@ namespace hpx::execution::experimental {
                 return {HPX_FORWARD(Receiver, receiver), future};
             }
         };
+
+        template <typename Future, typename Scheduler>
+        struct keep_future_continues_on_sender
+        {
+            using sender_concept = hpx::execution::experimental::sender_t;
+            using future_type = std::decay_t<Future>;
+            using scheduler_type = std::decay_t<Scheduler>;
+
+            future_type future;
+            scheduler_type scheduler;
+
+            struct env_type
+            {
+                scheduler_type scheduler;
+
+                template <typename CPO>
+                static constexpr auto query(
+                    hpx::execution::experimental::get_completion_domain_t<
+                        CPO>) noexcept
+                    -> hpx::execution::experimental::detail::sync_wait_domain
+                {
+                    return {};
+                }
+
+                template <typename CPO>
+                    requires(std::is_same_v<CPO,
+                                 hpx::execution::experimental::set_value_t> ||
+                        std::is_same_v<CPO,
+                            hpx::execution::experimental::set_stopped_t>)
+                constexpr auto query(
+                    hpx::execution::experimental::get_completion_scheduler_t<
+                        CPO>) const noexcept
+                {
+                    return scheduler;
+                }
+            };
+
+            constexpr env_type get_env() const noexcept
+            {
+                return {scheduler};
+            }
+
+            template <typename Receiver>
+            auto connect(Receiver&& receiver) &&
+            {
+                return keep_future_continues_on_operation_state<Receiver,
+                    Future, Scheduler>{HPX_FORWARD(Receiver, receiver),
+                    HPX_MOVE(future), HPX_MOVE(scheduler)};
+            }
+
+            template <typename Receiver>
+            auto connect(Receiver&& receiver) &
+            {
+                return keep_future_continues_on_operation_state<Receiver,
+                    Future, Scheduler>{
+                    HPX_FORWARD(Receiver, receiver), future, scheduler};
+            }
+        };
     }    // namespace detail
+
+    template <typename Future, typename Scheduler>
+    auto tag_invoke(continues_on_t, detail::keep_future_sender<Future>&& sndr,
+        Scheduler&& scheduler)
+    {
+        return detail::keep_future_continues_on_sender<Future, Scheduler>{
+            HPX_MOVE(sndr.future), HPX_FORWARD(Scheduler, scheduler)};
+    }
 
     HPX_CXX_CORE_EXPORT inline constexpr struct keep_future_t final
     {

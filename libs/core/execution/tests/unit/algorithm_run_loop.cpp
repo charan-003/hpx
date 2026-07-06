@@ -1571,11 +1571,11 @@ void test_keep_future_sender()
     {
         auto sender = ex::keep_future(hpx::make_ready_future<void>());
         static_assert(ex::is_sender_v<decltype(sender)>);
-        static_assert(std::is_empty_v<std::remove_cvref_t<
-                          decltype(ex::get_env(sender))>>);
-        static_assert(std::is_same_v<decltype(
-                              ex::get_completion_domain<ex::set_value_t>(
-                                  ex::get_env(sender)))>,
+        static_assert(std::is_empty_v<
+            std::remove_cvref_t<decltype(ex::get_env(sender))>>);
+        static_assert(
+            std::is_same_v<decltype(ex::get_completion_domain<ex::set_value_t>(
+                ex::get_env(sender)))>,
             sync_wait_domain);
     }
 
@@ -1759,6 +1759,13 @@ void test_keep_future_sender()
         ex::run_loop loop;
         auto t = hpx::thread([&] { loop.run(); });
         [[maybe_unused]] auto sched = loop.get_scheduler();
+        using sender_type =
+            decltype(ex::keep_future(hpx::async([&]() { return 42; })) |
+                ex::continues_on(sched));
+        using scheduler_type =
+            std::decay_t<decltype(ex::get_completion_scheduler<ex::set_value_t>(
+                ex::get_env(std::declval<sender_type&>())))>;
+        static_assert(std::is_same_v<scheduler_type, decltype(sched)>);
 
         auto f = hpx::async([&]() { return 42; });
         auto r = hpx::get<0>(*tt::sync_wait(
