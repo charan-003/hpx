@@ -160,6 +160,21 @@ void test_set_difference_sender_empty(
         HPX_TEST(result_last == std::begin(c3) + c1.size());
         HPX_TEST(std::equal(std::begin(c3), result_last, std::begin(c1)));
     }
+
+    // both ranges empty -> empty result, dest unchanged
+    {
+        std::vector<std::size_t> c1;
+        std::vector<std::size_t> c2;
+        std::vector<std::size_t> c3(1, static_cast<std::size_t>(-1));
+
+        auto result = tt::sync_wait(
+            ex::just(iterator(std::begin(c1)), iterator(std::end(c1)),
+                std::begin(c2), std::end(c2), std::begin(c3)) |
+            hpx::set_difference(ex_policy.on(exec)));
+
+        auto const result_last = hpx::get<0>(result.value());
+        HPX_TEST(result_last == std::begin(c3));
+    }
 }
 
 template <typename IteratorTag>
