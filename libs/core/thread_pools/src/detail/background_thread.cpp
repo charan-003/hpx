@@ -9,6 +9,7 @@
 #include <hpx/modules/execution_base.hpp>
 #include <hpx/modules/logging.hpp>
 #include <hpx/modules/threading_base.hpp>
+#include <hpx/modules/tracing.hpp>
 #include <hpx/thread_pools/detail/background_thread.hpp>
 #include <hpx/thread_pools/detail/scheduling_callbacks.hpp>
 #include <hpx/thread_pools/detail/scoped_background_timer.hpp>
@@ -218,6 +219,11 @@ namespace hpx::threads::detail {
                 background_exec_time_wrapper bg_exec_time(bg_work_duration);
 #endif    // HPX_HAVE_BACKGROUND_THREAD_COUNTERS
 
+                hpx::tracing::task_executing(thrdptr,
+                    threads::thread_data::get_safe_description(
+                        thrdptr->get_description(), "thread"),
+                    num_thread);
+
                 // invoke background thread
                 thrd_stat = (*thrdptr)(context_storage);
 
@@ -242,6 +248,14 @@ namespace hpx::threads::detail {
             }
             thrd_stat.store_state(state);
             state_val = state.state();
+
+            if (state_val == thread_schedule_state::terminated ||
+                state_val == thread_schedule_state::deleted)
+            {
+                hpx::tracing::task_completed(thrdptr,
+                    threads::thread_data::get_safe_description(
+                        thrdptr->get_description(), "thread"));
+            }
 
             if (HPX_LIKELY(state_val == thread_schedule_state::pending_boost))
             {

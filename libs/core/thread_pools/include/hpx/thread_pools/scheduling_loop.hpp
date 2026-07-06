@@ -187,6 +187,11 @@ namespace hpx::threads::detail {
                                 thrd_stat.get_previous(),
                                 thread_schedule_state::active);
 
+                            hpx::tracing::task_executing(thrdptr,
+                                threads::thread_data::get_safe_description(
+                                    thrdptr->get_description(), "thread"),
+                                num_thread);
+
 #ifdef HPX_HAVE_THREAD_IDLE_RATES
                             auto tfunc_time_collector_inner =
                                 hpx::experimental::scope_exit([&idle_rate] {
@@ -232,6 +237,18 @@ namespace hpx::threads::detail {
 
                                 profiler.handle_post_execution(
                                     thrdptr, thrd_stat.get_previous());
+
+                                if (thrd_stat.get_previous() ==
+                                        thread_schedule_state::deleted ||
+                                    thrd_stat.get_previous() ==
+                                        thread_schedule_state::terminated)
+                                {
+                                    hpx::tracing::task_completed(thrdptr,
+                                        threads::thread_data::
+                                            get_safe_description(
+                                                thrdptr->get_description(),
+                                                "thread"));
+                                }
                             }
 
                             detail::write_state_log(scheduler, num_thread, thrd,
