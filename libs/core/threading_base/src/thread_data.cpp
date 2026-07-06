@@ -114,12 +114,22 @@ namespace hpx::threads {
 #if defined(HPX_HAVE_TRACY)
         fiber_name_[0] = '\0';
 #endif
+#ifdef HPX_HAVE_THREAD_PARENT_REFERENCE
+        void const* parent_task_id =
+            parent_thread_id_ ? parent_thread_id_.get() : nullptr;
+#else
+        void const* parent_task_id = nullptr;
+#endif
+        hpx::tracing::task_created(
+            get_safe_description(get_description(), "thread"), this,
+            parent_task_id);
     }
 
     thread_data::~thread_data()
     {
         LTM_(debug).format("thread_data::~thread_data({})", this);
         free_thread_exit_callbacks();
+        hpx::tracing::task_deleted(this);
     }
 
     void thread_data::destroy_thread()
@@ -208,6 +218,8 @@ namespace hpx::threads {
             "thread_data::rebind_base({}), description({}), phase({}), rebind",
             this, get_description(), get_thread_phase());
 
+        hpx::tracing::task_deleted(this);
+
         free_thread_exit_callbacks();
 
         priority_ = init_data.priority;
@@ -279,6 +291,16 @@ namespace hpx::threads {
         }
 #endif
         set_timer_data(init_data.timer_data);
+
+#ifdef HPX_HAVE_THREAD_PARENT_REFERENCE
+        void const* parent_task_id =
+            parent_thread_id_ ? parent_thread_id_.get() : nullptr;
+#else
+        void const* parent_task_id = nullptr;
+#endif
+        hpx::tracing::task_created(
+            get_safe_description(get_description(), "thread"), this,
+            parent_task_id);
     }
 
 #if defined(HPX_HAVE_THREAD_DESCRIPTION)

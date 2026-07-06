@@ -8,6 +8,7 @@
 #include <hpx/modules/coroutines.hpp>
 #include <hpx/modules/errors.hpp>
 #include <hpx/modules/logging.hpp>
+#include <hpx/modules/tracing.hpp>
 #include <hpx/threading_base/create_thread.hpp>
 #include <hpx/threading_base/scheduler_base.hpp>
 #include <hpx/threading_base/thread_data.hpp>
@@ -87,6 +88,24 @@ namespace hpx::threads::detail {
 
         // create the new thread
         scheduler->create_thread(data, &id, ec);
+
+        if (!ec)
+        {
+#ifdef HPX_HAVE_THREAD_PARENT_REFERENCE
+            void const* parent_task_id =
+                data.parent_id ? data.parent_id.noref().get() : nullptr;
+#else
+            void const* parent_task_id = nullptr;
+#endif
+#ifdef HPX_HAVE_THREAD_DESCRIPTION
+            hpx::tracing::task_staged(
+                threads::thread_data::get_safe_description(
+                    data.description, "thread"),
+                parent_task_id);
+#else
+            hpx::tracing::task_staged("thread", parent_task_id);
+#endif
+        }
 
         LTM_(info)
             .format("create_thread: pool({}), scheduler({}), thread({}), "
