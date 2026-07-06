@@ -209,6 +209,17 @@ namespace hpx::actions {
     struct name : ::hpx::actions::reflect_component_action<^^component::func>  \
     {                                                                          \
     } /**/
+/// \brief Convenience macro for direct component actions.
+/// Usage: HPX_COMPONENT_DIRECT_ACTION(component, func, action_name)
+#define HPX_COMPONENT_DIRECT_ACTION(component, func, name)                     \
+    struct name                                                                \
+      : ::hpx::actions::reflect_component_direct_action<^^component::func>     \
+    {                                                                          \
+    } /**/
+/// \brief Convenience macro for direct plain actions.
+/// Usage: HPX_DIRECT_ACTION(func, action_name)
+#define HPX_DIRECT_ACTION(func, name)                                          \
+    using name = ::hpx::actions::reflect_direct_action<^^func>; /**/
 
     /// \brief Reflection-based action template.
     ///
@@ -269,6 +280,36 @@ namespace hpx::actions {
     template <std::meta::info F, typename Derived>
     detail::register_action_invocation_count<reflect_action<F, Derived>>
         reflect_action<F, Derived>::invocation_count_registrar_;
+    /// \endcond
+
+    /// \brief Reflection-based direct plain action template.
+    ///
+    /// Like reflect_action, but executes the reflected function
+    /// directly on the calling thread instead of spawning a new
+    /// thread, mirroring the relationship between basic_action's
+    /// action and direct_action.
+    ///
+    /// \tparam F       A std::meta::info reflection of a free function.
+    /// \tparam Derived CRTP derived type (defaults to void).
+    template <std::meta::info F, typename Derived = void>
+    struct reflect_direct_action
+      : reflect_action<F,
+            detail::action_type_t<reflect_direct_action<F, Derived>, Derived>>
+    {
+        using direct_execution = std::true_type;
+
+        static constexpr actions::action_flavor get_action_type() noexcept
+        {
+            return actions::action_flavor::direct_action;
+        }
+
+        static detail::register_action_invocation_count<reflect_direct_action>
+            invocation_count_registrar_;
+    };
+    /// \cond NOINTERNAL
+    template <std::meta::info F, typename Derived>
+    detail::register_action_invocation_count<reflect_direct_action<F, Derived>>
+        reflect_direct_action<F, Derived>::invocation_count_registrar_;
     /// \endcond
 
 }    // namespace hpx::actions
