@@ -141,13 +141,13 @@ namespace hpx::mpi::experimental {
             }
 
             template <typename... Ts>
-                requires(hpx::is_invocable_v<F, Ts..., MPI_Request*>)
+                requires(hpx::is_invocable_v<F, Ts&..., MPI_Request*>)
             void set_value(Ts&&... ts) && noexcept
             {
                 hpx::detail::try_catch_exception_ptr(
                     [&]() {
                         if constexpr (std::is_void_v<util::invoke_result_t<F,
-                                          Ts..., MPI_Request*>>)
+                                          Ts&..., MPI_Request*>>)
                         {
                             MPI_Request request;
                             HPX_INVOKE(f, ts..., &request);
