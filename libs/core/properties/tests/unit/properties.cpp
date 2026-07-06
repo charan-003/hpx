@@ -17,8 +17,7 @@ inline constexpr struct with_property_t
     template <typename T, typename P>
         requires requires(T const& t, P p) { t.apply_property(p); }
     constexpr auto operator()(T const& t, P p) const
-        noexcept(noexcept(t.apply_property(p)))
-        -> decltype(t.apply_property(p))
+        noexcept(noexcept(t.apply_property(p))) -> decltype(t.apply_property(p))
     {
         return t.apply_property(p);
     }
@@ -57,7 +56,6 @@ struct type4
         return tt;
     }
 };
-
 
 int main()
 {
