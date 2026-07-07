@@ -93,7 +93,7 @@ namespace hpx::threads::detail {
         {
 #ifdef HPX_HAVE_THREAD_PARENT_REFERENCE
             void const* parent_task_id =
-                data.parent_id ? data.parent_id.noref().get() : nullptr;
+                data.parent_id ? data.parent_id.get() : nullptr;
 #else
             void const* parent_task_id = nullptr;
 #endif
