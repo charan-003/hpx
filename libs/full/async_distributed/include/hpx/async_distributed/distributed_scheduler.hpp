@@ -15,9 +15,10 @@
 /// \code
 ///   hpx::id_type remote = hpx::find_all_localities()[1];
 ///   auto sched = hpx::distributed::distributed_scheduler{remote};
-///   auto result = sched.schedule()
-///       | stdexec::then([]{ return 42; })
-///       | stdexec::sync_wait();
+///   auto result = ex::just(42)
+///       | ex::continues_on(sched)
+///       | ex::then([](int x){ return x * 2; })
+///       | tt::sync_wait();
 /// \endcode
 
 #pragma once
@@ -28,6 +29,7 @@
 
 #include <hpx/async_distributed/detail/async_implementations.hpp>
 #include <hpx/async_distributed/detail/transfer_action.hpp>
+#include <hpx/execution/algorithms/detail/sync_wait_domain.hpp>
 #include <hpx/modules/errors.hpp>
 #include <hpx/modules/execution_base.hpp>
 #include <hpx/modules/futures.hpp>
@@ -42,9 +44,27 @@ namespace hpx::distributed {
     // Forward declarations
     struct distributed_scheduler;
     struct distributed_schedule_sender;
+    struct distributed_domain;
 
     template <typename Receiver>
     struct distributed_operation_state;
+
+    ///////////////////////////////////////////////////////////////////////////
+    // P2300 execution domain for distributed scheduling.
+    //
+    // Inherits from sync_wait_domain so that tt::sync_wait() uses
+    // HPX-cooperative waiting (spinlock + condition_variable_any) instead
+    // of OS-blocking, preventing deadlocks with --hpx:threads=1.
+    //
+    // The standard continues_on / schedule_from algorithms already work
+    // with our schedule() sender: they store completion data locally,
+    // start the schedule-sender (which hops to the remote locality),
+    // and replay the data on the downstream receiver.  No domain
+    // transform_sender override is needed for continues_on.
+    struct distributed_domain
+      : hpx::execution::experimental::detail::sync_wait_domain
+    {
+    };
 
     ///////////////////////////////////////////////////////////////////////////
     // Operation state: bridges the hpx::future<void> returned by the remote
@@ -162,7 +182,14 @@ namespace hpx::distributed {
 
         struct env
         {
-            distributed_scheduler const& sched;
+            hpx::id_type target;
+
+            // Forward get_domain queries to the scheduler's domain.
+            auto query(
+                hpx::execution::experimental::get_domain_t) const noexcept
+            {
+                return distributed_domain{};
+            }
 
             template <typename CPO>
                 requires meta::value<
@@ -171,6 +198,15 @@ namespace hpx::distributed {
             auto query(
                 hpx::execution::experimental::get_completion_scheduler_t<CPO>)
                 const noexcept;
+
+            // P3826R5: get_completion_domain queries
+            template <typename CPO>
+            auto query(
+                hpx::execution::experimental::get_completion_domain_t<CPO>)
+                const noexcept
+            {
+                return distributed_domain{};
+            }
         };
 
         auto get_env() const noexcept;
@@ -234,6 +270,24 @@ namespace hpx::distributed {
             return target_;
         }
 
+        /// Returns the execution domain of this scheduler.
+        [[nodiscard]]
+        static auto query(hpx::execution::experimental::get_domain_t) noexcept
+            -> distributed_domain
+        {
+            return {};
+        }
+
+        /// P3826R5: Returns the completion domain for this scheduler.
+        template <typename CPO>
+        [[nodiscard]]
+        static auto query(
+            hpx::execution::experimental::get_completion_domain_t<CPO>) noexcept
+            -> distributed_domain
+        {
+            return {};
+        }
+
     private:
         hpx::id_type target_;
     };
@@ -249,14 +303,12 @@ namespace hpx::distributed {
         hpx::execution::experimental::get_completion_scheduler_t<CPO>)
         const noexcept
     {
-        return distributed_scheduler{sched.target()};
+        return distributed_scheduler{target};
     }
 
     inline auto distributed_schedule_sender::get_env() const noexcept
     {
-        // Reconstruct the scheduler from the stored target id.
-        // This is cheap: distributed_scheduler holds only an id_type.
-        return env{distributed_scheduler{target_}};
+        return env{target_};
     }
 
 }    // namespace hpx::distributed

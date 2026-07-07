@@ -225,29 +225,6 @@ namespace hpx::distributed {
         }
     };
 
-    ///////////////////////////////////////////////////////////////////////////
-    /// CPO: distributed_continues_on(sender, distributed_scheduler)
-    ///
-    /// Creates a distributed_transfer_sender that intercepts the upstream
-    /// sender's set_value and bounces the values through the parcelport
-    /// to the target locality held by the scheduler.
-    ///
-    /// Usage:
-    ///   auto transferred = distributed_continues_on(ex::just(42), sched);
-    ///   auto result = tt::sync_wait(
-    ///       HPX_MOVE(transferred) | ex::then([](int x) { return x * 2; }));
-    inline constexpr struct distributed_continues_on_t final
-    {
-        // Two-argument form: distributed_continues_on(sender, scheduler)
-        template <typename Sender>
-        constexpr auto operator()(
-            Sender&& sndr, distributed_scheduler const& sched) const
-        {
-            return distributed_transfer_sender<std::decay_t<Sender>>{
-                HPX_FORWARD(Sender, sndr), sched.target()};
-        }
-    } distributed_continues_on{};
-
 }    // namespace hpx::distributed
 
 #endif    // HPX_HAVE_NETWORKING

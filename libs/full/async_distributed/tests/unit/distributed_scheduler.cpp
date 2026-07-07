@@ -12,6 +12,7 @@
 //   3. The sender can be connected to a receiver and started.
 //   4. The operation completes successfully when targeting the local
 //      locality (hpx::find_here()).
+//   5. Standard ex::continues_on routes through distributed_domain.
 
 #include <hpx/config.hpp>
 #if !defined(HPX_COMPUTE_DEVICE_CODE)
@@ -22,7 +23,6 @@
 
 #include <hpx/async_distributed/distributed_just.hpp>
 #include <hpx/async_distributed/distributed_scheduler.hpp>
-#include <hpx/async_distributed/distributed_transfer_sender.hpp>
 
 #include <atomic>
 #include <exception>
@@ -75,31 +75,25 @@ int hpx_main()
         HPX_TEST_EQ(std::get<0>(*result), 42);
     }
 
-    // Test 5: distributed_continues_on pipeline
-    //   distributed_continues_on(just(10), sched)
-    //     | then([](int x) { return x * 2; }) | sync_wait()
+    // Test 5: standard ex::continues_on with distributed_scheduler
+    //   ex::just(10) | ex::continues_on(sched)
+    //     | ex::then([](int x) { return x * 2; }) | sync_wait()
     {
         auto sched = hpx::distributed::distributed_scheduler{hpx::find_here()};
 
-        auto transferred =
-            hpx::distributed::distributed_continues_on(ex::just(10), sched);
-
-        auto result = tt::sync_wait(
-            HPX_MOVE(transferred) | ex::then([](int x) { return x * 2; }));
+        auto result = tt::sync_wait(ex::just(10) | ex::continues_on(sched) |
+            ex::then([](int x) { return x * 2; }));
 
         HPX_TEST(result.has_value());
         HPX_TEST_EQ(std::get<0>(*result), 20);
     }
 
-    // Test 6: chained distributed_continues_on with additional then()
+    // Test 6: standard ex::continues_on chained with additional then()
     {
         auto sched = hpx::distributed::distributed_scheduler{hpx::find_here()};
 
-        auto transferred =
-            hpx::distributed::distributed_continues_on(ex::just(7), sched);
-
-        auto result = tt::sync_wait(
-            HPX_MOVE(transferred) | ex::then([](int x) { return x + 3; }));
+        auto result = tt::sync_wait(ex::just(7) | ex::continues_on(sched) |
+            ex::then([](int x) { return x + 3; }));
 
         HPX_TEST(result.has_value());
         HPX_TEST_EQ(std::get<0>(*result), 10);
