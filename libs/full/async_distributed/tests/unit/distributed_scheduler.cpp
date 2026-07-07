@@ -46,11 +46,28 @@ HPX_REGISTER_ACTION(
 namespace hpx::distributed::detail {
     template <>
     hpx::future<hpx::tuple<int>> dispatch_distributed_execute_value<int>(
-        hpx::id_type const& target, hpx::tuple<int> const& t)
+        hpx::id_type const& target, int vals)
     {
-        return hpx::async(distributed_execute_value_action_int{}, target, t);
+        return hpx::async(distributed_execute_value_action_int{}, target, vals);
     }
 }
+
+// Callables for then_t interception tests
+struct my_then_callable_1
+{
+    hpx::tuple<int, hpx::id_type> operator()(int val) const
+    {
+        return hpx::make_tuple(val * 2, hpx::find_here());
+    }
+};
+
+struct my_then_callable_2
+{
+    hpx::tuple<int, hpx::id_type> operator()(int val) const
+    {
+        return hpx::make_tuple(val + 3, hpx::find_here());
+    }
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 int hpx_main()
@@ -92,7 +109,7 @@ int hpx_main()
 
     // Test 5: standard ex::transfer with distributed_scheduler
     //   ex::just(10) | ex::transfer(sched)
-    //     | ex::then([](int x) { return x * 2; }) | sync_wait()
+    // Test 5: distributed_domain intercepting ex::then
     {
         auto locs = hpx::find_remote_localities();
         auto target = locs.empty() ? hpx::find_here() : locs[0];
@@ -100,13 +117,14 @@ int hpx_main()
             hpx::distributed::experimental::distributed_scheduler{target};
 
         auto result = tt::sync_wait(ex::just(10) | ex::transfer(sched) |
-            ex::then([](int x) { return x * 2; }));
+            ex::then(my_then_callable_1{}));
 
         HPX_TEST(result.has_value());
-        HPX_TEST_EQ(std::get<0>(*result), 20);
+        HPX_TEST_EQ(std::get<0>(std::get<0>(*result)), 20);
+        HPX_TEST_EQ(std::get<1>(std::get<0>(*result)), target);
     }
 
-    // Test 6: standard ex::transfer chained with additional then()
+    // Test 6: distributed_domain intercepting ex::then with different value
     {
         auto locs = hpx::find_remote_localities();
         auto target = locs.empty() ? hpx::find_here() : locs[0];
@@ -114,10 +132,11 @@ int hpx_main()
             hpx::distributed::experimental::distributed_scheduler{target};
 
         auto result = tt::sync_wait(ex::just(7) | ex::transfer(sched) |
-            ex::then([](int x) { return x + 3; }));
+            ex::then(my_then_callable_2{}));
 
         HPX_TEST(result.has_value());
-        HPX_TEST_EQ(std::get<0>(*result), 10);
+        HPX_TEST_EQ(std::get<0>(std::get<0>(*result)), 10);
+        HPX_TEST_EQ(std::get<1>(std::get<0>(*result)), target);
     }
 
     return hpx::finalize();

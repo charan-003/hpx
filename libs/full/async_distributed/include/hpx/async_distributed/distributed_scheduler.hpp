@@ -34,6 +34,7 @@
 #include <hpx/modules/execution_base.hpp>
 #include <hpx/modules/futures.hpp>
 #include <hpx/modules/naming_base.hpp>
+#include <hpx/async_distributed/distributed_then_sender.hpp>
 
 #include <exception>
 #include <type_traits>
@@ -68,6 +69,26 @@ namespace hpx::distributed::experimental {
         struct distributed_domain
           : hpx::execution::experimental::detail::sync_wait_domain
         {
+            // By default, just return the sender
+            template <typename Sender, typename Env>
+            auto transform_sender(Sender&& sndr, Env&&) const
+            {
+                return HPX_FORWARD(Sender, sndr);
+            }
+
+            // Intercept stdexec::then_t and transform it to our distributed_then_sender
+            template <typename Sender, typename F>
+            friend auto tag_invoke(hpx::execution::experimental::then_t,
+                distributed_domain, Sender&& sndr, F&& f)
+            {
+                auto sched = hpx::execution::experimental::get_completion_scheduler<
+                    hpx::execution::experimental::set_value_t>(
+                    hpx::execution::experimental::get_env(sndr));
+                
+                return detail::distributed_then_sender<std::decay_t<Sender>,
+                    std::decay_t<F>>{
+                    HPX_FORWARD(Sender, sndr), HPX_FORWARD(F, f), sched.target()};
+            }
         };
     }    // namespace detail
 
@@ -108,10 +129,9 @@ namespace hpx::distributed::experimental {
             {
                 hpx::detail::try_catch_exception_ptr(
                     [&]() {
-                        // Dispatch the value action to the remote locality with empty tuple.
+                        // Dispatch the value action to the remote locality with empty payload.
                         auto fut = hpx::distributed::detail::
-                            dispatch_distributed_execute_value(
-                                target_, hpx::tuple<>{});
+                            dispatch_distributed_execute_value(target_);
 
                         // Chain a continuation to bridge the future completion
                         // into the P2300 receiver.  We capture `this` because

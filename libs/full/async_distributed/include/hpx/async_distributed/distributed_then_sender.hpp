@@ -1,0 +1,159 @@
+//  Copyright (c) 2024-2025 Hartmut Kaiser
+//
+//  SPDX-License-Identifier: BSL-1.0
+//  Distributed under the Boost Software License, Version 1.0. (See accompanying
+//  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+#pragma once
+
+#include <hpx/config.hpp>
+#include <hpx/async_distributed/detail/transfer_action.hpp>
+#include <hpx/execution_base/completion_signatures.hpp>
+#include <hpx/execution_base/receiver.hpp>
+#include <hpx/execution_base/sender.hpp>
+#include <hpx/modules/errors.hpp>
+
+#include <exception>
+#include <type_traits>
+#include <utility>
+
+namespace hpx::distributed::experimental::detail {
+
+    template <typename Receiver, typename F>
+    struct distributed_then_receiver
+    {
+        using receiver_type = std::decay_t<Receiver>;
+        using receiver_concept = hpx::execution::experimental::receiver_t;
+
+        receiver_type downstream_;
+        F f_;
+        hpx::id_type target_;
+
+        template <typename... Ts>
+        void set_value(Ts... vals) && noexcept
+        {
+            hpx::detail::try_catch_exception_ptr(
+                [&]() {
+                    // Dispatch the remote invocation action
+                    auto fut = hpx::async(
+                        distributed_invoke_callable_action<F, Ts...>{},
+                        target_, HPX_MOVE(f_), HPX_MOVE(vals)...);
+
+                    // Chain continuation to forward the remote result
+                    fut.then([downstream = HPX_MOVE(downstream_)](
+                                 hpx::future<hpx::tuple<std::invoke_result_t<F, Ts...>>>&& f) mutable {
+                        hpx::detail::try_catch_exception_ptr(
+                            [&]() {
+                                auto returned_tuple = f.get();
+                                hpx::invoke_fused(
+                                    [&](auto&&... args) {
+                                        hpx::execution::experimental::set_value(
+                                            HPX_MOVE(downstream),
+                                            HPX_FORWARD(decltype(args), args)...);
+                                    },
+                                    HPX_MOVE(returned_tuple));
+                            },
+                            [&](std::exception_ptr ep) {
+                                hpx::execution::experimental::set_error(
+                                    HPX_MOVE(downstream), HPX_MOVE(ep));
+                            });
+                    });
+                },
+                [&](std::exception_ptr ep) {
+                    hpx::execution::experimental::set_error(
+                        HPX_MOVE(downstream_), HPX_MOVE(ep));
+                });
+        }
+
+        void set_error(std::exception_ptr ep) && noexcept
+        {
+            hpx::execution::experimental::set_error(
+                HPX_MOVE(downstream_), HPX_MOVE(ep));
+        }
+
+        void set_stopped() && noexcept
+        {
+            hpx::execution::experimental::set_stopped(HPX_MOVE(downstream_));
+        }
+
+        auto get_env() const noexcept
+        {
+            return hpx::execution::experimental::get_env(downstream_);
+        }
+    };
+
+    template <typename Sender, typename F>
+    struct distributed_then_sender
+    {
+        using sender_concept = hpx::execution::experimental::sender_t;
+        using upstream_env_t = hpx::execution::experimental::env_of_t<Sender>;
+
+        Sender sender_;
+        F f_;
+        hpx::id_type target_;
+
+        template <typename Env>
+        struct generate_completion_signatures
+        {
+            using type = hpx::execution::experimental::completion_signatures_of_t<
+                decltype(hpx::execution::experimental::then(
+                    std::declval<Sender>(), std::declval<F>())),
+                Env>;
+        };
+
+        template <typename Env>
+        friend auto tag_invoke(
+            hpx::execution::experimental::get_completion_signatures_t,
+            distributed_then_sender const&, Env&&) noexcept
+            -> typename generate_completion_signatures<Env>::type;
+
+        template <typename Receiver>
+        struct operation_state
+        {
+            using upstream_op_t = decltype(hpx::execution::experimental::connect(
+                std::declval<Sender>(),
+                std::declval<distributed_then_receiver<Receiver, F>>()));
+
+            upstream_op_t upstream_op_;
+
+            template <typename Sender_, typename Receiver_>
+            operation_state(Sender_&& sndr, Receiver_&& rcvr, F f, hpx::id_type target)
+              : upstream_op_(hpx::execution::experimental::connect(
+                    HPX_FORWARD(Sender_, sndr),
+                    distributed_then_receiver<Receiver, F>{
+                        HPX_FORWARD(Receiver_, rcvr), HPX_MOVE(f), HPX_MOVE(target)}))
+            {
+            }
+
+            friend void tag_invoke(
+                hpx::execution::experimental::start_t, operation_state& os) noexcept
+            {
+                hpx::execution::experimental::start(os.upstream_op_);
+            }
+        };
+
+        template <typename Receiver>
+        friend operation_state<Receiver> tag_invoke(
+            hpx::execution::experimental::connect_t,
+            distributed_then_sender&& s, Receiver&& receiver)
+        {
+            return operation_state<Receiver>{HPX_MOVE(s.sender_),
+                HPX_FORWARD(Receiver, receiver), HPX_MOVE(s.f_), HPX_MOVE(s.target_)};
+        }
+
+        template <typename Receiver>
+        friend operation_state<Receiver> tag_invoke(
+            hpx::execution::experimental::connect_t,
+            distributed_then_sender const& s, Receiver&& receiver)
+        {
+            return operation_state<Receiver>{
+                s.sender_, HPX_FORWARD(Receiver, receiver), s.f_, s.target_};
+        }
+
+        auto get_env() const noexcept
+        {
+            return hpx::execution::experimental::get_env(sender_);
+        }
+    };
+
+}    // namespace hpx::distributed::experimental::detail
