@@ -44,6 +44,7 @@ set(post_remote_client_PARAMETERS LOCALITIES 2)
 
 set(remote_dataflow_PARAMETERS THREADS_PER_LOCALITY 4)
 set(remote_dataflow_PARAMETERS LOCALITIES 2)
+set(distributed_scheduler_PARAMETERS LOCALITIES 2)
 
 foreach(test ${tests})
   set(sources ${test}.cpp)

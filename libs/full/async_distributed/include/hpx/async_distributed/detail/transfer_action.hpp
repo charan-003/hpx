@@ -27,33 +27,39 @@ namespace hpx::distributed::detail {
     /// Phase 2: template function that takes an hpx::tuple of values
     /// and returns the same tuple, effectively passing it across the network.
     template <typename... Ts>
-    HPX_EXPORT hpx::tuple<Ts...> distributed_execute_value(
-        hpx::tuple<Ts...> const& t);
-
-    /// A helper function to asynchronously dispatch the action and return
-    /// the future, keeping the action type instantiation in the source file.
-    template <typename... Ts>
-    HPX_EXPORT hpx::future<hpx::tuple<Ts...>>
-    dispatch_distributed_execute_value(
-        hpx::id_type const& target, hpx::tuple<Ts...> const& t);
+    inline hpx::tuple<Ts...> distributed_execute_value(
+        hpx::tuple<Ts...> const& t)
+    {
+        return t;
+    }
 
 }    // namespace hpx::distributed::detail
 
-struct distributed_execute_value_action_empty
+// Expose a specific struct for the scheduler's empty payload signal
+struct distributed_schedule_action
   : hpx::actions::make_action_t<
         decltype(&hpx::distributed::detail::distributed_execute_value<>),
         &hpx::distributed::detail::distributed_execute_value<>,
-        distributed_execute_value_action_empty>
+        distributed_schedule_action>
 {
 };
 
-// Forward-declare the template action explicitly to avoid macro parsing issues.
-struct distributed_execute_value_action_int
-  : hpx::actions::make_action_t<
-        decltype(&hpx::distributed::detail::distributed_execute_value<int>),
-        &hpx::distributed::detail::distributed_execute_value<int>,
-        distributed_execute_value_action_int>
-{
-};
+namespace hpx::distributed::detail {
+
+    /// A helper function to asynchronously dispatch the action and return
+    /// the future. For arbitrary types, this must be specialized or
+    /// resolved by the user (or tests) who registers the specific action.
+    template <typename... Ts>
+    hpx::future<hpx::tuple<Ts...>> dispatch_distributed_execute_value(
+        hpx::id_type const& target, hpx::tuple<Ts...> const& t);
+
+    /// Overload for the empty payload (used natively by schedule())
+    inline hpx::future<hpx::tuple<>> dispatch_distributed_execute_value(
+        hpx::id_type const& target, hpx::tuple<> const& t)
+    {
+        return hpx::async(distributed_schedule_action{}, target, t);
+    }
+
+}    // namespace hpx::distributed::detail
 
 #endif    // HPX_HAVE_NETWORKING

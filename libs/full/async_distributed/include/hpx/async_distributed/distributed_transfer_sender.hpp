@@ -69,28 +69,26 @@ namespace hpx::distributed::experimental {
 
                     // Store the .then() future in the operation_state's slot
                     // so it outlives this receiver and prevents use-after-free.
-                    *continuation_slot_ = fut.then([downstream = HPX_MOVE(
-                                                        downstream_)](
-                                                       hpx::future<
-                                                           hpx::tuple<Ts...>>
-                                                           f) mutable {
-                        hpx::detail::try_catch_exception_ptr(
-                            [&]() {
-                                auto returned_tuple = f.get();
-                                hpx::invoke_fused(
-                                    [&](auto&&... args) {
-                                        hpx::execution::experimental::set_value(
-                                            HPX_MOVE(downstream),
-                                            std::forward<decltype(args)>(
-                                                args)...);
-                                    },
-                                    HPX_MOVE(returned_tuple));
-                            },
-                            [&](std::exception_ptr ep) {
-                                hpx::execution::experimental::set_error(
-                                    HPX_MOVE(downstream), HPX_MOVE(ep));
-                            });
-                    });
+                    *continuation_slot_ = fut.then(
+                        [downstream = HPX_MOVE(downstream_)](
+                            hpx::future<hpx::tuple<Ts...>>&& f) mutable {
+                            hpx::detail::try_catch_exception_ptr(
+                                [&]() {
+                                    auto returned_tuple = f.get();
+                                    hpx::invoke_fused(
+                                        [&](auto&&... args) {
+                                            hpx::execution::experimental::
+                                                set_value(HPX_MOVE(downstream),
+                                                    HPX_FORWARD(decltype(args),
+                                                        args)...);
+                                        },
+                                        HPX_MOVE(returned_tuple));
+                                },
+                                [&](std::exception_ptr ep) {
+                                    hpx::execution::experimental::set_error(
+                                        HPX_MOVE(downstream), HPX_MOVE(ep));
+                                });
+                        });
                 },
                 [&](std::exception_ptr ep) {
                     hpx::execution::experimental::set_error(
@@ -169,7 +167,7 @@ namespace hpx::distributed::experimental {
     /// For Phase 3, this only supports upstream senders with a single
     /// set_value_t(int) completion signature (since our action is only
     /// registered for int).  This restriction will be lifted when we
-    /// register additional type instantiations.
+    /// register additional type inst instantiations.
     template <typename Sender>
     struct distributed_transfer_sender
     {
@@ -228,17 +226,7 @@ namespace hpx::distributed::experimental {
 }    // namespace hpx::distributed::experimental
 
 namespace hpx::distributed::experimental::detail {
-    // Implement transform_sender for continues_on_t
-    template <typename Sender, typename Scheduler>
-    constexpr auto tag_invoke(hpx::execution::experimental::transform_sender_t,
-        distributed_domain, hpx::execution::experimental::continues_on_t,
-        Sender&& sndr, Scheduler const& sched) noexcept
-    {
-        return distributed_transfer_sender<std::decay_t<Sender>>{
-            HPX_FORWARD(Sender, sndr), sched.target()};
-    }
-
-    // Implement transform_sender for transfer_t (deprecated but might be routed)
+    // Implement transform_sender for transfer_t
     template <typename Sender, typename Scheduler>
     constexpr auto tag_invoke(hpx::execution::experimental::transform_sender_t,
         distributed_domain, hpx::execution::experimental::transfer_t,

@@ -118,7 +118,6 @@ set(async_sources
     continuation.cpp
     packaged_action.cpp
     promise.cpp
-    transfer_action.cpp
     trigger_lco.cpp
 )
 

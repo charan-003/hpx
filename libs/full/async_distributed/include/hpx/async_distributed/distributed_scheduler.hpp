@@ -41,16 +41,16 @@
 
 namespace hpx::distributed::experimental {
 
-    // Forward declarations
     struct distributed_scheduler;
-    struct distributed_schedule_sender;
-
-    template <typename Receiver>
-    struct distributed_operation_state;
 
     namespace detail {
+        struct distributed_schedule_sender;
+
+        template <typename Receiver>
+        struct distributed_operation_state;
+
         struct distributed_domain;
-    }
+    }    // namespace detail
 
     ///////////////////////////////////////////////////////////////////////////
     // P2300 execution domain for distributed scheduling.
@@ -71,163 +71,167 @@ namespace hpx::distributed::experimental {
         };
     }    // namespace detail
 
-    ///////////////////////////////////////////////////////////////////////////
-    // Operation state: bridges the hpx::future<void> returned by the remote
-    // action into the P2300 receiver protocol.
-    //
-    // Lifetime contract (P2300 section 6.9.7):
-    //   The operation_state is pinned in memory by the caller and must
-    //   outlive the async operation.  We capture `this` in the .then()
-    //   continuation, which is safe because the future's shared state
-    //   prevents destruction until the continuation fires.
-    template <typename Receiver>
-    struct distributed_operation_state
-    {
-        using receiver_type = std::decay_t<Receiver>;
-
-        template <typename Receiver_>
-        distributed_operation_state(Receiver_&& r, hpx::id_type target) noexcept
-          : receiver_(HPX_FORWARD(Receiver_, r))
-          , target_(HPX_MOVE(target))
+    namespace detail {
+        ///////////////////////////////////////////////////////////////////////////
+        // Operation state: bridges the hpx::future<void> returned by the remote
+        // action into the P2300 receiver protocol.
+        //
+        // Lifetime contract (P2300 section 6.9.7):
+        //   The operation_state is pinned in memory by the caller and must
+        //   outlive the async operation.  We capture `this` in the .then()
+        //   continuation, which is safe because the future's shared state
+        //   prevents destruction until the continuation fires.
+        template <typename Receiver>
+        struct distributed_operation_state
         {
-        }
+            using receiver_type = std::decay_t<Receiver>;
 
-        distributed_operation_state(
-            distributed_operation_state const&) = delete;
-        distributed_operation_state& operator=(
-            distributed_operation_state const&) = delete;
-        distributed_operation_state(distributed_operation_state&&) = delete;
-        distributed_operation_state& operator=(
-            distributed_operation_state&&) = delete;
+            template <typename Receiver_>
+            distributed_operation_state(
+                Receiver_&& r, hpx::id_type target) noexcept
+              : receiver_(HPX_FORWARD(Receiver_, r))
+              , target_(HPX_MOVE(target))
+            {
+            }
 
-        ~distributed_operation_state() = default;
+            distributed_operation_state(
+                distributed_operation_state const&) = delete;
+            distributed_operation_state& operator=(
+                distributed_operation_state const&) = delete;
+            distributed_operation_state(distributed_operation_state&&) = delete;
+            distributed_operation_state& operator=(
+                distributed_operation_state&&) = delete;
 
-        void start() & noexcept
-        {
-            hpx::detail::try_catch_exception_ptr(
-                [&]() {
-                    // Dispatch the value action to the remote locality with empty tuple.
-                    auto fut = hpx::distributed::detail::
-                        dispatch_distributed_execute_value(
-                            target_, hpx::tuple<>{});
+            ~distributed_operation_state() = default;
 
-                    // Chain a continuation to bridge the future completion
-                    // into the P2300 receiver.  We capture `this` because
-                    // the operation_state is pinned (P2300 lifetime
-                    // guarantee).
-                    fut.then([this](hpx::future<hpx::tuple<>> f) {
-                        hpx::detail::try_catch_exception_ptr(
-                            [&]() {
-                                f.get();    // rethrow any remote exception
-                                hpx::execution::experimental::set_value(
-                                    HPX_MOVE(receiver_));
-                            },
-                            [&](std::exception_ptr ep) {
-                                hpx::execution::experimental::set_error(
-                                    HPX_MOVE(receiver_), HPX_MOVE(ep));
-                            });
+            void start() & noexcept
+            {
+                hpx::detail::try_catch_exception_ptr(
+                    [&]() {
+                        // Dispatch the value action to the remote locality with empty tuple.
+                        auto fut = hpx::distributed::detail::
+                            dispatch_distributed_execute_value(
+                                target_, hpx::tuple<>{});
+
+                        // Chain a continuation to bridge the future completion
+                        // into the P2300 receiver.  We capture `this` because
+                        // the operation_state is pinned (P2300 lifetime
+                        // guarantee).
+                        fut.then([this](hpx::future<hpx::tuple<>> f) {
+                            hpx::detail::try_catch_exception_ptr(
+                                [&]() {
+                                    f.get();    // rethrow any remote exception
+                                    hpx::execution::experimental::set_value(
+                                        HPX_MOVE(receiver_));
+                                },
+                                [&](std::exception_ptr ep) {
+                                    hpx::execution::experimental::set_error(
+                                        HPX_MOVE(receiver_), HPX_MOVE(ep));
+                                });
+                        });
+                    },
+                    [&](std::exception_ptr ep) {
+                        // If hpx::async itself throws (e.g. invalid target),
+                        // route the error to the receiver.
+                        hpx::execution::experimental::set_error(
+                            HPX_MOVE(receiver_), HPX_MOVE(ep));
                     });
-                },
-                [&](std::exception_ptr ep) {
-                    // If hpx::async itself throws (e.g. invalid target),
-                    // route the error to the receiver.
-                    hpx::execution::experimental::set_error(
-                        HPX_MOVE(receiver_), HPX_MOVE(ep));
-                });
-        }
-
-    private:
-        receiver_type receiver_;
-        hpx::id_type target_;
-    };
-
-    ///////////////////////////////////////////////////////////////////////////
-    // Sender returned by distributed_scheduler::schedule().
-    //
-    // Completion signatures:
-    //   set_value()             - remote action completed successfully
-    //   set_error(exception_ptr) - remote action or network transport failed
-    //   set_stopped()           - included for concept conformance
-    struct distributed_schedule_sender
-    {
-        using sender_concept = hpx::execution::experimental::sender_t;
-
-        using completion_signatures =
-            hpx::execution::experimental::completion_signatures<
-                hpx::execution::experimental::set_value_t(),
-                hpx::execution::experimental::set_error_t(std::exception_ptr),
-                hpx::execution::experimental::set_stopped_t()>;
-
-        explicit distributed_schedule_sender(hpx::id_type target) noexcept
-          : target_(HPX_MOVE(target))
-        {
-        }
-
-        distributed_schedule_sender(distributed_schedule_sender&&) = default;
-        distributed_schedule_sender& operator=(
-            distributed_schedule_sender&&) = default;
-        distributed_schedule_sender(
-            distributed_schedule_sender const&) = default;
-        distributed_schedule_sender& operator=(
-            distributed_schedule_sender const&) = default;
-
-        ~distributed_schedule_sender() = default;
-
-        template <typename Receiver>
-        distributed_operation_state<Receiver> connect(Receiver&& receiver) &&
-        {
-            return {HPX_FORWARD(Receiver, receiver), HPX_MOVE(target_)};
-        }
-
-        template <typename Receiver>
-        distributed_operation_state<Receiver> connect(
-            Receiver&& receiver) const&
-        {
-            return {HPX_FORWARD(Receiver, receiver), target_};
-        }
-
-        struct env
-        {
-            hpx::id_type target;
-
-            // Forward get_domain queries to the scheduler's domain.
-            auto query(
-                hpx::execution::experimental::get_domain_t) const noexcept
-            {
-                return detail::distributed_domain{};
             }
 
-            template <typename CPO>
-                requires meta::value<
-                    meta::one_of<CPO, hpx::execution::experimental::set_value_t,
-                        hpx::execution::experimental::set_stopped_t>>
-            auto query(
-                hpx::execution::experimental::get_completion_scheduler_t<CPO>)
-                const noexcept;
-
-            // P3826R5: get_completion_domain queries
-            template <typename CPO>
-            auto query(
-                hpx::execution::experimental::get_completion_domain_t<CPO>)
-                const noexcept
-            {
-                return detail::distributed_domain{};
-            }
+        private:
+            receiver_type receiver_;
+            hpx::id_type target_;
         };
 
-        auto get_env() const noexcept;
+        ///////////////////////////////////////////////////////////////////////////
+        // Sender returned by distributed_scheduler::schedule().
+        //
+        // Completion signatures:
+        //   set_value()             - remote action completed successfully
+        //   set_error(exception_ptr) - remote action or network transport failed
+        //   set_stopped()           - included for concept conformance
+        struct distributed_schedule_sender
+        {
+            using sender_concept = hpx::execution::experimental::sender_t;
 
-    private:
-        // Allow env to access the scheduler stored in the sender.
-        // The scheduler is reconstructed from target_ on demand.
-        hpx::id_type target_;
+            using completion_signatures =
+                hpx::execution::experimental::completion_signatures<
+                    hpx::execution::experimental::set_value_t(),
+                    hpx::execution::experimental::set_error_t(
+                        std::exception_ptr),
+                    hpx::execution::experimental::set_stopped_t()>;
 
-        // The sender needs to remember which scheduler created it so
-        // that get_completion_scheduler can return it.
-        friend struct distributed_scheduler;
-        friend struct env;
-    };
+            explicit distributed_schedule_sender(hpx::id_type target) noexcept
+              : target_(HPX_MOVE(target))
+            {
+            }
 
+            distributed_schedule_sender(
+                distributed_schedule_sender&&) = default;
+            distributed_schedule_sender& operator=(
+                distributed_schedule_sender&&) = default;
+            distributed_schedule_sender(
+                distributed_schedule_sender const&) = default;
+            distributed_schedule_sender& operator=(
+                distributed_schedule_sender const&) = default;
+
+            ~distributed_schedule_sender() = default;
+
+            template <typename Receiver>
+            distributed_operation_state<Receiver> connect(
+                Receiver&& receiver) &&
+            {
+                return {HPX_FORWARD(Receiver, receiver), HPX_MOVE(target_)};
+            }
+
+            template <typename Receiver>
+            distributed_operation_state<Receiver> connect(
+                Receiver&& receiver) const&
+            {
+                return {HPX_FORWARD(Receiver, receiver), target_};
+            }
+
+            struct env
+            {
+                hpx::id_type target;
+
+                // Forward get_domain queries to the scheduler's domain.
+                auto query(
+                    hpx::execution::experimental::get_domain_t) const noexcept
+                {
+                    return detail::distributed_domain{};
+                }
+
+                template <typename CPO>
+                    requires meta::value<meta::one_of<CPO,
+                        hpx::execution::experimental::set_value_t,
+                        hpx::execution::experimental::set_stopped_t>>
+                auto query(
+                    hpx::execution::experimental::get_completion_scheduler_t<
+                        CPO>) const noexcept;
+
+                template <typename CPO>
+                auto query(
+                    hpx::execution::experimental::get_completion_domain_t<CPO>)
+                    const noexcept
+                {
+                    return detail::distributed_domain{};
+                }
+            };
+
+            auto get_env() const noexcept;
+
+        private:
+            // Allow env to access the scheduler stored in the sender.
+            // The scheduler is reconstructed from target_ on demand.
+            hpx::id_type target_;
+
+            // The sender needs to remember which scheduler created it so
+            // that get_completion_scheduler can return it.
+            friend struct hpx::distributed::experimental::distributed_scheduler;
+            friend struct env;
+        };
+    }    // namespace detail
     ///////////////////////////////////////////////////////////////////////////
     // P2300-compliant scheduler that dispatches work to a remote HPX
     // locality via the parcelport.
@@ -253,9 +257,9 @@ namespace hpx::distributed::experimental {
 
         /// P2300 schedule CPO: returns a sender that, when started,
         /// dispatches a void action to the target locality.
-        [[nodiscard]] distributed_schedule_sender schedule() const
+        [[nodiscard]] detail::distributed_schedule_sender schedule() const
         {
-            return distributed_schedule_sender{target_};
+            return detail::distributed_schedule_sender{target_};
         }
 
         friend bool operator==(distributed_scheduler const& lhs,
@@ -305,14 +309,14 @@ namespace hpx::distributed::experimental {
         requires meta::value<
             meta::one_of<CPO, hpx::execution::experimental::set_value_t,
                 hpx::execution::experimental::set_stopped_t>>
-    auto distributed_schedule_sender::env::query(
+    auto detail::distributed_schedule_sender::env::query(
         hpx::execution::experimental::get_completion_scheduler_t<CPO>)
         const noexcept
     {
         return distributed_scheduler{target};
     }
 
-    inline auto distributed_schedule_sender::get_env() const noexcept
+    inline auto detail::distributed_schedule_sender::get_env() const noexcept
     {
         return env{target_};
     }

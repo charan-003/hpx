@@ -30,10 +30,27 @@ namespace ex = hpx::execution::experimental;
 namespace tt = hpx::this_thread::experimental;
 
 // We explicitly instantiate and register actions for testing
-HPX_REGISTER_ACTION(distributed_execute_value_action_empty,
-    distributed_execute_value_action_empty)
+struct distributed_execute_value_action_int
+  : hpx::actions::make_action_t<
+        decltype(&hpx::distributed::detail::distributed_execute_value<int>),
+        &hpx::distributed::detail::distributed_execute_value<int>,
+        distributed_execute_value_action_int>
+{
+};
+
+HPX_REGISTER_ACTION(
+    distributed_schedule_action, distributed_schedule_action)
 HPX_REGISTER_ACTION(
     distributed_execute_value_action_int, distributed_execute_value_action_int)
+
+namespace hpx::distributed::detail {
+    template <>
+    hpx::future<hpx::tuple<int>> dispatch_distributed_execute_value<int>(
+        hpx::id_type const& target, hpx::tuple<int> const& t)
+    {
+        return hpx::async(distributed_execute_value_action_int{}, target, t);
+    }
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 int hpx_main()
@@ -73,8 +90,8 @@ int hpx_main()
         HPX_TEST(s1 == s2);
     }
 
-    // Test 5: standard ex::continues_on with distributed_scheduler
-    //   ex::just(10) | ex::continues_on(sched)
+    // Test 5: standard ex::transfer with distributed_scheduler
+    //   ex::just(10) | ex::transfer(sched)
     //     | ex::then([](int x) { return x * 2; }) | sync_wait()
     {
         auto locs = hpx::find_remote_localities();
@@ -82,21 +99,21 @@ int hpx_main()
         auto sched =
             hpx::distributed::experimental::distributed_scheduler{target};
 
-        auto result = tt::sync_wait(ex::just(10) | ex::continues_on(sched) |
+        auto result = tt::sync_wait(ex::just(10) | ex::transfer(sched) |
             ex::then([](int x) { return x * 2; }));
 
         HPX_TEST(result.has_value());
         HPX_TEST_EQ(std::get<0>(*result), 20);
     }
 
-    // Test 6: standard ex::continues_on chained with additional then()
+    // Test 6: standard ex::transfer chained with additional then()
     {
         auto locs = hpx::find_remote_localities();
         auto target = locs.empty() ? hpx::find_here() : locs[0];
         auto sched =
             hpx::distributed::experimental::distributed_scheduler{target};
 
-        auto result = tt::sync_wait(ex::just(7) | ex::continues_on(sched) |
+        auto result = tt::sync_wait(ex::just(7) | ex::transfer(sched) |
             ex::then([](int x) { return x + 3; }));
 
         HPX_TEST(result.has_value());
