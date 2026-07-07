@@ -24,12 +24,6 @@
 
 namespace hpx::distributed::detail {
 
-    /// Phase 1: void->void function for basic schedule()
-    HPX_EXPORT void distributed_execute_void();
-
-    HPX_EXPORT hpx::future<void> dispatch_distributed_execute_void(
-        hpx::id_type const& target);
-
     /// Phase 2: template function that takes an hpx::tuple of values
     /// and returns the same tuple, effectively passing it across the network.
     template <typename... Ts>
@@ -45,6 +39,14 @@ namespace hpx::distributed::detail {
 
 }    // namespace hpx::distributed::detail
 
+struct distributed_execute_value_action_empty
+  : hpx::actions::make_action_t<
+        decltype(&hpx::distributed::detail::distributed_execute_value<>),
+        &hpx::distributed::detail::distributed_execute_value<>,
+        distributed_execute_value_action_empty>
+{
+};
+
 // Forward-declare the template action explicitly to avoid macro parsing issues.
 struct distributed_execute_value_action_int
   : hpx::actions::make_action_t<
@@ -53,8 +55,5 @@ struct distributed_execute_value_action_int
         distributed_execute_value_action_int>
 {
 };
-
-HPX_DECLARE_PLAIN_ACTION(hpx::distributed::detail::distributed_execute_void,
-    distributed_execute_void_action)
 
 #endif    // HPX_HAVE_NETWORKING

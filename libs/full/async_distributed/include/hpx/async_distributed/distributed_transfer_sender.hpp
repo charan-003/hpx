@@ -36,7 +36,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace hpx::distributed {
+namespace hpx::distributed::experimental {
 
     // Forward declarations
     template <typename Sender>
@@ -225,6 +225,28 @@ namespace hpx::distributed {
         }
     };
 
-}    // namespace hpx::distributed
+}    // namespace hpx::distributed::experimental
+
+namespace hpx::distributed::experimental::detail {
+    // Implement transform_sender for continues_on_t
+    template <typename Sender, typename Scheduler>
+    constexpr auto tag_invoke(hpx::execution::experimental::transform_sender_t,
+        distributed_domain, hpx::execution::experimental::continues_on_t,
+        Sender&& sndr, Scheduler const& sched) noexcept
+    {
+        return distributed_transfer_sender<std::decay_t<Sender>>{
+            HPX_FORWARD(Sender, sndr), sched.target()};
+    }
+
+    // Implement transform_sender for transfer_t (deprecated but might be routed)
+    template <typename Sender, typename Scheduler>
+    constexpr auto tag_invoke(hpx::execution::experimental::transform_sender_t,
+        distributed_domain, hpx::execution::experimental::transfer_t,
+        Sender&& sndr, Scheduler const& sched) noexcept
+    {
+        return distributed_transfer_sender<std::decay_t<Sender>>{
+            HPX_FORWARD(Sender, sndr), sched.target()};
+    }
+}    // namespace hpx::distributed::experimental::detail
 
 #endif    // HPX_HAVE_NETWORKING

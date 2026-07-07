@@ -18,8 +18,6 @@
 
 namespace hpx::distributed::detail {
 
-    void distributed_execute_void() {}
-
     template <typename... Ts>
     hpx::tuple<Ts...> distributed_execute_value(hpx::tuple<Ts...> const& t)
     {
@@ -29,30 +27,24 @@ namespace hpx::distributed::detail {
         return t;
     }
 
-}    // namespace hpx::distributed::detail
+    template HPX_EXPORT hpx::tuple<> distributed_execute_value<>(
+        hpx::tuple<> const& t);
+    template HPX_EXPORT hpx::tuple<int> distributed_execute_value<int>(
+        hpx::tuple<int> const& t);
 
-// Register the action with the HPX serialization framework.
-HPX_PLAIN_ACTION(hpx::distributed::detail::distributed_execute_void,
-    distributed_execute_void_action)
+template <>
+hpx::future<hpx::tuple<>> dispatch_distributed_execute_value<>(
+    hpx::id_type const& target, hpx::tuple<> const& t)
+{
+    return hpx::async(distributed_execute_value_action_empty{}, target, t);
+}
 
-// We explicitly instantiate and register it for `int` for Phase 2 testing.
-HPX_REGISTER_ACTION(
-    distributed_execute_value_action_int, distributed_execute_value_action_int)
-
-namespace hpx::distributed::detail {
-
-    hpx::future<void> dispatch_distributed_execute_void(
-        hpx::id_type const& target)
-    {
-        return hpx::async(distributed_execute_void_action{}, target);
-    }
-
-    template <>
-    hpx::future<hpx::tuple<int>> dispatch_distributed_execute_value<int>(
-        hpx::id_type const& target, hpx::tuple<int> const& t)
-    {
-        return hpx::async(distributed_execute_value_action_int{}, target, t);
-    }
+template <>
+hpx::future<hpx::tuple<int>> dispatch_distributed_execute_value<int>(
+    hpx::id_type const& target, hpx::tuple<int> const& t)
+{
+    return hpx::async(distributed_execute_value_action_int{}, target, t);
+}
 
 }    // namespace hpx::distributed::detail
 

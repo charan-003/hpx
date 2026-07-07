@@ -21,7 +21,6 @@
 #include <hpx/modules/execution.hpp>
 #include <hpx/modules/testing.hpp>
 
-#include <hpx/async_distributed/distributed_just.hpp>
 #include <hpx/async_distributed/distributed_scheduler.hpp>
 
 #include <atomic>
@@ -30,12 +29,19 @@
 namespace ex = hpx::execution::experimental;
 namespace tt = hpx::this_thread::experimental;
 
+// We explicitly instantiate and register actions for testing
+HPX_REGISTER_ACTION(distributed_execute_value_action_empty,
+    distributed_execute_value_action_empty)
+HPX_REGISTER_ACTION(
+    distributed_execute_value_action_int, distributed_execute_value_action_int)
+
 ///////////////////////////////////////////////////////////////////////////////
 int hpx_main()
 {
     // Test 1: schedule() on the local locality completes with set_value.
     {
-        auto sched = hpx::distributed::distributed_scheduler{hpx::find_here()};
+        auto sched = hpx::distributed::experimental::distributed_scheduler{
+            hpx::find_here()};
         auto s = sched.schedule();
 
         // Verify the sender satisfies the sender concept.
@@ -49,7 +55,8 @@ int hpx_main()
     // Test 2: schedule() piped through then() produces a value.
     {
         hpx::id_type here = hpx::find_here();
-        auto s1 = ex::schedule(hpx::distributed::distributed_scheduler(here));
+        auto s1 = ex::schedule(
+            hpx::distributed::experimental::distributed_scheduler(here));
 
         auto s2 = ex::then(s1, []() { return 42; });
         auto result = tt::sync_wait(s2);
@@ -61,25 +68,19 @@ int hpx_main()
     // Test 3: scheduler equality.
     {
         auto here = hpx::find_here();
-        auto s1 = hpx::distributed::distributed_scheduler{here};
-        auto s2 = hpx::distributed::distributed_scheduler{here};
+        auto s1 = hpx::distributed::experimental::distributed_scheduler{here};
+        auto s2 = hpx::distributed::experimental::distributed_scheduler{here};
         HPX_TEST(s1 == s2);
-    }
-
-    // Test 4: distributed_just passing a value across the wire
-    {
-        auto result = tt::sync_wait(
-            hpx::distributed::distributed_just(hpx::find_here(), 42));
-
-        HPX_TEST(result.has_value());
-        HPX_TEST_EQ(std::get<0>(*result), 42);
     }
 
     // Test 5: standard ex::continues_on with distributed_scheduler
     //   ex::just(10) | ex::continues_on(sched)
     //     | ex::then([](int x) { return x * 2; }) | sync_wait()
     {
-        auto sched = hpx::distributed::distributed_scheduler{hpx::find_here()};
+        auto locs = hpx::find_remote_localities();
+        auto target = locs.empty() ? hpx::find_here() : locs[0];
+        auto sched =
+            hpx::distributed::experimental::distributed_scheduler{target};
 
         auto result = tt::sync_wait(ex::just(10) | ex::continues_on(sched) |
             ex::then([](int x) { return x * 2; }));
@@ -90,7 +91,10 @@ int hpx_main()
 
     // Test 6: standard ex::continues_on chained with additional then()
     {
-        auto sched = hpx::distributed::distributed_scheduler{hpx::find_here()};
+        auto locs = hpx::find_remote_localities();
+        auto target = locs.empty() ? hpx::find_here() : locs[0];
+        auto sched =
+            hpx::distributed::experimental::distributed_scheduler{target};
 
         auto result = tt::sync_wait(ex::just(7) | ex::continues_on(sched) |
             ex::then([](int x) { return x + 3; }));

@@ -39,15 +39,18 @@
 #include <type_traits>
 #include <utility>
 
-namespace hpx::distributed {
+namespace hpx::distributed::experimental {
 
     // Forward declarations
     struct distributed_scheduler;
     struct distributed_schedule_sender;
-    struct distributed_domain;
 
     template <typename Receiver>
     struct distributed_operation_state;
+
+    namespace detail {
+        struct distributed_domain;
+    }
 
     ///////////////////////////////////////////////////////////////////////////
     // P2300 execution domain for distributed scheduling.
@@ -61,10 +64,12 @@ namespace hpx::distributed {
     // start the schedule-sender (which hops to the remote locality),
     // and replay the data on the downstream receiver.  No domain
     // transform_sender override is needed for continues_on.
-    struct distributed_domain
-      : hpx::execution::experimental::detail::sync_wait_domain
-    {
-    };
+    namespace detail {
+        struct distributed_domain
+          : hpx::execution::experimental::detail::sync_wait_domain
+        {
+        };
+    }    // namespace detail
 
     ///////////////////////////////////////////////////////////////////////////
     // Operation state: bridges the hpx::future<void> returned by the remote
@@ -101,15 +106,16 @@ namespace hpx::distributed {
         {
             hpx::detail::try_catch_exception_ptr(
                 [&]() {
-                    // Dispatch the void action to the remote locality.
+                    // Dispatch the value action to the remote locality with empty tuple.
                     auto fut = hpx::distributed::detail::
-                        dispatch_distributed_execute_void(target_);
+                        dispatch_distributed_execute_value(
+                            target_, hpx::tuple<>{});
 
                     // Chain a continuation to bridge the future completion
                     // into the P2300 receiver.  We capture `this` because
                     // the operation_state is pinned (P2300 lifetime
                     // guarantee).
-                    fut.then([this](hpx::future<void> f) {
+                    fut.then([this](hpx::future<hpx::tuple<>> f) {
                         hpx::detail::try_catch_exception_ptr(
                             [&]() {
                                 f.get();    // rethrow any remote exception
@@ -188,7 +194,7 @@ namespace hpx::distributed {
             auto query(
                 hpx::execution::experimental::get_domain_t) const noexcept
             {
-                return distributed_domain{};
+                return detail::distributed_domain{};
             }
 
             template <typename CPO>
@@ -205,7 +211,7 @@ namespace hpx::distributed {
                 hpx::execution::experimental::get_completion_domain_t<CPO>)
                 const noexcept
             {
-                return distributed_domain{};
+                return detail::distributed_domain{};
             }
         };
 
@@ -230,7 +236,7 @@ namespace hpx::distributed {
     //   - schedule() returns a sender
     //   - equality-comparable
     //   - copy-constructible
-    struct distributed_scheduler
+    struct HPX_CXX_EXPORT distributed_scheduler
     {
         explicit distributed_scheduler(hpx::id_type target) noexcept
           : target_(HPX_MOVE(target))
@@ -273,7 +279,7 @@ namespace hpx::distributed {
         /// Returns the execution domain of this scheduler.
         [[nodiscard]]
         static auto query(hpx::execution::experimental::get_domain_t) noexcept
-            -> distributed_domain
+            -> detail::distributed_domain
         {
             return {};
         }
@@ -283,7 +289,7 @@ namespace hpx::distributed {
         [[nodiscard]]
         static auto query(
             hpx::execution::experimental::get_completion_domain_t<CPO>) noexcept
-            -> distributed_domain
+            -> detail::distributed_domain
         {
             return {};
         }
@@ -311,6 +317,6 @@ namespace hpx::distributed {
         return env{target_};
     }
 
-}    // namespace hpx::distributed
+}    // namespace hpx::distributed::experimental
 
 #endif    // HPX_HAVE_NETWORKING
