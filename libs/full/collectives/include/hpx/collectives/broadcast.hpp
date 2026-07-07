@@ -559,6 +559,43 @@ namespace hpx::collectives {
                 this_site = agas::get_locality_id();
             }
 
+            if (!communicators.valid())
+            {
+                return hpx::make_exceptional_future<std::decay_t<T>>(
+                    HPX_GET_EXCEPTION(hpx::error::invalid_status,
+                        "hpx::collectives::broadcast_to (hierarchical)",
+                        "the hierarchical communicator is not valid"));
+            }
+
+            auto const [num_sites_val, communicator_site] =
+                communicators.get_info();
+            if (this_site >= num_sites_val)
+            {
+                return hpx::make_exceptional_future<std::decay_t<T>>(
+                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                        "hpx::collectives::broadcast_to (hierarchical)",
+                        "this_site must be smaller than the number of "
+                        "participating sites"));
+            }
+
+            if (this_site != communicator_site)
+            {
+                return hpx::make_exceptional_future<std::decay_t<T>>(
+                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                        "hpx::collectives::broadcast_to (hierarchical)",
+                        "this_site must match the site used to create the "
+                        "hierarchical communicator"));
+            }
+
+            if (this_site != 0)
+            {
+                return hpx::make_exceptional_future<std::decay_t<T>>(
+                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                        "hpx::collectives::broadcast_to (hierarchical)",
+                        "only site 0 may call broadcast_to on a hierarchical "
+                        "communicator"));
+            }
+
             // Each sub-communicator advances num_generations per call. Used
             // standalone (double_step) the user generation k maps to the first
             // of its two internal generations (2k-1); used as the broadcast
@@ -731,6 +768,43 @@ namespace hpx::collectives {
                 this_site = agas::get_locality_id();
             }
 
+            if (!communicators.valid())
+            {
+                return hpx::make_exceptional_future<T>(
+                    HPX_GET_EXCEPTION(hpx::error::invalid_status,
+                        "hpx::collectives::broadcast_from (hierarchical)",
+                        "the hierarchical communicator is not valid"));
+            }
+
+            auto const [num_sites_val, communicator_site] =
+                communicators.get_info();
+            if (this_site >= num_sites_val)
+            {
+                return hpx::make_exceptional_future<T>(
+                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                        "hpx::collectives::broadcast_from (hierarchical)",
+                        "this_site must be smaller than the number of "
+                        "participating sites"));
+            }
+
+            if (this_site != communicator_site)
+            {
+                return hpx::make_exceptional_future<T>(
+                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                        "hpx::collectives::broadcast_from (hierarchical)",
+                        "this_site must match the site used to create the "
+                        "hierarchical communicator"));
+            }
+
+            if (this_site == 0)
+            {
+                return hpx::make_exceptional_future<T>(
+                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                        "hpx::collectives::broadcast_from (hierarchical)",
+                        "site 0 must call broadcast_to on a hierarchical "
+                        "communicator"));
+            }
+
             // See broadcast_to above for the internal generation mapping.
             if (!is_valid_hierarchical_run_generation(
                     generation, num_generations))
@@ -794,10 +868,22 @@ namespace hpx::collectives {
         generation_arg const generation = generation_arg(),
         root_site_arg const root_site = root_site_arg())
     {
-        HPX_ASSERT(this_site != root_site);
+        this_site_arg effective_site = this_site;
+        if (effective_site.is_default())
+        {
+            effective_site = agas::get_locality_id();
+        }
+
+        if (effective_site == root_site)
+        {
+            return hpx::make_exceptional_future<T>(HPX_GET_EXCEPTION(
+                hpx::error::bad_parameter, "hpx::collectives::broadcast_from",
+                "the receiving site must be different from the root site"));
+        }
+
         return broadcast_from<T>(create_communicator(basename, num_sites_arg(),
-                                     this_site, generation, root_site),
-            this_site);
+                                     effective_site, generation, root_site),
+            effective_site);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -829,10 +915,7 @@ namespace hpx::collectives {
         generation_arg const generation = generation_arg(),
         root_site_arg const root_site = root_site_arg())
     {
-        HPX_ASSERT(this_site != root_site);
-        return broadcast_from<T>(create_communicator(basename, num_sites_arg(),
-                                     this_site, generation, root_site),
-            this_site)
+        return broadcast_from<T>(basename, this_site, generation, root_site)
             .get();
     }
 

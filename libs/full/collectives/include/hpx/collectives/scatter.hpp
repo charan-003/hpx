@@ -578,6 +578,43 @@ namespace hpx::collectives {
                 this_site = agas::get_locality_id();
             }
 
+            if (!communicators.valid())
+            {
+                return hpx::make_exceptional_future<T>(
+                    HPX_GET_EXCEPTION(hpx::error::invalid_status,
+                        "hpx::collectives::scatter_from (hierarchical)",
+                        "the hierarchical communicator is not valid"));
+            }
+
+            auto const [num_sites_val, communicator_site] =
+                communicators.get_info();
+            if (this_site >= num_sites_val)
+            {
+                return hpx::make_exceptional_future<T>(
+                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                        "hpx::collectives::scatter_from (hierarchical)",
+                        "this_site must be smaller than the number of "
+                        "participating sites"));
+            }
+
+            if (this_site != communicator_site)
+            {
+                return hpx::make_exceptional_future<T>(
+                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                        "hpx::collectives::scatter_from (hierarchical)",
+                        "this_site must match the site used to create the "
+                        "hierarchical communicator"));
+            }
+
+            if (this_site == 0)
+            {
+                return hpx::make_exceptional_future<T>(
+                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                        "hpx::collectives::scatter_from (hierarchical)",
+                        "site 0 must call scatter_to on a hierarchical "
+                        "communicator"));
+            }
+
             if (!is_valid_hierarchical_run_generation(
                     generation, num_generations))
             {
@@ -641,10 +678,22 @@ namespace hpx::collectives {
         generation_arg const generation = generation_arg(),
         root_site_arg const root_site = root_site_arg())
     {
-        HPX_ASSERT(this_site != root_site);
+        this_site_arg effective_site = this_site;
+        if (effective_site.is_default())
+        {
+            effective_site = agas::get_locality_id();
+        }
+
+        if (effective_site == root_site)
+        {
+            return hpx::make_exceptional_future<T>(HPX_GET_EXCEPTION(
+                hpx::error::bad_parameter, "hpx::collectives::scatter_from",
+                "the receiving site must be different from the root site"));
+        }
+
         return scatter_from<T>(create_communicator(basename, num_sites_arg(),
-                                   this_site, generation, root_site),
-            this_site);
+                                   effective_site, generation, root_site),
+            effective_site);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -676,10 +725,7 @@ namespace hpx::collectives {
         generation_arg const generation = generation_arg(),
         root_site_arg const root_site = root_site_arg())
     {
-        HPX_ASSERT(this_site != root_site);
-        return scatter_from<T>(create_communicator(basename, num_sites_arg(),
-                                   this_site, generation, root_site),
-            this_site)
+        return scatter_from<T>(basename, this_site, generation, root_site)
             .get();
     }
 
@@ -794,8 +840,16 @@ namespace hpx::collectives {
                 this_site = agas::get_locality_id();
             }
 
-            std::size_t const num_sites_val =
-                hpx::get<0>(communicators.get_info());
+            if (!communicators.valid())
+            {
+                return hpx::make_exceptional_future<T>(
+                    HPX_GET_EXCEPTION(hpx::error::invalid_status,
+                        "hpx::collectives::scatter_to (hierarchical)",
+                        "the hierarchical communicator is not valid"));
+            }
+
+            auto const [num_sites_val, communicator_site] =
+                communicators.get_info();
             if (this_site >= num_sites_val)
             {
                 return hpx::make_exceptional_future<T>(
@@ -803,6 +857,24 @@ namespace hpx::collectives {
                         "hpx::collectives::scatter_to (hierarchical)",
                         "this_site must be smaller than the number of "
                         "participating sites"));
+            }
+
+            if (this_site != communicator_site)
+            {
+                return hpx::make_exceptional_future<T>(
+                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                        "hpx::collectives::scatter_to (hierarchical)",
+                        "this_site must match the site used to create the "
+                        "hierarchical communicator"));
+            }
+
+            if (this_site != 0)
+            {
+                return hpx::make_exceptional_future<T>(
+                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                        "hpx::collectives::scatter_to (hierarchical)",
+                        "only site 0 may call scatter_to on a hierarchical "
+                        "communicator"));
             }
 
             if (local_result.size() != num_sites_val)

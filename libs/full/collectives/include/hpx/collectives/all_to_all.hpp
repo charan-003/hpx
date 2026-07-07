@@ -500,7 +500,16 @@ namespace hpx::collectives {
             this_site = agas::get_locality_id();
         }
 
-        std::size_t const num_sites_val = hpx::get<0>(communicators.get_info());
+        if (!communicators.valid())
+        {
+            return hpx::make_exceptional_future<std::vector<T>>(
+                HPX_GET_EXCEPTION(hpx::error::invalid_status,
+                    "hpx::collectives::all_to_all (hierarchical)",
+                    "the hierarchical communicator is not valid"));
+        }
+
+        auto const [num_sites_val, communicator_site] =
+            communicators.get_info();
         std::size_t const arity_val = communicators.get_arity();
 
         // An out-of-range site would classify into no top-level group and
@@ -512,6 +521,15 @@ namespace hpx::collectives {
                     "hpx::collectives::all_to_all (hierarchical)",
                     "this_site must be smaller than the number of "
                     "participating sites"));
+        }
+
+        if (this_site != communicator_site)
+        {
+            return hpx::make_exceptional_future<std::vector<T>>(
+                HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                    "hpx::collectives::all_to_all (hierarchical)",
+                    "this_site must match the site used to create the "
+                    "hierarchical communicator"));
         }
 
         // The phase-2 packing slices each gathered contribution with

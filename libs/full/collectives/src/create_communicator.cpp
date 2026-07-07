@@ -76,6 +76,34 @@ namespace hpx::collectives {
         communicator_server::~communicator_server() = default;
     }    // namespace detail
 
+    namespace {
+
+        void validate_basename(char const* basename, char const* function)
+        {
+            if (basename == nullptr || basename[0] == '\0')
+            {
+                HPX_THROW_EXCEPTION(hpx::error::bad_parameter, function,
+                    "the base name for the communicator operation must not "
+                    "be empty");
+            }
+        }
+
+        void validate_communicator_arguments(num_sites_arg num_sites,
+            this_site_arg this_site, root_site_arg root_site,
+            char const* function)
+        {
+            if (num_sites.is_default() || this_site.is_default() ||
+                num_sites == 0 || this_site >= num_sites ||
+                root_site >= num_sites)
+            {
+                HPX_THROW_EXCEPTION(hpx::error::bad_parameter, function,
+                    "num_sites must be explicitly non-zero, this_site must "
+                    "be explicitly smaller than num_sites, and root_site "
+                    "must designate a participating site");
+            }
+        }
+    }    // namespace
+
     ///////////////////////////////////////////////////////////////////////////
     void communicator::set_info(num_sites_arg num_sites,
         this_site_arg this_site, root_site_arg root_site) noexcept
@@ -124,6 +152,9 @@ namespace hpx::collectives {
         num_sites_arg num_sites, this_site_arg this_site,
         generation_arg generation, root_site_arg root_site)
     {
+        validate_basename(
+            basename, "hpx::collectives::detail::create_communicator");
+
         if (num_sites.is_default())
         {
             num_sites = agas::get_num_localities(hpx::launch::sync);
@@ -136,6 +167,9 @@ namespace hpx::collectives {
                 root_site = this_site;
             }
         }
+
+        validate_communicator_arguments(num_sites, this_site, root_site,
+            "hpx::collectives::detail::create_communicator");
 
         HPX_ASSERT(this_site < num_sites);
         HPX_ASSERT(
@@ -196,6 +230,9 @@ namespace hpx::collectives {
         char const* basename, num_sites_arg num_sites, this_site_arg this_site,
         generation_arg generation, root_site_arg root_site)
     {
+        validate_basename(
+            basename, "hpx::collectives::detail::create_communicator");
+
         if (num_sites.is_default())
         {
             num_sites = agas::get_num_localities(hpx::launch::sync);
@@ -209,20 +246,35 @@ namespace hpx::collectives {
             }
         }
 
+        validate_communicator_arguments(num_sites, this_site, root_site,
+            "hpx::collectives::detail::create_communicator");
+
         HPX_ASSERT(this_site < num_sites);
         HPX_ASSERT(
             root_site != static_cast<std::size_t>(-1) && root_site < num_sites);
 
-        std::string name(basename);
-        if (!generation.is_default())
+        std::string name;
+        if (num_sites != 1)
         {
-            name += std::to_string(generation) + "/";
+            name = basename;
+            if (!generation.is_default())
+            {
+                name += std::to_string(generation) + "/";
+            }
         }
 
         if (this_site == root_site)
         {
             // create a new communicator
             auto c = hpx::local_new<communicator>(num_sites, basename);
+
+            // Return communicator object right away if there is only one site
+            // involved.
+            if (num_sites == 1)
+            {
+                c.set_info(num_sites, this_site, root_site);
+                return c;
+            }
 
             // register the communicator's id using the given basename, this
             // keeps the communicator alive
@@ -254,10 +306,16 @@ namespace hpx::collectives {
         num_sites_arg num_sites, this_site_arg this_site,
         generation_arg generation, root_site_arg root_site)
     {
+        validate_basename(
+            basename, "hpx::collectives::detail::create_local_communicator");
+
         if (root_site == static_cast<std::size_t>(-1))
         {
             root_site = this_site;
         }
+
+        validate_communicator_arguments(num_sites, this_site, root_site,
+            "hpx::collectives::detail::create_local_communicator");
 
         HPX_ASSERT(this_site < num_sites);
         HPX_ASSERT(
@@ -320,10 +378,16 @@ namespace hpx::collectives {
         char const* basename, num_sites_arg num_sites, this_site_arg this_site,
         generation_arg generation, root_site_arg root_site)
     {
+        validate_basename(
+            basename, "hpx::collectives::detail::create_local_communicator");
+
         if (root_site == static_cast<std::size_t>(-1))
         {
             root_site = this_site;
         }
+
+        validate_communicator_arguments(num_sites, this_site, root_site,
+            "hpx::collectives::detail::create_local_communicator");
 
         HPX_ASSERT(this_site < num_sites);
         HPX_ASSERT(
@@ -332,17 +396,29 @@ namespace hpx::collectives {
 
         // make sure the communicator will be registered in the local AGAS
         // symbol service instance
-        std::string name = hpx::util::format("/{}{}{}", agas::get_locality_id(),
-            basename[0] == '/' ? "" : "/", basename);
-        if (!generation.is_default())
+        std::string name;
+        if (num_sites != 1)
         {
-            name += std::to_string(generation) + "/";
+            name = hpx::util::format("/{}{}{}", agas::get_locality_id(),
+                basename[0] == '/' ? "" : "/", basename);
+            if (!generation.is_default())
+            {
+                name += std::to_string(generation) + "/";
+            }
         }
 
         if (this_site == root_site)
         {
             // create a new communicator
             auto c = hpx::local_new<communicator>(num_sites, basename);
+
+            // Return communicator object right away if there is only one site
+            // involved.
+            if (num_sites == 1)
+            {
+                c.set_info(num_sites, this_site, root_site);
+                return c;
+            }
 
             // register the communicator's id using the given basename, this
             // keeps the communicator alive
@@ -424,6 +500,9 @@ namespace hpx::collectives {
         arity_arg arity, generation_arg generation, root_site_arg root_site,
         flat_fallback_threshold_arg threshold)
     {
+        validate_basename(
+            basename, "hpx::collectives::create_hierarchical_communicator");
+
         if (num_sites.is_default())
         {
             num_sites = agas::get_num_localities(hpx::launch::sync);

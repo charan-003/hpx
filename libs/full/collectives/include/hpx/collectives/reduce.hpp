@@ -449,14 +449,15 @@ namespace hpx::traits {
                 [op = HPX_FORWARD(F, op)](
                     auto& data, bool&, std::size_t) mutable {
                     HPX_ASSERT(!data.empty());
+                    auto& reduce_op = op;
 
                     if constexpr (!std::is_same_v<std::decay_t<T>, bool>)
                     {
                         if (data.size() > 1)
                         {
                             auto it = data.begin();
-                            return hpx::reduce(++it, data.end(),
-                                HPX_MOVE(data[0]), HPX_FORWARD(F, op));
+                            return hpx::reduce(
+                                ++it, data.end(), HPX_MOVE(data[0]), reduce_op);
                         }
                         return HPX_MOVE(data[0]);
                     }
@@ -468,8 +469,7 @@ namespace hpx::traits {
                             return static_cast<bool>(hpx::reduce(++it,
                                 data.end(), static_cast<bool>(data[0]),
                                 [&](auto lhs, auto rhs) {
-                                    return HPX_FORWARD(F, op)(
-                                        static_cast<bool>(lhs),
+                                    return reduce_op(static_cast<bool>(lhs),
                                         static_cast<bool>(rhs));
                                 }));
                         }
@@ -600,6 +600,43 @@ namespace hpx::collectives {
             if (this_site.is_default())
             {
                 this_site = agas::get_locality_id();
+            }
+
+            if (!communicators.valid())
+            {
+                return hpx::make_exceptional_future<std::decay_t<T>>(
+                    HPX_GET_EXCEPTION(hpx::error::invalid_status,
+                        "hpx::collectives::reduce_here (hierarchical)",
+                        "the hierarchical communicator is not valid"));
+            }
+
+            auto const [num_sites_val, communicator_site] =
+                communicators.get_info();
+            if (this_site >= num_sites_val)
+            {
+                return hpx::make_exceptional_future<std::decay_t<T>>(
+                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                        "hpx::collectives::reduce_here (hierarchical)",
+                        "this_site must be smaller than the number of "
+                        "participating sites"));
+            }
+
+            if (this_site != communicator_site)
+            {
+                return hpx::make_exceptional_future<std::decay_t<T>>(
+                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                        "hpx::collectives::reduce_here (hierarchical)",
+                        "this_site must match the site used to create the "
+                        "hierarchical communicator"));
+            }
+
+            if (this_site != 0)
+            {
+                return hpx::make_exceptional_future<std::decay_t<T>>(
+                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                        "hpx::collectives::reduce_here (hierarchical)",
+                        "only site 0 may call reduce_here on a hierarchical "
+                        "communicator"));
             }
 
             if (!is_valid_hierarchical_run_generation(
@@ -779,6 +816,43 @@ namespace hpx::collectives {
                 this_site = agas::get_locality_id();
             }
 
+            if (!communicators.valid())
+            {
+                return hpx::make_exceptional_future<void>(
+                    HPX_GET_EXCEPTION(hpx::error::invalid_status,
+                        "hpx::collectives::reduce_there (hierarchical)",
+                        "the hierarchical communicator is not valid"));
+            }
+
+            auto const [num_sites_val, communicator_site] =
+                communicators.get_info();
+            if (this_site >= num_sites_val)
+            {
+                return hpx::make_exceptional_future<void>(
+                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                        "hpx::collectives::reduce_there (hierarchical)",
+                        "this_site must be smaller than the number of "
+                        "participating sites"));
+            }
+
+            if (this_site != communicator_site)
+            {
+                return hpx::make_exceptional_future<void>(
+                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                        "hpx::collectives::reduce_there (hierarchical)",
+                        "this_site must match the site used to create the "
+                        "hierarchical communicator"));
+            }
+
+            if (this_site == 0)
+            {
+                return hpx::make_exceptional_future<void>(
+                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                        "hpx::collectives::reduce_there (hierarchical)",
+                        "site 0 must call reduce_here on a hierarchical "
+                        "communicator"));
+            }
+
             // See reduce_here above for the internal generation mapping.
             if (!is_valid_hierarchical_run_generation(
                     generation, num_generations))
@@ -834,10 +908,22 @@ namespace hpx::collectives {
         generation_arg const generation = generation_arg(),
         root_site_arg const root_site = root_site_arg())
     {
-        HPX_ASSERT(this_site != root_site);
+        this_site_arg effective_site = this_site;
+        if (effective_site.is_default())
+        {
+            effective_site = agas::get_locality_id();
+        }
+
+        if (effective_site == root_site)
+        {
+            return hpx::make_exceptional_future<void>(HPX_GET_EXCEPTION(
+                hpx::error::bad_parameter, "hpx::collectives::reduce_there",
+                "the sending site must be different from the root site"));
+        }
+
         return reduce_there(create_communicator(basename, num_sites_arg(),
-                                this_site, generation, root_site),
-            HPX_FORWARD(T, local_result), this_site);
+                                effective_site, generation, root_site),
+            HPX_FORWARD(T, local_result), effective_site);
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -869,10 +955,8 @@ namespace hpx::collectives {
         generation_arg const generation = generation_arg(),
         root_site_arg const root_site = root_site_arg())
     {
-        HPX_ASSERT(this_site != root_site);
-        reduce_there(create_communicator(basename, num_sites_arg(), this_site,
-                         generation, root_site),
-            HPX_FORWARD(T, local_result), this_site)
+        reduce_there(basename, HPX_FORWARD(T, local_result), this_site,
+            generation, root_site)
             .get();
     }
 

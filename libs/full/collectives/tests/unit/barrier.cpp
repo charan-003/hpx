@@ -178,6 +178,34 @@ void collectives_barrier_generation_tests()
     hpx::collectives::barrier(hpx::launch::sync,
         "/test/barrier/collectives/basename_sync/", num_sites_arg(1),
         this_site_arg(0), generation_arg(1));
+
+    auto const singleton_sync_client1 = create_communicator(hpx::launch::sync,
+        "/test/barrier/collectives/singleton_sync/", num_sites_arg(1),
+        this_site_arg(0), generation_arg(1));
+    auto const singleton_sync_client2 = create_communicator(hpx::launch::sync,
+        "/test/barrier/collectives/singleton_sync/", num_sites_arg(1),
+        this_site_arg(0), generation_arg(1));
+
+    hpx::collectives::barrier(
+        singleton_sync_client1, this_site_arg(0), generation_arg(1))
+        .get();
+    hpx::collectives::barrier(
+        singleton_sync_client2, this_site_arg(0), generation_arg(1))
+        .get();
+
+    auto const singleton_local_sync_client1 = create_local_communicator(
+        hpx::launch::sync, "/test/barrier/collectives/local_singleton_sync/",
+        num_sites_arg(1), this_site_arg(0), generation_arg(1));
+    auto const singleton_local_sync_client2 = create_local_communicator(
+        hpx::launch::sync, "/test/barrier/collectives/local_singleton_sync/",
+        num_sites_arg(1), this_site_arg(0), generation_arg(1));
+
+    hpx::collectives::barrier(
+        singleton_local_sync_client1, this_site_arg(0), generation_arg(1))
+        .get();
+    hpx::collectives::barrier(
+        singleton_local_sync_client2, this_site_arg(0), generation_arg(1))
+        .get();
 }
 
 ///////////////////////////////////////////////////////////////////////////////

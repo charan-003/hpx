@@ -146,12 +146,18 @@ namespace hpx { namespace collectives {
     ///         provided every call uses an explicit, strictly consecutive
     ///         generation number so the shared sequence stays gap-free. Because
     ///         the two-phase hierarchical collectives (\a all_gather, \a
-    ///         all_reduce, \a all_to_all and the hierarchical \a barrier)
-    ///         derive their phase generations from that explicit number, they
-    ///         require it and reject an auto (default) generation. The
-    ///         non-hierarchical (flat) collectives keep supporting the default
-    ///         generation, falling back to the internal per-communicator
-    ///         counter maintained in the and_gate.
+    ///         all_reduce, \a all_to_all, \a inclusive_scan, \a exclusive_scan
+    ///         and the hierarchical \a barrier) derive their phase generations
+    ///         from that explicit number, they require it and reject an auto
+    ///         (default) generation. The non-hierarchical (flat) collectives
+    ///         keep supporting the default generation, falling back to the
+    ///         internal per-communicator counter maintained in the and_gate.
+    ///
+    /// \note   Hierarchical collective overloads that return hpx::future may
+    ///         still perform internal waits while walking the communicator tree.
+    ///         They should not be treated as fully non-blocking: argument
+    ///         validation and phase hand-offs can throw or block before the
+    ///         returned future is delivered.
     ///
     /// \returns    This function returns a new communicator object usable
     ///             with the collective operation.
@@ -372,6 +378,29 @@ namespace hpx::collectives {
         [[nodiscard]] std::size_t size() const
         {
             return communicators.size();
+        }
+
+        [[nodiscard]] bool empty() const noexcept
+        {
+            return communicators.empty();
+        }
+
+        [[nodiscard]] bool valid() const noexcept
+        {
+            if (communicators.empty())
+            {
+                return false;
+            }
+
+            for (auto const& comm : communicators)
+            {
+                if (!hpx::get<0>(comm).valid())
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         communicator const& back() const

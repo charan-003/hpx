@@ -303,6 +303,14 @@ namespace hpx::collectives::detail {
             generation_mode num_generations = generation_mode::single_step,
             std::size_t num_values = static_cast<std::size_t>(-1))
         {
+            if (which >= num_sites_)
+            {
+                HPX_THROW_EXCEPTION(hpx::error::bad_parameter,
+                    "communicator::handle_data",
+                    "site index must be smaller than the number of "
+                    "participating sites");
+            }
+
             auto on_ready = [this, operation, which, generation, num_values,
                                 finalizer = HPX_FORWARD(Finalizer, finalizer)](
                                 shared_future<void>&& f) mutable {
