@@ -142,9 +142,9 @@ namespace hpx::threads::detail {
                 bool const recurse_asynchronously =
                     !this_thread::has_sufficient_stack_space();
 #else
-                execute_thread_recursion_count const cnt;
                 bool const recurse_asynchronously =
-                    cnt.count_ > HPX_CONTINUATION_MAX_RECURSION_DEPTH;
+                    (threads::get_continuation_recursion_count() + 1) >
+                    HPX_CONTINUATION_MAX_RECURSION_DEPTH;
 #endif
                 if (!recurse_asynchronously)
                 {

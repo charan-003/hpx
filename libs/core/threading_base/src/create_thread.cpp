@@ -86,26 +86,22 @@ namespace hpx::threads::detail {
         if (data.priority == thread_priority::default_)
             data.priority = thread_priority::normal;
 
-        // create the new thread
-        scheduler->create_thread(data, &id, ec);
-
-        if (!ec)
-        {
 #ifdef HPX_HAVE_THREAD_PARENT_REFERENCE
-            void const* parent_task_id =
-                data.parent_id ? data.parent_id.get() : nullptr;
+        void const* parent_task_id =
+            data.parent_id ? data.parent_id.get() : nullptr;
 #else
-            void const* parent_task_id = nullptr;
+        void const* parent_task_id = nullptr;
 #endif
 #ifdef HPX_HAVE_THREAD_DESCRIPTION
-            hpx::tracing::task_staged(
-                threads::thread_data::get_safe_description(
-                    data.description, "thread"),
-                parent_task_id);
+        hpx::tracing::task_staged(threads::thread_data::get_safe_description(
+                                      data.description, "thread"),
+            parent_task_id);
 #else
-            hpx::tracing::task_staged("thread", parent_task_id);
+        hpx::tracing::task_staged("thread", parent_task_id);
 #endif
-        }
+
+        // create the new thread
+        scheduler->create_thread(data, &id, ec);
 
         LTM_(info)
             .format("create_thread: pool({}), scheduler({}), thread({}), "
