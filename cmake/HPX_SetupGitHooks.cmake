@@ -16,7 +16,10 @@ function(_hpx_get_hookspath _out_var)
     OUTPUT_VARIABLE _current
     OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET
   )
-  set(${_out_var} "${_current}" PARENT_SCOPE)
+  set(${_out_var}
+      "${_current}"
+      PARENT_SCOPE
+  )
 endfunction()
 
 function(hpx_setup_git_hooks)
