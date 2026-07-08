@@ -1,3 +1,5 @@
+#pragma once
+
 //  Copyright (c) 2025 Shivansh Singh
 //
 //  SPDX-License-Identifier: BSL-1.0
@@ -17,14 +19,11 @@
 ///   distributed_continues_on(ex::just(42), distributed_scheduler(target))
 ///     | ex::then([](int x) { return x * 2; })
 
-#pragma once
-
 #include <hpx/config.hpp>
 
 #if defined(HPX_HAVE_NETWORKING)
 
 #include <hpx/async_distributed/detail/transfer_action.hpp>
-#include <hpx/async_distributed/distributed_scheduler.hpp>
 #include <hpx/datastructures/tuple.hpp>
 #include <hpx/functional/invoke_fused.hpp>
 #include <hpx/modules/errors.hpp>
@@ -220,6 +219,9 @@ namespace hpx::distributed::experimental {
         }
     };
 
+    namespace detail {
+        struct distributed_domain;
+    }
 }    // namespace hpx::distributed::experimental
 
 namespace hpx::distributed::experimental::detail {

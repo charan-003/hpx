@@ -1,3 +1,5 @@
+#pragma once
+
 //  Copyright (c) 2025 Shivansh Singh
 //
 //  SPDX-License-Identifier: BSL-1.0
@@ -21,14 +23,10 @@
 ///       | tt::sync_wait();
 /// \endcode
 
-#pragma once
-
 #include <hpx/config.hpp>
 
 #if defined(HPX_HAVE_NETWORKING)
 
-#include <hpx/async_distributed/detail/async_implementations.hpp>
-#include <hpx/async_distributed/detail/transfer_action.hpp>
 #include <hpx/async_distributed/distributed_then_sender.hpp>
 #include <hpx/execution/algorithms/detail/sync_wait_domain.hpp>
 #include <hpx/modules/errors.hpp>

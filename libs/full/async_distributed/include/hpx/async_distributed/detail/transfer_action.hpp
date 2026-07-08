@@ -1,3 +1,5 @@
+#pragma once
+
 //  Copyright (c) 2025 Shivansh Singh
 //
 //  SPDX-License-Identifier: BSL-1.0
@@ -11,8 +13,6 @@
 /// parcelport to execute work on a remote locality.  Phase 1 transmits
 /// only a void signal (no value payload); serialized value forwarding
 /// will be added in a later phase.
-
-#pragma once
 
 #include <hpx/config.hpp>
 
@@ -34,16 +34,17 @@ namespace hpx::distributed::detail {
         return HPX_INVOKE(f, HPX_MOVE(vals)...);
     }
 
-/// Generic struct representing an HPX action that invokes a user-defined callable
-/// across the network. The callable F and arguments Ts... must be serializable.
-template <typename F, typename... Ts>
-struct distributed_invoke_callable_action
-  : hpx::actions::make_action_t<
-        decltype(&hpx::distributed::detail::distributed_invoke_callable<F, Ts...>),
-        &hpx::distributed::detail::distributed_invoke_callable<F, Ts...>,
-        distributed_invoke_callable_action<F, Ts...>>
-{
-};
+    /// Generic struct representing an HPX action that invokes a user-defined callable
+    /// across the network. The callable F and arguments Ts... must be serializable.
+    template <typename F, typename... Ts>
+    struct distributed_invoke_callable_action
+      : hpx::actions::make_action_t<
+            decltype(&hpx::distributed::detail::distributed_invoke_callable<F,
+                Ts...>),
+            &hpx::distributed::detail::distributed_invoke_callable<F, Ts...>,
+            distributed_invoke_callable_action<F, Ts...>>
+    {
+    };
 
 }    // namespace hpx::distributed::detail
 

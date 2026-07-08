@@ -59,7 +59,9 @@ set(async_headers
     hpx/async_distributed/trigger_lco.hpp
     hpx/async_distributed/trigger_lco_fwd.hpp
     hpx/async_distributed/detail/transfer_action.hpp
+    hpx/async_distributed/distributed_continues_on_sender.hpp
     hpx/async_distributed/distributed_scheduler.hpp
+    hpx/async_distributed/distributed_then_sender.hpp
 )
 
 set(async_macro_headers hpx/async_distributed/macros.hpp)
