@@ -37,6 +37,29 @@
 
 namespace hpx::distributed::experimental {
 
+    namespace detail {
+        struct continues_on_callable
+        {
+            auto operator()() const
+            {
+                return;
+            }
+
+            template <typename U, typename... Us>
+            auto operator()(U&& val, Us&&... vals) const
+            {
+                if constexpr (sizeof...(Us) == 0)
+                {
+                    return HPX_FORWARD(U, val);
+                }
+                else
+                {
+                    return hpx::make_tuple(HPX_FORWARD(U, val), HPX_FORWARD(Us, vals)...);
+                }
+            }
+        };
+    }    // namespace detail
+
     // Forward declarations
     template <typename Sender>
     struct distributed_continues_on_sender;
@@ -60,25 +83,43 @@ namespace hpx::distributed::experimental {
         {
             hpx::detail::try_catch_exception_ptr(
                 [&]() {
-                    auto t = hpx::make_tuple(HPX_MOVE(vals)...);
-
-                    auto fut = hpx::distributed::detail::
-                        dispatch_distributed_execute_value<Ts...>(target_, t);
+                    auto fut =
+                        hpx::async(hpx::distributed::detail::
+                                       distributed_invoke_callable_action<
+                                           detail::continues_on_callable,
+                                           std::decay_t<Ts>...>{},
+                            target_, detail::continues_on_callable{},
+                            HPX_MOVE(vals)...);
 
                     // Dispatch continuation directly without storing the future
                     fut.then([downstream = HPX_MOVE(downstream_)](
-                                 hpx::future<hpx::tuple<Ts...>>&& f) mutable {
+                                 auto&& f) mutable {
                         hpx::detail::try_catch_exception_ptr(
                             [&]() {
-                                auto returned_tuple = f.get();
-                                hpx::invoke_fused(
-                                    [&](auto&&... args) {
-                                        hpx::execution::experimental::set_value(
-                                            HPX_MOVE(downstream),
-                                            HPX_FORWARD(
-                                                decltype(args), args)...);
-                                    },
-                                    HPX_MOVE(returned_tuple));
+                                using result_type = std::invoke_result_t<
+                                    detail::continues_on_callable, Ts...>;
+                                if constexpr (std::is_void_v<result_type>)
+                                {
+                                    f.get();
+                                    hpx::execution::experimental::set_value(
+                                        HPX_MOVE(downstream));
+                                }
+                                else if constexpr (sizeof...(Ts) == 1)
+                                {
+                                    hpx::execution::experimental::set_value(
+                                        HPX_MOVE(downstream), f.get());
+                                }
+                                else
+                                {
+                                    hpx::invoke_fused(
+                                        [&](auto&&... args) {
+                                            hpx::execution::experimental::
+                                                set_value(HPX_MOVE(downstream),
+                                                    HPX_FORWARD(decltype(args),
+                                                        args)...);
+                                        },
+                                        f.get());
+                                }
                             },
                             [&](std::exception_ptr ep) {
                                 hpx::execution::experimental::set_error(
@@ -219,21 +260,6 @@ namespace hpx::distributed::experimental {
         }
     };
 
-    namespace detail {
-        struct distributed_domain;
-    }
 }    // namespace hpx::distributed::experimental
-
-namespace hpx::distributed::experimental::detail {
-    // Implement transform_sender for continues_on_t
-    template <typename Sender, typename Scheduler>
-    constexpr auto tag_invoke(hpx::execution::experimental::transform_sender_t,
-        distributed_domain, hpx::execution::experimental::continues_on_t,
-        Sender&& sndr, Scheduler const& sched) noexcept
-    {
-        return distributed_continues_on_sender<std::decay_t<Sender>>{
-            HPX_FORWARD(Sender, sndr), sched.target()};
-    }
-}    // namespace hpx::distributed::experimental::detail
 
 #endif    // HPX_HAVE_NETWORKING

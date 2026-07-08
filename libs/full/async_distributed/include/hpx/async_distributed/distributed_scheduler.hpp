@@ -27,6 +27,7 @@
 
 #if defined(HPX_HAVE_NETWORKING)
 
+#include <hpx/async_distributed/distributed_continues_on_sender.hpp>
 #include <hpx/async_distributed/distributed_then_sender.hpp>
 #include <hpx/execution/algorithms/detail/sync_wait_domain.hpp>
 #include <hpx/modules/errors.hpp>
@@ -72,6 +73,16 @@ namespace hpx::distributed::experimental {
             auto transform_sender(Sender&& sndr, Env&&) const
             {
                 return HPX_FORWARD(Sender, sndr);
+            }
+
+            // Intercept stdexec::continues_on_t and transform it to our distributed_continues_on_sender
+            template <typename Sender, typename Scheduler>
+            friend constexpr auto tag_invoke(hpx::execution::experimental::transform_sender_t,
+                distributed_domain, hpx::execution::experimental::continues_on_t,
+                Sender&& sndr, Scheduler const& sched) noexcept
+            {
+                return distributed_continues_on_sender<std::decay_t<Sender>>{
+                    HPX_FORWARD(Sender, sndr), sched.target()};
             }
 
             // Intercept stdexec::then_t and transform it to our distributed_then_sender
