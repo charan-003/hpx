@@ -7,7 +7,7 @@
 /// \file distributed_transfer_sender.hpp
 /// \brief P2300 sender adaptor for cross-locality value transfer.
 ///
-/// Implements the `distributed_transfer_sender<Sender>` adaptor which
+/// Implements the `distributed_continues_on_sender<Sender>` adaptor which
 /// connects to an upstream sender, intercepts its set_value(args...),
 /// serializes the values into an hpx::tuple, dispatches them to a remote
 /// locality via the parcelport, and unpacks the result into a downstream
@@ -40,7 +40,7 @@ namespace hpx::distributed::experimental {
 
     // Forward declarations
     template <typename Sender>
-    struct distributed_transfer_sender;
+    struct distributed_continues_on_sender;
 
     ///////////////////////////////////////////////////////////////////////////
     /// The transfer_receiver sits between the upstream sender and the
@@ -49,14 +49,13 @@ namespace hpx::distributed::experimental {
     /// It stores the .then() continuation future in a slot provided by
     /// the operation_state to prevent use-after-free at shutdown.
     template <typename Receiver, typename... Ts>
-    struct distributed_transfer_receiver
+    struct distributed_continues_on_receiver
     {
         using receiver_type = std::decay_t<Receiver>;
         using receiver_concept = hpx::execution::experimental::receiver_t;
 
-        receiver_type downstream_;
+        HPX_NO_UNIQUE_ADDRESS receiver_type downstream_;
         hpx::id_type target_;
-        hpx::future<void>* continuation_slot_;
 
         void set_value(Ts... vals) && noexcept
         {
@@ -67,28 +66,26 @@ namespace hpx::distributed::experimental {
                     auto fut = hpx::distributed::detail::
                         dispatch_distributed_execute_value<Ts...>(target_, t);
 
-                    // Store the .then() future in the operation_state's slot
-                    // so it outlives this receiver and prevents use-after-free.
-                    *continuation_slot_ = fut.then(
-                        [downstream = HPX_MOVE(downstream_)](
-                            hpx::future<hpx::tuple<Ts...>>&& f) mutable {
-                            hpx::detail::try_catch_exception_ptr(
-                                [&]() {
-                                    auto returned_tuple = f.get();
-                                    hpx::invoke_fused(
-                                        [&](auto&&... args) {
-                                            hpx::execution::experimental::
-                                                set_value(HPX_MOVE(downstream),
-                                                    HPX_FORWARD(decltype(args),
-                                                        args)...);
-                                        },
-                                        HPX_MOVE(returned_tuple));
-                                },
-                                [&](std::exception_ptr ep) {
-                                    hpx::execution::experimental::set_error(
-                                        HPX_MOVE(downstream), HPX_MOVE(ep));
-                                });
-                        });
+                    // Dispatch continuation directly without storing the future
+                    fut.then([downstream = HPX_MOVE(downstream_)](
+                                 hpx::future<hpx::tuple<Ts...>>&& f) mutable {
+                        hpx::detail::try_catch_exception_ptr(
+                            [&]() {
+                                auto returned_tuple = f.get();
+                                hpx::invoke_fused(
+                                    [&](auto&&... args) {
+                                        hpx::execution::experimental::set_value(
+                                            HPX_MOVE(downstream),
+                                            HPX_FORWARD(
+                                                decltype(args), args)...);
+                                    },
+                                    HPX_MOVE(returned_tuple));
+                            },
+                            [&](std::exception_ptr ep) {
+                                hpx::execution::experimental::set_error(
+                                    HPX_MOVE(downstream), HPX_MOVE(ep));
+                            });
+                    });
                 },
                 [&](std::exception_ptr ep) {
                     hpx::execution::experimental::set_error(
@@ -119,36 +116,35 @@ namespace hpx::distributed::experimental {
     /// intercepts set_value and bounces it through the network.
     /// Holds the continuation future to keep it alive until completion.
     template <typename Sender, typename Receiver, typename... Ts>
-    struct distributed_transfer_operation_state
+    struct distributed_continues_on_operation_state
     {
         using upstream_receiver_t =
-            distributed_transfer_receiver<Receiver, Ts...>;
+            distributed_continues_on_receiver<Receiver, Ts...>;
         using upstream_op_t = decltype(hpx::execution::experimental::connect(
             std::declval<Sender>(), std::declval<upstream_receiver_t>()));
 
-        hpx::future<void> continuation_future_;
         upstream_op_t upstream_op_;
 
         template <typename Sender_, typename Receiver_>
-        distributed_transfer_operation_state(
+        distributed_continues_on_operation_state(
             Sender_&& sndr, Receiver_&& rcvr, hpx::id_type target)
           : upstream_op_(hpx::execution::experimental::connect(
                 HPX_FORWARD(Sender_, sndr),
-                upstream_receiver_t{HPX_FORWARD(Receiver_, rcvr),
-                    HPX_MOVE(target), &continuation_future_}))
+                upstream_receiver_t{
+                    HPX_FORWARD(Receiver_, rcvr), HPX_MOVE(target)}))
         {
         }
 
-        distributed_transfer_operation_state(
-            distributed_transfer_operation_state const&) = delete;
-        distributed_transfer_operation_state& operator=(
-            distributed_transfer_operation_state const&) = delete;
-        distributed_transfer_operation_state(
-            distributed_transfer_operation_state&&) = delete;
-        distributed_transfer_operation_state& operator=(
-            distributed_transfer_operation_state&&) = delete;
+        distributed_continues_on_operation_state(
+            distributed_continues_on_operation_state const&) = delete;
+        distributed_continues_on_operation_state& operator=(
+            distributed_continues_on_operation_state const&) = delete;
+        distributed_continues_on_operation_state(
+            distributed_continues_on_operation_state&&) = delete;
+        distributed_continues_on_operation_state& operator=(
+            distributed_continues_on_operation_state&&) = delete;
 
-        ~distributed_transfer_operation_state() = default;
+        ~distributed_continues_on_operation_state() = default;
 
         void start() & noexcept
         {
@@ -169,7 +165,7 @@ namespace hpx::distributed::experimental {
     /// registered for int).  This restriction will be lifted when we
     /// register additional type inst instantiations.
     template <typename Sender>
-    struct distributed_transfer_sender
+    struct distributed_continues_on_sender
     {
         using sender_concept = hpx::execution::experimental::sender_t;
 
@@ -181,40 +177,41 @@ namespace hpx::distributed::experimental {
                 hpx::execution::experimental::set_error_t(std::exception_ptr),
                 hpx::execution::experimental::set_stopped_t()>;
 
-        Sender upstream_;
+        HPX_NO_UNIQUE_ADDRESS Sender upstream_;
         hpx::id_type target_;
 
         template <typename Sender_>
-        explicit distributed_transfer_sender(
+        explicit distributed_continues_on_sender(
             Sender_&& sndr, hpx::id_type target)
           : upstream_(HPX_FORWARD(Sender_, sndr))
           , target_(HPX_MOVE(target))
         {
         }
 
-        distributed_transfer_sender(distributed_transfer_sender&&) = default;
-        distributed_transfer_sender& operator=(
-            distributed_transfer_sender&&) = default;
-        distributed_transfer_sender(
-            distributed_transfer_sender const&) = default;
-        distributed_transfer_sender& operator=(
-            distributed_transfer_sender const&) = default;
+        distributed_continues_on_sender(
+            distributed_continues_on_sender&&) = default;
+        distributed_continues_on_sender& operator=(
+            distributed_continues_on_sender&&) = default;
+        distributed_continues_on_sender(
+            distributed_continues_on_sender const&) = default;
+        distributed_continues_on_sender& operator=(
+            distributed_continues_on_sender const&) = default;
 
-        ~distributed_transfer_sender() = default;
+        ~distributed_continues_on_sender() = default;
 
         template <typename Receiver>
         auto connect(Receiver&& receiver) &&
         {
-            return distributed_transfer_operation_state<Sender, Receiver, int>{
-                HPX_MOVE(upstream_), HPX_FORWARD(Receiver, receiver),
+            return distributed_continues_on_operation_state<Sender, Receiver,
+                int>{HPX_MOVE(upstream_), HPX_FORWARD(Receiver, receiver),
                 HPX_MOVE(target_)};
         }
 
         template <typename Receiver>
         auto connect(Receiver&& receiver) const&
         {
-            return distributed_transfer_operation_state<Sender, Receiver, int>{
-                upstream_, HPX_FORWARD(Receiver, receiver), target_};
+            return distributed_continues_on_operation_state<Sender, Receiver,
+                int>{upstream_, HPX_FORWARD(Receiver, receiver), target_};
         }
 
         auto get_env() const noexcept
@@ -232,7 +229,7 @@ namespace hpx::distributed::experimental::detail {
         distributed_domain, hpx::execution::experimental::continues_on_t,
         Sender&& sndr, Scheduler const& sched) noexcept
     {
-        return distributed_transfer_sender<std::decay_t<Sender>>{
+        return distributed_continues_on_sender<std::decay_t<Sender>>{
             HPX_FORWARD(Sender, sndr), sched.target()};
     }
 }    // namespace hpx::distributed::experimental::detail

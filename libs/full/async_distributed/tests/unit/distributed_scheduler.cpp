@@ -31,8 +31,6 @@ namespace tt = hpx::this_thread::experimental;
 
 // We explicitly instantiate and register actions for testing
 
-
-
 // Callables for then_t interception tests
 struct my_then_callable_1
 {
@@ -47,6 +45,14 @@ struct my_then_callable_2
     hpx::tuple<int, hpx::id_type> operator()(int val) const
     {
         return hpx::make_tuple(val + 3, hpx::find_here());
+    }
+};
+
+struct my_schedule_then_callable
+{
+    hpx::tuple<hpx::id_type> operator()() const
+    {
+        return hpx::make_tuple(hpx::find_here());
     }
 };
 
@@ -118,6 +124,20 @@ int hpx_main()
         HPX_TEST(result.has_value());
         HPX_TEST_EQ(std::get<0>(std::get<0>(*result)), 10);
         HPX_TEST_EQ(std::get<1>(std::get<0>(*result)), target);
+    }
+
+    // Test 7: ex::schedule(sched) | ex::then(...) executes on remote locality
+    {
+        auto locs = hpx::find_remote_localities();
+        auto target = locs.empty() ? hpx::find_here() : locs[0];
+        auto sched =
+            hpx::distributed::experimental::distributed_scheduler{target};
+
+        auto result = tt::sync_wait(
+            ex::schedule(sched) | ex::then(my_schedule_then_callable{}));
+
+        HPX_TEST(result.has_value());
+        HPX_TEST_EQ(std::get<0>(std::get<0>(*result)), target);
     }
 
     return hpx::finalize();

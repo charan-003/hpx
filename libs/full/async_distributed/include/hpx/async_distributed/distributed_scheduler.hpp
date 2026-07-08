@@ -29,12 +29,12 @@
 
 #include <hpx/async_distributed/detail/async_implementations.hpp>
 #include <hpx/async_distributed/detail/transfer_action.hpp>
+#include <hpx/async_distributed/distributed_then_sender.hpp>
 #include <hpx/execution/algorithms/detail/sync_wait_domain.hpp>
 #include <hpx/modules/errors.hpp>
 #include <hpx/modules/execution_base.hpp>
 #include <hpx/modules/futures.hpp>
 #include <hpx/modules/naming_base.hpp>
-#include <hpx/async_distributed/distributed_then_sender.hpp>
 
 #include <exception>
 #include <type_traits>
@@ -81,21 +81,21 @@ namespace hpx::distributed::experimental {
             friend auto tag_invoke(hpx::execution::experimental::then_t,
                 distributed_domain, Sender&& sndr, F&& f)
             {
-                auto sched = hpx::execution::experimental::get_completion_scheduler<
-                    hpx::execution::experimental::set_value_t>(
-                    hpx::execution::experimental::get_env(sndr));
-                
+                auto sched =
+                    hpx::execution::experimental::get_completion_scheduler<
+                        hpx::execution::experimental::set_value_t>(
+                        hpx::execution::experimental::get_env(sndr));
+
                 return detail::distributed_then_sender<std::decay_t<Sender>,
-                    std::decay_t<F>>{
-                    HPX_FORWARD(Sender, sndr), HPX_FORWARD(F, f), sched.target()};
+                    std::decay_t<F>>{HPX_FORWARD(Sender, sndr),
+                    HPX_FORWARD(F, f), sched.target()};
             }
         };
     }    // namespace detail
 
     namespace detail {
         ///////////////////////////////////////////////////////////////////////////
-        // Operation state: bridges the hpx::future<void> returned by the remote
-        // action into the P2300 receiver protocol.
+        // Operation state: bridges the schedule action into the P2300 receiver protocol.
         //
         // Lifetime contract (P2300 section 6.9.7):
         //   The operation_state is pinned in memory by the caller and must

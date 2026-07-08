@@ -25,7 +25,7 @@ namespace hpx::distributed::experimental::detail {
         using receiver_type = std::decay_t<Receiver>;
         using receiver_concept = hpx::execution::experimental::receiver_t;
 
-        receiver_type downstream_;
+        HPX_NO_UNIQUE_ADDRESS receiver_type downstream_;
         F f_;
         hpx::id_type target_;
 
@@ -36,24 +36,28 @@ namespace hpx::distributed::experimental::detail {
                 [&]() {
                     // Dispatch the remote invocation action
                     auto fut = hpx::async(
-                        hpx::distributed::detail::distributed_invoke_callable_action<F, Ts...>{},
+                        hpx::distributed::detail::
+                            distributed_invoke_callable_action<F, Ts...>{},
                         target_, HPX_MOVE(f_), HPX_MOVE(vals)...);
 
                     // Chain continuation to forward the remote result
-                    fut.then([downstream = HPX_MOVE(downstream_)](auto&& f) mutable {
+                    fut.then([downstream = HPX_MOVE(downstream_)](
+                                 auto&& f) mutable {
                         hpx::detail::try_catch_exception_ptr(
                             [&]() {
-                                using result_type = std::invoke_result_t<F, Ts...>;
+                                using result_type =
+                                    std::invoke_result_t<F, Ts...>;
                                 if constexpr (std::is_void_v<result_type>)
                                 {
-                                    f.get();
+                                    f.get();    // wait for completion
                                     hpx::execution::experimental::set_value(
                                         HPX_MOVE(downstream));
                                 }
                                 else
                                 {
+                                    auto result = f.get();
                                     hpx::execution::experimental::set_value(
-                                        HPX_MOVE(downstream), f.get());
+                                        HPX_MOVE(downstream), HPX_MOVE(result));
                                 }
                             },
                             [&](std::exception_ptr ep) {
@@ -91,45 +95,49 @@ namespace hpx::distributed::experimental::detail {
         using sender_concept = hpx::execution::experimental::sender_t;
         using upstream_env_t = hpx::execution::experimental::env_of_t<Sender>;
 
-        Sender sender_;
+        HPX_NO_UNIQUE_ADDRESS Sender sender_;
         F f_;
         hpx::id_type target_;
 
         template <typename Env>
         struct generate_completion_signatures
         {
-            using type = hpx::execution::experimental::completion_signatures_of_t<
-                decltype(hpx::execution::experimental::then(
-                    std::declval<Sender>(), std::declval<F>())),
-                Env>;
+            using type =
+                hpx::execution::experimental::completion_signatures_of_t<
+                    decltype(hpx::execution::experimental::then(
+                        std::declval<Sender>(), std::declval<F>())),
+                    Env>;
         };
 
         template <typename Env>
         friend auto tag_invoke(
             hpx::execution::experimental::get_completion_signatures_t,
-            distributed_then_sender const&, Env&&) noexcept
-            -> typename generate_completion_signatures<Env>::type;
+            distributed_then_sender const&, Env&&) noexcept ->
+            typename generate_completion_signatures<Env>::type;
 
         template <typename Receiver>
         struct operation_state
         {
-            using upstream_op_t = decltype(hpx::execution::experimental::connect(
-                std::declval<Sender>(),
-                std::declval<distributed_then_receiver<Receiver, F>>()));
+            using upstream_op_t =
+                decltype(hpx::execution::experimental::connect(
+                    std::declval<Sender>(),
+                    std::declval<distributed_then_receiver<Receiver, F>>()));
 
             upstream_op_t upstream_op_;
 
             template <typename Sender_, typename Receiver_>
-            operation_state(Sender_&& sndr, Receiver_&& rcvr, F f, hpx::id_type target)
+            operation_state(
+                Sender_&& sndr, Receiver_&& rcvr, F f, hpx::id_type target)
               : upstream_op_(hpx::execution::experimental::connect(
                     HPX_FORWARD(Sender_, sndr),
                     distributed_then_receiver<Receiver, F>{
-                        HPX_FORWARD(Receiver_, rcvr), HPX_MOVE(f), HPX_MOVE(target)}))
+                        HPX_FORWARD(Receiver_, rcvr), HPX_MOVE(f),
+                        HPX_MOVE(target)}))
             {
             }
 
-            friend void tag_invoke(
-                hpx::execution::experimental::start_t, operation_state& os) noexcept
+            friend void tag_invoke(hpx::execution::experimental::start_t,
+                operation_state& os) noexcept
             {
                 hpx::execution::experimental::start(os.upstream_op_);
             }
@@ -141,7 +149,8 @@ namespace hpx::distributed::experimental::detail {
             distributed_then_sender&& s, Receiver&& receiver)
         {
             return operation_state<Receiver>{HPX_MOVE(s.sender_),
-                HPX_FORWARD(Receiver, receiver), HPX_MOVE(s.f_), HPX_MOVE(s.target_)};
+                HPX_FORWARD(Receiver, receiver), HPX_MOVE(s.f_),
+                HPX_MOVE(s.target_)};
         }
 
         template <typename Receiver>
