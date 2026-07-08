@@ -68,25 +68,44 @@ namespace hpx::execution::experimental {
                             hpx::execution::experimental::set_value(
                                 HPX_MOVE(receiver_));
                         }
-                        else if constexpr (hpx::traits::has_post_member_v<
-                                               std::decay_t<Executor>>)
+                        else if constexpr (requires(
+                                               std::decay_t<Executor>& exec) {
+                                               exec.post([]() {});
+                                           })
                         {
-                            // For executors that support post(), call the
-                            // member function directly. Using the post_t CPO
-                            // here would additionally require the executor to
-                            // satisfy the (Non)BlockingOneWayExecutor
-                            // concept, which not all executors with a post()
-                            // member (e.g. fork_join_executor) do.
-                            exec_.post(
-                                [receiver = HPX_MOVE(receiver_)]() mutable {
+                            // Public post() member
+                            exec_.post([this]() mutable {
+                                hpx::execution::experimental::set_value(
+                                    HPX_MOVE(receiver_));
+                            });
+                        }
+                        else if constexpr (requires(
+                                               std::decay_t<Executor>& exec) {
+                                               exec.async_invoke([]() {});
+                                           })
+                        {
+                            // fork_join_executor: post() is private but
+                            // async_invoke schedules on worker threads.
+                            (void) exec_.async_invoke([this]() mutable {
+                                hpx::execution::experimental::set_value(
+                                    HPX_MOVE(receiver_));
+                            });
+                        }
+                        else if constexpr (requires(
+                                               std::decay_t<Executor>& exec) {
+                                               hpx::parallel::execution::post(
+                                                   exec, []() {});
+                                           })
+                        {
+                            hpx::parallel::execution::post(
+                                exec_, [this]() mutable {
                                     hpx::execution::experimental::set_value(
-                                        HPX_MOVE(receiver));
+                                        HPX_MOVE(receiver_));
                                 });
                         }
                         else
                         {
-                            // For bulk-only executors that don't have a
-                            // post() member, invoke inline
+                            // Bulk-only executors without scheduling support
                             hpx::execution::experimental::set_value(
                                 HPX_MOVE(receiver_));
                         }
