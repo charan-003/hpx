@@ -1575,8 +1575,8 @@ void test_keep_future_sender()
             std::remove_cvref_t<decltype(ex::get_env(sender))>>);
         static_assert(
             std::is_same_v<decltype(ex::get_completion_domain<ex::set_value_t>(
-                ex::get_env(sender)))>,
-            sync_wait_domain);
+                               ex::get_env(sender))),
+                sync_wait_domain>);
     }
 
     // the future should be passed to then, not its contained value
