@@ -215,7 +215,7 @@ namespace hpx::parallel::execution::detail {
     // data needed for the scheduling
     template <bool Sync, typename Result, typename Launch, typename F,
         typename Shape, typename... Ts>
-    struct HPX_ALWAYS_EXPORT index_queue_bulk_state_result final
+    struct index_queue_bulk_state_result final
       : lcos::detail::future_data_base<std::vector<Result>>
     {
     private:
