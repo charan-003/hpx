@@ -60,7 +60,7 @@ struct non_copyable_sender
     template <typename Self, typename... Env>
     static consteval auto get_completion_signatures(Self&&, Env&&...) noexcept
         -> ex::completion_signatures<ex::set_value_t(Ts...),
-                          ex::set_error_t(std::exception_ptr)>
+            ex::set_error_t(std::exception_ptr)>
     {
         return {};
     }
@@ -116,7 +116,7 @@ struct example_sender
     template <typename Self, typename... Env>
     static consteval auto get_completion_signatures(Self&&, Env&&...) noexcept
         -> ex::completion_signatures<ex::set_value_t(Ts...),
-                          ex::set_error_t(std::exception_ptr)>
+            ex::set_error_t(std::exception_ptr)>
     {
         return {};
     }
