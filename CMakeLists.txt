@@ -116,13 +116,15 @@ hpx_force_out_of_tree_build(
 
 hpx_option(
   HPX_WITH_GIT_HOOKS BOOL
-  "Enable git commit hooks for formatting checks on commit (default: ON)."
-  ON ADVANCED
+  "Enable git commit hooks for formatting checks on commit (default: ON)." ON
+  ADVANCED
 )
 
+include(HPX_SetupGitHooks)
 if(HPX_WITH_GIT_HOOKS)
-  include(HPX_SetupGitHooks)
   hpx_setup_git_hooks()
+else()
+  hpx_unset_git_hooks()
 endif()
 
 if(NOT HPX_CMAKE_LOGLEVEL)
