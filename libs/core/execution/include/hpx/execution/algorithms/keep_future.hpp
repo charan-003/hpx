@@ -102,13 +102,14 @@ namespace hpx::execution::experimental {
                 using receiver_concept =
                     hpx::execution::experimental::receiver_t;
 
-                HPX_NO_UNIQUE_ADDRESS std::decay_t<Receiver> receiver;
-                std::decay_t<Future> future;
+                keep_future_continues_on_operation_state* op_state;
 
-                [[nodiscard]] constexpr decltype(auto) get_env() const noexcept(
-                    noexcept(hpx::execution::experimental::get_env(receiver)))
+                [[nodiscard]] constexpr decltype(auto) get_env() const
+                    noexcept(noexcept(hpx::execution::experimental::get_env(
+                        op_state->receiver)))
                 {
-                    return hpx::execution::experimental::get_env(receiver);
+                    return hpx::execution::experimental::get_env(
+                        op_state->receiver);
                 }
 
                 void set_value() && noexcept
@@ -116,24 +117,25 @@ namespace hpx::execution::experimental {
                     hpx::detail::try_catch_exception_ptr(
                         [&]() {
                             hpx::execution::experimental::set_value(
-                                HPX_MOVE(receiver), HPX_MOVE(future));
+                                HPX_MOVE(op_state->receiver),
+                                HPX_MOVE(op_state->future));
                         },
                         [&](std::exception_ptr ep) {
                             hpx::execution::experimental::set_error(
-                                HPX_MOVE(receiver), HPX_MOVE(ep));
+                                HPX_MOVE(op_state->receiver), HPX_MOVE(ep));
                         });
                 }
 
                 void set_error(std::exception_ptr ep) && noexcept
                 {
                     hpx::execution::experimental::set_error(
-                        HPX_MOVE(receiver), HPX_MOVE(ep));
+                        HPX_MOVE(op_state->receiver), HPX_MOVE(ep));
                 }
 
                 void set_stopped() && noexcept
                 {
                     hpx::execution::experimental::set_stopped(
-                        HPX_MOVE(receiver));
+                        HPX_MOVE(op_state->receiver));
                 }
             };
 
@@ -149,12 +151,20 @@ namespace hpx::execution::experimental {
 
             void schedule_completion() && noexcept
             {
-                auto schedule_sender =
-                    hpx::execution::experimental::schedule(scheduler);
-                schedule_op_state.emplace(hpx::execution::experimental::connect(
-                    HPX_MOVE(schedule_sender),
-                    scheduler_receiver{HPX_MOVE(receiver), HPX_MOVE(future)}));
-                start_sender_operation_state(*schedule_op_state);
+                hpx::detail::try_catch_exception_ptr(
+                    [&]() {
+                        auto schedule_sender =
+                            hpx::execution::experimental::schedule(scheduler);
+                        schedule_op_state.emplace(
+                            hpx::execution::experimental::connect(
+                                HPX_MOVE(schedule_sender),
+                                scheduler_receiver{this}));
+                        start_sender_operation_state(*schedule_op_state);
+                    },
+                    [&](std::exception_ptr ep) {
+                        hpx::execution::experimental::set_error(
+                            HPX_MOVE(receiver), HPX_MOVE(ep));
+                    });
             }
 
             void start() & noexcept
