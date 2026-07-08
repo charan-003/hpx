@@ -289,7 +289,7 @@ struct callback_receiver
     template <typename... Ts>
     void set_value(Ts&&... ts) && noexcept
     {
-        HPX_INVOKE(f, std::forward<Ts>(ts)...);
+        std::invoke(f, std::forward<Ts>(ts)...);
         set_value_called = true;
     }
 };
@@ -310,7 +310,7 @@ struct error_callback_receiver
     template <typename E>
     void set_error(E&& e) && noexcept
     {
-        HPX_INVOKE(f, std::forward<E>(e));
+        std::invoke(f, std::forward<E>(e));
         set_error_called = true;
     }
 
@@ -364,7 +364,7 @@ struct void_callback_helper
     template <typename T>
     void operator()(T&& t)
     {
-        HPX_INVOKE(std::move(f), std::forward<T>(t));
+        std::invoke(std::move(f), std::forward<T>(t));
     }
 };
 
