@@ -148,25 +148,17 @@ namespace hpx::threads::detail {
 #endif
                 if (!recurse_asynchronously)
                 {
-                    hpx::tracing::task_executing(thrdptr,
-                        threads::thread_data::get_safe_description(
-                            thrdptr->get_description(), "thread"),
-                        hpx::get_worker_thread_num());
+                    hpx::tracing::task_executing(thrdptr);
                 }
 
                 thrd_stat = handle_execute_thread(thrd.noref());
 
-                profiler.handle_post_execution(
-                    thrdptr, thrd_stat.get_previous());
+                auto prev_state = thrd_stat.get_previous();
+                profiler.handle_post_execution(thrdptr, prev_state);
 
-                if (thrd_stat.get_previous() ==
-                        thread_schedule_state::deleted ||
-                    thrd_stat.get_previous() ==
-                        thread_schedule_state::terminated)
+                if (prev_state == thread_schedule_state::terminated)
                 {
-                    hpx::tracing::task_completed(thrdptr,
-                        threads::thread_data::get_safe_description(
-                            thrdptr->get_description(), "thread"));
+                    hpx::tracing::task_completed(thrdptr);
                 }
             }
             else

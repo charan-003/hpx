@@ -123,3 +123,44 @@ namespace hpx::tracing {
     };
 }    // namespace hpx::tracing
 #endif
+
+namespace hpx::tracing {
+
+    template <typename ThreadData>
+    constexpr void task_created([[maybe_unused]] ThreadData* thrdptr,
+        [[maybe_unused]] void const* parent_task_id = nullptr) noexcept
+    {
+#if defined(HPX_HAVE_TRACY) ||                                                 \
+    (defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0) ||                \
+    defined(HPX_HAVE_APEX)
+        task_created(ThreadData::get_safe_description(
+                         thrdptr->get_description(), "thread"),
+            thrdptr, parent_task_id);
+#endif
+    }
+
+    template <typename ThreadData>
+    constexpr void task_executing([[maybe_unused]] ThreadData* thrdptr) noexcept
+    {
+#if defined(HPX_HAVE_TRACY) ||                                                 \
+    (defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0) ||                \
+    defined(HPX_HAVE_APEX)
+        task_executing(thrdptr,
+            ThreadData::get_safe_description(
+                thrdptr->get_description(), "thread"),
+            thrdptr->get_last_worker_thread_num());
+#endif
+    }
+
+    template <typename ThreadData>
+    constexpr void task_completed([[maybe_unused]] ThreadData* thrdptr) noexcept
+    {
+#if defined(HPX_HAVE_TRACY) ||                                                 \
+    (defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0) ||                \
+    defined(HPX_HAVE_APEX)
+        task_completed(thrdptr,
+            ThreadData::get_safe_description(
+                thrdptr->get_description(), "thread"));
+#endif
+    }
+}    // namespace hpx::tracing
