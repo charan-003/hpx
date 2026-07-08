@@ -95,6 +95,7 @@ namespace hpx::resource {
         unspecified = -1,
         local = 0,
         local_priority_fifo = 1,
+        local_priority_fifo_double = 11,
         local_priority_lifo = 2,
         static_ = 3,
         static_priority = 4,

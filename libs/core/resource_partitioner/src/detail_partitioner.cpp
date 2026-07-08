@@ -137,6 +137,9 @@ namespace hpx::resource::detail {
         case resource::scheduling_policy::local_priority_fifo:
             sched = "local_priority_fifo";
             break;
+        case resource::scheduling_policy::local_priority_fifo_double:
+            sched = "local_priority_fifo_double";
+            break;
         case resource::scheduling_policy::local_priority_lifo:
             sched = "local_priority_lifo";
             break;
@@ -500,6 +503,12 @@ namespace hpx::resource::detail {
             std::string("local-priority-fifo").find(default_scheduler_str))
         {
             default_scheduler = scheduling_policy::local_priority_fifo;
+        }
+        else if (0 ==
+            std::string("local-priority-fifo-double")
+                .find(default_scheduler_str))
+        {
+            default_scheduler = scheduling_policy::local_priority_fifo_double;
         }
         else if (0 ==
             std::string("local-priority-lifo").find(default_scheduler_str))
