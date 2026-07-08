@@ -38,7 +38,7 @@ namespace hpx::threads::detail {
                 // Assigning keep_alive = background_thread; as the very first
                 // statement ensures the background thread holds a
                 // self-reference before the external background_thread handle
-                // can be reassigned in call_and_create_background_thread, 
+                // can be reassigned in call_and_create_background_thread,
                 // preventing premature teardown of a "given back to scheduler"
                 // thread.
                 keep_alive = background_thread;
