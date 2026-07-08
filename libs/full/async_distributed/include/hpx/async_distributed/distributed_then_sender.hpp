@@ -36,22 +36,25 @@ namespace hpx::distributed::experimental::detail {
                 [&]() {
                     // Dispatch the remote invocation action
                     auto fut = hpx::async(
-                        distributed_invoke_callable_action<F, Ts...>{},
+                        hpx::distributed::detail::distributed_invoke_callable_action<F, Ts...>{},
                         target_, HPX_MOVE(f_), HPX_MOVE(vals)...);
 
                     // Chain continuation to forward the remote result
-                    fut.then([downstream = HPX_MOVE(downstream_)](
-                                 hpx::future<hpx::tuple<std::invoke_result_t<F, Ts...>>>&& f) mutable {
+                    fut.then([downstream = HPX_MOVE(downstream_)](auto&& f) mutable {
                         hpx::detail::try_catch_exception_ptr(
                             [&]() {
-                                auto returned_tuple = f.get();
-                                hpx::invoke_fused(
-                                    [&](auto&&... args) {
-                                        hpx::execution::experimental::set_value(
-                                            HPX_MOVE(downstream),
-                                            HPX_FORWARD(decltype(args), args)...);
-                                    },
-                                    HPX_MOVE(returned_tuple));
+                                using result_type = std::invoke_result_t<F, Ts...>;
+                                if constexpr (std::is_void_v<result_type>)
+                                {
+                                    f.get();
+                                    hpx::execution::experimental::set_value(
+                                        HPX_MOVE(downstream));
+                                }
+                                else
+                                {
+                                    hpx::execution::experimental::set_value(
+                                        HPX_MOVE(downstream), f.get());
+                                }
                             },
                             [&](std::exception_ptr ep) {
                                 hpx::execution::experimental::set_error(

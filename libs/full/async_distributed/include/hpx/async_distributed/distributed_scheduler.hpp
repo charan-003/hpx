@@ -129,26 +129,8 @@ namespace hpx::distributed::experimental {
             {
                 hpx::detail::try_catch_exception_ptr(
                     [&]() {
-                        // Dispatch the value action to the remote locality with empty payload.
-                        auto fut = hpx::distributed::detail::
-                            dispatch_distributed_execute_value(target_);
-
-                        // Chain a continuation to bridge the future completion
-                        // into the P2300 receiver.  We capture `this` because
-                        // the operation_state is pinned (P2300 lifetime
-                        // guarantee).
-                        fut.then([this](hpx::future<hpx::tuple<>> f) {
-                            hpx::detail::try_catch_exception_ptr(
-                                [&]() {
-                                    f.get();    // rethrow any remote exception
-                                    hpx::execution::experimental::set_value(
-                                        HPX_MOVE(receiver_));
-                                },
-                                [&](std::exception_ptr ep) {
-                                    hpx::execution::experimental::set_error(
-                                        HPX_MOVE(receiver_), HPX_MOVE(ep));
-                                });
-                        });
+                        hpx::execution::experimental::set_value(
+                            HPX_MOVE(receiver_));
                     },
                     [&](std::exception_ptr ep) {
                         // If hpx::async itself throws (e.g. invalid target),

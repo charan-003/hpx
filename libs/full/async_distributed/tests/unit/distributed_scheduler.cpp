@@ -30,27 +30,8 @@ namespace ex = hpx::execution::experimental;
 namespace tt = hpx::this_thread::experimental;
 
 // We explicitly instantiate and register actions for testing
-struct distributed_execute_value_action_int
-  : hpx::actions::make_action_t<
-        decltype(&hpx::distributed::detail::distributed_execute_value<int>),
-        &hpx::distributed::detail::distributed_execute_value<int>,
-        distributed_execute_value_action_int>
-{
-};
 
-HPX_REGISTER_ACTION(
-    distributed_schedule_action, distributed_schedule_action)
-HPX_REGISTER_ACTION(
-    distributed_execute_value_action_int, distributed_execute_value_action_int)
 
-namespace hpx::distributed::detail {
-    template <>
-    hpx::future<hpx::tuple<int>> dispatch_distributed_execute_value<int>(
-        hpx::id_type const& target, int vals)
-    {
-        return hpx::async(distributed_execute_value_action_int{}, target, vals);
-    }
-}
 
 // Callables for then_t interception tests
 struct my_then_callable_1
@@ -116,7 +97,7 @@ int hpx_main()
         auto sched =
             hpx::distributed::experimental::distributed_scheduler{target};
 
-        auto result = tt::sync_wait(ex::just(10) | ex::transfer(sched) |
+        auto result = tt::sync_wait(ex::just(10) | ex::continues_on(sched) |
             ex::then(my_then_callable_1{}));
 
         HPX_TEST(result.has_value());
@@ -131,7 +112,7 @@ int hpx_main()
         auto sched =
             hpx::distributed::experimental::distributed_scheduler{target};
 
-        auto result = tt::sync_wait(ex::just(7) | ex::transfer(sched) |
+        auto result = tt::sync_wait(ex::just(7) | ex::continues_on(sched) |
             ex::then(my_then_callable_2{}));
 
         HPX_TEST(result.has_value());
