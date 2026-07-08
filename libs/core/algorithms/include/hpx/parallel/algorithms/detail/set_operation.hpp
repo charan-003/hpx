@@ -249,21 +249,24 @@ namespace hpx::parallel::detail {
             // D0/D1 destructors are homed to libhpx_core and are missing for
             // this policy, breaking the link under clang -fvisibility=hidden.
             // See #7344.
+            auto copy_chunk = [buffer, dest](set_chunk_data* ch) {
+                if (ch->start == set_chunk_data::uninit_start ||
+                    ch->start_index == set_chunk_data::uninit_start_index ||
+                    ch->len == set_chunk_data::uninit_len)
+                {
+                    return;
+                }
+                std::copy(buffer.get() + ch->start,
+                    buffer.get() + ch->start + ch->len, dest + ch->start_index);
+            };
+
             if constexpr (hpx::execution_policy_has_scheduler_executor_v<
                               ExPolicy>)
             {
                 set_chunk_data* ch = chunks.get();
                 for (std::size_t i = 0; i != cores; ++i, ++ch)
                 {
-                    if (ch->start == set_chunk_data::uninit_start ||
-                        ch->start_index == set_chunk_data::uninit_start_index ||
-                        ch->len == set_chunk_data::uninit_len)
-                    {
-                        continue;
-                    }
-                    std::copy(buffer.get() + ch->start,
-                        buffer.get() + ch->start + ch->len,
-                        dest + ch->start_index);
+                    copy_chunk(ch);
                 }
             }
             else
@@ -271,19 +274,8 @@ namespace hpx::parallel::detail {
                 parallel::util::
                     foreach_partitioner<hpx::execution::parallel_policy>::call(
                         hpx::execution::par, chunks.get(), cores,
-                        [buffer, dest](
-                            set_chunk_data* ch, std::size_t, std::size_t) {
-                            if (ch->start == set_chunk_data::uninit_start ||
-                                ch->start_index ==
-                                    set_chunk_data::uninit_start_index ||
-                                ch->len == set_chunk_data::uninit_len)
-                            {
-                                return;
-                            }
-                            std::copy(buffer.get() + ch->start,
-                                buffer.get() + ch->start + ch->len,
-                                dest + ch->start_index);
-                        },
+                        [copy_chunk](set_chunk_data* ch, std::size_t,
+                            std::size_t) { copy_chunk(ch); },
                         [](set_chunk_data* last) -> set_chunk_data* {
                             return last;
                         });
