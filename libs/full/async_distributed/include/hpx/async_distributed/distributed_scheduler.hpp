@@ -77,9 +77,11 @@ namespace hpx::distributed::experimental {
 
             // Intercept stdexec::continues_on_t and transform it to our distributed_continues_on_sender
             template <typename Sender, typename Scheduler>
-            friend constexpr auto tag_invoke(hpx::execution::experimental::transform_sender_t,
-                distributed_domain, hpx::execution::experimental::continues_on_t,
-                Sender&& sndr, Scheduler const& sched) noexcept
+            friend constexpr auto tag_invoke(
+                hpx::execution::experimental::transform_sender_t,
+                distributed_domain,
+                hpx::execution::experimental::continues_on_t, Sender&& sndr,
+                Scheduler const& sched) noexcept
             {
                 return distributed_continues_on_sender<std::decay_t<Sender>>{
                     HPX_FORWARD(Sender, sndr), sched.target()};
