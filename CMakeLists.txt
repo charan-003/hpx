@@ -125,10 +125,6 @@ if(HPX_WITH_GIT_HOOKS)
   hpx_setup_git_hooks()
 endif()
 
-if(NOT HPX_CMAKE_LOGLEVEL)
-  set(HPX_CMAKE_LOGLEVEL "WARN")
-endif()
-
 # print initial diagnostics
 hpx_info("CMake version: ${CMAKE_VERSION}, generator: ${CMAKE_GENERATOR}")
 hpx_info("HPX version: ${HPX_VERSION}")
