@@ -76,8 +76,11 @@ void benchmark_keep_future(std::uint64_t count, std::uint64_t rep,
     measure("future boundary", "keep_future + continues_on", count, rep,
         [&](std::uint64_t i) {
             auto f = hpx::make_ready_future<std::uint64_t>(i);
-            auto r = hpx::get<0>(*(tt::sync_wait(
-                ex::keep_future(std::move(f)) | ex::continues_on(sched))));
+
+            auto result = tt::sync_wait(
+                ex::keep_future(std::move(f)) | ex::continues_on(sched));
+            HPX_ASSERT(result);
+            auto& r = hpx::get<0>(*result);
             sink = sink + r.get();
         });
 }
