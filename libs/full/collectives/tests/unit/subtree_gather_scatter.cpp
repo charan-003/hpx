@@ -65,16 +65,23 @@ void test_round_trip(std::uint32_t num_sites, int arity)
                         comms, std::uint32_t(site), generation_arg(gather_gen));
 
                     // Verify: gathered should contain contiguous site ids.
-                    auto groups =
-                        detail::get_top_level_groups(ns, comms.get_arity());
-                    auto gidx = detail::classify_site(ts, groups);
+                    std::ptrdiff_t const gidx =
+                        detail::classify_site(ts, ns, comms.get_arity());
+                    HPX_TEST_NEQ(gidx, static_cast<std::ptrdiff_t>(-1));
 
-                    HPX_TEST_EQ(gathered.size(),
-                        static_cast<std::size_t>(groups[gidx].size));
+                    std::size_t const group = static_cast<std::size_t>(gidx);
+                    std::size_t const group_left =
+                        detail::get_top_level_group_left(
+                            group, ns, comms.get_arity());
+                    std::size_t const group_size =
+                        detail::get_top_level_group_size(
+                            group, ns, comms.get_arity());
+
+                    HPX_TEST_EQ(gathered.size(), group_size);
                     for (std::size_t j = 0; j != gathered.size(); ++j)
                     {
                         HPX_TEST_EQ(gathered[j],
-                            static_cast<std::uint32_t>(groups[gidx].left + j));
+                            static_cast<std::uint32_t>(group_left + j));
                     }
 
                     // Scatter: send each site its value back.
@@ -140,21 +147,26 @@ void test_vector_payload(std::uint32_t num_sites, int arity)
                 auto gathered = detail::subtree_gather_at_top_rep(
                     comms, HPX_MOVE(my_data), generation_arg(1));
 
-                auto groups =
-                    detail::get_top_level_groups(ns, comms.get_arity());
-                auto gidx = detail::classify_site(ts, groups);
+                std::ptrdiff_t const gidx =
+                    detail::classify_site(ts, ns, comms.get_arity());
+                HPX_TEST_NEQ(gidx, static_cast<std::ptrdiff_t>(-1));
+
+                std::size_t const group = static_cast<std::size_t>(gidx);
+                std::size_t const group_left = detail::get_top_level_group_left(
+                    group, ns, comms.get_arity());
+                std::size_t const group_size = detail::get_top_level_group_size(
+                    group, ns, comms.get_arity());
 
                 // gathered is vector<vector<uint32_t>> with one entry
                 // per subtree site (gather_data flattens one level per
                 // gather step, preserving inner vectors).
-                HPX_TEST_EQ(gathered.size(),
-                    static_cast<std::size_t>(groups[gidx].size));
+                HPX_TEST_EQ(gathered.size(), group_size);
 
                 // Verify values.
-                for (std::size_t j = 0; j != groups[gidx].size; ++j)
+                for (std::size_t j = 0; j != group_size; ++j)
                 {
                     std::uint32_t expected_site =
-                        static_cast<std::uint32_t>(groups[gidx].left + j);
+                        static_cast<std::uint32_t>(group_left + j);
                     HPX_TEST_EQ(
                         gathered[j].size(), static_cast<std::size_t>(3));
                     HPX_TEST_EQ(gathered[j][0], expected_site * 10);

@@ -452,18 +452,21 @@ namespace hpx::collectives {
                 return;
             }
 
-            auto const groups =
-                detail::get_top_level_groups(right - left + 1, arity);
+            std::size_t const num_sites = right - left + 1;
+            std::size_t const num_groups =
+                detail::get_top_level_group_count(num_sites, arity);
 
-            for (std::size_t i = 0; i != groups.size(); ++i)
+            for (std::size_t i = 0; i != num_groups; ++i)
             {
-                std::size_t const current_left = left + groups[i].left;
-                std::size_t const current_right = left + groups[i].right;
+                std::size_t const current_left = left +
+                    detail::get_top_level_group_left(i, num_sites, arity);
+                std::size_t const current_right = current_left +
+                    detail::get_top_level_group_size(i, num_sites, arity) - 1;
 
                 if (this_site == current_left)
                 {
                     auto c = create_communicator(name.c_str(),
-                        num_sites_arg(groups.size()), this_site_arg(i),
+                        num_sites_arg(num_groups), this_site_arg(i),
                         generation_arg(generation), root_site_arg(0));
 
                     communicators.emplace_back(HPX_MOVE(c), this_site_arg(i));

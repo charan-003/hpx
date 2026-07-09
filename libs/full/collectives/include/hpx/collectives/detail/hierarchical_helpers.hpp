@@ -12,17 +12,18 @@
 
 #include <hpx/assert.hpp>
 #include <hpx/collectives/argument_types.hpp>
-#include <hpx/modules/errors.hpp>
 #include <hpx/modules/functional.hpp>
 
-#include <algorithm>
 #include <cstddef>
 #include <exception>
-#include <iterator>
 #include <limits>
 #include <type_traits>
 #include <utility>
 #include <vector>
+
+namespace hpx::collectives {
+    struct hierarchical_communicator;
+}
 
 namespace hpx::collectives::detail {
 
@@ -41,36 +42,10 @@ namespace hpx::collectives::detail {
         generation_arg second;
     };
 
-    template <typename Communicators>
-    [[nodiscard]] std::exception_ptr validate_hierarchical_communicator(
-        Communicators const& communicators, this_site_arg const this_site,
-        char const* name)
-    {
-        if (!communicators.valid())
-        {
-            return HPX_GET_EXCEPTION(hpx::error::invalid_status, name,
-                "the hierarchical communicator is not valid");
-        }
-
-        auto const [num_sites_val, communicator_site] =
-            communicators.get_info();
-
-        if (this_site >= num_sites_val)
-        {
-            return HPX_GET_EXCEPTION(hpx::error::bad_parameter, name,
-                "this_site must be smaller than the number of participating "
-                "sites");
-        }
-
-        if (this_site != communicator_site)
-        {
-            return HPX_GET_EXCEPTION(hpx::error::bad_parameter, name,
-                "this_site must match the site used to create the "
-                "hierarchical communicator");
-        }
-
-        return std::exception_ptr{};
-    }
+    [[nodiscard]] HPX_CXX_EXPORT std::exception_ptr
+    validate_hierarchical_communicator(
+        hierarchical_communicator const& communicators, this_site_arg this_site,
+        char const* name);
 
     template <typename ValueType, typename Data>
     constexpr decltype(auto) handle_bool(Data&& data) noexcept
@@ -154,78 +129,20 @@ namespace hpx::collectives::detail {
             num_generations};
     }
 
-    HPX_CXX_EXPORT struct top_level_group
-    {
-        std::size_t left;
-        std::size_t right;
-        std::size_t size;
-    };
+    [[nodiscard]] HPX_CXX_EXPORT std::size_t get_top_level_group_count(
+        std::size_t num_sites, std::size_t arity);
 
-    // Compute the top-level partition of [0, num_sites) into `arity` groups.
-    // Uses the same division logic as recursively_fill_communicators:
-    // first (num_sites % arity) groups get ceil(num_sites/arity) sites,
-    // the rest get floor(num_sites/arity).
-    HPX_CXX_EXPORT inline std::vector<top_level_group> get_top_level_groups(
-        std::size_t num_sites, std::size_t arity)
-    {
-        HPX_ASSERT(arity != 0);
+    [[nodiscard]] HPX_CXX_EXPORT std::size_t get_top_level_group_left(
+        std::size_t group, std::size_t num_sites, std::size_t arity);
 
-        if (arity > num_sites)
-        {
-            arity = num_sites;
-        }
+    [[nodiscard]] HPX_CXX_EXPORT std::size_t get_top_level_group_size(
+        std::size_t group, std::size_t num_sites, std::size_t arity);
 
-        std::size_t const division_steps = num_sites / arity;
-        std::size_t const remainder = num_sites % arity;
+    [[nodiscard]] HPX_CXX_EXPORT std::ptrdiff_t classify_site(
+        std::size_t this_site, std::size_t num_sites, std::size_t arity);
 
-        std::vector<top_level_group> groups;
-        groups.reserve(arity);
-
-        std::size_t offset = 0;
-        for (std::size_t i = 0; i != arity; ++i)
-        {
-            std::size_t const group_size =
-                division_steps + (i < remainder ? 1 : 0);
-
-            std::size_t const left = offset;
-            std::size_t const right = left + group_size - 1;
-            groups.push_back(top_level_group{left, right, group_size});
-
-            offset += group_size;
-        }
-
-        return groups;
-    }
-
-    // Return the index of the top-level group that contains `this_site`,
-    // or -1 if there is none. Groups are sorted by left boundary, so we use
-    // std::lower_bound. The return type is signed so the -1 sentinel and the
-    // std::distance result need no casts.
-    HPX_CXX_EXPORT inline std::ptrdiff_t classify_site(
-        std::size_t this_site, std::vector<top_level_group> const& groups)
-    {
-        auto const it = std::lower_bound(groups.begin(), groups.end(),
-            this_site, [](top_level_group const& g, std::size_t site) {
-                return g.right < site;
-            });
-
-        if (it != groups.end() && this_site >= it->left)
-        {
-            return std::distance(groups.begin(), it);
-        }
-
-        return -1;
-    }
-
-    // Return true if `this_site` is the leftmost site (representative)
-    // of its top-level group.
-    HPX_CXX_EXPORT inline bool is_top_level_rep(
-        std::size_t this_site, std::size_t num_sites, std::size_t arity)
-    {
-        auto const groups = get_top_level_groups(num_sites, arity);
-        auto const g = classify_site(this_site, groups);
-        return g != -1 && this_site == groups[g].left;
-    }
+    [[nodiscard]] HPX_CXX_EXPORT bool is_top_level_rep(
+        std::size_t this_site, std::size_t num_sites, std::size_t arity);
 
     template <typename T, typename F>
     std::vector<T> make_inclusive_scan_results(std::vector<T>&& values, F&& op)

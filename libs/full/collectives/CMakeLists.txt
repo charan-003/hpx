@@ -66,6 +66,7 @@ set(collectives_sources
     channel_communicator.cpp
     create_communicator.cpp
     detail/channel_communicator_server.cpp
+    detail/hierarchical_helpers.cpp
     exclusive_scan.cpp
     gather.cpp
     inclusive_scan.cpp
