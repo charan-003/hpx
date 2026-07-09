@@ -327,8 +327,7 @@ namespace hpx::cuda::experimental {
             }
             // clang-format on
 
-            constexpr decltype(auto) get_env() const
-                noexcept(noexcept(hpx::execution::experimental::get_env(s)))
+            constexpr auto get_env() const noexcept
             {
                 return hpx::execution::experimental::get_env(s);
             }

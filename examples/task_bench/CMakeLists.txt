@@ -8,11 +8,16 @@
 # (https://github.com/StanfordLegion/task-bench) as an external dependency. No
 # task-bench source files are vendored here.
 
-cmake_minimum_required(VERSION 3.18)
-
 # task-bench core uses POSIX APIs (clock_gettime, etc.) that are not available
 # on Windows. Skip the entire example on Windows builds (MSVC and MinGW).
 if(WIN32)
+  return()
+endif()
+
+# The HPX drivers include hpx/hpx.hpp and hpx/hpx_init.hpp, which are only
+# available when the distributed runtime is enabled. Skip the entire example
+# when the feature is disabled in the parent project.
+if(COMMAND add_hpx_executable AND NOT HPX_WITH_DISTRIBUTED_RUNTIME)
   return()
 endif()
 
@@ -23,7 +28,7 @@ include(FetchContent)
 fetchcontent_declare(
   task_bench
   GIT_REPOSITORY https://github.com/StanfordLegion/task-bench.git
-  GIT_TAG master
+  GIT_TAG 661d99505cc61172861e92db1b7e63b5e1165a98
   SOURCE_SUBDIR hpx
 )
 
@@ -51,14 +56,6 @@ add_library(
 target_include_directories(task_bench_core PUBLIC "${TASK_BENCH_CORE_DIR}")
 target_compile_features(task_bench_core PUBLIC cxx_std_17)
 set_target_properties(task_bench_core PROPERTIES OUTPUT_NAME "core_s")
-
-# The HPX drivers include hpx/hpx.hpp and hpx/hpx_init.hpp, which are only
-# available when the distributed runtime is enabled. Skip them otherwise.
-if(COMMAND add_hpx_executable)
-  if(NOT HPX_WITH_DISTRIBUTED_RUNTIME)
-    return()
-  endif()
-endif()
 
 # Build the HPX fork-join driver (intra-node parallelism, no MPI required).
 if(COMMAND add_hpx_executable)
