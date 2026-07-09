@@ -55,8 +55,8 @@ namespace hpx::threads::detail {
 
         thread_self const* self = get_self_ptr();
 
-#ifdef HPX_HAVE_THREAD_PARENT_REFERENCE
         void const* parent_task_id = nullptr;
+#ifdef HPX_HAVE_THREAD_PARENT_REFERENCE
         if (nullptr == data.parent_id)
         {
             if (self)
@@ -64,13 +64,15 @@ namespace hpx::threads::detail {
                 data.parent_id = get_thread_id_data(self->get_thread_id());
                 data.parent_phase = self->get_thread_phase();
             }
+            parent_task_id = data.parent_id.get();
         }
-        parent_task_id = data.parent_id.get();
+        else
+        {
+            parent_task_id = data.parent_id.get();
+        }
 
         if (0 == data.parent_locality_id)
             data.parent_locality_id = detail::get_locality_id(hpx::throws);
-#else
-        void const* parent_task_id = nullptr;
 #endif
 
         if (nullptr == data.scheduler_base)

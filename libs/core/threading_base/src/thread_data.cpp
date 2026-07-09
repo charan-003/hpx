@@ -96,8 +96,8 @@ namespace hpx::threads {
             stacksize <= (std::numeric_limits<std::int32_t>::max)());
         HPX_ASSERT(stacksize_enum_ != threads::thread_stacksize::current);
 
-#ifdef HPX_HAVE_THREAD_PARENT_REFERENCE
         void const* parent_task_id = nullptr;
+#ifdef HPX_HAVE_THREAD_PARENT_REFERENCE
         // store the thread id of the parent thread, mainly for debugging
         // purposes
         if (parent_thread_id_ == nullptr)
@@ -111,8 +111,6 @@ namespace hpx::threads {
         parent_task_id = parent_thread_id_.get();
         if (0 == parent_locality_id_)
             parent_locality_id_ = detail::get_locality_id(hpx::throws);
-#else
-        void const* parent_task_id = nullptr;
 #endif
         set_timer_data(init_data.timer_data);
 #if defined(HPX_HAVE_TRACY)
@@ -214,9 +212,8 @@ namespace hpx::threads {
             "thread_data::rebind_base({}), description({}), phase({}), rebind",
             this, get_description(), get_thread_phase());
 
-        hpx::tracing::task_deleted(this);
-
         free_thread_exit_callbacks();
+        hpx::tracing::task_deleted(this);
 
         priority_ = init_data.priority;
         requested_interrupt_ = false;
@@ -270,8 +267,8 @@ namespace hpx::threads {
         LTM_(debug).format("thread::thread({}), description({}), rebind", this,
             get_description());
 
-#ifdef HPX_HAVE_THREAD_PARENT_REFERENCE
         void const* parent_task_id = nullptr;
+#ifdef HPX_HAVE_THREAD_PARENT_REFERENCE
         // store the thread id of the parent thread, mainly for debugging
         // purposes
         if (parent_thread_id_ == nullptr)
@@ -287,8 +284,6 @@ namespace hpx::threads {
         {
             parent_locality_id_ = detail::get_locality_id(hpx::throws);
         }
-#else
-        void const* parent_task_id = nullptr;
 #endif
         set_timer_data(init_data.timer_data);
 
