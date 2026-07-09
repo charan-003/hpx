@@ -154,12 +154,13 @@ namespace hpx::threads::detail {
                 thrd_stat = handle_execute_thread(thrd.noref());
 
                 auto prev_state = thrd_stat.get_previous();
+                auto on_exit = hpx::experimental::scope_exit([&] {
+                    if (prev_state == thread_schedule_state::terminated)
+                    {
+                        hpx::tracing::task_completed(thrdptr);
+                    }
+                });
                 profiler.handle_post_execution(thrdptr, prev_state);
-
-                if (prev_state == thread_schedule_state::terminated)
-                {
-                    hpx::tracing::task_completed(thrdptr);
-                }
             }
             else
             {

@@ -219,10 +219,7 @@ namespace hpx::threads::detail {
                 background_exec_time_wrapper bg_exec_time(bg_work_duration);
 #endif    // HPX_HAVE_BACKGROUND_THREAD_COUNTERS
 
-                hpx::tracing::task_executing(thrdptr,
-                    threads::thread_data::get_safe_description(
-                        thrdptr->get_description(), "thread"),
-                    num_thread);
+                hpx::tracing::task_executing(thrdptr);
 
                 // invoke background thread
                 thrd_stat = (*thrdptr)(context_storage);
@@ -249,12 +246,10 @@ namespace hpx::threads::detail {
             thrd_stat.store_state(state);
             state_val = state.state();
 
-            if (state_val == thread_schedule_state::terminated ||
-                state_val == thread_schedule_state::deleted)
+            HPX_ASSERT(state_val != thread_schedule_state::deleted);
+            if (state_val == thread_schedule_state::terminated)
             {
-                hpx::tracing::task_completed(thrdptr,
-                    threads::thread_data::get_safe_description(
-                        thrdptr->get_description(), "thread"));
+                hpx::tracing::task_completed(thrdptr);
             }
 
             if (HPX_LIKELY(state_val == thread_schedule_state::pending_boost))

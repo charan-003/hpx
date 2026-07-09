@@ -187,10 +187,7 @@ namespace hpx::threads::detail {
                                 thrd_stat.get_previous(),
                                 thread_schedule_state::active);
 
-                            hpx::tracing::task_executing(thrdptr,
-                                threads::thread_data::get_safe_description(
-                                    thrdptr->get_description(), "thread"),
-                                num_thread);
+                            hpx::tracing::task_executing(thrdptr);
 
 #ifdef HPX_HAVE_THREAD_IDLE_RATES
                             auto tfunc_time_collector_inner =
@@ -235,20 +232,18 @@ namespace hpx::threads::detail {
 
                                 thrd_stat = (*thrdptr)(context_storage);
 
+                                auto prev_state = thrd_stat.get_previous();
+                                auto on_exit =
+                                    hpx::experimental::scope_exit([&] {
+                                        if (prev_state ==
+                                            thread_schedule_state::terminated)
+                                        {
+                                            hpx::tracing::task_completed(
+                                                thrdptr);
+                                        }
+                                    });
                                 profiler.handle_post_execution(
-                                    thrdptr, thrd_stat.get_previous());
-
-                                if (thrd_stat.get_previous() ==
-                                        thread_schedule_state::deleted ||
-                                    thrd_stat.get_previous() ==
-                                        thread_schedule_state::terminated)
-                                {
-                                    hpx::tracing::task_completed(thrdptr,
-                                        threads::thread_data::
-                                            get_safe_description(
-                                                thrdptr->get_description(),
-                                                "thread"));
-                                }
+                                    thrdptr, prev_state);
                             }
 
                             detail::write_state_log(scheduler, num_thread, thrd,
