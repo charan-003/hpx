@@ -11,8 +11,7 @@
 #pragma once
 
 #include <hpx/config.hpp>
-#include <hpx/functional/invoke.hpp>
-#include <hpx/functional/traits/is_invocable.hpp>
+#include <hpx/modules/functional.hpp>
 #include <hpx/modules/synchronization.hpp>
 #include <hpx/threading/thread.hpp>
 

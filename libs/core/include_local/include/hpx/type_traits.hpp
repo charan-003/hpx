@@ -9,7 +9,7 @@
 #pragma once
 
 #include <hpx/config.hpp>
-#include <hpx/functional/invoke_result.hpp>
+#include <hpx/modules/functional.hpp>
 
 namespace hpx {
 

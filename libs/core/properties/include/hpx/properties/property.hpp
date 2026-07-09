@@ -8,7 +8,7 @@
 #pragma once
 
 #include <hpx/config.hpp>
-#include <hpx/functional/traits/is_invocable.hpp>
+#include <hpx/modules/functional.hpp>
 
 #include <type_traits>
 #include <utility>

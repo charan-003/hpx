@@ -17,7 +17,7 @@
 /// classes are asynchronous API which return the futures.
 
 #include <hpx/config.hpp>
-#include <hpx/functional/invoke_result.hpp>
+#include <hpx/modules/functional.hpp>
 #include <hpx/modules/actions.hpp>
 #include <hpx/modules/actions_base.hpp>
 #include <hpx/modules/async_base.hpp>

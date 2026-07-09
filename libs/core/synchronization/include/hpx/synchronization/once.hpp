@@ -15,7 +15,7 @@
 #pragma once
 
 #include <hpx/config.hpp>
-#include <hpx/functional/invoke.hpp>
+#include <hpx/modules/functional.hpp>
 #include <hpx/synchronization/event.hpp>
 
 #include <atomic>

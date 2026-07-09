@@ -14,6 +14,7 @@
 
 #include <hpx/config.hpp>
 #include <hpx/functional/detail/basic_function.hpp>
+#include <hpx/functional/detail/basic_function.hpp>
 #include <hpx/functional/detail/function_registration.hpp>
 #include <hpx/functional/traits/get_function_address.hpp>
 #include <hpx/functional/traits/get_function_annotation.hpp>
