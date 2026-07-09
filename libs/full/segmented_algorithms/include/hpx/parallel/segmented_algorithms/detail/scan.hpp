@@ -19,6 +19,7 @@
 #include <hpx/modules/futures.hpp>
 #include <hpx/modules/iterator_support.hpp>
 #include <hpx/modules/pack_traversal.hpp>
+#include <hpx/modules/tag_invoke.hpp>
 #include <hpx/modules/type_support.hpp>
 
 #include <hpx/parallel/segmented_algorithms/detail/dispatch.hpp>
