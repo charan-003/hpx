@@ -8,9 +8,8 @@
 #pragma once
 
 #include <hpx/config.hpp>
-#include <hpx/modules/functional.hpp>
 
-#include <type_traits>
+#include <concepts>
 #include <utility>
 
 namespace hpx::experimental {
@@ -26,7 +25,7 @@ namespace hpx::experimental {
         // call tag(tn...) when invocable
         // clang-format off
         template <typename Tag, typename... Tn>
-            requires hpx::is_invocable_v<Tag, Tn&&...>
+            requires std::invocable<Tag, Tn&&...>
         constexpr HPX_FORCEINLINE auto operator()(Tag tag, Tn&&... tn) const
             noexcept(noexcept(tag(HPX_FORWARD(Tn, tn)...)))
             -> decltype(tag(HPX_FORWARD(Tn, tn)...))
@@ -38,7 +37,7 @@ namespace hpx::experimental {
         // return t0 unchanged when tag is not invocable
         // clang-format off
         template <typename Tag, typename T0, typename... Tn>
-            requires (!hpx::is_invocable_v<Tag, T0, Tn...>)
+            requires (!std::invocable<Tag, T0, Tn...>)
         constexpr HPX_FORCEINLINE auto operator()(Tag, T0&& t0, Tn&&...) const
             noexcept(noexcept(HPX_FORWARD(T0, t0)))
             -> decltype(HPX_FORWARD(T0, t0))

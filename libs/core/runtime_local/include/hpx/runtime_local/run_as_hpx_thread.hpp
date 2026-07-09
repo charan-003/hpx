@@ -8,9 +8,9 @@
 
 #include <hpx/config.hpp>
 #include <hpx/assert.hpp>
-#include <hpx/modules/functional.hpp>
 #include <hpx/modules/async_base.hpp>
 #include <hpx/modules/datastructures.hpp>
+#include <hpx/modules/functional.hpp>
 #include <hpx/modules/synchronization.hpp>
 #include <hpx/modules/threading_base.hpp>
 
