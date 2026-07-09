@@ -500,37 +500,17 @@ namespace hpx::collectives {
             this_site = agas::get_locality_id();
         }
 
-        if (!communicators.valid())
+        detail::hierarchical_communicator_info communicator_info;
+        if (auto const error =
+                detail::validate_hierarchical_communicator(communicators,
+                    this_site, "hpx::collectives::all_to_all (hierarchical)",
+                    &communicator_info))
         {
-            return hpx::make_exceptional_future<std::vector<T>>(
-                HPX_GET_EXCEPTION(hpx::error::invalid_status,
-                    "hpx::collectives::all_to_all (hierarchical)",
-                    "the hierarchical communicator is not valid"));
+            return hpx::make_exceptional_future<std::vector<T>>(error);
         }
 
-        auto const [num_sites_val, communicator_site] =
-            communicators.get_info();
+        std::size_t const num_sites_val = communicator_info.num_sites;
         std::size_t const arity_val = communicators.get_arity();
-
-        // An out-of-range site would classify into no top-level group and
-        // silently take the non-representative branch, hanging the gather.
-        if (this_site >= num_sites_val)
-        {
-            return hpx::make_exceptional_future<std::vector<T>>(
-                HPX_GET_EXCEPTION(hpx::error::bad_parameter,
-                    "hpx::collectives::all_to_all (hierarchical)",
-                    "this_site must be smaller than the number of "
-                    "participating sites"));
-        }
-
-        if (this_site != communicator_site)
-        {
-            return hpx::make_exceptional_future<std::vector<T>>(
-                HPX_GET_EXCEPTION(hpx::error::bad_parameter,
-                    "hpx::collectives::all_to_all (hierarchical)",
-                    "this_site must match the site used to create the "
-                    "hierarchical communicator"));
-        }
 
         // The phase-2 packing slices each gathered contribution with
         // unchecked iterator arithmetic, so a wrong-size contribution must

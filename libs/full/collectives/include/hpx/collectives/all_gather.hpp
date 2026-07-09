@@ -452,16 +452,16 @@ namespace hpx::collectives {
             this_site = agas::get_locality_id();
         }
 
-        if (!communicators.valid())
+        detail::hierarchical_communicator_info communicator_info;
+        if (auto const error =
+                detail::validate_hierarchical_communicator(communicators,
+                    this_site, "hpx::collectives::all_gather (hierarchical)",
+                    &communicator_info))
         {
-            return hpx::make_exceptional_future<std::vector<arg_type>>(
-                HPX_GET_EXCEPTION(hpx::error::invalid_status,
-                    "hpx::collectives::all_gather (hierarchical)",
-                    "the hierarchical communicator is not valid"));
+            return hpx::make_exceptional_future<std::vector<arg_type>>(error);
         }
 
-        auto const [num_sites_val, communicator_site] =
-            communicators.get_info();
+        std::size_t const num_sites_val = communicator_info.num_sites;
         std::size_t const arity_val = communicators.get_arity();
 
         // The hierarchical helpers hardcode site 0 as the local root at
@@ -473,24 +473,6 @@ namespace hpx::collectives {
                     "hpx::collectives::all_gather (hierarchical)",
                     "hierarchical all_gather currently supports only "
                     "root_site == 0 (the tree designates site 0 as the root)"));
-        }
-
-        if (this_site >= num_sites_val)
-        {
-            return hpx::make_exceptional_future<std::vector<arg_type>>(
-                HPX_GET_EXCEPTION(hpx::error::bad_parameter,
-                    "hpx::collectives::all_gather (hierarchical)",
-                    "this_site must be smaller than the number of "
-                    "participating sites"));
-        }
-
-        if (this_site != communicator_site)
-        {
-            return hpx::make_exceptional_future<std::vector<arg_type>>(
-                HPX_GET_EXCEPTION(hpx::error::bad_parameter,
-                    "hpx::collectives::all_gather (hierarchical)",
-                    "this_site must match the site used to create the "
-                    "hierarchical communicator"));
         }
 
         auto const [gather_gen, broadcast_gen] =

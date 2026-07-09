@@ -559,32 +559,11 @@ namespace hpx::collectives {
                 this_site = agas::get_locality_id();
             }
 
-            if (!communicators.valid())
+            if (auto const error =
+                    validate_hierarchical_communicator(communicators, this_site,
+                        "hpx::collectives::broadcast_to (hierarchical)"))
             {
-                return hpx::make_exceptional_future<std::decay_t<T>>(
-                    HPX_GET_EXCEPTION(hpx::error::invalid_status,
-                        "hpx::collectives::broadcast_to (hierarchical)",
-                        "the hierarchical communicator is not valid"));
-            }
-
-            auto const [num_sites_val, communicator_site] =
-                communicators.get_info();
-            if (this_site >= num_sites_val)
-            {
-                return hpx::make_exceptional_future<std::decay_t<T>>(
-                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
-                        "hpx::collectives::broadcast_to (hierarchical)",
-                        "this_site must be smaller than the number of "
-                        "participating sites"));
-            }
-
-            if (this_site != communicator_site)
-            {
-                return hpx::make_exceptional_future<std::decay_t<T>>(
-                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
-                        "hpx::collectives::broadcast_to (hierarchical)",
-                        "this_site must match the site used to create the "
-                        "hierarchical communicator"));
+                return hpx::make_exceptional_future<std::decay_t<T>>(error);
             }
 
             if (this_site != 0)
@@ -768,32 +747,11 @@ namespace hpx::collectives {
                 this_site = agas::get_locality_id();
             }
 
-            if (!communicators.valid())
+            if (auto const error =
+                    validate_hierarchical_communicator(communicators, this_site,
+                        "hpx::collectives::broadcast_from (hierarchical)"))
             {
-                return hpx::make_exceptional_future<T>(
-                    HPX_GET_EXCEPTION(hpx::error::invalid_status,
-                        "hpx::collectives::broadcast_from (hierarchical)",
-                        "the hierarchical communicator is not valid"));
-            }
-
-            auto const [num_sites_val, communicator_site] =
-                communicators.get_info();
-            if (this_site >= num_sites_val)
-            {
-                return hpx::make_exceptional_future<T>(
-                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
-                        "hpx::collectives::broadcast_from (hierarchical)",
-                        "this_site must be smaller than the number of "
-                        "participating sites"));
-            }
-
-            if (this_site != communicator_site)
-            {
-                return hpx::make_exceptional_future<T>(
-                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
-                        "hpx::collectives::broadcast_from (hierarchical)",
-                        "this_site must match the site used to create the "
-                        "hierarchical communicator"));
+                return hpx::make_exceptional_future<T>(error);
             }
 
             if (this_site == 0)

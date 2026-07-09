@@ -12,10 +12,12 @@
 
 #include <hpx/assert.hpp>
 #include <hpx/collectives/argument_types.hpp>
+#include <hpx/modules/errors.hpp>
 #include <hpx/modules/functional.hpp>
 
 #include <algorithm>
 #include <cstddef>
+#include <exception>
 #include <iterator>
 #include <limits>
 #include <type_traits>
@@ -38,6 +40,48 @@ namespace hpx::collectives::detail {
         generation_arg first;
         generation_arg second;
     };
+
+    struct hierarchical_communicator_info
+    {
+        num_sites_arg num_sites;
+        this_site_arg communicator_site;
+    };
+
+    template <typename Communicators>
+    [[nodiscard]] std::exception_ptr validate_hierarchical_communicator(
+        Communicators const& communicators, this_site_arg const this_site,
+        char const* name, hierarchical_communicator_info* info = nullptr)
+    {
+        if (!communicators.valid())
+        {
+            return HPX_GET_EXCEPTION(hpx::error::invalid_status, name,
+                "the hierarchical communicator is not valid");
+        }
+
+        auto const [num_sites_val, communicator_site] =
+            communicators.get_info();
+
+        if (this_site >= num_sites_val)
+        {
+            return HPX_GET_EXCEPTION(hpx::error::bad_parameter, name,
+                "this_site must be smaller than the number of participating "
+                "sites");
+        }
+
+        if (this_site != communicator_site)
+        {
+            return HPX_GET_EXCEPTION(hpx::error::bad_parameter, name,
+                "this_site must match the site used to create the "
+                "hierarchical communicator");
+        }
+
+        if (info != nullptr)
+        {
+            *info = {num_sites_val, communicator_site};
+        }
+
+        return std::exception_ptr{};
+    }
 
     template <typename ValueType, typename Data>
     constexpr decltype(auto) handle_bool(Data&& data) noexcept

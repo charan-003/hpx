@@ -276,7 +276,6 @@ namespace hpx::traits {
                 [op = HPX_FORWARD(F, op)](
                     auto& data, bool& data_available, std::size_t) mutable {
                     HPX_ASSERT(!data.empty());
-                    auto& reduce_op = op;
 
                     if constexpr (!std::is_same_v<std::decay_t<T>, bool>)
                     {
@@ -284,8 +283,8 @@ namespace hpx::traits {
                         {
                             // compute reduction result only once
                             auto it = data.begin();
-                            data[0] = hpx::reduce(
-                                ++it, data.end(), data[0], reduce_op);
+                            data[0] =
+                                hpx::reduce(++it, data.end(), data[0], op);
                             data_available = true;
                         }
                         return data[0];
@@ -299,7 +298,7 @@ namespace hpx::traits {
                             data[0] = hpx::reduce(++it, data.end(),
                                 static_cast<bool>(data[0]),
                                 [&](auto lhs, auto rhs) {
-                                    return reduce_op(static_cast<bool>(lhs),
+                                    return op(static_cast<bool>(lhs),
                                         static_cast<bool>(rhs));
                                 });
                             data_available = true;
@@ -495,16 +494,16 @@ namespace hpx::collectives {
             this_site = agas::get_locality_id();
         }
 
-        if (!communicators.valid())
+        detail::hierarchical_communicator_info communicator_info;
+        if (auto const error =
+                detail::validate_hierarchical_communicator(communicators,
+                    this_site, "hpx::collectives::all_reduce (hierarchical)",
+                    &communicator_info))
         {
-            return hpx::make_exceptional_future<arg_type>(
-                HPX_GET_EXCEPTION(hpx::error::invalid_status,
-                    "hpx::collectives::all_reduce (hierarchical)",
-                    "the hierarchical communicator is not valid"));
+            return hpx::make_exceptional_future<arg_type>(error);
         }
 
-        auto const [num_sites_val, communicator_site] =
-            communicators.get_info();
+        std::size_t const num_sites_val = communicator_info.num_sites;
         std::size_t const arity_val = communicators.get_arity();
 
         // The hierarchical helpers hardcode site 0 as the local root at
@@ -516,24 +515,6 @@ namespace hpx::collectives {
                     "hpx::collectives::all_reduce (hierarchical)",
                     "hierarchical all_reduce currently supports only "
                     "root_site == 0 (the tree designates site 0 as the root)"));
-        }
-
-        if (this_site >= num_sites_val)
-        {
-            return hpx::make_exceptional_future<arg_type>(
-                HPX_GET_EXCEPTION(hpx::error::bad_parameter,
-                    "hpx::collectives::all_reduce (hierarchical)",
-                    "this_site must be smaller than the number of "
-                    "participating sites"));
-        }
-
-        if (this_site != communicator_site)
-        {
-            return hpx::make_exceptional_future<arg_type>(
-                HPX_GET_EXCEPTION(hpx::error::bad_parameter,
-                    "hpx::collectives::all_reduce (hierarchical)",
-                    "this_site must match the site used to create the "
-                    "hierarchical communicator"));
         }
 
         auto const [reduce_gen, broadcast_gen] =

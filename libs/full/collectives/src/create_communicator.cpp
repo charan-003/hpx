@@ -175,14 +175,10 @@ namespace hpx::collectives {
         HPX_ASSERT(
             root_site != static_cast<std::size_t>(-1) && root_site < num_sites);
 
-        std::string name;
-        if (num_sites != 1)
+        std::string name(basename);
+        if (!generation.is_default())
         {
-            name = basename;
-            if (!generation.is_default())
-            {
-                name += std::to_string(generation) + "/";
-            }
+            name += std::to_string(generation) + "/";
         }
 
         if (this_site == root_site)
@@ -253,14 +249,10 @@ namespace hpx::collectives {
         HPX_ASSERT(
             root_site != static_cast<std::size_t>(-1) && root_site < num_sites);
 
-        std::string name;
-        if (num_sites != 1)
+        std::string name(basename);
+        if (!generation.is_default())
         {
-            name = basename;
-            if (!generation.is_default())
-            {
-                name += std::to_string(generation) + "/";
-            }
+            name += std::to_string(generation) + "/";
         }
 
         if (this_site == root_site)
@@ -324,15 +316,11 @@ namespace hpx::collectives {
 
         // make sure the communicator will be registered in the local AGAS
         // symbol service instance
-        std::string name;
-        if (num_sites != 1)
+        std::string name = hpx::util::format("/{}{}{}", agas::get_locality_id(),
+            basename[0] == '/' ? "" : "/", basename);
+        if (!generation.is_default())
         {
-            name = hpx::util::format("/{}{}{}", agas::get_locality_id(),
-                basename[0] == '/' ? "" : "/", basename);
-            if (!generation.is_default())
-            {
-                name += std::to_string(generation) + "/";
-            }
+            name += std::to_string(generation) + "/";
         }
 
         if (this_site == root_site)
@@ -396,15 +384,11 @@ namespace hpx::collectives {
 
         // make sure the communicator will be registered in the local AGAS
         // symbol service instance
-        std::string name;
-        if (num_sites != 1)
+        std::string name = hpx::util::format("/{}{}{}", agas::get_locality_id(),
+            basename[0] == '/' ? "" : "/", basename);
+        if (!generation.is_default())
         {
-            name = hpx::util::format("/{}{}{}", agas::get_locality_id(),
-                basename[0] == '/' ? "" : "/", basename);
-            if (!generation.is_default())
-            {
-                name += std::to_string(generation) + "/";
-            }
+            name += std::to_string(generation) + "/";
         }
 
         if (this_site == root_site)
