@@ -819,16 +819,15 @@ namespace hpx::collectives {
                 this_site = agas::get_locality_id();
             }
 
-            hierarchical_communicator_info communicator_info;
             if (auto const error =
                     validate_hierarchical_communicator(communicators, this_site,
-                        "hpx::collectives::scatter_to (hierarchical)",
-                        &communicator_info))
+                        "hpx::collectives::scatter_to (hierarchical)"))
             {
                 return hpx::make_exceptional_future<T>(error);
             }
 
-            std::size_t const num_sites_val = communicator_info.num_sites;
+            std::size_t const num_sites_val =
+                hpx::get<0>(communicators.get_info());
 
             if (this_site != 0)
             {

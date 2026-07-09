@@ -41,16 +41,10 @@ namespace hpx::collectives::detail {
         generation_arg second;
     };
 
-    struct hierarchical_communicator_info
-    {
-        num_sites_arg num_sites;
-        this_site_arg communicator_site;
-    };
-
     template <typename Communicators>
     [[nodiscard]] std::exception_ptr validate_hierarchical_communicator(
         Communicators const& communicators, this_site_arg const this_site,
-        char const* name, hierarchical_communicator_info* info = nullptr)
+        char const* name)
     {
         if (!communicators.valid())
         {
@@ -73,11 +67,6 @@ namespace hpx::collectives::detail {
             return HPX_GET_EXCEPTION(hpx::error::bad_parameter, name,
                 "this_site must match the site used to create the "
                 "hierarchical communicator");
-        }
-
-        if (info != nullptr)
-        {
-            *info = {num_sites_val, communicator_site};
         }
 
         return std::exception_ptr{};

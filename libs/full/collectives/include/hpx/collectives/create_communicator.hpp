@@ -186,6 +186,7 @@ namespace hpx { namespace collectives {
 #include <hpx/collectives/argument_types.hpp>
 #include <hpx/collectives/detail/communicator.hpp>
 
+#include <algorithm>
 #include <cstddef>
 #include <utility>
 #include <vector>
@@ -392,15 +393,8 @@ namespace hpx::collectives {
                 return false;
             }
 
-            for (auto const& comm : communicators)
-            {
-                if (!hpx::get<0>(comm).valid())
-                {
-                    return false;
-                }
-            }
-
-            return true;
+            return std::ranges::all_of(communicators,
+                [](auto const& comm) { return hpx::get<0>(comm).valid(); });
         }
 
         communicator const& back() const
