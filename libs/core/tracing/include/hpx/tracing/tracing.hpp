@@ -10,6 +10,12 @@
 #include <hpx/config.hpp>
 #include <hpx/preprocessor/cat.hpp>
 
+#if defined(HPX_HAVE_TRACY) ||                                                 \
+    (defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0) ||                \
+    defined(HPX_HAVE_APEX)
+#define HPX_HAVE_TRACING
+#endif
+
 #if defined(DOXYGEN)
 /// \defgroup tracing Tracing API
 /// \brief Unconditionally defined tracing and profiling abstractions.
@@ -130,9 +136,7 @@ namespace hpx::tracing {
     constexpr void task_created([[maybe_unused]] ThreadData* thrdptr,
         [[maybe_unused]] void const* parent_task_id = nullptr) noexcept
     {
-#if defined(HPX_HAVE_TRACY) ||                                                 \
-    (defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0) ||                \
-    defined(HPX_HAVE_APEX)
+#if defined(HPX_HAVE_TRACING)
         task_created(ThreadData::get_safe_description(
                          thrdptr->get_description(), "thread"),
             thrdptr, parent_task_id);
@@ -142,9 +146,7 @@ namespace hpx::tracing {
     template <typename ThreadData>
     constexpr void task_executing([[maybe_unused]] ThreadData* thrdptr) noexcept
     {
-#if defined(HPX_HAVE_TRACY) ||                                                 \
-    (defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0) ||                \
-    defined(HPX_HAVE_APEX)
+#if defined(HPX_HAVE_TRACING)
         task_executing(thrdptr,
             ThreadData::get_safe_description(
                 thrdptr->get_description(), "thread"),
@@ -155,9 +157,7 @@ namespace hpx::tracing {
     template <typename ThreadData>
     constexpr void task_completed([[maybe_unused]] ThreadData* thrdptr) noexcept
     {
-#if defined(HPX_HAVE_TRACY) ||                                                 \
-    (defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0) ||                \
-    defined(HPX_HAVE_APEX)
+#if defined(HPX_HAVE_TRACING)
         task_completed(thrdptr,
             ThreadData::get_safe_description(
                 thrdptr->get_description(), "thread"));
