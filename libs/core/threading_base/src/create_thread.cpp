@@ -63,8 +63,8 @@ namespace hpx::threads::detail {
             {
                 data.parent_id = get_thread_id_data(self->get_thread_id());
                 data.parent_phase = self->get_thread_phase();
+                parent_task_id = data.parent_id.get();
             }
-            parent_task_id = data.parent_id.get();
         }
         else
         {

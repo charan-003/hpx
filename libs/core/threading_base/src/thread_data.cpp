@@ -106,9 +106,9 @@ namespace hpx::threads {
             {
                 parent_thread_id_ = threads::get_self_id();
                 parent_thread_phase_ = self->get_thread_phase();
+                parent_task_id = parent_thread_id_.get();
             }
         }
-        parent_task_id = parent_thread_id_.get();
         if (0 == parent_locality_id_)
             parent_locality_id_ = detail::get_locality_id(hpx::throws);
 #endif
@@ -277,9 +277,9 @@ namespace hpx::threads {
             {
                 parent_thread_id_ = threads::get_self_id();
                 parent_thread_phase_ = self->get_thread_phase();
+                parent_task_id = parent_thread_id_.get();
             }
         }
-        parent_task_id = parent_thread_id_.get();
         if (0 == parent_locality_id_)
         {
             parent_locality_id_ = detail::get_locality_id(hpx::throws);
