@@ -42,7 +42,7 @@ function(hpx_setup_git_hooks)
   _hpx_get_hookspath(_hpx_current_hookspath)
   if(_hpx_current_hookspath AND NOT _hpx_current_hookspath STREQUAL ".githooks")
     hpx_warn(
-      "core.hooksPath already set to '${_hpx_current_hookspath}'; leaving it unchanged. Unset it or set HPX_WITH_GIT_HOOKS=OFF to opt out of HPX git hooks."
+      "core.hooksPath already set to '${_hpx_current_hookspath}'; leaving it unchanged."
     )
     return()
   endif()
@@ -58,28 +58,5 @@ function(hpx_setup_git_hooks)
     hpx_info("Git commit hooks enabled (.githooks/)")
   else()
     hpx_warn("Could not enable git commit hooks: ${_hpx_git_hooks_error}")
-  endif()
-endfunction()
-
-# Called when HPX_WITH_GIT_HOOKS is OFF. Only reverts the setting we own, i.e.
-# unset core.hooksPath when it still points at our .githooks directory.
-function(hpx_unset_git_hooks)
-  if(NOT EXISTS "${HPX_SOURCE_DIR}/.git")
-    return()
-  endif()
-
-  find_package(Git QUIET)
-  if(NOT GIT_FOUND)
-    return()
-  endif()
-
-  _hpx_get_hookspath(_hpx_current_hookspath)
-  if(_hpx_current_hookspath STREQUAL ".githooks")
-    execute_process(
-      COMMAND "${GIT_EXECUTABLE}" config --unset core.hooksPath
-      WORKING_DIRECTORY "${HPX_SOURCE_DIR}"
-      ERROR_QUIET
-    )
-    hpx_info("Git commit hooks disabled (core.hooksPath unset)")
   endif()
 endfunction()
