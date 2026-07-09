@@ -15,5 +15,6 @@ add_hpx_module(
   GLOBAL_HEADER_MODULE_GEN ON
   HEADERS ${properties_headers}
   EXCLUDE_FROM_GLOBAL_HEADER hpx/property.hpp
+  MODULE_DEPENDENCIES hpx_config
   CMAKE_SUBDIRS examples tests
 )
