@@ -9,12 +9,7 @@
 
 #include <hpx/config.hpp>
 #include <hpx/preprocessor/cat.hpp>
-
-#if defined(HPX_HAVE_TRACY) ||                                                 \
-    (defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0) ||                \
-    defined(HPX_HAVE_APEX)
-#define HPX_HAVE_TRACING
-#endif
+#include <hpx/tracing/macros.hpp>
 
 #if defined(DOXYGEN)
 /// \defgroup tracing Tracing API
