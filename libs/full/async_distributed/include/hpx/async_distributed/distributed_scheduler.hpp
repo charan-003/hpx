@@ -92,14 +92,15 @@ namespace hpx::distributed::experimental {
             friend auto tag_invoke(hpx::execution::experimental::then_t,
                 distributed_domain, Sender&& sndr, F&& f)
             {
+                auto env = hpx::execution::experimental::get_env(sndr);
                 auto sched =
                     hpx::execution::experimental::get_completion_scheduler<
-                        hpx::execution::experimental::set_value_t>(
-                        hpx::execution::experimental::get_env(sndr));
+                        hpx::execution::experimental::set_value_t>(env);
+                auto target = sched.target_;
 
                 return detail::distributed_then_sender<std::decay_t<Sender>,
                     std::decay_t<F>>{HPX_FORWARD(Sender, sndr),
-                    HPX_FORWARD(F, f), sched.target()};
+                    HPX_FORWARD(F, f), HPX_MOVE(target)};
             }
         };
     }    // namespace detail
@@ -313,6 +314,7 @@ namespace hpx::distributed::experimental {
 
     private:
         hpx::id_type target_;
+        friend struct detail::distributed_domain;
     };
 
     // ---- Deferred inline definitions (after distributed_scheduler is
