@@ -227,7 +227,7 @@ namespace hpx::execution::experimental {
                     HPX_FORWARD(F, f));
         }
 
-        // Default: integral shape → counting_shape
+        // Default: integral shape -> counting_shape
         // clang-format off
         template <typename Sender, typename Shape, typename F,
             HPX_CONCEPT_REQUIRES_(
