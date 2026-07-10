@@ -1,6 +1,7 @@
 //  Copyright (c) 2007-2026 Hartmut Kaiser
 //  Copyright (c) 2008-2009 Chirag Dekate, Anshul Tandon
 //  Copyright (c) 2011      Bryce Lelbach
+//  Copyright (c) 2007-2026 Hartmut Kaiser
 //
 //  SPDX-License-Identifier: BSL-1.0
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -62,8 +63,8 @@ namespace hpx::threads {
       , requested_interrupt_(false)
       , enabled_interrupt_(true)
       , is_stackless_(is_stackless)
+      , running_exit_funcs_(false)
       , ran_exit_funcs_(false)
-      , has_exit_funcs_(false)
       , runs_as_child_(init_data.schedulehint.runs_as_child_mode() ==
             hpx::threads::thread_execution_hint::run_as_child)
       , last_worker_thread_num_(
@@ -138,56 +139,73 @@ namespace hpx::threads {
 
     void thread_data::run_thread_exit_callbacks()
     {
-        if (has_exit_funcs_.load(std::memory_order_acquire))
-        {
-            std::unique_lock<hpx::util::detail::spinlock> l(
-                spinlock_pool::spinlock_for(this));
+        std::unique_lock<hpx::util::detail::spinlock> l(mtx_);
 
-            while (!exit_funcs_.empty())
+        // run the exit functions in the order they have been added
+        exit_funcs_.reverse();
+
+        HPX_ASSERT(!running_exit_funcs_);
+
+        running_exit_funcs_ = true;
+        auto on_exit = hpx::experimental::scope_exit([this] {
+            running_exit_funcs_ = false;
+            ran_exit_funcs_ = true;
+        });
+
+        while (!exit_funcs_.empty())
+        {
+            if (auto f = HPX_MOVE(exit_funcs_.front()); !f.empty())
             {
-                if (auto& f = exit_funcs_.front(); !f.empty())
-                {
-                    hpx::unlock_guard<
-                        std::unique_lock<hpx::util::detail::spinlock>>
-                        ul(l);
-                    f();
-                }
+                // Pop under lock to make sure that a recursive call to
+                // add_thread_exit_callback from inside f() or during the
+                // unlocked phase will not cause the wrong function to be
+                // popped.
+                exit_funcs_.pop_front();
+
+                hpx::unlock_guard<std::unique_lock<hpx::util::detail::spinlock>>
+                    ul(l);
+                f();
+            }
+            else
+            {
                 exit_funcs_.pop_front();
             }
-            has_exit_funcs_.store(true, std::memory_order_release);
         }
-        ran_exit_funcs_.store(true, std::memory_order_release);
     }
 
     bool thread_data::add_thread_exit_callback(hpx::function<void()> const& f)
     {
-        std::lock_guard<hpx::util::detail::spinlock> l(
-            spinlock_pool::spinlock_for(this));
+        std::unique_lock<hpx::util::detail::spinlock> l(mtx_);
 
-        if (ran_exit_funcs_.load(std::memory_order_relaxed) ||
+        if (ran_exit_funcs_ ||
             get_state().state() == thread_schedule_state::terminated ||
             get_state().state() == thread_schedule_state::deleted)
         {
             return false;
         }
 
-        exit_funcs_.push_front(f);
-        has_exit_funcs_.store(true, std::memory_order_release);
+        if (running_exit_funcs_)
+        {
+            // make sure new function ends up at the end of the list during the
+            // execution of exit functions
+            exit_funcs_.reverse();
+            exit_funcs_.push_front(f);
+            exit_funcs_.reverse();
+        }
+        else
+        {
+            exit_funcs_.push_front(f);
+        }
 
         return true;
     }
 
     void thread_data::free_thread_exit_callbacks()
     {
-        if (!has_exit_funcs_.load(std::memory_order_relaxed))
-            return;
-
-        std::scoped_lock<hpx::util::detail::spinlock> l(
-            spinlock_pool::spinlock_for(this));
+        std::unique_lock<hpx::util::detail::spinlock> l(mtx_);
 
         // Exit functions should have been executed.
-        HPX_ASSERT(exit_funcs_.empty() ||
-            ran_exit_funcs_.load(std::memory_order_relaxed));
+        HPX_ASSERT(exit_funcs_.empty() || ran_exit_funcs_);
 
         exit_funcs_.clear();
     }
@@ -229,8 +247,8 @@ namespace hpx::threads {
         priority_ = init_data.priority;
         requested_interrupt_ = false;
         enabled_interrupt_ = true;
-        ran_exit_funcs_.store(false, std::memory_order_relaxed);
-        has_exit_funcs_.store(false, std::memory_order_relaxed);
+        running_exit_funcs_ = false;
+        ran_exit_funcs_ = false;
 
         runs_as_child_.store(init_data.schedulehint.runs_as_child_mode() ==
                 hpx::threads::thread_execution_hint::run_as_child,
@@ -305,16 +323,15 @@ namespace hpx::threads {
 #if defined(HPX_HAVE_THREAD_DESCRIPTION)
     threads::thread_description thread_data::get_description() const
     {
-        std::scoped_lock<hpx::util::detail::spinlock> l(
-            spinlock_pool::spinlock_for(this));
+        std::unique_lock<hpx::util::detail::spinlock> l(mtx_);
         return description_;
     }
 
     threads::thread_description thread_data::set_description(
         threads::thread_description value)
     {
-        std::scoped_lock<hpx::util::detail::spinlock> l(
-            spinlock_pool::spinlock_for(this));
+        std::unique_lock<hpx::util::detail::spinlock> l(mtx_);
+
         std::swap(description_, value);
 
         hpx::tracing::rename_region(description_.get_description());
@@ -324,16 +341,15 @@ namespace hpx::threads {
 
     threads::thread_description thread_data::get_lco_description() const
     {
-        std::scoped_lock<hpx::util::detail::spinlock> l(
-            spinlock_pool::spinlock_for(this));
+        std::unique_lock<hpx::util::detail::spinlock> l(mtx_);
         return lco_description_;
     }
 
     threads::thread_description thread_data::set_lco_description(
         threads::thread_description value)
     {
-        std::scoped_lock<hpx::util::detail::spinlock> l(
-            spinlock_pool::spinlock_for(this));
+        std::unique_lock<hpx::util::detail::spinlock> l(mtx_);
+
         std::swap(lco_description_, value);
         return value;
     }

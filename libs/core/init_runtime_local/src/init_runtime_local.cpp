@@ -500,7 +500,8 @@ namespace hpx {
                     }
                     catch (hpx::exception const& e)
                     {
-                        std::cerr << "hpx::init: hpx::exception caught: "
+                        resource::detail::delete_partitioner();
+                        std::cerr << "hpx::local::init: hpx::exception caught: "
                                   << hpx::get_error_what(e) << "\n";
                         return -1;
                     }
@@ -523,6 +524,7 @@ namespace hpx {
                 }
                 catch (hpx::detail::command_line_error const& e)
                 {
+                    resource::detail::delete_partitioner();
                     std::cerr << "hpx::local::init: std::exception caught: "
                               << e.what() << "\n";
                     return -1;
