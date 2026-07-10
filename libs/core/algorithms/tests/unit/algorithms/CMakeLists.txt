@@ -215,6 +215,7 @@ set(tests
     rotate_copy_sender
     search_sender
     set_difference_sender
+    set_intersection_sender
     shift_left_sender
     shift_right_sender
     starts_with_sender
