@@ -110,20 +110,26 @@ namespace hpx::lcos::local::detail {
             return wait(lock, "condition_variable::wait", ec);
         }
 
-        threads::thread_restart_state wait_until(
+        HPX_CORE_EXPORT threads::thread_restart_state wait_until(
             std::unique_lock<mutex_type>& lock,
             hpx::chrono::steady_time_point const& abs_time,
-            char const* description, error_code& ec = throws)
-        {
-            return wait_until(
-                lock, abs_time, []() { return false; }, description, ec);
-        }
+            char const* description, error_code& ec = throws);
 
         HPX_CORE_EXPORT threads::thread_restart_state wait_until(
             std::unique_lock<mutex_type>& lock,
             hpx::chrono::steady_time_point const& abs_time,
             hpx::move_only_function<bool()>&& wait_cond,
             char const* description, error_code& ec = throws);
+
+        threads::thread_restart_state wait_until(
+            std::unique_lock<mutex_type>& lock,
+            hpx::chrono::steady_time_point const& abs_time,
+            hpx::move_only_function<bool()>&& wait_cond,
+            error_code& ec = throws)
+        {
+            return wait_until(lock, abs_time, HPX_MOVE(wait_cond),
+                "condition_variable::wait_until", ec);
+        }
 
         threads::thread_restart_state wait_until(
             std::unique_lock<mutex_type>& lock,

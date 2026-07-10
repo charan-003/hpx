@@ -13,12 +13,16 @@
 #include <atomic>
 #include <chrono>
 #include <cstddef>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 std::size_t dummy_called = 0;
+std::size_t dummy_sleep_for_called = 0;
+std::size_t dummy_sleep_until_called = 0;
 
 struct dummy_context final : hpx::execution_base::context_base
 {
@@ -54,16 +58,22 @@ struct dummy_agent : hpx::execution_base::agent_base
     void abort(char const*) override {}
 
     hpx::threads::thread_restart_state sleep_for(
-        hpx::chrono::steady_duration const&, hpx::move_only_function<bool()>&&,
-        char const*) override
+        hpx::chrono::steady_duration const&,
+        hpx::move_only_function<bool()>&& wait_cond, char const*) override
     {
-        return hpx::threads::thread_restart_state::signaled;
+        ++dummy_sleep_for_called;
+        return wait_cond && wait_cond() ?
+            hpx::threads::thread_restart_state::signaled :
+            hpx::threads::thread_restart_state::timeout;
     }
     hpx::threads::thread_restart_state sleep_until(
         hpx::chrono::steady_time_point const&,
-        hpx::move_only_function<bool()>&&, char const*) override
+        hpx::move_only_function<bool()>&& wait_cond, char const*) override
     {
-        return hpx::threads::thread_restart_state::signaled;
+        ++dummy_sleep_until_called;
+        return wait_cond && wait_cond() ?
+            hpx::threads::thread_restart_state::signaled :
+            hpx::threads::thread_restart_state::timeout;
     }
 
     dummy_context context_;
@@ -189,12 +199,68 @@ void test_sleep()
     HPX_TEST(now + sleep_duration * 2 <= std::chrono::steady_clock::now());
 }
 
+void test_sleep_with_predicate()
+{
+    // predicate satisfied immediately -> the agent should report that it was
+    // signaled, and the (move-only) predicate must have been forwarded all the
+    // way down to the agent implementation.
+    {
+        dummy_agent dummy;
+        hpx::execution_base::this_thread::reset_agent ctx(dummy);
+
+        dummy_sleep_for_called = 0;
+        auto state = hpx::execution_base::this_thread::agent().sleep_for(
+            std::chrono::milliseconds(100), []() { return true; });
+        HPX_TEST_EQ(dummy_sleep_for_called, 1u);
+        HPX_TEST(state == hpx::threads::thread_restart_state::signaled);
+    }
+
+    // predicate never satisfied -> the agent should report a timeout
+    {
+        dummy_agent dummy;
+        hpx::execution_base::this_thread::reset_agent ctx(dummy);
+
+        dummy_sleep_until_called = 0;
+        auto state = hpx::execution_base::this_thread::agent().sleep_until(
+            std::chrono::steady_clock::now() + std::chrono::milliseconds(100),
+            []() { return false; });
+        HPX_TEST_EQ(dummy_sleep_until_called, 1u);
+        HPX_TEST(state == hpx::threads::thread_restart_state::timeout);
+    }
+
+    // move-only predicates must be forwarded by value, not copied
+    {
+        dummy_agent dummy;
+        hpx::execution_base::this_thread::reset_agent ctx(dummy);
+
+        auto flag = std::make_unique<bool>(true);
+        auto state = hpx::execution_base::this_thread::agent().sleep_for(
+            std::chrono::milliseconds(100),
+            [flag = std::move(flag)]() { return *flag; });
+        HPX_TEST(state == hpx::threads::thread_restart_state::signaled);
+    }
+
+    // the real (default) agent used when no other agent context has been
+    // installed does not support predicate-based early wake up: it always waits
+    // out the full duration and reports a timeout, regardless of the predicate
+    // passed in.
+    {
+        auto now = std::chrono::steady_clock::now();
+        auto sleep_duration = std::chrono::milliseconds(100);
+        auto state = hpx::execution_base::this_thread::agent().sleep_for(
+            sleep_duration, []() { return true; });
+        HPX_TEST(state == hpx::threads::thread_restart_state::timeout);
+        HPX_TEST(now + sleep_duration <= std::chrono::steady_clock::now());
+    }
+}
+
 int main()
 {
     test_basic_functionality();
     test_yield();
     test_suspend_resume();
     test_sleep();
+    test_sleep_with_predicate();
 
     return hpx::util::report_errors();
 }
