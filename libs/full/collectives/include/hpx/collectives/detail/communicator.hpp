@@ -26,6 +26,7 @@
 
 #include <cstddef>
 #include <mutex>
+#include <string>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -62,7 +63,7 @@ namespace hpx::collectives::detail {
         HPX_EXPORT communicator_server() noexcept;
 
         HPX_EXPORT explicit communicator_server(
-            std::size_t num_sites, char const* basename) noexcept;
+            std::size_t num_sites, char const* basename);
 
         communicator_server(communicator_server const&) = delete;
         communicator_server(communicator_server&&) = delete;
@@ -482,7 +483,10 @@ namespace hpx::collectives::detail {
         std::size_t const num_sites_;
         std::size_t on_ready_count_ = 0;
         char const* current_operation_ = nullptr;
-        char const* basename_ = nullptr;
+        // Stored by value: the name arrives as a pointer into a caller-local
+        // buffer that does not outlive the component, and it is only ever
+        // needed again for diagnostics.
+        std::string basename_;
         mutex_type mtx_;
         bool needs_initialization_ = true;
         bool data_available_ = false;
