@@ -1,4 +1,4 @@
-//  Copyright (c) 2007-2025 Hartmut Kaiser
+//  Copyright (c) 2007-2026 Hartmut Kaiser
 //  Copyright (c) 2013-2015 Agustin Berge
 //
 //  SPDX-License-Identifier: BSL-1.0
@@ -8,6 +8,7 @@
 #include <hpx/assert.hpp>
 #include <hpx/modules/errors.hpp>
 #include <hpx/modules/execution_base.hpp>
+#include <hpx/modules/functional.hpp>
 #include <hpx/modules/logging.hpp>
 #include <hpx/modules/memory.hpp>
 #include <hpx/modules/thread_support.hpp>
@@ -249,6 +250,7 @@ namespace hpx::lcos::local::detail {
     threads::thread_restart_state condition_variable::wait_until(
         std::unique_lock<mutex_type>& lock,
         hpx::chrono::steady_time_point const& abs_time,
+        hpx::move_only_function<bool()>&& wait_cond,
         char const* /* description */, error_code& /* ec */)
     {
         HPX_ASSERT_OWNS_LOCK(lock);
@@ -258,15 +260,18 @@ namespace hpx::lcos::local::detail {
         queue_entry f(this_ctx, &queue_);
         queue_.push_back(f);
 
+        threads::thread_restart_state s;
         reset_queue_entry r(f);
+
         {
             // suspend this thread
             unlock_guard<std::unique_lock<mutex_type>> ul(lock);
-            this_ctx.sleep_until(abs_time.value());
+            s = this_ctx.sleep_until(abs_time.value(), HPX_MOVE(wait_cond));
         }
 
-        return f.ctx_ ? threads::thread_restart_state::timeout :
-                        threads::thread_restart_state::signaled;
+        return f.ctx_ || s == threads::thread_restart_state::timeout ?
+            threads::thread_restart_state::timeout :
+            threads::thread_restart_state::signaled;
     }
 
     template <typename Mutex>
