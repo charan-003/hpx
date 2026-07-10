@@ -7,6 +7,7 @@
 #include <hpx/config.hpp>
 
 #if !defined(HPX_COMPUTE_DEVICE_CODE)
+#include <hpx/assert.hpp>
 #include <hpx/execution.hpp>
 #include <hpx/execution/algorithms/sync_wait.hpp>
 #include <hpx/future.hpp>
@@ -19,6 +20,7 @@
 #include <cstdint>
 #include <iostream>
 #include <string>
+#include <utility>
 
 namespace ex = hpx::execution::experimental;
 namespace tt = hpx::this_thread::experimental;
