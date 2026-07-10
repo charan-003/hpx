@@ -152,6 +152,13 @@ namespace hpx { namespace collectives {
     ///         non-hierarchical (flat) collectives keep supporting the default
     ///         generation, falling back to the internal per-communicator
     ///         counter maintained in the and_gate.
+    ///         Once any operation on a communicator has used that default,
+    ///         later operations on the same instance may no longer pass an
+    ///         explicit generation number: the counter's position is no
+    ///         longer reliably known to the caller. The reverse transition,
+    ///         from explicit numbering back to the default, remains valid.
+    ///         All participants of a single operation must use the same
+    ///         generation mode.
     ///
     /// \returns    This function returns a new communicator object usable
     ///             with the collective operation.

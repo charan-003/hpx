@@ -381,6 +381,29 @@ namespace hpx::collectives::detail {
             std::unique_lock l(mtx_);
             [[maybe_unused]] util::ignore_all_while_checking il;
 
+            // An explicit generation number is usable only while the gate
+            // position remains a pure function of the numbers supplied so far.
+            // An auto (default) generation advances the gate without telling
+            // the caller by how much, leaving no reliable way to choose the
+            // next explicit number: too small throws, too large waits forever.
+            // Latch the first auto use and reject the transition up front; the
+            // reverse order stays valid because an auto generation always
+            // synchronizes on the gate's current position.
+            if (generation == generation_arg{})
+            {
+                auto_generation_used_ = true;
+            }
+            else if (auto_generation_used_)
+            {
+                l.unlock();
+                HPX_THROW_EXCEPTION(hpx::error::bad_parameter,
+                    "communicator::handle_data",
+                    "communicator {}: an explicit generation number cannot "
+                    "follow auto-generation operations on the same "
+                    "communicator: operation {}, which {}, generation {}.",
+                    basename_, operation, which, generation);
+            }
+
             // Verify that there is no overlap between different types of
             // operations on the same communicator.
             set_operation_and_check_sequencing(l, operation, which, generation);
@@ -490,6 +513,7 @@ namespace hpx::collectives::detail {
         mutex_type mtx_;
         bool needs_initialization_ = true;
         bool data_available_ = false;
+        bool auto_generation_used_ = false;
     };
 }    // namespace hpx::collectives::detail
 
