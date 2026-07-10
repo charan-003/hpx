@@ -96,6 +96,7 @@ namespace hpx::threads {
             stacksize <= (std::numeric_limits<std::int32_t>::max)());
         HPX_ASSERT(stacksize_enum_ != threads::thread_stacksize::current);
 
+        void const* parent_task_id = nullptr;
 #ifdef HPX_HAVE_THREAD_PARENT_REFERENCE
         // store the thread id of the parent thread, mainly for debugging
         // purposes
@@ -105,6 +106,7 @@ namespace hpx::threads {
             {
                 parent_thread_id_ = threads::get_self_id();
                 parent_thread_phase_ = self->get_thread_phase();
+                parent_task_id = parent_thread_id_.get();
             }
         }
         if (0 == parent_locality_id_)
@@ -114,12 +116,14 @@ namespace hpx::threads {
 #if defined(HPX_HAVE_TRACY)
         fiber_name_[0] = '\0';
 #endif
+        hpx::tracing::task_created(this, parent_task_id);
     }
 
     thread_data::~thread_data()
     {
         LTM_(debug).format("thread_data::~thread_data({})", this);
         free_thread_exit_callbacks();
+        hpx::tracing::task_deleted(this);
     }
 
     void thread_data::destroy_thread()
@@ -209,6 +213,7 @@ namespace hpx::threads {
             this, get_description(), get_thread_phase());
 
         free_thread_exit_callbacks();
+        hpx::tracing::task_deleted(this);
 
         priority_ = init_data.priority;
         requested_interrupt_ = false;
@@ -262,6 +267,7 @@ namespace hpx::threads {
         LTM_(debug).format("thread::thread({}), description({}), rebind", this,
             get_description());
 
+        void const* parent_task_id = nullptr;
 #ifdef HPX_HAVE_THREAD_PARENT_REFERENCE
         // store the thread id of the parent thread, mainly for debugging
         // purposes
@@ -271,6 +277,7 @@ namespace hpx::threads {
             {
                 parent_thread_id_ = threads::get_self_id();
                 parent_thread_phase_ = self->get_thread_phase();
+                parent_task_id = parent_thread_id_.get();
             }
         }
         if (0 == parent_locality_id_)
@@ -279,6 +286,8 @@ namespace hpx::threads {
         }
 #endif
         set_timer_data(init_data.timer_data);
+
+        hpx::tracing::task_created(this, parent_task_id);
     }
 
 #if defined(HPX_HAVE_THREAD_DESCRIPTION)
