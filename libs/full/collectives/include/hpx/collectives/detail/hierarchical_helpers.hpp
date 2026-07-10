@@ -42,7 +42,7 @@ namespace hpx::collectives::detail {
         generation_arg second;
     };
 
-    HPX_CXX_EXPORT [[nodiscard]] std::exception_ptr
+    [[nodiscard]] HPX_EXPORT std::exception_ptr
     validate_hierarchical_communicator(
         hierarchical_communicator const& communicators, this_site_arg this_site,
         char const* name);
@@ -129,19 +129,19 @@ namespace hpx::collectives::detail {
             num_generations};
     }
 
-    HPX_CXX_EXPORT [[nodiscard]] std::size_t get_top_level_group_count(
+    [[nodiscard]] HPX_EXPORT std::size_t get_top_level_group_count(
         std::size_t num_sites, std::size_t arity);
 
-    HPX_CXX_EXPORT [[nodiscard]] std::size_t get_top_level_group_left(
+    [[nodiscard]] HPX_EXPORT std::size_t get_top_level_group_left(
         std::size_t group, std::size_t num_sites, std::size_t arity);
 
-    HPX_CXX_EXPORT [[nodiscard]] std::size_t get_top_level_group_size(
+    [[nodiscard]] HPX_EXPORT std::size_t get_top_level_group_size(
         std::size_t group, std::size_t num_sites, std::size_t arity);
 
-    HPX_CXX_EXPORT [[nodiscard]] std::ptrdiff_t classify_site(
+    [[nodiscard]] HPX_EXPORT std::ptrdiff_t classify_site(
         std::size_t this_site, std::size_t num_sites, std::size_t arity);
 
-    HPX_CXX_EXPORT [[nodiscard]] bool is_top_level_rep(
+    [[nodiscard]] HPX_EXPORT bool is_top_level_rep(
         std::size_t this_site, std::size_t num_sites, std::size_t arity);
 
     template <typename T, typename F>
