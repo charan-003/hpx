@@ -9,6 +9,7 @@
 
 #include <hpx/config.hpp>
 #include <hpx/preprocessor/cat.hpp>
+#include <hpx/tracing/macros.hpp>
 
 #if defined(DOXYGEN)
 /// \defgroup tracing Tracing API
@@ -123,3 +124,38 @@ namespace hpx::tracing {
     };
 }    // namespace hpx::tracing
 #endif
+
+namespace hpx::tracing {
+
+    template <typename ThreadData>
+    constexpr void task_created([[maybe_unused]] ThreadData* thrdptr,
+        [[maybe_unused]] void const* parent_task_id = nullptr) noexcept
+    {
+#if defined(HPX_HAVE_TRACING)
+        task_created(ThreadData::get_safe_description(
+                         thrdptr->get_description(), "thread"),
+            thrdptr, parent_task_id);
+#endif
+    }
+
+    template <typename ThreadData>
+    constexpr void task_executing([[maybe_unused]] ThreadData* thrdptr) noexcept
+    {
+#if defined(HPX_HAVE_TRACING)
+        task_executing(thrdptr,
+            ThreadData::get_safe_description(
+                thrdptr->get_description(), "thread"),
+            thrdptr->get_last_worker_thread_num());
+#endif
+    }
+
+    template <typename ThreadData>
+    constexpr void task_completed([[maybe_unused]] ThreadData* thrdptr) noexcept
+    {
+#if defined(HPX_HAVE_TRACING)
+        task_completed(thrdptr,
+            ThreadData::get_safe_description(
+                thrdptr->get_description(), "thread"));
+#endif
+    }
+}    // namespace hpx::tracing
