@@ -76,10 +76,11 @@ namespace hpx::lockfree {
         struct node;
         struct node_data
         {
-            using tagged_node_handle = detail::select_tagged_handle<node,
-                node_based>::tagged_handle_type;
-            using handle_type =
-                detail::select_tagged_handle<node, node_based>::handle_type;
+            using tagged_node_handle =
+                typename detail::select_tagged_handle<node,
+                    node_based>::tagged_handle_type;
+            using handle_type = typename detail::select_tagged_handle<node,
+                node_based>::handle_type;
 
             template <typename T_>
             node_data(T_&& t, handle_type null_handle) noexcept(
@@ -112,17 +113,17 @@ namespace hpx::lockfree {
                 node_data>::cache_aligned_data_derived;
         };
 
-        using node_allocator =
-            std::allocator_traits<Allocator>::template rebind_alloc<node>;
+        using node_allocator = typename std::allocator_traits<
+            Allocator>::template rebind_alloc<node>;
 
-        using pool_t = detail::select_freelist<node, node_allocator,
+        using pool_t = typename detail::select_freelist<node, node_allocator,
             compile_time_sized, fixed_sized, capacity>::type;
 
-        using tagged_node_handle = pool_t::tagged_node_handle;
-        using handle_type =
-            detail::select_tagged_handle<node, node_based>::handle_type;
+        using tagged_node_handle = typename pool_t::tagged_node_handle;
+        using handle_type = typename detail::select_tagged_handle<node,
+            node_based>::handle_type;
 
-        using index_t = tagged_node_handle::index_t;
+        using index_t = typename tagged_node_handle::index_t;
 
         static constexpr auto null_index_t() noexcept
         {
@@ -157,8 +158,8 @@ namespace hpx::lockfree {
         queue& operator=(queue&&) = delete;
 
         using value_type = T;
-        using allocator = implementation_defined::allocator;
-        using size_type = implementation_defined::size_type;
+        using allocator = typename implementation_defined::allocator;
+        using size_type = typename implementation_defined::size_type;
 
         /**
          * \return true, if implementation is lock-free.
@@ -198,9 +199,8 @@ namespace hpx::lockfree {
          *  \pre Must specify a capacity<> argument
          */
         template <typename U>
-        explicit queue(
-            std::allocator_traits<Allocator>::template rebind_alloc<U> const&
-                alloc)
+        explicit queue(typename std::allocator_traits<
+            Allocator>::template rebind_alloc<U> const& alloc)
           : head_(tagged_node_handle(null_index_t(), 0))
           , tail_(tagged_node_handle(null_index_t(), 0))
           , pool(alloc, capacity)
@@ -254,8 +254,8 @@ namespace hpx::lockfree {
          */
         template <typename U>
         queue(size_type n,
-            std::allocator_traits<Allocator>::template rebind_alloc<U> const&
-                alloc)
+            typename std::allocator_traits<Allocator>::template rebind_alloc<
+                U> const& alloc)
           : head_(tagged_node_handle(null_index_t(), 0))
           , tail_(tagged_node_handle(null_index_t(), 0))
           , pool(alloc, n + 1)

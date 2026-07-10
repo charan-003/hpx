@@ -1,4 +1,4 @@
-//  Copyright (c) 2007-2025 Hartmut Kaiser
+//  Copyright (c) 2007-2026 Hartmut Kaiser
 //  Copyright (c)      2011 Bryce Lelbach
 //  Copyright (c) 2008-2009 Chirag Dekate, Anshul Tandon
 //
@@ -596,8 +596,10 @@ namespace hpx::threads {
 
         bool requested_interrupt_;
         bool enabled_interrupt_;
-        bool ran_exit_funcs_;
         bool const is_stackless_;
+
+        std::atomic<bool> ran_exit_funcs_;
+        std::atomic<bool> has_exit_funcs_;
 
         // support scoped child execution
         std::atomic<bool> runs_as_child_;
@@ -657,12 +659,14 @@ namespace hpx::threads {
     }
 
 #if defined(HPX_HAVE_TRACY)
+    // tracy support
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT tracing::region_init_data
     get_region_init_data(thread_data const* thrdptr);
 
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT tracing::fiber_region_init_data
     get_fiber_region_init_data(thread_data const* thrdptr);
 #elif defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0
+    // ITTNotify support
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT tracing::region_init_data
     get_region_init_data(thread_data const* thrdptr);
 

@@ -95,6 +95,10 @@ namespace hpx::threads::policies {
         };
     };
 
+    // Dual-queue push-to-passive semantics, conditional (128-bit atomic)
+    // end-selection for pop, distinct steal=true vs. steal=false pop control
+    // flow (bounded retries + parity toggle), and empty() requiring both
+    // queues to be empty.
     HPX_CXX_CORE_EXPORT template <typename T>
     struct lockfree_fifo_double_backend
     {

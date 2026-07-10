@@ -1,4 +1,4 @@
-//  Copyright (c) 2007-2025 Hartmut Kaiser
+//  Copyright (c) 2007-2026 Hartmut Kaiser
 //  Copyright (c) 2008-2009 Chirag Dekate, Anshul Tandon
 //  Copyright (c) 2011      Bryce Lelbach
 //
@@ -61,8 +61,9 @@ namespace hpx::threads {
       , priority_(init_data.priority)
       , requested_interrupt_(false)
       , enabled_interrupt_(true)
-      , ran_exit_funcs_(false)
       , is_stackless_(is_stackless)
+      , ran_exit_funcs_(false)
+      , has_exit_funcs_(false)
       , runs_as_child_(init_data.schedulehint.runs_as_child_mode() ==
             hpx::threads::thread_execution_hint::run_as_child)
       , last_worker_thread_num_(
@@ -137,20 +138,25 @@ namespace hpx::threads {
 
     void thread_data::run_thread_exit_callbacks()
     {
-        std::unique_lock<hpx::util::detail::spinlock> l(
-            spinlock_pool::spinlock_for(this));
-
-        while (!exit_funcs_.empty())
+        if (has_exit_funcs_.load(std::memory_order_acquire))
         {
+            std::unique_lock<hpx::util::detail::spinlock> l(
+                spinlock_pool::spinlock_for(this));
+
+            while (!exit_funcs_.empty())
             {
-                hpx::unlock_guard<std::unique_lock<hpx::util::detail::spinlock>>
-                    ul(l);
-                if (!exit_funcs_.front().empty())
-                    exit_funcs_.front()();
+                if (auto& f = exit_funcs_.front(); !f.empty())
+                {
+                    hpx::unlock_guard<
+                        std::unique_lock<hpx::util::detail::spinlock>>
+                        ul(l);
+                    f();
+                }
+                exit_funcs_.pop_front();
             }
-            exit_funcs_.pop_front();
+            has_exit_funcs_.store(true, std::memory_order_release);
         }
-        ran_exit_funcs_ = true;
+        ran_exit_funcs_.store(true, std::memory_order_release);
     }
 
     bool thread_data::add_thread_exit_callback(hpx::function<void()> const& f)
@@ -158,7 +164,7 @@ namespace hpx::threads {
         std::lock_guard<hpx::util::detail::spinlock> l(
             spinlock_pool::spinlock_for(this));
 
-        if (ran_exit_funcs_ ||
+        if (ran_exit_funcs_.load(std::memory_order_relaxed) ||
             get_state().state() == thread_schedule_state::terminated ||
             get_state().state() == thread_schedule_state::deleted)
         {
@@ -166,17 +172,22 @@ namespace hpx::threads {
         }
 
         exit_funcs_.push_front(f);
+        has_exit_funcs_.store(true, std::memory_order_release);
 
         return true;
     }
 
     void thread_data::free_thread_exit_callbacks()
     {
+        if (!has_exit_funcs_.load(std::memory_order_relaxed))
+            return;
+
         std::scoped_lock<hpx::util::detail::spinlock> l(
             spinlock_pool::spinlock_for(this));
 
         // Exit functions should have been executed.
-        HPX_ASSERT(exit_funcs_.empty() || ran_exit_funcs_);
+        HPX_ASSERT(exit_funcs_.empty() ||
+            ran_exit_funcs_.load(std::memory_order_relaxed));
 
         exit_funcs_.clear();
     }
@@ -218,7 +229,8 @@ namespace hpx::threads {
         priority_ = init_data.priority;
         requested_interrupt_ = false;
         enabled_interrupt_ = true;
-        ran_exit_funcs_ = false;
+        ran_exit_funcs_.store(false, std::memory_order_relaxed);
+        has_exit_funcs_.store(false, std::memory_order_relaxed);
 
         runs_as_child_.store(init_data.schedulehint.runs_as_child_mode() ==
                 hpx::threads::thread_execution_hint::run_as_child,
