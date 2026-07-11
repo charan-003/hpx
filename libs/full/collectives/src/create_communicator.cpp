@@ -63,11 +63,14 @@ namespace hpx::collectives {
             HPX_ASSERT(false);    // shouldn't ever be called
         }
 
+        // Copy basename: it may point at a caller-local buffer (e.g. hierarchical
+        // create_communicator(name.c_str(), ...)) that does not outlive this
+        // component. std::string(nullptr) is undefined, so guard null.
         communicator_server::communicator_server(
-            std::size_t num_sites, char const* basename) noexcept
+            std::size_t num_sites, char const* basename)
           : gate_(num_sites)
           , num_sites_(num_sites)
-          , basename_(basename)
+          , basename_(basename != nullptr ? basename : "")
         {
             HPX_ASSERT(
                 num_sites != 0 && num_sites != static_cast<std::size_t>(-1));
