@@ -506,9 +506,13 @@ namespace hpx::collectives::detail {
         std::size_t const num_sites_;
         std::size_t on_ready_count_ = 0;
         char const* current_operation_ = nullptr;
-        // Stored by value: the name arrives as a pointer into a caller-local
-        // buffer that does not outlive the component, and it is only ever
-        // needed again for diagnostics.
+        // Owned copy for diagnostics only. create_communicator passes the
+        // caller's char const* straight into local_new; hierarchical tree
+        // construction uses name.c_str() on a stack std::string that is
+        // destroyed when recursively_fill_communicators returns, while this
+        // component outlives that frame. A borrowed pointer would therefore
+        // dangle on later exception paths. Flat string-literal basenames are
+        // stable, but ownership keeps every path safe without special cases.
         std::string basename_;
         mutex_type mtx_;
         bool needs_initialization_ = true;
