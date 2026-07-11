@@ -14,6 +14,7 @@
 #include <numeric>
 #include <random>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "test_utils.hpp"
@@ -381,6 +382,7 @@ void test_find_last_sentinel(IteratorTag)
         auto result = hpx::ranges::find_last_if_not(c, pred);
         base_iterator test_index =
             std::begin(c.base()) + static_cast<std::ptrdiff_t>(c.size() - 50);
+        HPX_TEST(result.begin() == iterator(test_index));
         c.base().back() = 5;
         auto result2 = hpx::ranges::find_last_if_not(c, pred);
         HPX_TEST(
