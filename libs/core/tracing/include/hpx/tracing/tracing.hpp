@@ -150,6 +150,40 @@ namespace hpx::tracing {
     }
 
     template <typename ThreadData>
+    constexpr void task_yielded([[maybe_unused]] ThreadData* thrdptr) noexcept
+    {
+#if defined(HPX_HAVE_TRACING)
+        task_yielded(thrdptr,
+            ThreadData::get_safe_description(
+                thrdptr->get_description(), "thread"));
+#endif
+    }
+
+    template <typename ThreadData>
+    constexpr void task_suspended([[maybe_unused]] ThreadData* thrdptr,
+        [[maybe_unused]] char const* reason) noexcept
+    {
+#if defined(HPX_HAVE_TRACING)
+        task_suspended(thrdptr,
+            ThreadData::get_safe_description(
+                thrdptr->get_description(), "thread"),
+            reason);
+#endif
+    }
+
+    template <typename ThreadData>
+    constexpr void task_resumed([[maybe_unused]] ThreadData* thrdptr,
+        [[maybe_unused]] char const* wake_reason) noexcept
+    {
+#if defined(HPX_HAVE_TRACING)
+        task_resumed(thrdptr,
+            ThreadData::get_safe_description(
+                thrdptr->get_description(), "thread"),
+            wake_reason);
+#endif
+    }
+
+    template <typename ThreadData>
     constexpr void task_completed([[maybe_unused]] ThreadData* thrdptr) noexcept
     {
 #if defined(HPX_HAVE_TRACING)
