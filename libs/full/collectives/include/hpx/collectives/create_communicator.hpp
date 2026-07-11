@@ -388,11 +388,6 @@ namespace hpx::collectives {
             return communicators.size();
         }
 
-        [[nodiscard]] bool empty() const noexcept
-        {
-            return communicators.empty();
-        }
-
         [[nodiscard]] bool valid() const noexcept
         {
             if (communicators.empty())
