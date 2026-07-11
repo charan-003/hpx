@@ -8,10 +8,9 @@
 
 #if !defined(HPX_COMPUTE_DEVICE_CODE)
 #include <hpx/assert.hpp>
-#include <hpx/execution.hpp>
-#include <hpx/execution/algorithms/sync_wait.hpp>
 #include <hpx/future.hpp>
 #include <hpx/init.hpp>
+#include <hpx/modules/execution.hpp>
 #include <hpx/modules/testing.hpp>
 #include <hpx/modules/timing.hpp>
 #include <hpx/thread.hpp>
