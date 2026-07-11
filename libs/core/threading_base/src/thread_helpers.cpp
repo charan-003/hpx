@@ -487,6 +487,18 @@ namespace hpx::this_thread {
 #endif
             hpx::tracing::fiber_suspend_region tracy_suspend(
                 get_suspend_reason(description));
+
+            if (state == threads::thread_schedule_state::pending ||
+                state == threads::thread_schedule_state::pending_boost)
+            {
+                hpx::tracing::task_yielded(get_thread_id_data(id.noref()));
+            }
+            else if (state == threads::thread_schedule_state::suspended)
+            {
+                hpx::tracing::task_suspended(get_thread_id_data(id.noref()),
+                    get_suspend_reason(description));
+            }
+
             // We might need to dispatch 'nextid' to it's correct scheduler only
             // if our current scheduler is the same, we should yield to the id
             if (nextid &&
@@ -569,6 +581,10 @@ namespace hpx::this_thread {
 #endif
             hpx::tracing::fiber_suspend_region tracy_suspend(
                 get_suspend_reason(description));
+
+            hpx::tracing::task_suspended(get_thread_id_data(id.noref()),
+                get_suspend_reason(description));
+
             std::atomic<bool> timer_started(false);
             threads::thread_id_ref_type const timer_id =
                 threads::set_thread_state(id.noref(), abs_time, &timer_started,
