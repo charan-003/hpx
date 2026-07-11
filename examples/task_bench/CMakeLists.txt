@@ -28,7 +28,7 @@ include(FetchContent)
 fetchcontent_declare(
   task_bench
   GIT_REPOSITORY https://github.com/StanfordLegion/task-bench.git
-  GIT_TAG 661d99505cc61172861e92db1b7e63b5e1165a98
+  GIT_TAG 8be58bc147d75d37ba770ddb4a910daa3e3b2e79
   SOURCE_SUBDIR hpx
 )
 
@@ -39,6 +39,9 @@ if(NOT task_bench_POPULATED)
 endif()
 
 set(TASK_BENCH_CORE_DIR "${task_bench_SOURCE_DIR}/core")
+set(TASK_BENCH_HPX_DIR "${task_bench_SOURCE_DIR}/hpx")
+set(TASK_BENCH_FORK_JOIN_SOURCE "${TASK_BENCH_HPX_DIR}/hpx_fork_join.cc")
+set(TASK_BENCH_DISTRIBUTED_SOURCE "${TASK_BENCH_HPX_DIR}/hpx_distributed.cc")
 
 # core_random.c and siphash.c are C files; enable C so cmake can compile them.
 enable_language(C)
@@ -57,41 +60,41 @@ target_include_directories(task_bench_core PUBLIC "${TASK_BENCH_CORE_DIR}")
 target_compile_features(task_bench_core PUBLIC cxx_std_17)
 set_target_properties(task_bench_core PROPERTIES OUTPUT_NAME "core_s")
 
-# Build the HPX fork-join driver (intra-node parallelism, no MPI required).
-if(COMMAND add_hpx_executable)
-  add_hpx_executable(
-    hpx_fork_join
-    SOURCES "${task_bench_SOURCE_DIR}/hpx/hpx_fork_join.cc"
-    FOLDER "Examples/TaskBench"
-  )
-  # hpx_include carries the libs/full/include/include path (and all its
-  # transitive module deps such as hpx_segmented_algorithms) that hpx/hpx.hpp
-  # requires. It is only defined when HPX_WITH_DISTRIBUTED_RUNTIME=ON, which is
-  # already guaranteed by the guard above.
-  target_link_libraries(hpx_fork_join PRIVATE hpx_include)
-else()
-  find_package(HPX REQUIRED)
-  add_executable(hpx_fork_join "${task_bench_SOURCE_DIR}/hpx/hpx_fork_join.cc")
-  target_link_libraries(hpx_fork_join PUBLIC HPX::hpx HPX::wrap_main)
+# Build the fork-join driver if the upstream checkout provides it.
+if(EXISTS "${TASK_BENCH_FORK_JOIN_SOURCE}")
+  if(COMMAND add_hpx_executable)
+    add_hpx_executable(
+      hpx_fork_join
+      SOURCES "${TASK_BENCH_FORK_JOIN_SOURCE}"
+      FOLDER "Examples/TaskBench"
+    )
+    # hpx_include carries the libs/full/include/include path (and all its
+    # transitive module deps such as hpx_segmented_algorithms) that hpx/hpx.hpp
+    # requires. It is only defined when HPX_WITH_DISTRIBUTED_RUNTIME=ON, which is
+    # already guaranteed by the guard above.
+    target_link_libraries(hpx_fork_join PRIVATE hpx_include)
+  else()
+    find_package(HPX REQUIRED)
+    add_executable(hpx_fork_join "${TASK_BENCH_FORK_JOIN_SOURCE}")
+    target_link_libraries(hpx_fork_join PUBLIC HPX::hpx HPX::wrap_main)
+  endif()
+  target_include_directories(hpx_fork_join PRIVATE "${TASK_BENCH_CORE_DIR}")
+  target_link_libraries(hpx_fork_join PUBLIC task_bench_core)
+  add_hpx_example_target_dependencies("task_bench" hpx_fork_join)
 endif()
-target_include_directories(hpx_fork_join PRIVATE "${TASK_BENCH_CORE_DIR}")
-target_link_libraries(hpx_fork_join PUBLIC task_bench_core)
-add_hpx_example_target_dependencies("task_bench" hpx_fork_join)
 
-# Optionally build the distributed driver if MPI is available.
+# Build the distributed driver if MPI is available.
 find_package(MPI)
-if(MPI_FOUND)
+if(MPI_FOUND AND EXISTS "${TASK_BENCH_DISTRIBUTED_SOURCE}")
   if(COMMAND add_hpx_executable)
     add_hpx_executable(
       hpx_distributed
-      SOURCES "${task_bench_SOURCE_DIR}/hpx/hpx_distributed.cc"
+      SOURCES "${TASK_BENCH_DISTRIBUTED_SOURCE}"
       FOLDER "Examples/TaskBench"
     )
     target_link_libraries(hpx_distributed PRIVATE hpx_include)
   else()
-    add_executable(
-      hpx_distributed "${task_bench_SOURCE_DIR}/hpx/hpx_distributed.cc"
-    )
+    add_executable(hpx_distributed "${TASK_BENCH_DISTRIBUTED_SOURCE}")
     target_link_libraries(hpx_distributed PUBLIC HPX::hpx HPX::wrap_main)
   endif()
   target_include_directories(hpx_distributed PRIVATE "${TASK_BENCH_CORE_DIR}")
@@ -102,4 +105,14 @@ if(MPI_FOUND)
   target_compile_definitions(
     hpx_distributed PRIVATE OMPI_SKIP_MPICXX MPICH_SKIP_MPICXX
   )
+endif()
+
+if(HPX_WITH_TESTS AND HPX_WITH_TESTS_EXAMPLES)
+  # Prefer the fork-join driver when available. Otherwise, use the upstream
+  # distributed driver as a lightweight smoke test.
+  if(TARGET hpx_fork_join)
+    add_hpx_example_test("task_bench" hpx_fork_join RUN_SERIAL)
+  elseif(TARGET hpx_distributed)
+    add_hpx_example_test("task_bench" hpx_distributed RUN_SERIAL)
+  endif()
 endif()
