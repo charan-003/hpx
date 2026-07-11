@@ -26,6 +26,7 @@
 
 #include <cstddef>
 #include <mutex>
+#include <string>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -62,7 +63,7 @@ namespace hpx::collectives::detail {
         HPX_EXPORT communicator_server() noexcept;
 
         HPX_EXPORT explicit communicator_server(
-            std::size_t num_sites, char const* basename) noexcept;
+            std::size_t num_sites, char const* basename);
 
         communicator_server(communicator_server const&) = delete;
         communicator_server(communicator_server&&) = delete;
@@ -380,6 +381,29 @@ namespace hpx::collectives::detail {
             std::unique_lock l(mtx_);
             [[maybe_unused]] util::ignore_all_while_checking il;
 
+            // An explicit generation number is usable only while the gate
+            // position remains a pure function of the numbers supplied so far.
+            // An auto (default) generation advances the gate without telling
+            // the caller by how much, leaving no reliable way to choose the
+            // next explicit number: too small throws, too large waits forever.
+            // Latch the first auto use and reject the transition up front; the
+            // reverse order stays valid because an auto generation always
+            // synchronizes on the gate's current position.
+            if (generation == generation_arg{})
+            {
+                auto_generation_used_ = true;
+            }
+            else if (auto_generation_used_)
+            {
+                l.unlock();
+                HPX_THROW_EXCEPTION(hpx::error::bad_parameter,
+                    "communicator::handle_data",
+                    "communicator {}: an explicit generation number cannot "
+                    "follow auto-generation operations on the same "
+                    "communicator: operation {}, which {}, generation {}.",
+                    basename_, operation, which, generation);
+            }
+
             // Verify that there is no overlap between different types of
             // operations on the same communicator.
             set_operation_and_check_sequencing(l, operation, which, generation);
@@ -482,10 +506,18 @@ namespace hpx::collectives::detail {
         std::size_t const num_sites_;
         std::size_t on_ready_count_ = 0;
         char const* current_operation_ = nullptr;
-        char const* basename_ = nullptr;
+        // Owned copy for diagnostics only. create_communicator passes the
+        // caller's char const* straight into local_new; hierarchical tree
+        // construction uses name.c_str() on a stack std::string that is
+        // destroyed when recursively_fill_communicators returns, while this
+        // component outlives that frame. A borrowed pointer would therefore
+        // dangle on later exception paths. Flat string-literal basenames are
+        // stable, but ownership keeps every path safe without special cases.
+        std::string basename_;
         mutex_type mtx_;
         bool needs_initialization_ = true;
         bool data_available_ = false;
+        bool auto_generation_used_ = false;
     };
 }    // namespace hpx::collectives::detail
 
