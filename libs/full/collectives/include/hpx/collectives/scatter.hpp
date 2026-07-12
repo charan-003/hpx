@@ -397,6 +397,7 @@ namespace hpx { namespace collectives {
 
 #include <hpx/collectives/argument_types.hpp>
 #include <hpx/collectives/create_communicator.hpp>
+#include <hpx/collectives/detail/flattened_data.hpp>
 #include <hpx/collectives/detail/hierarchical_helpers.hpp>
 
 #include <cstddef>
@@ -428,14 +429,10 @@ namespace hpx::traits {
             hpx::collectives::detail::generation_mode num_generations)
         {
             using data_type = typename Result::result_type;
-
             return communicator.template handle_data<data_type>(
                 communication::communicator_data<
                     communication::scatter_tag>::name(),
-                which, generation,
-                // step function (invoked once for get)
-                nullptr,
-                // finalizer (invoked after all sites have checked in)
+                which, generation, nullptr,
                 [](auto& data, bool&, std::size_t which) {
                     return hpx::collectives::detail::handle_bool<data_type>(
                         HPX_MOVE(data[which]));
@@ -443,24 +440,68 @@ namespace hpx::traits {
                 num_generations);
         }
 
-        template <typename Result, typename T>
+        template <typename Result>
+        static Result get(Communicator& communicator, std::size_t which,
+            std::size_t generation,
+            hpx::collectives::detail::generation_mode num_generations,
+            hpx::collectives::detail::uniform_scatter_tag)
+        {
+            using data_type = typename Result::result_type;
+            static_assert(
+                hpx::collectives::detail::is_uniform_rows_v<data_type>);
+
+            std::size_t const num_sites = communicator.num_sites_;
+            return communicator.template handle_data<data_type>(
+                communication::communicator_data<
+                    communication::scatter_tag>::name(),
+                which, generation, nullptr,
+                [num_sites](auto& data, bool&, std::size_t which) {
+                    return hpx::collectives::detail::extract_uniform_rows(
+                        data[0], which, num_sites);
+                },
+                num_generations, 1);
+        }
+
+        template <typename Result, typename Payload>
         static Result set(Communicator& communicator, std::size_t which,
             std::size_t generation,
             hpx::collectives::detail::generation_mode num_generations,
-            std::vector<T>&& t)
+            Payload&& t)
         {
-            return communicator.template handle_data<T>(
-                communication::communicator_data<
-                    communication::scatter_tag>::name(),
-                which, generation,
-                // step function (invoked once for set)
-                [&t](auto& data, std::size_t) { data = HPX_MOVE(t); },
-                // finalizer (invoked after all sites have checked in)
-                [](auto& data, bool&, std::size_t which) {
-                    return hpx::collectives::detail::handle_bool<T>(
-                        HPX_MOVE(data[which]));
-                },
-                num_generations);
+            using payload_type = std::decay_t<Payload>;
+            if constexpr (hpx::collectives::detail::is_uniform_rows_v<
+                              payload_type>)
+            {
+                std::size_t const num_sites = communicator.num_sites_;
+                return communicator.template handle_data<payload_type>(
+                    communication::communicator_data<
+                        communication::scatter_tag>::name(),
+                    which, generation,
+                    [&t](auto& data, std::size_t) {
+                        data[0] = HPX_FORWARD(Payload, t);
+                    },
+                    [num_sites](auto& data, bool&, std::size_t which) {
+                        return hpx::collectives::detail::extract_uniform_rows(
+                            data[0], which, num_sites);
+                    },
+                    num_generations, 1);
+            }
+            else
+            {
+                using data_type = typename payload_type::value_type;
+                return communicator.template handle_data<data_type>(
+                    communication::communicator_data<
+                        communication::scatter_tag>::name(),
+                    which, generation,
+                    [&t](auto& data, std::size_t) {
+                        data = HPX_FORWARD(Payload, t);
+                    },
+                    [](auto& data, bool&, std::size_t which) {
+                        return hpx::collectives::detail::handle_bool<data_type>(
+                            HPX_MOVE(data[which]));
+                    },
+                    num_generations);
+            }
         }
     };
 }    // namespace hpx::traits
@@ -475,9 +516,10 @@ namespace hpx::collectives {
         // step. The public overload forwards with single_step; the hierarchical
         // scatter_from walks its sub-communicators through this entry with the
         // mapped step.
-        template <typename T>
-        hpx::future<T> scatter_from(communicator fid, this_site_arg this_site,
-            generation_arg const generation, generation_mode num_generations)
+        template <typename T, bool UseUniformRows = false>
+        hpx::future<T> scatter_from_impl(communicator fid,
+            this_site_arg this_site, generation_arg const generation,
+            generation_mode num_generations)
         {
             if (this_site.is_default())
             {
@@ -492,14 +534,29 @@ namespace hpx::collectives {
 
             auto scatter_from_data = [this_site, generation, num_generations](
                                          communicator&& c) -> hpx::future<T> {
-                using action_type =
-                    communicator_server::communication_get_direct_action<
-                        traits::communication::scatter_tag, hpx::future<T>,
-                        generation_mode>;
-
-                // explicitly unwrap returned future
-                hpx::future<T> result = hpx::async(
-                    action_type(), c, this_site, generation, num_generations);
+                // Explicitly unwrap the returned future. Only the internal
+                // uniform-row protocol adds a tag to the action signature.
+                hpx::future<T> result = [&]() {
+                    if constexpr (UseUniformRows)
+                    {
+                        using action_type = communicator_server::
+                            communication_get_direct_action<
+                                traits::communication::scatter_tag,
+                                hpx::future<T>, generation_mode,
+                                uniform_scatter_tag>;
+                        return hpx::async(action_type(), c, this_site,
+                            generation, num_generations, uniform_scatter_tag{});
+                    }
+                    else
+                    {
+                        using action_type = communicator_server::
+                            communication_get_direct_action<
+                                traits::communication::scatter_tag,
+                                hpx::future<T>, generation_mode>;
+                        return hpx::async(action_type(), c, this_site,
+                            generation, num_generations);
+                    }
+                }();
 
                 if (!result.is_ready())
                 {
@@ -513,6 +570,16 @@ namespace hpx::collectives {
 
             return fid.then(hpx::launch::sync, HPX_MOVE(scatter_from_data));
         }
+
+        template <typename T>
+        hpx::future<uniform_rows<T>> scatter_rows_from(communicator fid,
+            this_site_arg this_site, generation_arg const generation,
+            generation_mode num_generations)
+        {
+            return scatter_from_impl<uniform_rows<T>, true>(
+                HPX_MOVE(fid), this_site, generation, num_generations);
+        }
+
     }    // namespace detail
 
     HPX_CXX_EXPORT template <typename T>
@@ -520,8 +587,8 @@ namespace hpx::collectives {
         this_site_arg this_site = this_site_arg(),
         generation_arg const generation = generation_arg())
     {
-        return detail::scatter_from<T>(HPX_MOVE(fid), this_site, generation,
-            detail::generation_mode::single_step);
+        return detail::scatter_from_impl<T>(HPX_MOVE(fid), this_site,
+            generation, detail::generation_mode::single_step);
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -558,10 +625,62 @@ namespace hpx::collectives {
         // Forward declaration: the flat scatter_to detail entry is defined
         // further down, but the hierarchical scatter_from below walks its
         // sub-communicators through it.
+        template <typename Result, typename Payload>
+        hpx::future<Result> scatter_to_impl(communicator fid,
+            Payload&& local_result, this_site_arg this_site,
+            generation_arg generation, generation_mode num_generations);
+
         template <typename T>
-        hpx::future<T> scatter_to(communicator fid,
-            std::vector<T>&& local_result, this_site_arg this_site,
-            generation_arg const generation, generation_mode num_generations);
+        hpx::future<uniform_rows<T>> scatter_rows_to(communicator fid,
+            uniform_rows<T>&& local_result, this_site_arg this_site,
+            generation_arg generation, generation_mode num_generations);
+
+        // Ordinary communicator storage requires default construction at the
+        // leaf; retain the uniform carrier for payloads without it.
+        template <typename T>
+        hpx::future<T> scatter_leaf_from(communicator fid,
+            this_site_arg this_site, generation_arg generation,
+            generation_mode num_generations)
+        {
+            if constexpr (std::is_default_constructible_v<T>)
+            {
+                return scatter_from_impl<T>(
+                    HPX_MOVE(fid), this_site, generation, num_generations);
+            }
+            else
+            {
+                return hpx::make_future<T>(
+                    scatter_rows_from<T>(
+                        HPX_MOVE(fid), this_site, generation, num_generations),
+                    [](uniform_rows<T>&& result) {
+                        return unwrap_uniform_value(HPX_MOVE(result));
+                    });
+            }
+        }
+
+        template <typename T>
+        hpx::future<T> scatter_leaf_to(communicator fid,
+            uniform_rows<T>&& local_result, this_site_arg this_site,
+            generation_arg generation, generation_mode num_generations)
+        {
+            HPX_ASSERT(local_result.num_rows == local_result.data.size());
+
+            if constexpr (std::is_default_constructible_v<T>)
+            {
+                return scatter_to_impl<T>(HPX_MOVE(fid),
+                    HPX_MOVE(local_result.data), this_site, generation,
+                    num_generations);
+            }
+            else
+            {
+                return hpx::make_future<T>(
+                    scatter_rows_to(HPX_MOVE(fid), HPX_MOVE(local_result),
+                        this_site, generation, num_generations),
+                    [](uniform_rows<T>&& result) {
+                        return unwrap_uniform_value(HPX_MOVE(result));
+                    });
+            }
+        }
 
         // scatter_from over a hierarchical_communicator: detail entry carrying
         // the internal generation step. The public overload forwards with
@@ -594,23 +713,22 @@ namespace hpx::collectives {
             auto [current_communicator, current_site] = communicators[0];
             if (communicators.size() == 1)
             {
-                return scatter_from<T>(
+                return scatter_leaf_from<T>(
                     current_communicator, current_site, run_gen, run_step);
             }
 
-            std::vector<T> data = scatter_from<std::vector<T>>(
+            uniform_rows<T> data = scatter_rows_from<T>(
                 current_communicator, current_site, run_gen, run_step)
-                                      .get();
+                                       .get();
 
             for (std::size_t i = 1; i < communicators.size() - 1; ++i)
             {
-                data = scatter_to(communicators.get(i),
-                    scatter_data(HPX_MOVE(data), communicators.get_arity()),
+                data = scatter_rows_to(communicators.get(i), HPX_MOVE(data),
                     this_site_arg(0), run_gen, run_step)
                            .get();
             }
 
-            return scatter_to(communicators.back(), HPX_MOVE(data),
+            return scatter_leaf_to(communicators.back(), HPX_MOVE(data),
                 this_site_arg(0), run_gen, run_step);
         }
     }    // namespace detail
@@ -690,27 +808,44 @@ namespace hpx::collectives {
         // The public overload forwards with single_step; the hierarchical
         // scatter_to walks its sub-communicators through this entry with the
         // mapped step.
-        template <typename T>
-        hpx::future<T> scatter_to(communicator fid,
-            std::vector<T>&& local_result, this_site_arg this_site,
+        template <typename Result, typename Payload>
+        hpx::future<Result> scatter_to_impl(communicator fid,
+            Payload&& local_result, this_site_arg this_site,
             generation_arg const generation, generation_mode num_generations)
         {
+            using payload_type = std::decay_t<Payload>;
+            constexpr bool uniform_payload = is_uniform_rows_v<payload_type>;
+
             if (this_site.is_default())
             {
                 this_site = agas::get_locality_id();
             }
             if (generation == 0)
             {
-                return hpx::make_exceptional_future<T>(HPX_GET_EXCEPTION(
+                return hpx::make_exceptional_future<Result>(HPX_GET_EXCEPTION(
                     hpx::error::bad_parameter, "hpx::collectives::scatter_to",
                     "the generation number shouldn't be zero"));
             }
 
             auto [num_sites, comm_site] = fid.get_info();
 
-            if (local_result.size() != num_sites)
+            if constexpr (uniform_payload)
             {
-                return hpx::make_exceptional_future<T>(HPX_GET_EXCEPTION(
+                static_assert(std::is_same_v<Result, payload_type>);
+                validate_uniform_rows(
+                    local_result, "hpx::collectives::scatter_to");
+                if (local_result.num_rows < num_sites)
+                {
+                    return hpx::make_exceptional_future<Result>(
+                        HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                            "hpx::collectives::scatter_to",
+                            "the uniform-row payload must contain at least one "
+                            "row per participating site"));
+                }
+            }
+            else if (local_result.size() != num_sites)
+            {
+                return hpx::make_exceptional_future<Result>(HPX_GET_EXCEPTION(
                     hpx::error::bad_parameter, "hpx::collectives::scatter_to",
                     "the number of values to scatter must be equal to the "
                     "number of participating sites"));
@@ -721,14 +856,19 @@ namespace hpx::collectives {
             {
                 if (this_site != comm_site)
                 {
-                    return hpx::make_exceptional_future<T>(
+                    return hpx::make_exceptional_future<Result>(
                         HPX_GET_EXCEPTION(hpx::error::bad_parameter,
                             "hpx::collectives::scatter_to",
                             "the local site should be zero if only one site is "
                             "involved"));
                 }
 
-                if constexpr (std::is_same_v<T, bool>)
+                if constexpr (uniform_payload)
+                {
+                    return hpx::make_ready_future(
+                        HPX_FORWARD(Payload, local_result));
+                }
+                else if constexpr (std::is_same_v<Result, bool>)
                 {
                     return hpx::make_ready_future(
                         static_cast<bool>(local_result[0]));
@@ -740,17 +880,18 @@ namespace hpx::collectives {
             }
 
             auto scatter_to_data =
-                [local_result = HPX_MOVE(local_result), this_site, generation,
-                    num_generations](
-                    communicator&& c) mutable -> hpx::future<T> {
+                [local_result = HPX_FORWARD(Payload, local_result), this_site,
+                    generation, num_generations](
+                    communicator&& c) mutable -> hpx::future<Result> {
                 using action_type =
                     communicator_server::communication_set_direct_action<
-                        traits::communication::scatter_tag, hpx::future<T>,
-                        generation_mode, std::vector<T>>;
+                        traits::communication::scatter_tag, hpx::future<Result>,
+                        generation_mode, payload_type>;
 
                 // explicitly unwrap returned future
-                hpx::future<T> result = hpx::async(action_type(), c, this_site,
-                    generation, num_generations, HPX_MOVE(local_result));
+                hpx::future<Result> result =
+                    hpx::async(action_type(), c, this_site, generation,
+                        num_generations, HPX_MOVE(local_result));
 
                 if (!result.is_ready())
                 {
@@ -764,6 +905,15 @@ namespace hpx::collectives {
 
             return fid.then(hpx::launch::sync, HPX_MOVE(scatter_to_data));
         }
+
+        template <typename T>
+        hpx::future<uniform_rows<T>> scatter_rows_to(communicator fid,
+            uniform_rows<T>&& local_result, this_site_arg this_site,
+            generation_arg const generation, generation_mode num_generations)
+        {
+            return scatter_to_impl<uniform_rows<T>>(HPX_MOVE(fid),
+                HPX_MOVE(local_result), this_site, generation, num_generations);
+        }
     }    // namespace detail
 
     ///////////////////////////////////////////////////////////////////////////
@@ -773,7 +923,7 @@ namespace hpx::collectives {
         this_site_arg this_site = this_site_arg(),
         generation_arg const generation = generation_arg())
     {
-        return detail::scatter_to(HPX_MOVE(fid), HPX_MOVE(local_result),
+        return detail::scatter_to_impl<T>(HPX_MOVE(fid), HPX_MOVE(local_result),
             this_site, generation, detail::generation_mode::single_step);
     }
 
@@ -792,6 +942,16 @@ namespace hpx::collectives {
             if (this_site.is_default())
             {
                 this_site = agas::get_locality_id();
+            }
+
+            if (!is_valid_hierarchical_run_generation(
+                    generation, num_generations))
+            {
+                return hpx::make_exceptional_future<T>(
+                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+                        "hpx::collectives::scatter_to (hierarchical)",
+                        "the generation number is too large for the internal "
+                        "generation mapping"));
             }
 
             std::size_t const num_sites_val =
@@ -814,41 +974,30 @@ namespace hpx::collectives {
                         "number of participating sites"));
             }
 
-            if (!is_valid_hierarchical_run_generation(
-                    generation, num_generations))
-            {
-                return hpx::make_exceptional_future<T>(
-                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
-                        "hpx::collectives::scatter_to (hierarchical)",
-                        "the generation number is too large for the internal "
-                        "generation mapping"));
-            }
-
             auto const [run_gen, run_step] =
                 hierarchical_run_params(generation, num_generations);
 
             auto [current_communicator, current_site] = communicators[0];
             if (communicators.size() == 1)
             {
-                return scatter_to(current_communicator, HPX_MOVE(local_result),
-                    current_site, run_gen, run_step);
+                return scatter_leaf_to(current_communicator,
+                    make_uniform_rows(HPX_MOVE(local_result)), current_site,
+                    run_gen, run_step);
             }
 
-            arity_arg arity = communicators.get_arity();
-            std::vector<T> data = scatter_to(communicators.get(0),
-                scatter_data(HPX_MOVE(local_result), arity), this_site_arg(0),
-                run_gen, run_step)
-                                      .get();
+            uniform_rows<T> data = make_uniform_rows(HPX_MOVE(local_result));
+            data = scatter_rows_to(communicators.get(0), HPX_MOVE(data),
+                this_site_arg(0), run_gen, run_step)
+                       .get();
 
             for (std::size_t i = 1; i < communicators.size() - 1; ++i)
             {
-                data = scatter_to(communicators.get(i),
-                    scatter_data(HPX_MOVE(data), arity),
-                    this_site_arg(this_site % arity), run_gen, run_step)
+                data = scatter_rows_to(communicators.get(i), HPX_MOVE(data),
+                    this_site_arg(0), run_gen, run_step)
                            .get();
             }
 
-            return scatter_to(communicators.back(), HPX_MOVE(data),
+            return scatter_leaf_to(communicators.back(), HPX_MOVE(data),
                 this_site_arg(0), run_gen, run_step);
         }
     }    // namespace detail
