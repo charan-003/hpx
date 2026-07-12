@@ -264,14 +264,6 @@ namespace hpx::threads::detail {
 
         thread_schedule_state const previous_state_val = previous_state.state();
 
-        if (previous_state_val == thread_schedule_state::suspended &&
-            (new_state == thread_schedule_state::pending ||
-                new_state == thread_schedule_state::pending_boost))
-        {
-            hpx::tracing::task_resumed(
-                get_thread_id_data(thrd), "set_thread_state");
-        }
-
         if (!(previous_state_val == thread_schedule_state::pending ||
                 previous_state_val == thread_schedule_state::pending_boost) &&
             (new_state == thread_schedule_state::pending ||

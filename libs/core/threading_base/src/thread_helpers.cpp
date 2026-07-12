@@ -518,6 +518,12 @@ namespace hpx::this_thread {
                 statex = self.yield(
                     threads::thread_result_type(state, HPX_MOVE(nextid)));
             }
+
+            if (state == threads::thread_schedule_state::suspended)
+            {
+                hpx::tracing::task_resumed(get_thread_id_data(id.noref()),
+                    get_thread_state_ex_name(statex));
+            }
         }
 
         // handle interruption, if needed
@@ -615,6 +621,9 @@ namespace hpx::this_thread {
                     threads::thread_schedule_state::suspended,
                     HPX_MOVE(nextid)));
             }
+
+            hpx::tracing::task_resumed(get_thread_id_data(id.noref()),
+                get_thread_state_ex_name(statex));
 
             if (statex != threads::thread_restart_state::timeout)
             {
