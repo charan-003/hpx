@@ -23,12 +23,13 @@ endif()
 
 include(FetchContent)
 
-# Fetch task-bench from upstream. Pin to the commit that includes the HPX driver
-# so the build is reproducible.
+# Fetch task-bench from upstream. Pin to the commit that adds the HPX
+# fork_join_executor implementation so the build is reproducible and compatible
+# with this HPX checkout.
 fetchcontent_declare(
   task_bench
   GIT_REPOSITORY https://github.com/StanfordLegion/task-bench.git
-  GIT_TAG 8be58bc147d75d37ba770ddb4a910daa3e3b2e79
+  GIT_TAG 15306dbcc691dcb351d6579a414adff2e73849bf
   SOURCE_SUBDIR hpx
 )
 
@@ -70,8 +71,8 @@ if(EXISTS "${TASK_BENCH_FORK_JOIN_SOURCE}")
     )
     # hpx_include carries the libs/full/include/include path (and all its
     # transitive module deps such as hpx_segmented_algorithms) that hpx/hpx.hpp
-    # requires. It is only defined when HPX_WITH_DISTRIBUTED_RUNTIME=ON, which is
-    # already guaranteed by the guard above.
+    # requires. It is only defined when HPX_WITH_DISTRIBUTED_RUNTIME=ON, which
+    # is already guaranteed by the guard above.
     target_link_libraries(hpx_fork_join PRIVATE hpx_include)
   else()
     find_package(HPX REQUIRED)
