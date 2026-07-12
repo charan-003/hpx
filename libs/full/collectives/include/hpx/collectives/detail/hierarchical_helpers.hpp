@@ -42,7 +42,7 @@ namespace hpx::collectives::detail {
         generation_arg second;
     };
 
-    HPX_CXX_EXPORT [[nodiscard]] HPX_EXPORT std::exception_ptr
+    [[nodiscard]] HPX_EXPORT std::exception_ptr
     validate_hierarchical_communicator(
         hierarchical_communicator const& communicators, this_site_arg this_site,
         char const* name);
