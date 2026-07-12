@@ -76,6 +76,9 @@ void test_set_error_paths()
         HPX_TEST(!gate.set(5, l, nullptr, ec));
         HPX_TEST(ec);
         HPX_TEST_EQ(ec.value(), static_cast<int>(hpx::error::bad_parameter));
+
+        // set() unlocks l before reporting the error
+        HPX_TEST(!l.owns_lock());
     }
 
     // set() an index successfully
@@ -91,6 +94,9 @@ void test_set_error_paths()
         HPX_TEST(!gate.set(0, l, nullptr, ec));
         HPX_TEST(ec);
         HPX_TEST_EQ(ec.value(), static_cast<int>(hpx::error::bad_parameter));
+
+        // set() unlocks l before reporting the error
+        HPX_TEST(!l.owns_lock());
     }
 }
 
@@ -115,6 +121,9 @@ void test_synchronize_error_paths()
         gate.synchronize(1, l, "test_synchronize_error_paths", ec);
         HPX_TEST(ec);
         HPX_TEST_EQ(ec.value(), static_cast<int>(hpx::error::invalid_status));
+
+        // synchronize() unlocks l before reporting the error
+        HPX_TEST(!l.owns_lock());
     }
 
     // synchronizing on the current generation returns immediately, without
@@ -124,6 +133,91 @@ void test_synchronize_error_paths()
         hpx::error_code ec(hpx::throwmode::lightweight);
         gate.synchronize(3, l, "test_synchronize_error_paths", ec);
         HPX_TEST(!ec);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Equivalent to test_set_error_paths(), but omitting the explicit ec argument
+// to verify that the same error conditions are reported by throwing
+// hpx::exception instead.
+void test_set_error_paths_throws()
+{
+    hpx::lcos::local::and_gate gate(2);
+    hpx::spinlock mtx;
+
+    // set() with an out-of-range index
+    {
+        lock_type l(mtx);
+        HPX_TEST_THROW(gate.set(5, l), hpx::exception);
+    }
+    {
+        lock_type l(mtx);
+        try
+        {
+            gate.set(5, l);
+            HPX_TEST(false);
+        }
+        catch (hpx::exception const& e)
+        {
+            HPX_TEST_EQ(e.get_error(), hpx::error::bad_parameter);
+        }
+    }
+
+    // set() an index successfully
+    {
+        lock_type l(mtx);
+        HPX_TEST(!gate.set(0, l));
+    }
+
+    // set() the same index a second time
+    {
+        lock_type l(mtx);
+        HPX_TEST_THROW(gate.set(0, l), hpx::exception);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Equivalent to test_synchronize_error_paths(), but omitting the explicit ec
+// argument to verify that the same error conditions are reported by throwing
+// hpx::exception instead.
+void test_synchronize_error_paths_throws()
+{
+    hpx::lcos::local::and_gate gate;
+    hpx::spinlock mtx;
+
+    {
+        lock_type l(mtx);
+        gate.next_generation(l);    // generation: 1 -> 2
+        gate.next_generation(l);    // generation: 2 -> 3
+        HPX_TEST_EQ(gate.generation(l), static_cast<std::size_t>(3));
+    }
+
+    // requesting a generation smaller than the current one is a sequencing
+    // error
+    {
+        lock_type l(mtx);
+        HPX_TEST_THROW(
+            gate.synchronize(1, l, "test_synchronize_error_paths_throws"),
+            hpx::exception);
+    }
+    {
+        lock_type l(mtx);
+        try
+        {
+            gate.synchronize(1, l, "test_synchronize_error_paths_throws");
+            HPX_TEST(false);
+        }
+        catch (hpx::exception const& e)
+        {
+            HPX_TEST_EQ(e.get_error(), hpx::error::invalid_status);
+        }
+    }
+
+    // synchronizing on the current generation returns immediately, without
+    // blocking, and without an error
+    {
+        lock_type l(mtx);
+        gate.synchronize(3, l, "test_synchronize_error_paths_throws");
     }
 }
 
@@ -161,7 +255,50 @@ void test_next_generation_error_paths()
     HPX_TEST_EQ(gate.generation(), static_cast<std::size_t>(3));    // unchanged
 }
 
-///////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+// next_generation(new_generation) assigns the requested value and then
+// increments it, so requesting generation 10 leaves the gate at 11, not 10.
+void test_next_generation_explicit_value()
+{
+    hpx::lcos::local::base_and_gate<hpx::spinlock> gate;
+
+    gate.next_generation();    // generation: 1 -> 2
+    gate.next_generation();    // generation: 2 -> 3
+    HPX_TEST_EQ(gate.generation(), static_cast<std::size_t>(3));
+
+    std::size_t const gen = gate.next_generation(10);
+    HPX_TEST_EQ(gen, static_cast<std::size_t>(11));
+    HPX_TEST_EQ(gate.generation(), static_cast<std::size_t>(11));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Equivalent to test_next_generation_error_paths(), but omitting the explicit
+// ec argument to verify that the same error condition is reported by throwing
+// hpx::exception instead.
+void test_next_generation_error_paths_throws()
+{
+    hpx::lcos::local::base_and_gate<hpx::spinlock> gate;
+
+    gate.next_generation();    // generation: 1 -> 2
+    gate.next_generation();    // generation: 2 -> 3
+    HPX_TEST_EQ(gate.generation(), static_cast<std::size_t>(3));
+
+    HPX_TEST_THROW(gate.next_generation(1), hpx::exception);
+
+    try
+    {
+        gate.next_generation(1);
+        HPX_TEST(false);
+    }
+    catch (hpx::exception const& e)
+    {
+        HPX_TEST_EQ(e.get_error(), hpx::error::invalid_status);
+    }
+
+    HPX_TEST_EQ(gate.generation(), static_cast<std::size_t>(3));    // unchanged
+}
+
+///////////////////////////////////////////////////////////////////////////////
 void test_generation_accessor()
 {
     hpx::lcos::local::and_gate gate;
@@ -175,7 +312,7 @@ void test_generation_accessor()
     HPX_TEST_EQ(gate.generation(l), static_cast<std::size_t>(2));
 }
 
-///////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 void test_move_construction()
 {
     hpx::lcos::local::and_gate gate(2);
@@ -275,9 +412,13 @@ int hpx_main()
     test_get_future_and_set();
     test_get_shared_future_and_set();
     test_set_error_paths();
+    test_set_error_paths_throws();
     test_synchronize_error_paths();
+    test_synchronize_error_paths_throws();
     test_next_generation_triggers_waiters();
     test_next_generation_error_paths();
+    test_next_generation_error_paths_throws();
+    test_next_generation_explicit_value();
     test_generation_accessor();
     test_move_construction();
     test_move_assignment();
