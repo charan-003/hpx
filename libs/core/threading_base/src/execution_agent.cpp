@@ -1,5 +1,5 @@
 //  Copyright (c) 2019 Thomas Heller
-//  Copyright (c) 2020-2025 Hartmut Kaiser
+//  Copyright (c) 2020-2026 Hartmut Kaiser
 //
 //  SPDX-License-Identifier: BSL-1.0
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -107,17 +107,22 @@ namespace hpx::threads {
         do_yield(desc, threads::thread_schedule_state::suspended);
     }
 
-    void execution_agent::sleep_for(
-        hpx::chrono::steady_duration const& sleep_duration, char const* desc)
+    threads::thread_restart_state execution_agent::sleep_for(
+        hpx::chrono::steady_duration const& sleep_duration,
+        hpx::move_only_function<bool()>&& wait_cond, char const* desc)
     {
-        sleep_until(sleep_duration.from_now(), desc);
+        return sleep_until(
+            sleep_duration.from_now(), HPX_MOVE(wait_cond), desc);
     }
 
-    void execution_agent::sleep_until(
-        hpx::chrono::steady_time_point const& sleep_time, char const* desc)
+    threads::thread_restart_state execution_agent::sleep_until(
+        hpx::chrono::steady_time_point const& sleep_time,
+        hpx::move_only_function<bool()>&& wait_cond, char const* desc)
     {
-        // Just yield until time has passed by...
+        // Just yield until time has passed by (or until wait_condition has been
+        // met)...
         auto now = std::chrono::steady_clock::now();
+        auto const cond = HPX_MOVE(wait_cond);
 
         // Note: we yield at least once to allow for other threads to make
         // progress in any case. We also use yield instead of yield_k for the
@@ -134,9 +139,17 @@ namespace hpx::threads {
             {
                 do_yield(desc, hpx::threads::thread_schedule_state::pending);
             }
+
+            if (cond && cond())
+            {
+                return threads::thread_restart_state::signaled;
+            }
+
             ++k;
             now = std::chrono::steady_clock::now();
         } while (now < sleep_time.value());
+
+        return threads::thread_restart_state::timeout;
     }
 
     hpx::threads::thread_restart_state execution_agent::do_yield(
