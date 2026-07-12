@@ -149,6 +149,12 @@ namespace hpx::tracing {
 #endif
     }
 
+    // Note: The `constexpr` specifier on these wrapper functions is only truly
+    // meaningful and exercised in the no-tracing configuration (when HPX_HAVE_TRACING
+    // is NOT defined). If tracing is enabled, the code inside the preprocessor block
+    // makes the function non-constexpr, but this is acceptable as long as we do not
+    // try to call these functions in a constant-evaluation context.
+
     template <typename ThreadData>
     constexpr void task_yielded([[maybe_unused]] ThreadData* thrdptr) noexcept
     {
