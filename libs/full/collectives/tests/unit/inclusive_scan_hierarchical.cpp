@@ -259,6 +259,8 @@ void test_moved_from_communicator_rejected()
     HPX_TEST(valid_comms.valid());
     HPX_TEST(!comms.valid());
 
+    // The moved-from communicator is intentionally reused to verify rejection.
+    // NOLINTNEXTLINE(bugprone-use-after-move)
     auto test_rejected = [&](generation_arg const generation,
                              root_site_arg const root_site,
                              hpx::error const expected_error) {
