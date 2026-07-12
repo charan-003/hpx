@@ -378,6 +378,10 @@ void test_find_last_sentinel(IteratorTag)
     }
 
     // find_last_if_not
+    std::fill(std::begin(c.base()), std::end(c.base()), std::size_t(1));
+    c.base().at(c.size() / 2) = 5;
+    c.base().at(c.size() - 50) = 5;
+
     {
         auto result = hpx::ranges::find_last_if_not(c, pred);
         base_iterator test_index =
