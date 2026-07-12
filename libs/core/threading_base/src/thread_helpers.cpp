@@ -491,12 +491,12 @@ namespace hpx::this_thread {
             if (state == threads::thread_schedule_state::pending ||
                 state == threads::thread_schedule_state::pending_boost)
             {
-                hpx::tracing::task_yielded(get_thread_id_data(id.noref()));
+                hpx::tracing::task_yielded(id.noref());
             }
             else if (state == threads::thread_schedule_state::suspended)
             {
-                hpx::tracing::task_suspended(get_thread_id_data(id.noref()),
-                    get_suspend_reason(description));
+                hpx::tracing::task_suspended(
+                    id.noref(), get_suspend_reason(description));
             }
 
             // We might need to dispatch 'nextid' to it's correct scheduler only
@@ -521,8 +521,7 @@ namespace hpx::this_thread {
 
             if (state == threads::thread_schedule_state::suspended)
             {
-                hpx::tracing::task_resumed(get_thread_id_data(id.noref()),
-                    get_thread_state_ex_name(statex));
+                hpx::tracing::task_resumed(id.noref(), statex);
             }
         }
 
@@ -588,8 +587,8 @@ namespace hpx::this_thread {
             hpx::tracing::fiber_suspend_region tracy_suspend(
                 get_suspend_reason(description));
 
-            hpx::tracing::task_suspended(get_thread_id_data(id.noref()),
-                get_suspend_reason(description));
+            hpx::tracing::task_suspended(
+                id.noref(), get_suspend_reason(description));
 
             std::atomic<bool> timer_started(false);
             threads::thread_id_ref_type const timer_id =
@@ -622,8 +621,7 @@ namespace hpx::this_thread {
                     HPX_MOVE(nextid)));
             }
 
-            hpx::tracing::task_resumed(get_thread_id_data(id.noref()),
-                get_thread_state_ex_name(statex));
+            hpx::tracing::task_resumed(id.noref(), statex);
 
             if (statex != threads::thread_restart_state::timeout)
             {

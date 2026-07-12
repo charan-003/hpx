@@ -189,6 +189,32 @@ namespace hpx::tracing {
 #endif
     }
 
+    template <typename ThreadId>
+    constexpr void task_yielded([[maybe_unused]] ThreadId const& id) noexcept
+    {
+#if defined(HPX_HAVE_TRACING)
+        task_yielded(get_thread_id_data(id));
+#endif
+    }
+
+    template <typename ThreadId>
+    constexpr void task_suspended([[maybe_unused]] ThreadId const& id,
+        [[maybe_unused]] char const* reason) noexcept
+    {
+#if defined(HPX_HAVE_TRACING)
+        task_suspended(get_thread_id_data(id), reason);
+#endif
+    }
+
+    template <typename ThreadId, typename StateX>
+    constexpr void task_resumed([[maybe_unused]] ThreadId const& id,
+        [[maybe_unused]] StateX statex) noexcept
+    {
+#if defined(HPX_HAVE_TRACING)
+        task_resumed(get_thread_id_data(id), get_thread_state_ex_name(statex));
+#endif
+    }
+
     template <typename ThreadData>
     constexpr void task_completed([[maybe_unused]] ThreadData* thrdptr) noexcept
     {
