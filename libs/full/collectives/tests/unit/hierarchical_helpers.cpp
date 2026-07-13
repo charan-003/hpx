@@ -24,6 +24,7 @@ using hpx::collectives::detail::checked_data_size_sum;
 using hpx::collectives::detail::classify_site;
 using hpx::collectives::detail::get_top_level_groups;
 using hpx::collectives::detail::is_top_level_rep;
+using hpx::collectives::detail::is_uniform_rows_v;
 using hpx::collectives::detail::uniform_rows;
 
 struct move_only_value
@@ -286,6 +287,16 @@ void test_is_top_level_rep_exhaustive()
     }
 }
 
+void test_is_uniform_rows_trait()
+{
+    static_assert(is_uniform_rows_v<uniform_rows<int>>);
+    static_assert(is_uniform_rows_v<uniform_rows<int> const>);
+    static_assert(is_uniform_rows_v<uniform_rows<int>&>);
+    static_assert(is_uniform_rows_v<uniform_rows<int> const&>);
+    static_assert(!is_uniform_rows_v<int>);
+    static_assert(!is_uniform_rows_v<std::vector<int>>);
+}
+
 void test_uniform_rows_slicing()
 {
     uniform_rows<int> first(std::vector<int>{10, 11, 20, 21, 30, 31}, 3);
@@ -320,6 +331,18 @@ void test_uniform_rows_slicing()
     HPX_TEST_EQ(middle.data()[0].value, 20);
 }
 
+void test_uniform_rows_extract_single_slice()
+{
+    uniform_rows<int> rows(std::vector<int>{1, 2, 3, 4}, 2);
+    auto slice = HPX_MOVE(rows).extract(0, 1);
+    HPX_TEST_EQ(slice.num_rows(), static_cast<std::size_t>(2));
+    HPX_TEST_EQ(slice.data().size(), static_cast<std::size_t>(4));
+    HPX_TEST_EQ(slice.data()[0], 1);
+    HPX_TEST_EQ(slice.data()[1], 2);
+    HPX_TEST_EQ(slice.data()[2], 3);
+    HPX_TEST_EQ(slice.data()[3], 4);
+}
+
 void test_uniform_rows_merge()
 {
     std::vector<uniform_rows<std::string>> values;
@@ -347,6 +370,37 @@ void test_uniform_rows_merge()
     uniform_rows<int> singleton_result(HPX_MOVE(singleton));
     HPX_TEST_EQ(singleton_result.data().data(), original_data);
     HPX_TEST_EQ(singleton_result.num_rows(), static_cast<std::size_t>(2));
+}
+
+void test_uniform_rows_merge_move_only()
+{
+    std::vector<uniform_rows<move_only_value>> values;
+
+    std::vector<move_only_value> first_row;
+    first_row.emplace_back(1);
+    first_row.emplace_back(2);
+    values.emplace_back(HPX_MOVE(first_row), 1);
+
+    std::vector<move_only_value> second_row;
+    second_row.emplace_back(3);
+    second_row.emplace_back(4);
+    values.emplace_back(HPX_MOVE(second_row), 1);
+
+    uniform_rows<move_only_value> merged(HPX_MOVE(values));
+    HPX_TEST_EQ(merged.data().size(), static_cast<std::size_t>(4));
+    HPX_TEST_EQ(merged.num_rows(), static_cast<std::size_t>(2));
+    HPX_TEST_EQ(merged.data()[0].value, 1);
+    HPX_TEST_EQ(merged.data()[1].value, 2);
+    HPX_TEST_EQ(merged.data()[2].value, 3);
+    HPX_TEST_EQ(merged.data()[3].value, 4);
+}
+
+void test_uniform_rows_empty_merge()
+{
+    std::vector<uniform_rows<int>> empty_values;
+    uniform_rows<int> result(HPX_MOVE(empty_values));
+    HPX_TEST_EQ(result.num_rows(), static_cast<std::size_t>(0));
+    HPX_TEST(result.data().empty());
 }
 
 void test_uniform_rows_vector_bool()
@@ -399,7 +453,6 @@ void test_uniform_rows_validation()
     HPX_TEST(valid_no_rows.is_valid());
     HPX_TEST(valid_rows.is_valid());
     HPX_TEST_EQ(valid_empty_rows.row_width(), static_cast<std::size_t>(0));
-    HPX_TEST_EQ(valid_no_rows.row_width(), static_cast<std::size_t>(0));
     HPX_TEST_EQ(valid_rows.row_width(), static_cast<std::size_t>(2));
     HPX_TEST(!rows_with_no_width.is_valid());
     HPX_TEST(!nonuniform_width.is_valid());
@@ -409,6 +462,12 @@ void test_uniform_rows_validation()
         hpx::exception);
     HPX_TEST_THROW(nonuniform_width.validate("test_uniform_rows_validation"),
         hpx::exception);
+}
+
+void test_uniform_rows_row_width_zero_rows()
+{
+    uniform_rows<int> zero_rows(std::vector<int>{}, 0);
+    HPX_TEST_EQ(zero_rows.row_width(), static_cast<std::size_t>(0));
 }
 
 void test_uniform_rows_construction()
@@ -495,10 +554,15 @@ int hpx_main()
     test_matches_recursive_fill();
     test_is_top_level_rep_basic();
     test_is_top_level_rep_exhaustive();
+    test_is_uniform_rows_trait();
     test_uniform_rows_slicing();
+    test_uniform_rows_extract_single_slice();
     test_uniform_rows_merge();
+    test_uniform_rows_merge_move_only();
+    test_uniform_rows_empty_merge();
     test_uniform_rows_vector_bool();
     test_uniform_rows_validation();
+    test_uniform_rows_row_width_zero_rows();
     test_uniform_rows_construction();
     test_data_size_overflow();
     test_uniform_rows_serialization();
