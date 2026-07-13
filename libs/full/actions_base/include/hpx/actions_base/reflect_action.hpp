@@ -129,6 +129,7 @@ namespace hpx::actions {
         typename Component =
             typename detail::reflect_component_action_base<F>::component_type,
         typename Derived = void>
+        requires(std::meta::is_function(F) && std::meta::is_class_member(F))
     struct reflect_component_action
       : basic_action<Component,
             typename detail::reflect_component_action_base<F>::func_type,
@@ -162,6 +163,7 @@ namespace hpx::actions {
     };
 
     template <std::meta::info F, typename Component, typename Derived>
+        requires(std::meta::is_function(F) && std::meta::is_class_member(F))
     detail::register_action_invocation_count<
         reflect_component_action<F, Component, Derived>>
         reflect_component_action<F, Component,
@@ -180,6 +182,7 @@ namespace hpx::actions {
         typename Component =
             typename detail::reflect_component_action_base<F>::component_type,
         typename Derived = void>
+        requires(std::meta::is_function(F) && std::meta::is_class_member(F))
     struct reflect_component_direct_action
       : reflect_component_action<F, Component,
             detail::action_type_t<
@@ -198,6 +201,7 @@ namespace hpx::actions {
             invocation_count_registrar_;
     };
     template <std::meta::info F, typename Component, typename Derived>
+        requires(std::meta::is_function(F) && std::meta::is_class_member(F))
     detail::register_action_invocation_count<
         reflect_component_direct_action<F, Component, Derived>>
         reflect_component_direct_action<F, Component,
@@ -232,6 +236,7 @@ namespace hpx::actions {
     /// \tparam F  A std::meta::info reflection of a free function.
     /// \tparam Derived  Derived type for CRTP extensibility (default: void).
     template <std::meta::info F, typename Derived = void>
+        requires(std::meta::is_namespace_member(F) && std::meta::is_function(F))
     struct reflect_action
       : basic_action<hpx::actions::detail::plain_function,
             typename detail::reflect_action_base<F>::func_type,
@@ -278,6 +283,7 @@ namespace hpx::actions {
 
     /// \cond NOINTERNAL
     template <std::meta::info F, typename Derived>
+        requires(std::meta::is_namespace_member(F) && std::meta::is_function(F))
     detail::register_action_invocation_count<reflect_action<F, Derived>>
         reflect_action<F, Derived>::invocation_count_registrar_;
     /// \endcond
@@ -292,6 +298,7 @@ namespace hpx::actions {
     /// \tparam F       A std::meta::info reflection of a free function.
     /// \tparam Derived CRTP derived type (defaults to void).
     template <std::meta::info F, typename Derived = void>
+        requires(std::meta::is_namespace_member(F) && std::meta::is_function(F))
     struct reflect_direct_action
       : reflect_action<F,
             detail::action_type_t<reflect_direct_action<F, Derived>, Derived>>
@@ -308,6 +315,7 @@ namespace hpx::actions {
     };
     /// \cond NOINTERNAL
     template <std::meta::info F, typename Derived>
+        requires(std::meta::is_namespace_member(F) && std::meta::is_function(F))
     detail::register_action_invocation_count<reflect_direct_action<F, Derived>>
         reflect_direct_action<F, Derived>::invocation_count_registrar_;
     /// \endcond
