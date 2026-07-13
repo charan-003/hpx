@@ -104,9 +104,10 @@ namespace hpx { namespace collectives {
     ///             for all local collective operations.
     ///
     /// \throws hpx::exception with hpx::error::bad_parameter if \a basename
-    ///         is null or empty, if \a num_sites is zero, if \a this_site is
-    ///         not smaller than \a num_sites, or if the (resolved)
-    ///         \a root_site does not designate a participating site.
+    ///         is null or empty, if \a num_sites is unspecified or zero, if
+    ///         \a this_site is unspecified or not smaller than \a num_sites,
+    ///         or if the (resolved) \a root_site does not designate a
+    ///         participating site.
     ///
     communicator create_local_communicator(char const* basename,
         num_sites_arg num_sites, this_site_arg this_site,
