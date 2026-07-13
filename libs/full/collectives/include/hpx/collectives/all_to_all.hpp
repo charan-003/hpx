@@ -556,7 +556,7 @@ namespace hpx::collectives {
         std::ptrdiff_t const gidx =
             detail::classify_site(this_site, num_sites_val, arity_val);
         bool const is_representative =
-            detail::is_top_level_rep(this_site, num_sites_val, arity_val);
+            detail::is_top_level_rep(gidx, this_site, num_sites_val, arity_val);
 
         if (is_representative)
         {

@@ -566,13 +566,11 @@ namespace hpx::collectives {
                 return hpx::make_exceptional_future<std::decay_t<T>>(error);
             }
 
-            if (this_site != 0)
+            if (auto const error = validate_hierarchical_root_caller(this_site,
+                    "hpx::collectives::broadcast_to (hierarchical)",
+                    "broadcast_to"))
             {
-                return hpx::make_exceptional_future<std::decay_t<T>>(
-                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
-                        "hpx::collectives::broadcast_to (hierarchical)",
-                        "only site 0 may call broadcast_to on a hierarchical "
-                        "communicator"));
+                return hpx::make_exceptional_future<std::decay_t<T>>(error);
             }
 
             // Each sub-communicator advances num_generations per call. Used
@@ -754,13 +752,12 @@ namespace hpx::collectives {
                 return hpx::make_exceptional_future<T>(error);
             }
 
-            if (this_site == 0)
-            {
-                return hpx::make_exceptional_future<T>(
-                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
+            if (auto const error =
+                    validate_hierarchical_non_root_caller(this_site,
                         "hpx::collectives::broadcast_from (hierarchical)",
-                        "site 0 must call broadcast_to on a hierarchical "
-                        "communicator"));
+                        "broadcast_to"))
+            {
+                return hpx::make_exceptional_future<T>(error);
             }
 
             // See broadcast_to above for the internal generation mapping.
@@ -826,17 +823,14 @@ namespace hpx::collectives {
         generation_arg const generation = generation_arg(),
         root_site_arg const root_site = root_site_arg())
     {
-        this_site_arg effective_site = this_site;
-        if (effective_site.is_default())
-        {
-            effective_site = agas::get_locality_id();
-        }
+        this_site_arg const effective_site =
+            detail::resolve_this_site(this_site);
 
-        if (effective_site == root_site)
+        if (auto const error =
+                detail::validate_site_differs_from_root(effective_site,
+                    root_site, "hpx::collectives::broadcast_from", "receiving"))
         {
-            return hpx::make_exceptional_future<T>(HPX_GET_EXCEPTION(
-                hpx::error::bad_parameter, "hpx::collectives::broadcast_from",
-                "the receiving site must be different from the root site"));
+            return hpx::make_exceptional_future<T>(error);
         }
 
         return broadcast_from<T>(create_communicator(basename, num_sites_arg(),

@@ -248,19 +248,17 @@ void test_generation_rejections()
     }
 }
 
-void test_moved_from_communicator_rejected()
+void test_invalid_communicator_rejected()
 {
     auto comms = create_hierarchical_communicator(
-        "/test/inclusive_scan_hierarchical/moved_from/", num_sites_arg(1),
+        "/test/inclusive_scan_hierarchical/invalid/", num_sites_arg(1),
         this_site_arg(0), arity_arg(2), generation_arg(), root_site_arg(),
         flat_fallback_threshold_arg(0));
 
-    auto const valid_comms = HPX_MOVE(comms);
-    HPX_TEST(valid_comms.valid());
+    HPX_TEST(comms.valid());
+    comms.get(0) = communicator{};
     HPX_TEST(!comms.valid());
 
-    // The moved-from communicator is intentionally reused to verify rejection.
-    // NOLINTNEXTLINE(bugprone-use-after-move)
     auto test_rejected = [&](generation_arg const generation,
                              root_site_arg const root_site,
                              hpx::error const expected_error) {
@@ -377,7 +375,7 @@ int hpx_main()
         test_non_power_of_arity();
         test_flat_fallback_vs_tree();
         test_generation_rejections();
-        test_moved_from_communicator_rejected();
+        test_invalid_communicator_rejected();
         test_string_ordering();
         test_bool_scan();
     }

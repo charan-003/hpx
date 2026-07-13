@@ -608,13 +608,11 @@ namespace hpx::collectives {
                 return hpx::make_exceptional_future<std::decay_t<T>>(error);
             }
 
-            if (this_site != 0)
+            if (auto const error = validate_hierarchical_root_caller(this_site,
+                    "hpx::collectives::reduce_here (hierarchical)",
+                    "reduce_here"))
             {
-                return hpx::make_exceptional_future<std::decay_t<T>>(
-                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
-                        "hpx::collectives::reduce_here (hierarchical)",
-                        "only site 0 may call reduce_here on a hierarchical "
-                        "communicator"));
+                return hpx::make_exceptional_future<std::decay_t<T>>(error);
             }
 
             if (!is_valid_hierarchical_run_generation(
@@ -801,13 +799,11 @@ namespace hpx::collectives {
                 return hpx::make_exceptional_future<void>(error);
             }
 
-            if (this_site == 0)
+            if (auto const error = validate_hierarchical_non_root_caller(
+                    this_site, "hpx::collectives::reduce_there (hierarchical)",
+                    "reduce_here"))
             {
-                return hpx::make_exceptional_future<void>(
-                    HPX_GET_EXCEPTION(hpx::error::bad_parameter,
-                        "hpx::collectives::reduce_there (hierarchical)",
-                        "site 0 must call reduce_here on a hierarchical "
-                        "communicator"));
+                return hpx::make_exceptional_future<void>(error);
             }
 
             // See reduce_here above for the internal generation mapping.
@@ -865,17 +861,14 @@ namespace hpx::collectives {
         generation_arg const generation = generation_arg(),
         root_site_arg const root_site = root_site_arg())
     {
-        this_site_arg effective_site = this_site;
-        if (effective_site.is_default())
-        {
-            effective_site = agas::get_locality_id();
-        }
+        this_site_arg const effective_site =
+            detail::resolve_this_site(this_site);
 
-        if (effective_site == root_site)
+        if (auto const error =
+                detail::validate_site_differs_from_root(effective_site,
+                    root_site, "hpx::collectives::reduce_there", "sending"))
         {
-            return hpx::make_exceptional_future<void>(HPX_GET_EXCEPTION(
-                hpx::error::bad_parameter, "hpx::collectives::reduce_there",
-                "the sending site must be different from the root site"));
+            return hpx::make_exceptional_future<void>(error);
         }
 
         return reduce_there(create_communicator(basename, num_sites_arg(),

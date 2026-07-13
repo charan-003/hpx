@@ -220,6 +220,7 @@ namespace hpx { namespace collectives {
 #include <hpx/collectives/argument_types.hpp>
 #include <hpx/collectives/broadcast.hpp>
 #include <hpx/collectives/create_communicator.hpp>
+#include <hpx/collectives/detail/hierarchical_helpers.hpp>
 #include <hpx/collectives/gather.hpp>
 
 #include <cstddef>
@@ -462,15 +463,11 @@ namespace hpx::collectives {
         std::size_t const num_sites_val = hpx::get<0>(communicators.get_info());
         std::size_t const arity_val = communicators.get_arity();
 
-        // The hierarchical helpers hardcode site 0 as the local root at
-        // every tree level, so a non-zero root is not supported.
-        if (root_site != 0)
+        if (auto const error = detail::validate_hierarchical_root_site(
+                root_site, "hpx::collectives::all_gather (hierarchical)",
+                "all_gather"))
         {
-            return hpx::make_exceptional_future<std::vector<arg_type>>(
-                HPX_GET_EXCEPTION(hpx::error::bad_parameter,
-                    "hpx::collectives::all_gather (hierarchical)",
-                    "hierarchical all_gather currently supports only "
-                    "root_site == 0 (the tree designates site 0 as the root)"));
+            return hpx::make_exceptional_future<std::vector<arg_type>>(error);
         }
 
         auto const [gather_gen, broadcast_gen] =

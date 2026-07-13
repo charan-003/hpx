@@ -330,6 +330,42 @@ void test_generation_rejections()
     }
 }
 
+void test_invalid_communicator_rejected()
+{
+    auto comms = create_hierarchical_communicator(
+        "/test/exclusive_scan_hierarchical/invalid/", num_sites_arg(1),
+        this_site_arg(0), arity_arg(2), generation_arg(), root_site_arg(),
+        flat_fallback_threshold_arg(0));
+
+    HPX_TEST(comms.valid());
+    comms.get(0) = communicator{};
+    HPX_TEST(!comms.valid());
+
+    auto test_rejected = [&](generation_arg const generation,
+                             root_site_arg const root_site,
+                             hpx::error const expected_error) {
+        bool rejected = false;
+        try
+        {
+            exclusive_scan(hpx::launch::sync, comms, std::uint32_t(1),
+                std::uint32_t(0), std::plus<std::uint32_t>{}, this_site_arg(0),
+                generation, root_site);
+        }
+        catch (hpx::exception const& e)
+        {
+            rejected = true;
+            HPX_TEST_EQ(e.get_error(), expected_error);
+        }
+        HPX_TEST(rejected);
+    };
+
+    test_rejected(generation_arg(), root_site_arg(), hpx::error::bad_parameter);
+    test_rejected(
+        generation_arg(1), root_site_arg(1), hpx::error::bad_parameter);
+    test_rejected(
+        generation_arg(1), root_site_arg(), hpx::error::invalid_status);
+}
+
 void test_string_ordering()
 {
     constexpr std::uint32_t num_sites = 7;
@@ -424,6 +460,7 @@ int hpx_main()
         test_non_power_of_arity();
         test_flat_fallback_vs_tree();
         test_generation_rejections();
+        test_invalid_communicator_rejected();
         test_string_ordering();
         test_bool_scan();
     }

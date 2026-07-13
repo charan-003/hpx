@@ -65,6 +65,12 @@ namespace hpx { namespace collectives {
     /// \returns    This function returns a new communicator object usable
     ///             with the collective operation.
     ///
+    /// \throws hpx::exception with hpx::error::bad_parameter if \a basename
+    ///         is null or empty, if the (resolved) \a num_sites is zero, if
+    ///         the (resolved) \a this_site is not smaller than \a num_sites,
+    ///         or if the (resolved) \a root_site does not designate a
+    ///         participating site.
+    ///
     communicator create_communicator(char const* basename,
         num_sites_arg num_sites = num_sites_arg(),
         this_site_arg this_site = this_site_arg(),
@@ -97,6 +103,11 @@ namespace hpx { namespace collectives {
     /// \returns    This function returns a new communicator object usable
     ///             for all local collective operations.
     ///
+    /// \throws hpx::exception with hpx::error::bad_parameter if \a basename
+    ///         is null or empty, if \a num_sites is zero, if \a this_site is
+    ///         not smaller than \a num_sites, or if the (resolved)
+    ///         \a root_site does not designate a participating site.
+    ///
     communicator create_local_communicator(char const* basename,
         num_sites_arg num_sites, this_site_arg this_site,
         generation_arg generation = generation_arg(),
@@ -118,15 +129,16 @@ namespace hpx { namespace collectives {
     ///                     defaults to whatever hpx::get_locality_id() returns.
     /// \param arity        The arity of the hierarchical tree of communicators
     ///                     to create for the given endpoint. The default arity
-    ///                     is 2.
+    ///                     is 2 and the value must be at least 2.
     /// \param  generation  The generational counter identifying the sequence
     ///                     number of the collective operation performed on the
     ///                     given base name. This is optional and needs to be
     ///                     supplied only if the collective operation on the
     ///                     given base name has to be performed more than once.
     /// \param  root_site   The site that is responsible for creating the
-    ///                     collective support object. This value is optional
-    ///                     and defaults to '0' (zero).
+    ///                     collective support object. Hierarchical
+    ///                     communicators currently support only site 0 as the
+    ///                     root, which is also the default.
     /// \param  threshold   The site-count threshold below which the
     ///                     communicator collapses to a single flat
     ///                     communicator spanning all sites (strict
@@ -169,6 +181,12 @@ namespace hpx { namespace collectives {
     /// \returns    This function returns a new communicator object usable
     ///             with the collective operation.
     ///
+    /// \throws hpx::exception with hpx::error::bad_parameter if \a basename
+    ///         is null or empty, if the (resolved) \a num_sites is zero, if
+    ///         the (resolved) \a this_site is not smaller than \a num_sites,
+    ///         if the (resolved) \a root_site is not zero, or if \a arity is
+    ///         smaller than 2.
+    ///
     hierarchical_communicator create_hierarchical_communicator(
         char const* basename,
         num_sites_arg num_sites = num_sites_arg(),
@@ -193,8 +211,8 @@ namespace hpx { namespace collectives {
 #include <hpx/collectives/argument_types.hpp>
 #include <hpx/collectives/detail/communicator.hpp>
 
-#include <algorithm>
 #include <cstddef>
+#include <exception>
 #include <utility>
 #include <vector>
 
@@ -325,6 +343,22 @@ namespace hpx::collectives {
         this_site_arg this_site, generation_arg generation = generation_arg(),
         root_site_arg root_site = root_site_arg());
 
+    namespace detail {
+
+        // Resolve a defaulted this_site to the id of the calling locality.
+        [[nodiscard]] HPX_EXPORT this_site_arg resolve_this_site(
+            this_site_arg this_site);
+
+        // The basename overloads of broadcast_from, gather_there,
+        // reduce_there, and scatter_from must be invoked on a site other
+        // than the root site. `site_role` names the calling site ("sending"
+        // or "receiving") for the resulting error message.
+        [[nodiscard]] HPX_EXPORT std::exception_ptr
+        validate_site_differs_from_root(this_site_arg this_site,
+            root_site_arg root_site, char const* operation,
+            char const* site_role);
+    }    // namespace detail
+
     ///////////////////////////////////////////////////////////////////////////
     HPX_CXX_EXPORT struct hierarchical_communicator;
 
@@ -388,16 +422,7 @@ namespace hpx::collectives {
             return communicators.size();
         }
 
-        [[nodiscard]] bool valid() const noexcept
-        {
-            if (communicators.empty())
-            {
-                return false;
-            }
-
-            return std::ranges::all_of(communicators,
-                [](auto const& comm) { return hpx::get<0>(comm).valid(); });
-        }
+        [[nodiscard]] HPX_EXPORT bool valid() const noexcept;
 
         communicator const& back() const
         {

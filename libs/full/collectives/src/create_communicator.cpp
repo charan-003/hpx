@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <exception>
 #include <mutex>
 #include <string>
 #include <utility>
@@ -105,7 +106,49 @@ namespace hpx::collectives {
                     "must designate a participating site");
             }
         }
+
+        // A communicator with only one site involved needs no registration:
+        // initialize it right away.
+        [[nodiscard]] bool init_singleton_communicator(communicator& c,
+            num_sites_arg num_sites, this_site_arg this_site,
+            root_site_arg root_site)
+        {
+            if (num_sites != 1)
+            {
+                return false;
+            }
+
+            c.set_info(num_sites, this_site, root_site);
+            return true;
+        }
     }    // namespace
+
+    namespace detail {
+
+        this_site_arg resolve_this_site(this_site_arg const this_site)
+        {
+            if (this_site.is_default())
+            {
+                return this_site_arg(agas::get_locality_id());
+            }
+            return this_site;
+        }
+
+        std::exception_ptr validate_site_differs_from_root(
+            this_site_arg const this_site, root_site_arg const root_site,
+            char const* operation, char const* site_role)
+        {
+            if (this_site == root_site)
+            {
+                return HPX_GET_EXCEPTION(hpx::error::bad_parameter, operation,
+                    hpx::util::format(
+                        "the {} site must be different from the root site",
+                        site_role));
+            }
+
+            return std::exception_ptr();
+        }
+    }    // namespace detail
 
     ///////////////////////////////////////////////////////////////////////////
     void communicator::set_info(num_sites_arg num_sites,
@@ -189,11 +232,8 @@ namespace hpx::collectives {
             // create a new communicator
             auto c = hpx::local_new<communicator>(num_sites, basename);
 
-            // Return communicator object right away if there is only one site
-            // involved.
-            if (num_sites == 1)
+            if (init_singleton_communicator(c, num_sites, this_site, root_site))
             {
-                c.set_info(num_sites, this_site, root_site);
                 return c;
             }
 
@@ -263,11 +303,8 @@ namespace hpx::collectives {
             // create a new communicator
             auto c = hpx::local_new<communicator>(num_sites, basename);
 
-            // Return communicator object right away if there is only one site
-            // involved.
-            if (num_sites == 1)
+            if (init_singleton_communicator(c, num_sites, this_site, root_site))
             {
-                c.set_info(num_sites, this_site, root_site);
                 return c;
             }
 
@@ -331,11 +368,8 @@ namespace hpx::collectives {
             // create a new communicator
             auto c = hpx::local_new<communicator>(num_sites, basename);
 
-            // Return communicator object right away if there is only one site
-            // involved.
-            if (num_sites == 1)
+            if (init_singleton_communicator(c, num_sites, this_site, root_site))
             {
-                c.set_info(num_sites, this_site, root_site);
                 return c;
             }
 
@@ -399,11 +433,8 @@ namespace hpx::collectives {
             // create a new communicator
             auto c = hpx::local_new<communicator>(num_sites, basename);
 
-            // Return communicator object right away if there is only one site
-            // involved.
-            if (num_sites == 1)
+            if (init_singleton_communicator(c, num_sites, this_site, root_site))
             {
-                c.set_info(num_sites, this_site, root_site);
                 return c;
             }
 
@@ -552,6 +583,17 @@ namespace hpx::collectives {
             arity, this_site, generation);
         return hierarchical_communicator(
             HPX_MOVE(communicators), arity, root_site, num_sites, this_site);
+    }
+
+    bool hierarchical_communicator::valid() const noexcept
+    {
+        if (communicators.empty())
+        {
+            return false;
+        }
+
+        return std::ranges::all_of(communicators,
+            [](auto const& comm) { return hpx::get<0>(comm).valid(); });
     }
 
     hpx::tuple<num_sites_arg, this_site_arg, root_site_arg>

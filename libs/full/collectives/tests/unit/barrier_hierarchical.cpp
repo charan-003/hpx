@@ -181,6 +181,49 @@ void test_invalid_hierarchical_arguments_rejected()
         HPX_TEST_EQ(e.get_error(), hpx::error::bad_parameter);
     }
     HPX_TEST(mismatched_site_rejected);
+
+    // this_site >= num_sites must be rejected before the mismatched-site
+    // check has a chance to classify it.
+    bool out_of_range_site_rejected = false;
+    try
+    {
+        hpx::collectives::barrier(hpx::launch::sync, barrier_clients,
+            this_site_arg(5), generation_arg(1));
+    }
+    catch (hpx::exception const& e)
+    {
+        out_of_range_site_rejected = true;
+        HPX_TEST_EQ(e.get_error(), hpx::error::bad_parameter);
+        HPX_TEST(std::string(e.what()).find(
+                     "this_site must be smaller than the number of "
+                     "participating sites") != std::string::npos);
+    }
+    HPX_TEST(out_of_range_site_rejected);
+}
+
+void test_invalid_communicator_rejected()
+{
+    auto comms =
+        create_hierarchical_communicator("/test/barrier_hierarchical/invalid/",
+            num_sites_arg(1), this_site_arg(0), arity_arg(2), generation_arg(),
+            root_site_arg(), flat_fallback_threshold_arg(0));
+
+    HPX_TEST(comms.valid());
+    comms.get(0) = communicator{};
+    HPX_TEST(!comms.valid());
+
+    bool rejected = false;
+    try
+    {
+        hpx::collectives::barrier(
+            hpx::launch::sync, comms, this_site_arg(0), generation_arg(1));
+    }
+    catch (hpx::exception const& e)
+    {
+        rejected = true;
+        HPX_TEST_EQ(e.get_error(), hpx::error::invalid_status);
+    }
+    HPX_TEST(rejected);
 }
 
 void test_large_single_pass_generations_rejected()
@@ -277,6 +320,7 @@ int hpx_main()
         test_non_power_of_arity();
         test_invalid_arity_rejected();
         test_invalid_hierarchical_arguments_rejected();
+        test_invalid_communicator_rejected();
         test_large_single_pass_generations_rejected();
     }
 

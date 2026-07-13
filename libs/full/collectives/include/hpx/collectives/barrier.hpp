@@ -271,13 +271,11 @@ namespace hpx::collectives {
             this_site = agas::get_locality_id();
         }
 
-        if (root_site != 0)
+        if (auto const error =
+                detail::validate_hierarchical_root_site(root_site,
+                    "hpx::collectives::barrier (hierarchical)", "barrier"))
         {
-            return hpx::make_exceptional_future<void>(
-                HPX_GET_EXCEPTION(hpx::error::bad_parameter,
-                    "hpx::collectives::barrier (hierarchical)",
-                    "hierarchical barrier currently supports only "
-                    "root_site == 0 (the tree designates site 0 as the root)"));
+            return hpx::make_exceptional_future<void>(error);
         }
 
         if (auto const error =

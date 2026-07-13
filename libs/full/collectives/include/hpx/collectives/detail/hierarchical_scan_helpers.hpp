@@ -55,18 +55,12 @@ namespace hpx::collectives::detail {
                 "generation mapping"));
         }
 
-        this_site_arg effective_site = this_site;
-        if (effective_site.is_default())
-        {
-            effective_site = agas::get_locality_id();
-        }
+        this_site_arg const effective_site = resolve_this_site(this_site);
 
-        if (root_site != 0)
+        if (auto const error =
+                validate_hierarchical_root_site(root_site, operation, "scan"))
         {
-            return hpx::make_exceptional_future<Result>(
-                HPX_GET_EXCEPTION(hpx::error::bad_parameter, operation,
-                    "hierarchical scan currently supports only root_site == 0 "
-                    "(the tree designates site 0 as the root)"));
+            return hpx::make_exceptional_future<Result>(error);
         }
 
         if (auto const error = validate_hierarchical_communicator(

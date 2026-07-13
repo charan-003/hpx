@@ -45,7 +45,28 @@ namespace hpx::collectives::detail {
     [[nodiscard]] HPX_EXPORT std::exception_ptr
     validate_hierarchical_communicator(
         hierarchical_communicator const& communicators, this_site_arg this_site,
-        char const* name);
+        char const* operation);
+
+    // The tree hardcodes site 0 as the root at every level, so the root-side
+    // entry points (broadcast_to, gather_here, reduce_here, scatter_to) may
+    // only be called from site 0, and the non-root entry points only from the
+    // other sites. `root_operation` names the root-side operation for the
+    // resulting error message.
+    [[nodiscard]] HPX_EXPORT std::exception_ptr
+    validate_hierarchical_root_caller(this_site_arg this_site,
+        char const* operation, char const* root_operation);
+
+    [[nodiscard]] HPX_EXPORT std::exception_ptr
+    validate_hierarchical_non_root_caller(this_site_arg this_site,
+        char const* operation, char const* root_operation);
+
+    // A non-zero root site is not supported by any of the hierarchical
+    // implementations (the tree designates site 0 as the root).
+    // `operation_name` is the plain operation name (e.g. "barrier") used in
+    // the resulting error message.
+    [[nodiscard]] HPX_EXPORT std::exception_ptr validate_hierarchical_root_site(
+        root_site_arg root_site, char const* operation,
+        char const* operation_name);
 
     template <typename ValueType, typename Data>
     constexpr decltype(auto) handle_bool(Data&& data) noexcept
@@ -129,6 +150,15 @@ namespace hpx::collectives::detail {
             num_generations};
     }
 
+    // The topology helpers below are deliberately the only entities in this
+    // file that carry HPX_CXX_EXPORT: the unit tests (hierarchical_helpers,
+    // subtree_gather_scatter) call them directly, and with C++20 modules
+    // enabled those tests consume this header through `import HPX.Full;`
+    // (via the generated hpx/modules/collectives.hpp), so anything named
+    // directly by an importer must be module-exported. Everything else here
+    // is referenced only from within the module purview (reachability is
+    // sufficient for the templates and validation helpers) and intentionally
+    // stays unexported.
     HPX_CXX_EXPORT [[nodiscard]] HPX_EXPORT std::size_t
     get_top_level_group_count(std::size_t num_sites, std::size_t arity);
 
@@ -144,6 +174,12 @@ namespace hpx::collectives::detail {
         std::size_t this_site, std::size_t num_sites, std::size_t arity);
 
     HPX_CXX_EXPORT [[nodiscard]] HPX_EXPORT bool is_top_level_rep(
+        std::size_t this_site, std::size_t num_sites, std::size_t arity);
+
+    // Overload for callers that have already classified this_site; avoids
+    // repeating the classify_site scan. Only referenced from within the
+    // module purview, hence no HPX_CXX_EXPORT.
+    [[nodiscard]] HPX_EXPORT bool is_top_level_rep(std::ptrdiff_t group,
         std::size_t this_site, std::size_t num_sites, std::size_t arity);
 
     template <typename T, typename F>
