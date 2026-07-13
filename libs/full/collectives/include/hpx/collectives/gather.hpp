@@ -652,7 +652,7 @@ namespace hpx::collectives {
                 gather_here_impl<uniform_rows<value_type>>(communicators.get(0),
                     HPX_MOVE(result), this_site_arg(0), run_gen, run_step),
                 [](uniform_rows<value_type>&& data) {
-                    return HPX_MOVE(data).unwrap_row();
+                    return HPX_MOVE(data).unwrap_values();
                 });
         }
     }    // namespace detail

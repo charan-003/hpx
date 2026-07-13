@@ -210,6 +210,13 @@ namespace hpx::collectives::detail {
             return HPX_MOVE(data);
         }
 
+        [[nodiscard]] std::vector<T> unwrap_values() &&
+        {
+            HPX_ASSERT(is_valid());
+            HPX_ASSERT(num_rows == data.size());
+            return HPX_MOVE(data);
+        }
+
         std::vector<T> data;
         std::size_t num_rows = 0;
 

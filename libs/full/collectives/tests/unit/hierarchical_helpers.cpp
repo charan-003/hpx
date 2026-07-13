@@ -378,6 +378,13 @@ void test_uniform_rows_construction()
     HPX_TEST_EQ(unwrapped.size(), static_cast<std::size_t>(2));
     HPX_TEST_EQ(unwrapped[0], std::string("first"));
     HPX_TEST_EQ(unwrapped[1], std::string("second"));
+
+    uniform_rows<int> scalar_rows(std::vector<int>{1, 2, 3});
+    auto values = HPX_MOVE(scalar_rows).unwrap_values();
+    HPX_TEST_EQ(values.size(), static_cast<std::size_t>(3));
+    HPX_TEST_EQ(values[0], 1);
+    HPX_TEST_EQ(values[1], 2);
+    HPX_TEST_EQ(values[2], 3);
 }
 
 void test_data_size_overflow()
