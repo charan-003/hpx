@@ -69,7 +69,7 @@ struct opaque_payload_traits<
 
     static payload_type make(std::uint32_t const value)
     {
-        return {{value}, 0};
+        return payload_type(std::vector<std::uint32_t>{value}, 0);
     }
 
     static void check_payload(

@@ -21,13 +21,9 @@
 using hpx::collectives::detail::checked_data_size_product;
 using hpx::collectives::detail::checked_data_size_sum;
 using hpx::collectives::detail::classify_site;
-using hpx::collectives::detail::extract_uniform_rows;
 using hpx::collectives::detail::get_top_level_groups;
 using hpx::collectives::detail::is_top_level_rep;
-using hpx::collectives::detail::is_valid_uniform_rows;
-using hpx::collectives::detail::merge_uniform_rows;
 using hpx::collectives::detail::uniform_rows;
-using hpx::collectives::detail::validate_uniform_rows;
 
 void test_balanced_arity2()
 {
@@ -270,8 +266,8 @@ void test_is_top_level_rep_exhaustive()
 
 void test_uniform_rows_slicing()
 {
-    uniform_rows<int> first{{10, 11, 20, 21, 30, 31}, 3};
-    auto left = extract_uniform_rows(first, 0, 2);
+    uniform_rows<int> first(std::vector<int>{10, 11, 20, 21, 30, 31}, 3);
+    auto left = first.extract(0, 2);
     HPX_TEST_EQ(left.data.size(), static_cast<std::size_t>(4));
     HPX_TEST_EQ(left.num_rows, static_cast<std::size_t>(2));
     HPX_TEST_EQ(left.data[0], 10);
@@ -279,15 +275,15 @@ void test_uniform_rows_slicing()
     HPX_TEST_EQ(left.data[2], 20);
     HPX_TEST_EQ(left.data[3], 21);
 
-    uniform_rows<int> second{{10, 11, 20, 21, 30, 31}, 3};
-    auto right = extract_uniform_rows(second, 1, 2);
+    uniform_rows<int> second(std::vector<int>{10, 11, 20, 21, 30, 31}, 3);
+    auto right = second.extract(1, 2);
     HPX_TEST_EQ(right.data.size(), static_cast<std::size_t>(2));
     HPX_TEST_EQ(right.num_rows, static_cast<std::size_t>(1));
     HPX_TEST_EQ(right.data[0], 30);
     HPX_TEST_EQ(right.data[1], 31);
 
-    uniform_rows<int> empty_rows{{}, 3};
-    auto empty = extract_uniform_rows(empty_rows, 1, 3);
+    uniform_rows<int> empty_rows(std::vector<int>{}, 3);
+    auto empty = empty_rows.extract(1, 3);
     HPX_TEST(empty.data.empty());
     HPX_TEST_EQ(empty.num_rows, static_cast<std::size_t>(1));
 }
@@ -295,10 +291,10 @@ void test_uniform_rows_slicing()
 void test_uniform_rows_merge()
 {
     std::vector<uniform_rows<std::string>> values;
-    values.push_back({{"a", "b", "c", "d"}, 2});
-    values.push_back({{"e", "f"}, 1});
+    values.emplace_back(std::vector<std::string>{"a", "b", "c", "d"}, 2);
+    values.emplace_back(std::vector<std::string>{"e", "f"}, 1);
 
-    auto result = merge_uniform_rows(HPX_MOVE(values));
+    uniform_rows<std::string> result(HPX_MOVE(values));
     HPX_TEST_EQ(result.data.size(), static_cast<std::size_t>(6));
     HPX_TEST_EQ(result.num_rows, static_cast<std::size_t>(3));
     for (std::size_t i = 0; i != result.data.size(); ++i)
@@ -307,19 +303,26 @@ void test_uniform_rows_merge()
     }
 
     std::vector<uniform_rows<int>> mismatched;
-    mismatched.push_back({{1, 2}, 1});
-    mismatched.push_back({{3, 4, 5}, 1});
+    mismatched.emplace_back(std::vector<int>{1, 2}, 1);
+    mismatched.emplace_back(std::vector<int>{3, 4, 5}, 1);
     HPX_TEST_THROW(
-        (void) merge_uniform_rows(HPX_MOVE(mismatched)), hpx::exception);
+        (void) uniform_rows<int>(HPX_MOVE(mismatched)), hpx::exception);
+
+    std::vector<uniform_rows<int>> singleton;
+    singleton.emplace_back(std::vector<int>{1, 2, 3, 4}, 2);
+    int const* const original_data = singleton.front().data.data();
+    uniform_rows<int> singleton_result(HPX_MOVE(singleton));
+    HPX_TEST_EQ(singleton_result.data.data(), original_data);
+    HPX_TEST_EQ(singleton_result.num_rows, static_cast<std::size_t>(2));
 }
 
 void test_uniform_rows_vector_bool()
 {
     std::vector<uniform_rows<bool>> values;
-    values.push_back({{true, false, true, true}, 2});
-    values.push_back({{false, false}, 1});
+    values.emplace_back(std::vector<bool>{true, false, true, true}, 2);
+    values.emplace_back(std::vector<bool>{false, false}, 1);
 
-    auto merged = merge_uniform_rows(HPX_MOVE(values));
+    uniform_rows<bool> merged(HPX_MOVE(values));
     HPX_TEST_EQ(merged.data.size(), static_cast<std::size_t>(6));
     HPX_TEST_EQ(merged.num_rows, static_cast<std::size_t>(3));
     HPX_TEST(merged.data[0]);
@@ -329,7 +332,7 @@ void test_uniform_rows_vector_bool()
     HPX_TEST(!merged.data[4]);
     HPX_TEST(!merged.data[5]);
 
-    auto slice = extract_uniform_rows(merged, 1, 3);
+    auto slice = merged.extract(1, 3);
     HPX_TEST_EQ(slice.data.size(), static_cast<std::size_t>(2));
     HPX_TEST_EQ(slice.num_rows, static_cast<std::size_t>(1));
     HPX_TEST(slice.data[0]);
@@ -338,23 +341,43 @@ void test_uniform_rows_vector_bool()
 
 void test_uniform_rows_validation()
 {
-    uniform_rows<int> valid_empty_rows{{}, 3};
-    uniform_rows<int> valid_no_rows{{}, 0};
-    uniform_rows<int> rows_with_no_width{{1}, 0};
-    uniform_rows<int> nonuniform_width{{1, 2, 3}, 2};
+    uniform_rows<int> valid_empty_rows(std::vector<int>{}, 3);
+    uniform_rows<int> valid_no_rows(std::vector<int>{}, 0);
+    uniform_rows<int> rows_with_no_width(std::vector<int>{1}, 0);
+    uniform_rows<int> nonuniform_width(std::vector<int>{1, 2, 3}, 2);
 
-    HPX_TEST(is_valid_uniform_rows(valid_empty_rows));
-    HPX_TEST(is_valid_uniform_rows(valid_no_rows));
-    HPX_TEST(!is_valid_uniform_rows(rows_with_no_width));
-    HPX_TEST(!is_valid_uniform_rows(nonuniform_width));
-    HPX_TEST_NO_THROW(validate_uniform_rows(
-        valid_empty_rows, "test_uniform_rows_validation"));
-    HPX_TEST_THROW(validate_uniform_rows(
-                       rows_with_no_width, "test_uniform_rows_validation"),
+    HPX_TEST(valid_empty_rows.is_valid());
+    HPX_TEST(valid_no_rows.is_valid());
+    HPX_TEST(!rows_with_no_width.is_valid());
+    HPX_TEST(!nonuniform_width.is_valid());
+    HPX_TEST_NO_THROW(
+        valid_empty_rows.validate("test_uniform_rows_validation"));
+    HPX_TEST_THROW(rows_with_no_width.validate("test_uniform_rows_validation"),
         hpx::exception);
-    HPX_TEST_THROW(
-        validate_uniform_rows(nonuniform_width, "test_uniform_rows_validation"),
+    HPX_TEST_THROW(nonuniform_width.validate("test_uniform_rows_validation"),
         hpx::exception);
+}
+
+void test_uniform_rows_construction()
+{
+    uniform_rows<int> rows(std::vector<int>{1, 2, 3});
+    HPX_TEST_EQ(rows.data.size(), static_cast<std::size_t>(3));
+    HPX_TEST_EQ(rows.num_rows, static_cast<std::size_t>(3));
+    HPX_TEST_EQ(rows.row_width(), static_cast<std::size_t>(1));
+
+    std::string value = "value";
+    uniform_rows<std::string> copied_value(value);
+    HPX_TEST_EQ(HPX_MOVE(copied_value).unwrap_value(), value);
+
+    uniform_rows<std::string> moved_value(std::string("moved"));
+    HPX_TEST_EQ(HPX_MOVE(moved_value).unwrap_value(), std::string("moved"));
+
+    uniform_rows<std::string> row(
+        std::vector<std::string>{"first", "second"}, 1);
+    auto unwrapped = HPX_MOVE(row).unwrap_row();
+    HPX_TEST_EQ(unwrapped.size(), static_cast<std::size_t>(2));
+    HPX_TEST_EQ(unwrapped[0], std::string("first"));
+    HPX_TEST_EQ(unwrapped[1], std::string("second"));
 }
 
 void test_data_size_overflow()
@@ -371,7 +394,8 @@ void test_data_size_overflow()
 
 void test_uniform_rows_serialization()
 {
-    uniform_rows<std::string> rows{{"zero", "one", "two", "three"}, 2};
+    uniform_rows<std::string> rows(
+        std::vector<std::string>{"zero", "one", "two", "three"}, 2);
     std::vector<char> rows_buffer;
     hpx::serialization::output_archive rows_output(rows_buffer);
     rows_output << rows;
@@ -405,6 +429,7 @@ int hpx_main()
     test_uniform_rows_merge();
     test_uniform_rows_vector_bool();
     test_uniform_rows_validation();
+    test_uniform_rows_construction();
     test_data_size_overflow();
     test_uniform_rows_serialization();
 

@@ -444,9 +444,10 @@ namespace hpx::traits {
             hpx::collectives::detail::generation_mode num_generations, T&& t)
         {
             using payload_type = std::decay_t<T>;
+            using result_type = typename Result::result_type;
             constexpr bool uniform_result =
                 hpx::collectives::detail::is_uniform_rows_v<payload_type> &&
-                std::is_same_v<typename Result::result_type, payload_type>;
+                std::is_same_v<result_type, payload_type>;
 
             if constexpr (uniform_result)
             {
@@ -458,8 +459,7 @@ namespace hpx::traits {
                         data[which] = HPX_FORWARD(T, t);
                     },
                     [](auto& data, bool&, std::size_t) {
-                        return hpx::collectives::detail::merge_uniform_rows(
-                            HPX_MOVE(data));
+                        return result_type(HPX_MOVE(data));
                     },
                     num_generations);
             }
@@ -548,8 +548,7 @@ namespace hpx::collectives {
                 Result result;
                 if constexpr (uniform_result)
                 {
-                    validate_uniform_rows(
-                        local_result, "hpx::collectives::gather_here");
+                    local_result.validate("hpx::collectives::gather_here");
                     result = HPX_FORWARD(T, local_result);
                 }
                 else
@@ -670,8 +669,7 @@ namespace hpx::collectives {
                 hierarchical_run_params(generation, num_generations);
 
             using value_type = std::decay_t<T>;
-            uniform_rows<value_type> result =
-                make_uniform_value(HPX_FORWARD(T, local_result));
+            uniform_rows<value_type> result(HPX_FORWARD(T, local_result));
             for (std::size_t i = communicators.size() - 1; i != 0; --i)
             {
                 result = gather_here_impl<uniform_rows<value_type>>(
@@ -684,7 +682,7 @@ namespace hpx::collectives {
                 gather_here_impl<uniform_rows<value_type>>(communicators.get(0),
                     HPX_MOVE(result), this_site_arg(0), run_gen, run_step),
                 [](uniform_rows<value_type>&& data) {
-                    return HPX_MOVE(data.data);
+                    return HPX_MOVE(data).unwrap_row();
                 });
         }
     }    // namespace detail
@@ -850,8 +848,7 @@ namespace hpx::collectives {
                 hierarchical_run_params(generation, num_generations);
 
             using value_type = std::decay_t<T>;
-            uniform_rows<value_type> data =
-                make_uniform_value(HPX_FORWARD(T, local_result));
+            uniform_rows<value_type> data(HPX_FORWARD(T, local_result));
             for (std::size_t i = communicators.size() - 1; i != 0; --i)
             {
                 data = gather_here_impl<uniform_rows<value_type>>(

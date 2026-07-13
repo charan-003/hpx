@@ -456,8 +456,7 @@ namespace hpx::traits {
                     communication::scatter_tag>::name(),
                 which, generation, nullptr,
                 [num_sites](auto& data, bool&, std::size_t which) {
-                    return hpx::collectives::detail::extract_uniform_rows(
-                        data[0], which, num_sites);
+                    return data[0].extract(which, num_sites);
                 },
                 num_generations, 1);
         }
@@ -481,8 +480,7 @@ namespace hpx::traits {
                         data[0] = HPX_FORWARD(Payload, t);
                     },
                     [num_sites](auto& data, bool&, std::size_t which) {
-                        return hpx::collectives::detail::extract_uniform_rows(
-                            data[0], which, num_sites);
+                        return data[0].extract(which, num_sites);
                     },
                     num_generations, 1);
             }
@@ -653,7 +651,7 @@ namespace hpx::collectives {
                     scatter_rows_from<T>(
                         HPX_MOVE(fid), this_site, generation, num_generations),
                     [](uniform_rows<T>&& result) {
-                        return unwrap_uniform_value(HPX_MOVE(result));
+                        return HPX_MOVE(result).unwrap_value();
                     });
             }
         }
@@ -677,7 +675,7 @@ namespace hpx::collectives {
                     scatter_rows_to(HPX_MOVE(fid), HPX_MOVE(local_result),
                         this_site, generation, num_generations),
                     [](uniform_rows<T>&& result) {
-                        return unwrap_uniform_value(HPX_MOVE(result));
+                        return HPX_MOVE(result).unwrap_value();
                     });
             }
         }
@@ -832,8 +830,7 @@ namespace hpx::collectives {
             if constexpr (uniform_payload)
             {
                 static_assert(std::is_same_v<Result, payload_type>);
-                validate_uniform_rows(
-                    local_result, "hpx::collectives::scatter_to");
+                local_result.validate("hpx::collectives::scatter_to");
                 if (local_result.num_rows < num_sites)
                 {
                     return hpx::make_exceptional_future<Result>(
@@ -981,11 +978,11 @@ namespace hpx::collectives {
             if (communicators.size() == 1)
             {
                 return scatter_leaf_to(current_communicator,
-                    make_uniform_rows(HPX_MOVE(local_result)), current_site,
+                    uniform_rows<T>(HPX_MOVE(local_result)), current_site,
                     run_gen, run_step);
             }
 
-            uniform_rows<T> data = make_uniform_rows(HPX_MOVE(local_result));
+            uniform_rows<T> data(HPX_MOVE(local_result));
             data = scatter_rows_to(communicators.get(0), HPX_MOVE(data),
                 this_site_arg(0), run_gen, run_step)
                        .get();
