@@ -208,6 +208,90 @@ void collectives_barrier_generation_tests()
         .get();
 }
 
+void collectives_communicator_validation_tests()
+{
+    using namespace hpx::collectives;
+
+    auto const expect_bad_parameter = [](char const* test_name, auto&& test) {
+        bool rejected = false;
+        try
+        {
+            test();
+        }
+        catch (hpx::exception const& e)
+        {
+            rejected = true;
+            HPX_TEST_EQ_MSG(
+                e.get_error(), hpx::error::bad_parameter, test_name);
+        }
+        HPX_TEST_MSG(rejected, test_name);
+    };
+
+    expect_bad_parameter("null communicator basename", [] {
+        (void) create_local_communicator(
+            nullptr, num_sites_arg(1), this_site_arg(0));
+    });
+    expect_bad_parameter("empty communicator basename", [] {
+        (void) create_local_communicator(
+            "", num_sites_arg(1), this_site_arg(0));
+    });
+    expect_bad_parameter("unspecified local communicator site count", [] {
+        (void) create_local_communicator(
+            "/test/barrier/collectives/default_num_sites/", num_sites_arg(),
+            this_site_arg(0));
+    });
+    expect_bad_parameter("zero local communicator site count", [] {
+        (void) create_local_communicator(
+            "/test/barrier/collectives/zero_num_sites/", num_sites_arg(0),
+            this_site_arg(0));
+    });
+    expect_bad_parameter("unspecified local communicator site", [] {
+        (void) create_local_communicator(
+            "/test/barrier/collectives/default_this_site/", num_sites_arg(1),
+            this_site_arg());
+    });
+    expect_bad_parameter("out-of-range communicator site", [] {
+        (void) create_communicator(
+            "/test/barrier/collectives/out_of_range_factory_site/",
+            num_sites_arg(1), this_site_arg(1));
+    });
+    expect_bad_parameter("out-of-range communicator root", [] {
+        (void) create_communicator(
+            "/test/barrier/collectives/out_of_range_factory_root/",
+            num_sites_arg(1), this_site_arg(0), generation_arg(),
+            root_site_arg(1));
+    });
+    expect_bad_parameter("zero hierarchical communicator site count", [] {
+        (void) create_hierarchical_communicator(
+            "/test/barrier/collectives/zero_hierarchical_num_sites/",
+            num_sites_arg(0), this_site_arg(0));
+    });
+    expect_bad_parameter("unsupported hierarchical communicator root", [] {
+        (void) create_hierarchical_communicator(
+            "/test/barrier/collectives/nonzero_hierarchical_root/",
+            num_sites_arg(2), this_site_arg(0), arity_arg(2), generation_arg(),
+            root_site_arg(1));
+    });
+    expect_bad_parameter("invalid hierarchical communicator arity", [] {
+        (void) create_hierarchical_communicator(
+            "/test/barrier/collectives/invalid_hierarchical_arity/",
+            num_sites_arg(2), this_site_arg(0), arity_arg(1));
+    });
+
+    if (hpx::get_locality_id() == 0)
+    {
+        auto const range_guard_client = create_communicator(
+            "/test/barrier/collectives/out_of_range_collective_site/",
+            num_sites_arg(2), this_site_arg(0));
+
+        expect_bad_parameter("out-of-range collective site", [&] {
+            hpx::collectives::barrier(
+                range_guard_client, this_site_arg(2), generation_arg(1))
+                .get();
+        });
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 int hpx_main(hpx::program_options::variables_map& vm)
 {
@@ -215,6 +299,7 @@ int hpx_main(hpx::program_options::variables_map& vm)
     test_release_from_non_hpx_thread(vm);
 
     collectives_barrier_generation_tests();
+    collectives_communicator_validation_tests();
 
     local_tests(vm);
 

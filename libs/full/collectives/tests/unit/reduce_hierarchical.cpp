@@ -256,7 +256,7 @@ void test_flat_basename_site_equals_root_rejected()
     {
         reduce_there(hpx::launch::sync,
             "/test/reduce_hierarchical/flat_root_rejected/", std::uint32_t(1),
-            this_site_arg(0), generation_arg(), root_site_arg(0));
+            this_site_arg(), generation_arg(), root_site_arg(0));
     }
     catch (hpx::exception const& e)
     {

@@ -241,8 +241,8 @@ void test_flat_basename_site_equals_root_rejected()
     try
     {
         hpx::collectives::broadcast_from<std::uint32_t>(hpx::launch::sync,
-            "/test/broadcast_hierarchical/flat_root_rejected/",
-            this_site_arg(0), generation_arg(), root_site_arg(0));
+            "/test/broadcast_hierarchical/flat_root_rejected/", this_site_arg(),
+            generation_arg(), root_site_arg(0));
     }
     catch (hpx::exception const& e)
     {

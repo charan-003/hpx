@@ -252,7 +252,7 @@ void test_flat_basename_site_equals_root_rejected()
     try
     {
         scatter_from<std::uint32_t>(hpx::launch::sync,
-            "/test/scatter_hierarchical/flat_root_rejected/", this_site_arg(0),
+            "/test/scatter_hierarchical/flat_root_rejected/", this_site_arg(),
             generation_arg(), root_site_arg(0));
     }
     catch (hpx::exception const& e)

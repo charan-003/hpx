@@ -96,14 +96,31 @@ namespace hpx::collectives {
             this_site_arg this_site, root_site_arg root_site,
             char const* function)
         {
-            if (num_sites.is_default() || this_site.is_default() ||
-                num_sites == 0 || this_site >= num_sites ||
-                root_site >= num_sites)
+            if (num_sites.is_default())
             {
                 HPX_THROW_EXCEPTION(hpx::error::bad_parameter, function,
-                    "num_sites must be explicitly non-zero, this_site must "
-                    "be explicitly smaller than num_sites, and root_site "
-                    "must designate a participating site");
+                    "the number of participating sites must be specified");
+            }
+            if (num_sites == 0)
+            {
+                HPX_THROW_EXCEPTION(hpx::error::bad_parameter, function,
+                    "the number of participating sites must be non-zero");
+            }
+            if (this_site.is_default())
+            {
+                HPX_THROW_EXCEPTION(hpx::error::bad_parameter, function,
+                    "the current site must be specified");
+            }
+            if (this_site >= num_sites)
+            {
+                HPX_THROW_EXCEPTION(hpx::error::bad_parameter, function,
+                    "the current site must be smaller than the number of "
+                    "participating sites");
+            }
+            if (root_site >= num_sites)
+            {
+                HPX_THROW_EXCEPTION(hpx::error::bad_parameter, function,
+                    "the root site must designate a participating site");
             }
         }
 

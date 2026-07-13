@@ -17,15 +17,12 @@
 #include <hpx/collectives/detail/hierarchical_helpers.hpp>
 #include <hpx/collectives/gather.hpp>
 #include <hpx/collectives/scatter.hpp>
-#include <hpx/modules/async_base.hpp>
-#include <hpx/modules/async_distributed.hpp>
 #include <hpx/modules/errors.hpp>
 #include <hpx/modules/functional.hpp>
 #include <hpx/modules/futures.hpp>
 #include <hpx/modules/type_support.hpp>
 
 #include <cstddef>
-#include <type_traits>
 #include <utility>
 #include <vector>
 

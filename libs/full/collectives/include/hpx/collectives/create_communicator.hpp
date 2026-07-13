@@ -174,9 +174,10 @@ namespace hpx { namespace collectives {
     ///
     /// \note   Hierarchical collective overloads that return hpx::future may
     ///         still perform internal waits while walking the communicator tree.
-    ///         They should not be treated as fully non-blocking: argument
-    ///         validation and phase hand-offs can throw or block before the
-    ///         returned future is delivered.
+    ///         They should not be treated as fully non-blocking: validation
+    ///         failures are reported through the returned exceptional future,
+    ///         but internal phase hand-offs can throw or block before that
+    ///         future is delivered.
     ///
     /// \returns    This function returns a new communicator object usable
     ///             with the collective operation.
