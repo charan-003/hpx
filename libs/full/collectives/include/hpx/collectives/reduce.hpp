@@ -455,8 +455,8 @@ namespace hpx::traits {
                         if (data.size() > 1)
                         {
                             auto it = data.begin();
-                            return hpx::reduce(
-                                ++it, data.end(), HPX_MOVE(data[0]), op);
+                            return hpx::reduce(++it, data.end(),
+                                HPX_MOVE(data[0]), HPX_MOVE(op));
                         }
                         return HPX_MOVE(data[0]);
                     }

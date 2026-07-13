@@ -545,13 +545,8 @@ namespace hpx::collectives {
                 "root_site == 0");
         }
 
-        if (num_sites == 0 || this_site >= num_sites)
-        {
-            HPX_THROW_EXCEPTION(hpx::error::bad_parameter,
-                "hpx::collectives::create_hierarchical_communicator",
-                "num_sites must be non-zero and this_site must be smaller "
-                "than the number of participating sites");
-        }
+        validate_communicator_arguments(num_sites, this_site, root_site,
+            "hpx::collectives::create_hierarchical_communicator");
 
         if (arity < 2)
         {

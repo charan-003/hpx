@@ -284,8 +284,8 @@ namespace hpx::traits {
                         {
                             // compute reduction result only once
                             auto it = data.begin();
-                            data[0] =
-                                hpx::reduce(++it, data.end(), data[0], op);
+                            data[0] = hpx::reduce(
+                                ++it, data.end(), data[0], HPX_MOVE(op));
                             data_available = true;
                         }
                         return data[0];
