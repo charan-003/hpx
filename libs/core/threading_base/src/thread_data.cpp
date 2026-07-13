@@ -59,23 +59,19 @@ namespace hpx::threads {
         std::ptrdiff_t const stacksize, bool const is_stackless,
         thread_id_addref const addref)
       : detail::thread_data_reference_counting(addref)
-      , priority_(init_data.priority)
-      , requested_interrupt_(false)
-      , enabled_interrupt_(true)
-      , is_stackless_(is_stackless)
-      , running_exit_funcs_(false)
-      , ran_exit_funcs_(false)
       , is_background_(false)
       , runs_as_child_(init_data.schedulehint.runs_as_child_mode() ==
             hpx::threads::thread_execution_hint::run_as_child)
+      , state_(is_stackless ? state::is_stackless : state::none)
+      , stacksize_(init_data.stacksize == thread_stacksize::nostack ?
+                (std::numeric_limits<std::int32_t>::max)() :
+                static_cast<std::int32_t>(stacksize))
+      , stacksize_enum_(init_data.stacksize)
+      , priority_(init_data.priority)
       , last_worker_thread_num_(
             init_data.schedulehint.mode == thread_schedule_hint_mode::thread ?
                 init_data.schedulehint.hint :
                 static_cast<std::uint16_t>(-1))
-      , stacksize_enum_(init_data.stacksize)
-      , stacksize_(stacksize_enum_ == thread_stacksize::nostack ?
-                (std::numeric_limits<std::int32_t>::max)() :
-                static_cast<std::int32_t>(stacksize))
       , current_state_(thread_state(
             init_data.initial_state, thread_restart_state::signaled))
       , scheduler_base_(init_data.scheduler_base)
@@ -95,7 +91,7 @@ namespace hpx::threads {
         LTM_(debug).format(
             "thread::thread({}), description({})", this, get_description());
 
-        HPX_ASSERT(is_stackless_ ||
+        HPX_ASSERT(state_ & state::is_stackless ||
             stacksize <= (std::numeric_limits<std::int32_t>::max)());
         HPX_ASSERT(stacksize_enum_ != threads::thread_stacksize::current);
 
@@ -145,12 +141,12 @@ namespace hpx::threads {
         // run the exit functions in the order they have been added
         exit_funcs_.reverse();
 
-        HPX_ASSERT(!running_exit_funcs_);
+        HPX_ASSERT(!(state_ & state::running_exit_funcs));
 
-        running_exit_funcs_ = true;
+        state_ |= state::running_exit_funcs;
         auto on_exit = hpx::experimental::scope_exit([this] {
-            running_exit_funcs_ = false;
-            ran_exit_funcs_ = true;
+            state_ &= ~state::running_exit_funcs;
+            state_ |= state::ran_exit_funcs;
         });
 
         while (!exit_funcs_.empty())
@@ -178,14 +174,14 @@ namespace hpx::threads {
     {
         std::unique_lock<hpx::util::detail::spinlock> l(mtx_);
 
-        if (ran_exit_funcs_ ||
+        if (state_ & state::ran_exit_funcs ||
             get_state().state() == thread_schedule_state::terminated ||
             get_state().state() == thread_schedule_state::deleted)
         {
             return false;
         }
 
-        if (running_exit_funcs_)
+        if (state_ & state::running_exit_funcs)
         {
             // make sure new function ends up at the end of the list during the
             // execution of exit functions
@@ -206,7 +202,7 @@ namespace hpx::threads {
         std::unique_lock<hpx::util::detail::spinlock> l(mtx_);
 
         // Exit functions should have been executed.
-        HPX_ASSERT(exit_funcs_.empty() || ran_exit_funcs_);
+        HPX_ASSERT(exit_funcs_.empty() || state_ & state::ran_exit_funcs);
 
         exit_funcs_.clear();
     }
@@ -218,7 +214,8 @@ namespace hpx::threads {
         // avoid infinite recursion. This function is called by
         // this_thread::suspend which causes problems if the lock would call
         // suspend itself.
-        if (enabled_interrupt_ && requested_interrupt_)
+        if (state_ & state::enabled_interrupt &&
+            state_ & state::requested_interrupt)
         {
             // Verify that there are no more registered locks for this
             // OS-thread. This will throw if there are still any locks held.
@@ -227,7 +224,8 @@ namespace hpx::threads {
             // now interrupt this thread
             if (throw_on_interrupt)
             {
-                requested_interrupt_ = false;    // avoid recursive exceptions
+                // avoid recursive exceptions
+                state_ &= ~state::requested_interrupt;
                 throw hpx::thread_interrupted();
             }
 
@@ -246,10 +244,10 @@ namespace hpx::threads {
         hpx::tracing::task_deleted(this);
 
         priority_ = init_data.priority;
-        requested_interrupt_ = false;
-        enabled_interrupt_ = true;
-        running_exit_funcs_ = false;
-        ran_exit_funcs_ = false;
+        state_ |= state::enabled_interrupt;
+        state_ &= ~state::requested_interrupt;
+        state_ &= ~state::running_exit_funcs;
+        state_ &= ~state::ran_exit_funcs;
         is_background_ = false;
 
         runs_as_child_.store(init_data.schedulehint.runs_as_child_mode() ==
@@ -551,7 +549,7 @@ namespace hpx::threads {
 
     hpx::tracing::task_timer_data get_self_timer_data()
     {
-        if (thread_data* thrd_data = get_self_id_data();
+        if (thread_data const* thrd_data = get_self_id_data();
             HPX_LIKELY(nullptr != thrd_data))
         {
             return thrd_data->get_timer_data();

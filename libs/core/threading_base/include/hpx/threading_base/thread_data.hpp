@@ -50,6 +50,46 @@ namespace hpx::threads {
             get_locality_id_type* f);
         HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT std::uint32_t get_locality_id(
             hpx::error_code&);
+
+        ///////////////////////////////////////////////////////////////////////
+        enum class thread_data_state : std::uint16_t
+        {
+            none = 0x00,
+            requested_interrupt = 0x01,
+            enabled_interrupt = 0x02,
+            is_stackless = 0x04,
+            running_exit_funcs = 0x08,
+            ran_exit_funcs = 0x10,
+        };
+
+        constexpr bool operator&(
+            thread_data_state lhs, thread_data_state rhs) noexcept
+        {
+            using type = std::underlying_type_t<thread_data_state>;
+            return static_cast<type>(lhs) & static_cast<type>(rhs);
+        }
+
+        constexpr thread_data_state operator~(thread_data_state s) noexcept
+        {
+            using type = std::underlying_type_t<thread_data_state>;
+            return static_cast<thread_data_state>(~static_cast<type>(s));
+        }
+
+        constexpr void operator|=(
+            thread_data_state& lhs, thread_data_state rhs) noexcept
+        {
+            using type = std::underlying_type_t<thread_data_state>;
+            lhs = static_cast<thread_data_state>(
+                static_cast<type>(lhs) | static_cast<type>(rhs));
+        }
+
+        constexpr void operator&=(
+            thread_data_state& lhs, thread_data_state rhs) noexcept
+        {
+            using type = std::underlying_type_t<thread_data_state>;
+            lhs = static_cast<thread_data_state>(
+                static_cast<type>(lhs) & static_cast<type>(rhs));
+        }
     }    // namespace detail
 
     ////////////////////////////////////////////////////////////////////////////
@@ -442,26 +482,35 @@ namespace hpx::threads {
         // handle thread interruption
         constexpr bool interruption_requested() const noexcept
         {
-            return requested_interrupt_;
+            return state_ & state::requested_interrupt;
         }
 
         constexpr bool interruption_enabled() const noexcept
         {
-            return enabled_interrupt_;
+            return state_ & state::enabled_interrupt;
         }
 
-        bool set_interruption_enabled(bool enable) noexcept
+        bool set_interruption_enabled(bool const enable) noexcept
         {
-            using std::swap;
-            swap(enabled_interrupt_, enable);
-            return enable;
+            std::unique_lock<hpx::util::detail::spinlock> l(mtx_);
+
+            bool const old_state = state_ & state::enabled_interrupt;
+            if (enable)
+            {
+                state_ |= state::enabled_interrupt;
+            }
+            else
+            {
+                state_ &= ~state::enabled_interrupt;
+            }
+            return old_state;
         }
 
         void interrupt(bool const flag = true)
         {
             std::unique_lock<hpx::util::detail::spinlock> l(mtx_);
 
-            if (flag && !enabled_interrupt_)
+            if (flag && !(state_ & state::enabled_interrupt))
             {
                 l.unlock();
 
@@ -469,7 +518,15 @@ namespace hpx::threads {
                     "thread_data::interrupt",
                     "interrupts are disabled for this thread");
             }
-            requested_interrupt_ = flag;
+
+            if (flag)
+            {
+                state_ |= state::requested_interrupt;
+            }
+            else
+            {
+                state_ &= ~state::requested_interrupt;
+            }
         }
 
         bool interruption_point(bool throw_on_interrupt = true);
@@ -488,7 +545,7 @@ namespace hpx::threads {
 
         HPX_FORCEINLINE constexpr bool is_stackless() const noexcept
         {
-            return is_stackless_;
+            return state_ & state::is_stackless;
         }
 
         void destroy_thread() override;
@@ -596,25 +653,22 @@ namespace hpx::threads {
         void rebind_base(thread_init_data& init_data);
 
     private:
-        thread_priority priority_;
-
         mutable hpx::util::detail::spinlock mtx_;
 
-        bool requested_interrupt_;
-        bool enabled_interrupt_;
-        bool const is_stackless_;
-        bool running_exit_funcs_;
-        bool ran_exit_funcs_;
+        std::atomic<bool> runs_as_child_;    // support scoped child execution
         bool is_background_;
 
-        // support scoped child execution
-        std::atomic<bool> runs_as_child_;
+        using state = detail::thread_data_state;
+        state state_;
+
+        std::int32_t stacksize_;
+
+        thread_stacksize stacksize_enum_;
+        thread_priority priority_;
 
         std::uint16_t last_worker_thread_num_;
 
-        thread_stacksize stacksize_enum_;
         HPX_NO_UNIQUE_ADDRESS hpx::tracing::task_timer_data timer_data_;
-        std::int32_t stacksize_;
 
         mutable std::atomic<thread_state> current_state_;
 
