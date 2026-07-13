@@ -883,14 +883,10 @@ namespace hpx::collectives {
                     return hpx::make_ready_future(
                         HPX_FORWARD(Payload, local_result));
                 }
-                else if constexpr (std::is_same_v<Result, bool>)
-                {
-                    return hpx::make_ready_future(
-                        static_cast<bool>(local_result[0]));
-                }
                 else
                 {
-                    return hpx::make_ready_future(HPX_MOVE(local_result[0]));
+                    return hpx::make_ready_future(
+                        handle_bool<Result>(HPX_MOVE(local_result[0])));
                 }
             }
 
@@ -1001,11 +997,7 @@ namespace hpx::collectives {
             }
 
             uniform_rows<T> data(HPX_MOVE(local_result));
-            data = scatter_rows_to(communicators.get(0), HPX_MOVE(data),
-                this_site_arg(0), run_gen, run_step)
-                       .get();
-
-            for (std::size_t i = 1; i < communicators.size() - 1; ++i)
+            for (std::size_t i = 0; i < communicators.size() - 1; ++i)
             {
                 data = scatter_rows_to(communicators.get(i), HPX_MOVE(data),
                     this_site_arg(0), run_gen, run_step)

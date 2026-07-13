@@ -25,7 +25,7 @@
 
 namespace hpx::collectives::detail {
 
-    HPX_CXX_EXPORT [[nodiscard]] inline std::size_t checked_data_size_sum(
+    [[nodiscard]] inline std::size_t checked_data_size_sum(
         std::size_t const lhs, std::size_t const rhs)
     {
         constexpr std::size_t max_size =
@@ -40,7 +40,7 @@ namespace hpx::collectives::detail {
         return lhs + rhs;
     }
 
-    HPX_CXX_EXPORT [[nodiscard]] inline std::size_t checked_data_size_product(
+    [[nodiscard]] inline std::size_t checked_data_size_product(
         std::size_t const lhs, std::size_t const rhs)
     {
         constexpr std::size_t max_size =
@@ -58,7 +58,7 @@ namespace hpx::collectives::detail {
     // A compact carrier for equally sized logical rows. Gather and scatter
     // preserve a uniform row width, so a row count is sufficient to derive
     // every boundary without allocating or serializing an offset table.
-    HPX_CXX_EXPORT template <typename T>
+    template <typename T>
     struct uniform_rows
     {
         uniform_rows() = default;

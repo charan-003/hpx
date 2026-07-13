@@ -452,9 +452,11 @@ namespace hpx::traits {
                 communication::communicator_data<
                     communication::gather_tag>::name(),
                 which, generation,
+                // step function (invoked once for get)
                 [&t](auto& data, std::size_t which) {
                     data[which] = HPX_FORWARD(T, t);
                 },
+                // finalizer (invoked once after all data has been received)
                 [](auto& data, bool&, std::size_t) -> result_type {
                     return result_type(HPX_MOVE(data));
                 },
