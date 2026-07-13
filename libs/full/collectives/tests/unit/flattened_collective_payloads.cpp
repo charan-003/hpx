@@ -81,15 +81,11 @@ struct opaque_payload_traits<
     }
 };
 
-template <typename Payload>
-void run_opaque_uniform_payload(char const* const basename,
+template <typename Payload, typename Communicator>
+void run_opaque_uniform_payload(Communicator const& communicator,
     std::uint32_t const num_sites, std::uint32_t const this_site)
 {
     using traits = opaque_payload_traits<Payload>;
-
-    auto const communicator =
-        create_communicator(basename, num_sites_arg(num_sites),
-            this_site_arg(this_site), generation_arg(), root_site_arg(0));
 
     Payload local_value = traits::make(this_site + 10);
     if (this_site == 0)
@@ -256,8 +252,20 @@ void test_local_multisite_payload_paths()
         hpx::collectives::detail::uniform_rows<std::uint32_t>;
 
     run_local_sites(num_sites, [](std::uint32_t const site) {
+        auto const communicator =
+            create_communicator("/test/flattened_payload_local_opaque_rows/",
+                num_sites_arg(num_sites), this_site_arg(site), generation_arg(),
+                root_site_arg(0));
         run_opaque_uniform_payload<uniform_payload>(
-            "/test/flattened_payload_local_opaque_rows/", num_sites, site);
+            communicator, num_sites, site);
+    });
+    run_local_sites(num_sites, [](std::uint32_t const site) {
+        auto const communicators = create_hierarchical_communicator(
+            "/test/flattened_payload_local_hierarchical_opaque_rows/",
+            num_sites_arg(num_sites), this_site_arg(site), arity_arg(2),
+            generation_arg(), root_site_arg(0), flat_fallback_threshold_arg(0));
+        run_opaque_uniform_payload<uniform_payload>(
+            communicators, num_sites, site);
     });
     run_local_sites(num_sites, [](std::uint32_t const site) {
         run_nonassignable_hierarchical_payload(
@@ -288,16 +296,44 @@ void test_singleton_payload_paths()
             this_site_arg(0), generation_arg(2))
             .get();
     HPX_TEST_EQ(scattered, std::string("scatter"));
+
+    using uniform_payload =
+        hpx::collectives::detail::uniform_rows<std::uint32_t>;
+    using traits = opaque_payload_traits<uniform_payload>;
+
+    auto const opaque_gathered = gather_here(
+        communicators, traits::make(80), this_site_arg(0), generation_arg(3))
+                                     .get();
+    HPX_TEST_EQ(opaque_gathered.size(), static_cast<std::size_t>(1));
+    traits::check_payload(opaque_gathered[0], 80);
+
+    std::vector<uniform_payload> opaque_values;
+    opaque_values.push_back(traits::make(90));
+    auto const opaque_scattered = scatter_to(communicators,
+        HPX_MOVE(opaque_values), this_site_arg(0), generation_arg(4))
+                                      .get();
+    traits::check_payload(opaque_scattered, 90);
 }
 
 int hpx_main()
 {
     std::uint32_t const this_site = hpx::get_locality_id();
     std::uint32_t const num_sites = hpx::get_num_localities(hpx::launch::sync);
+    using uniform_payload =
+        hpx::collectives::detail::uniform_rows<std::uint32_t>;
 
-    run_opaque_uniform_payload<
-        hpx::collectives::detail::uniform_rows<std::uint32_t>>(
-        "/test/flattened_payload_opaque_rows/", num_sites, this_site);
+    auto const communicator = create_communicator(
+        "/test/flattened_payload_opaque_rows/", num_sites_arg(num_sites),
+        this_site_arg(this_site), generation_arg(), root_site_arg(0));
+    run_opaque_uniform_payload<uniform_payload>(
+        communicator, num_sites, this_site);
+
+    auto const hierarchical_communicators = create_hierarchical_communicator(
+        "/test/flattened_payload_hierarchical_opaque_rows/",
+        num_sites_arg(num_sites), this_site_arg(this_site), arity_arg(2),
+        generation_arg(), root_site_arg(0), flat_fallback_threshold_arg(0));
+    run_opaque_uniform_payload<uniform_payload>(
+        hierarchical_communicators, num_sites, this_site);
     run_nonassignable_hierarchical_payload(
         "/test/flattened_payload_nonassignable/", num_sites, this_site);
     run_auto_generation_hierarchical_payloads(num_sites, this_site);

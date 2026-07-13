@@ -445,38 +445,20 @@ namespace hpx::traits {
         {
             using payload_type = std::decay_t<T>;
             using result_type = typename Result::result_type;
-            constexpr bool uniform_result =
-                hpx::collectives::detail::is_uniform_rows_v<payload_type> &&
-                std::is_same_v<result_type, payload_type>;
+            static_assert(std::is_constructible_v<result_type,
+                std::vector<payload_type>&&>);
 
-            if constexpr (uniform_result)
-            {
-                return communicator.template handle_data<payload_type>(
-                    communication::communicator_data<
-                        communication::gather_tag>::name(),
-                    which, generation,
-                    [&t](auto& data, std::size_t which) {
-                        data[which] = HPX_FORWARD(T, t);
-                    },
-                    [](auto& data, bool&, std::size_t) {
-                        return result_type(HPX_MOVE(data));
-                    },
-                    num_generations);
-            }
-            else
-            {
-                return communicator.template handle_data<payload_type>(
-                    communication::communicator_data<
-                        communication::gather_tag>::name(),
-                    which, generation,
-                    [&t](auto& data, std::size_t which) {
-                        data[which] = HPX_FORWARD(T, t);
-                    },
-                    [](auto& data, bool&, std::size_t) {
-                        return HPX_MOVE(data);
-                    },
-                    num_generations);
-            }
+            return communicator.template handle_data<payload_type>(
+                communication::communicator_data<
+                    communication::gather_tag>::name(),
+                which, generation,
+                [&t](auto& data, std::size_t which) {
+                    data[which] = HPX_FORWARD(T, t);
+                },
+                [](auto& data, bool&, std::size_t) -> result_type {
+                    return result_type(HPX_MOVE(data));
+                },
+                num_generations);
         }
 
         template <typename Result, typename T>
@@ -515,12 +497,8 @@ namespace hpx::collectives {
             generation_mode num_generations)
         {
             using payload_type = std::decay_t<T>;
-            constexpr bool uniform_result = is_uniform_rows_v<Result>;
-
-            if constexpr (uniform_result)
-            {
-                static_assert(std::is_same_v<Result, payload_type>);
-            }
+            static_assert(
+                std::is_constructible_v<Result, std::vector<payload_type>&&>);
 
             if (this_site.is_default())
             {
@@ -545,17 +523,9 @@ namespace hpx::collectives {
                             "involved"));
                 }
 
-                Result result;
-                if constexpr (uniform_result)
-                {
-                    local_result.validate("hpx::collectives::gather_here");
-                    result = HPX_FORWARD(T, local_result);
-                }
-                else
-                {
-                    result.emplace_back(HPX_FORWARD(T, local_result));
-                }
-                return hpx::make_ready_future(HPX_MOVE(result));
+                std::vector<payload_type> values;
+                values.emplace_back(HPX_FORWARD(T, local_result));
+                return hpx::make_ready_future(Result(HPX_MOVE(values)));
             }
 
             auto gather_here_data =
