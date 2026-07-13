@@ -30,14 +30,22 @@
 #include <hpx/async_distributed/distributed_continues_on_sender.hpp>
 #include <hpx/async_distributed/distributed_then_sender.hpp>
 #include <hpx/execution/algorithms/detail/sync_wait_domain.hpp>
+#include <hpx/execution_base/stdexec_forward.hpp>
 #include <hpx/modules/errors.hpp>
 #include <hpx/modules/execution_base.hpp>
 #include <hpx/modules/futures.hpp>
 #include <hpx/modules/naming_base.hpp>
 
 #include <exception>
+#include <iostream>
 #include <type_traits>
+#include <typeinfo>
 #include <utility>
+
+// Forward declaration to allow matching the tag without including the header
+namespace stdexec {
+    struct then_t;
+}
 
 namespace hpx::distributed::experimental {
 
@@ -68,39 +76,40 @@ namespace hpx::distributed::experimental {
         struct distributed_domain
           : hpx::execution::experimental::detail::sync_wait_domain
         {
-            // By default, just return the sender
-            template <typename Sender, typename Env>
-            auto transform_sender(Sender&& sndr, Env&&) const
+            // SFINAE overload for anything NOT then
+            template <typename OpTag, typename Sender, typename... Env,
+                typename std::enable_if_t<
+                    !(std::is_same_v<stdexec::tag_of_t<Sender>,
+                        hpx::execution::experimental::then_t>),
+                    int> = 0>
+            constexpr auto transform_sender(
+                OpTag, Sender&& sndr, Env const&...) const
             {
                 return HPX_FORWARD(Sender, sndr);
             }
 
-            // Intercept stdexec::continues_on_t and transform it to our distributed_continues_on_sender
-            template <typename Sender, typename Scheduler>
-            friend constexpr auto tag_invoke(
-                hpx::execution::experimental::transform_sender_t,
-                distributed_domain,
-                hpx::execution::experimental::continues_on_t, Sender&& sndr,
-                Scheduler const& sched) noexcept
+            // SFINAE overload for then
+            template <typename OpTag, typename Sender, typename... Env,
+                typename std::enable_if_t<
+                    std::is_same_v<stdexec::tag_of_t<Sender>,
+                        hpx::execution::experimental::then_t>,
+                    int> = 0>
+            constexpr auto transform_sender(
+                OpTag, Sender&& sndr, Env const&...) const
             {
-                return distributed_continues_on_sender<std::decay_t<Sender>>{
-                    HPX_FORWARD(Sender, sndr), sched.target()};
-            }
+                auto&& f = stdexec::__get<1>(HPX_FORWARD(Sender, sndr));
+                auto&& child = stdexec::__get<2>(HPX_FORWARD(Sender, sndr));
 
-            // Intercept stdexec::then_t and transform it to our distributed_then_sender
-            template <typename Sender, typename F>
-            friend auto tag_invoke(hpx::execution::experimental::then_t,
-                distributed_domain, Sender&& sndr, F&& f)
-            {
-                auto env = hpx::execution::experimental::get_env(sndr);
+                auto env = hpx::execution::experimental::get_env(child);
                 auto sched =
                     hpx::execution::experimental::get_completion_scheduler<
                         hpx::execution::experimental::set_value_t>(env);
-                auto target = sched.target_;
+                auto target = sched.target();
 
-                return detail::distributed_then_sender<std::decay_t<Sender>,
-                    std::decay_t<F>>{HPX_FORWARD(Sender, sndr),
-                    HPX_FORWARD(F, f), HPX_MOVE(target)};
+                return detail::distributed_then_sender<
+                    std::decay_t<decltype(child)>, std::decay_t<decltype(f)>>{
+                    HPX_FORWARD(decltype(child), child),
+                    HPX_FORWARD(decltype(f), f), HPX_MOVE(target)};
             }
         };
     }    // namespace detail
@@ -254,7 +263,7 @@ namespace hpx::distributed::experimental {
     //   - schedule() returns a sender
     //   - equality-comparable
     //   - copy-constructible
-    struct HPX_CXX_EXPORT distributed_scheduler
+    HPX_CXX_EXPORT struct distributed_scheduler
     {
         explicit distributed_scheduler(hpx::id_type target) noexcept
           : target_(HPX_MOVE(target))

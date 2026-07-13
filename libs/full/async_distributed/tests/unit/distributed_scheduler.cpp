@@ -107,8 +107,8 @@ int hpx_main()
             ex::then(my_then_callable_1{}));
 
         HPX_TEST(result.has_value());
-        HPX_TEST_EQ(std::get<0>(std::get<0>(*result)), 20);
-        HPX_TEST_EQ(std::get<1>(std::get<0>(*result)), target);
+        HPX_TEST_EQ(hpx::get<0>(std::get<0>(*result)), 20);
+        HPX_TEST_EQ(hpx::get<1>(std::get<0>(*result)), target);
     }
 
     // Test 6: distributed_domain intercepting ex::then with different value
@@ -122,8 +122,8 @@ int hpx_main()
             ex::then(my_then_callable_2{}));
 
         HPX_TEST(result.has_value());
-        HPX_TEST_EQ(std::get<0>(std::get<0>(*result)), 10);
-        HPX_TEST_EQ(std::get<1>(std::get<0>(*result)), target);
+        HPX_TEST_EQ(hpx::get<0>(std::get<0>(*result)), 10);
+        HPX_TEST_EQ(hpx::get<1>(std::get<0>(*result)), target);
     }
 
     // Test 7: ex::schedule(sched) | ex::then(...) executes on remote locality
@@ -137,7 +137,7 @@ int hpx_main()
             ex::schedule(sched) | ex::then(my_schedule_then_callable{}));
 
         HPX_TEST(result.has_value());
-        HPX_TEST_EQ(std::get<0>(std::get<0>(*result)), target);
+        HPX_TEST_EQ(hpx::get<0>(std::get<0>(*result)), target);
     }
 
     return hpx::finalize();

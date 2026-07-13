@@ -105,10 +105,23 @@ namespace hpx::distributed::experimental::detail {
         template <typename Env>
         struct generate_completion_signatures
         {
+            struct domainless_sender
+            {
+                using sender_concept = hpx::execution::experimental::sender_t;
+                using completion_signatures =
+                    hpx::execution::experimental::completion_signatures_of_t<
+                        Sender, Env>;
+
+                auto get_env() const noexcept
+                {
+                    return hpx::execution::experimental::empty_env{};
+                }
+            };
+
             using type =
                 hpx::execution::experimental::completion_signatures_of_t<
                     decltype(hpx::execution::experimental::then(
-                        std::declval<Sender>(), std::declval<F>())),
+                        std::declval<domainless_sender>(), std::declval<F>())),
                     Env>;
         };
 
