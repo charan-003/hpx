@@ -1,4 +1,4 @@
-//  Copyright (c) 2026 The STE||AR-Group
+//  Copyright (c) 2026 Hartmut Kaiser
 //
 //  SPDX-License-Identifier: BSL-1.0
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -28,6 +28,77 @@
 namespace {
 
     ///////////////////////////////////////////////////////////////////////////
+    // Minimal thread_data subclass that can be constructed directly (i.e.
+    // without going through a scheduler) and that exposes the protected
+    // rebind_base() through its rebind() override. This allows testing the
+    // rebind-resets-is_background behavior deterministically, without depending
+    // on the thread_data allocator ever reusing an address.
+    class testable_thread_data : public hpx::threads::thread_data
+    {
+    public:
+        explicit testable_thread_data(hpx::threads::thread_init_data& init_data)
+          : hpx::threads::thread_data(init_data, nullptr, 0, true)
+        {
+        }
+
+        std::size_t get_thread_data() const override
+        {
+            return 0;
+        }
+
+        std::size_t set_thread_data(std::size_t) override
+        {
+            return 0;
+        }
+
+#if defined(HPX_HAVE_THREAD_PHASE_INFORMATION)
+        std::size_t get_thread_phase() const noexcept override
+        {
+            return 0;
+        }
+#endif
+
+#if defined(HPX_HAVE_LIBCDS)
+        std::size_t get_libcds_data() const override
+        {
+            return 0;
+        }
+        std::size_t set_libcds_data(std::size_t data) override
+        {
+            return data;
+        }
+        std::size_t get_libcds_hazard_pointer_data() const override
+        {
+            return 0;
+        }
+        std::size_t set_libcds_hazard_pointer_data(std::size_t data) override
+        {
+            return data;
+        }
+        std::size_t get_libcds_dynamic_hazard_pointer_data() const override
+        {
+            return 0;
+        }
+        std::size_t set_libcds_dynamic_hazard_pointer_data(
+            std::size_t data) override
+        {
+            return data;
+        }
+#endif
+
+        void init() override {}
+
+        void rebind(hpx::threads::thread_init_data& init_data) override
+        {
+            // exercise the actual behavior under test directly, without
+            // requiring a coroutine to have run to completion
+            this->thread_data::rebind_base(init_data);
+        }
+
+        void destroy() noexcept override {}
+    };
+
+    ///////////////////////////////////////////////////////////////////////////
     void test_is_background_default_false()
     {
         hpx::async([]() {
@@ -52,18 +123,7 @@ namespace {
         }).get();
     }
 
-    // Return thread_data pointer to the running thread itself, even if it is
-    // executed inline in the context of an outer parent thread.
-    hpx::threads::thread_data* get_self_inner_id_data() noexcept
-    {
-        if (auto const* self = hpx::threads::get_self_ptr();
-            HPX_LIKELY(nullptr != self))
-        {
-            return hpx::threads::get_thread_id_data(self->get_thread_id());
-        }
-        return nullptr;
-    }
-
+    ///////////////////////////////////////////////////////////////////////////
     // A newly (re-)initialized thread must not carry over the is_background
     // flag from a previous use of the same thread_data instance (see
     // thread_data::rebind_base resetting is_background_ to false). Since
@@ -72,7 +132,7 @@ namespace {
     // keep creating threads (alternating whether is_background is set) until a
     // reused address is actually observed, capped at max_iterations to avoid
     // looping forever if reuse never happens.
-    void test_is_background_reset_on_rebind()
+    void test_is_background_reset_on_rebind_probabilistic()
     {
         constexpr int max_iterations = 10000;
 
@@ -85,9 +145,9 @@ namespace {
         {
             bool const mark_background = (i % 2) == 0;
 
-            hpx::async([&previous_data, &observed_reuse, &mtx,
-                           mark_background]() {
-                auto* data = get_self_inner_id_data();
+            // explicitly disable inline execution (launch::task)
+            hpx::async(hpx::launch::task, [&, mark_background]() {
+                auto* data = hpx::threads::get_self_id_data();
                 HPX_TEST(data != nullptr);
 
                 {
@@ -95,9 +155,10 @@ namespace {
 
                     if (previous_data.contains(data))
                     {
-                        // this thread_data instance's storage has been reused;
-                        // its is_background flag must have been reset to its
-                        // default value (false) by thread_data::rebind_base
+                        // this thread_data instance's storage has been
+                        // reused; its is_background flag must have been
+                        // reset to its default value (false) by
+                        // thread_data::rebind_base
                         HPX_TEST(!data->is_background());
                         observed_reuse = true;
                     }
@@ -118,6 +179,29 @@ namespace {
     }
 
     ///////////////////////////////////////////////////////////////////////////
+    // A newly (re-)initialized thread must not carry over the is_background
+    // flag from a previous use of the same thread_data instance (see
+    // resetting is_background_ to false). Exercise thread_data::rebind_base
+    // directly on a locally-owned thread_data instance instead of relying on
+    // the scheduler ever reusing an address.
+    void test_is_background_reset_on_rebind_direct()
+    {
+        hpx::threads::thread_init_data init_data;
+        init_data.stacksize = hpx::threads::thread_stacksize::nostack;
+
+        testable_thread_data data(init_data);
+        HPX_TEST(!data.is_background());
+
+        data.set_is_background();
+        HPX_TEST(data.is_background());
+
+        hpx::threads::thread_init_data rebind_data;
+        rebind_data.stacksize = hpx::threads::thread_stacksize::nostack;
+
+        data.rebind(rebind_data);
+        HPX_TEST(!data.is_background());
+    }
+    ///////////////////////////////////////////////////////////////////////////
     // Regression test for
     // hpx::this_thread::suspend()/execution_agent::do_yield() correctly
     // handling threads that are flagged as background threads. Such threads
@@ -132,7 +216,7 @@ namespace {
         bool running = false;
         bool woken_up = false;
 
-        hpx::thread t([&mtx, &cond, &running, &woken_up, mark_background]() {
+        hpx::thread t([&, mark_background]() {
             auto* data = hpx::threads::get_self_id_data();
             if (mark_background)
             {
@@ -218,7 +302,9 @@ int hpx_main()
 {
     test_is_background_default_false();
     test_set_is_background();
-    test_is_background_reset_on_rebind();
+
+    test_is_background_reset_on_rebind_probabilistic();
+    test_is_background_reset_on_rebind_direct();
 
     test_suspend_resume_with_background_flag(false);
     test_suspend_resume_with_background_flag(true);

@@ -66,7 +66,9 @@ void test_single_callback_executes_once()
 {
     std::atomic<int> call_count{0};
 
-    hpx::async([&call_count]() {
+    // disable inline execution as this may mis-identify self as the target
+    // thread
+    hpx::async(hpx::launch::task, [&call_count]() {
         hpx::threads::thread_id_type const id = hpx::threads::get_self_id();
 
         bool const added = hpx::threads::add_thread_exit_callback(

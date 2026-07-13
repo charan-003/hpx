@@ -43,7 +43,7 @@ namespace hpx::threads::detail {
 
     ///////////////////////////////////////////////////////////////////////////
     // Create a new background thread
-    HPX_CORE_EXPORT void create_background_thread(
+    HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT void create_background_thread(
         thread_id_ref_type& background_thread,
         threads::policies::scheduler_base& scheduler_base,
         std::size_t num_thread, scheduling_callbacks const& callbacks,
