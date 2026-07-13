@@ -405,6 +405,16 @@ namespace hpx { namespace collectives {
 #include <utility>
 #include <vector>
 
+namespace hpx::collectives::detail {
+
+    // Distinguishes the internal row scatter protocol from an ordinary scatter
+    // whose user value type happens to be uniform_rows<T>.
+    struct uniform_scatter_tag
+    {
+    };
+
+}    // namespace hpx::collectives::detail
+
 namespace hpx::traits {
 
     ///////////////////////////////////////////////////////////////////////////
@@ -432,7 +442,10 @@ namespace hpx::traits {
             return communicator.template handle_data<data_type>(
                 communication::communicator_data<
                     communication::scatter_tag>::name(),
-                which, generation, nullptr,
+                which, generation,
+                // step function (invoked once for get)
+                nullptr,
+                // finalizer (invoked after all sites have checked in)
                 [](auto& data, bool&, std::size_t which) {
                     return hpx::collectives::detail::handle_bool<data_type>(
                         HPX_MOVE(data[which]));
@@ -454,7 +467,10 @@ namespace hpx::traits {
             return communicator.template handle_data<data_type>(
                 communication::communicator_data<
                     communication::scatter_tag>::name(),
-                which, generation, nullptr,
+                which, generation,
+                // step function (invoked once for get)
+                nullptr,
+                // finalizer (invoked after all sites have checked in)
                 [num_sites](auto& data, bool&, std::size_t which) {
                     return data[0].extract(which, num_sites);
                 },
@@ -476,9 +492,11 @@ namespace hpx::traits {
                     communication::communicator_data<
                         communication::scatter_tag>::name(),
                     which, generation,
+                    // step function (invoked once for set)
                     [&t](auto& data, std::size_t) {
                         data[0] = HPX_FORWARD(Payload, t);
                     },
+                    // finalizer (invoked after all sites have checked in)
                     [num_sites](auto& data, bool&, std::size_t which) {
                         return data[0].extract(which, num_sites);
                     },
@@ -491,9 +509,11 @@ namespace hpx::traits {
                     communication::communicator_data<
                         communication::scatter_tag>::name(),
                     which, generation,
+                    // step function (invoked once for set)
                     [&t](auto& data, std::size_t) {
                         data = HPX_FORWARD(Payload, t);
                     },
+                    // finalizer (invoked after all sites have checked in)
                     [](auto& data, bool&, std::size_t which) {
                         return hpx::collectives::detail::handle_bool<data_type>(
                             HPX_MOVE(data[which]));

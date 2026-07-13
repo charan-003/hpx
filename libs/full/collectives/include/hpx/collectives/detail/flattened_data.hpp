@@ -259,10 +259,4 @@ namespace hpx::collectives::detail {
     inline constexpr bool is_uniform_rows_v =
         is_uniform_rows<std::decay_t<T>>::value;
 
-    // Distinguishes the internal row scatter protocol from an ordinary scatter
-    // whose user value type happens to be uniform_rows<T>.
-    struct uniform_scatter_tag
-    {
-    };
-
 }    // namespace hpx::collectives::detail
