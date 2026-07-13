@@ -151,15 +151,18 @@ namespace hpx {
                 policy_holder<D> const& p) noexcept;
 
             template <typename Left, typename Right>
-            friend policy_holder<Left> operator&=(policy_holder<Left>& lhs,
+            friend constexpr policy_holder<Left> operator&=(
+                policy_holder<Left>& lhs,
                 policy_holder<Right> const& rhs) noexcept;
 
             template <typename Left, typename Right>
-            friend policy_holder<Left> operator|=(policy_holder<Left>& lhs,
+            friend constexpr policy_holder<Left> operator|=(
+                policy_holder<Left>& lhs,
                 policy_holder<Right> const& rhs) noexcept;
 
             template <typename Left, typename Right>
-            friend policy_holder<Left> operator^=(policy_holder<Left>& lhs,
+            friend constexpr policy_holder<Left> operator^=(
+                policy_holder<Left>& lhs,
                 policy_holder<Right> const& rhs) noexcept;
 
         public:
@@ -419,7 +422,7 @@ namespace hpx {
         }
 
         template <typename Left, typename Right>
-        inline policy_holder<Left> operator&=(
+        constexpr policy_holder<Left> operator&=(
             policy_holder<Left>& lhs, policy_holder<Right> const& rhs) noexcept
         {
             lhs = policy_holder<Left>(lhs & rhs);
@@ -427,7 +430,7 @@ namespace hpx {
         }
 
         template <typename Left, typename Right>
-        inline policy_holder<Left> operator|=(
+        constexpr policy_holder<Left> operator|=(
             policy_holder<Left>& lhs, policy_holder<Right> const& rhs) noexcept
         {
             lhs = policy_holder<Left>(lhs | rhs);
@@ -435,7 +438,7 @@ namespace hpx {
         }
 
         template <typename Left, typename Right>
-        inline policy_holder<Left> operator^=(
+        constexpr policy_holder<Left> operator^=(
             policy_holder<Left>& lhs, policy_holder<Right> const& rhs) noexcept
         {
             lhs = policy_holder<Left>(lhs ^ rhs);

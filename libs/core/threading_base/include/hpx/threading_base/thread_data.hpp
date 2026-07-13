@@ -1,4 +1,4 @@
-//  Copyright (c) 2007-2025 Hartmut Kaiser
+//  Copyright (c) 2007-2026 Hartmut Kaiser
 //  Copyright (c)      2011 Bryce Lelbach
 //  Copyright (c) 2008-2009 Chirag Dekate, Anshul Tandon
 //
@@ -375,14 +375,12 @@ namespace hpx::threads {
 #ifdef HPX_HAVE_THREAD_FULLBACKTRACE_ON_SUSPENSION
         char const* get_backtrace() const noexcept
         {
-            std::lock_guard<hpx::util::detail::spinlock> l(
-                spinlock_pool::spinlock_for(this));
+            std::unique_lock<hpx::util::detail::spinlock> l(mtx_);
             return backtrace_;
         }
         char const* set_backtrace(char const* value) noexcept
         {
-            std::lock_guard<hpx::util::detail::spinlock> l(
-                spinlock_pool::spinlock_for(this));
+            std::unique_lock<hpx::util::detail::spinlock> l(mtx_);
 
             char const* bt = backtrace_;
             backtrace_ = value;
@@ -391,15 +389,13 @@ namespace hpx::threads {
 #else
         util::backtrace const* get_backtrace() const noexcept
         {
-            std::lock_guard<hpx::util::detail::spinlock> l(
-                spinlock_pool::spinlock_for(this));
+            std::unique_lock<hpx::util::detail::spinlock> l(mtx_);
             return backtrace_;
         }
         util::backtrace const* set_backtrace(
             util::backtrace const* value) noexcept
         {
-            std::lock_guard<hpx::util::detail::spinlock> l(
-                spinlock_pool::spinlock_for(this));
+            std::unique_lock<hpx::util::detail::spinlock> l(mtx_);
 
             util::backtrace const* bt = backtrace_;
             backtrace_ = value;
@@ -410,8 +406,7 @@ namespace hpx::threads {
         // Generate full backtrace for captured stack
         std::string backtrace()
         {
-            std::lock_guard<hpx::util::detail::spinlock> l(
-                spinlock_pool::spinlock_for(this));
+            std::unique_lock<hpx::util::detail::spinlock> l(mtx_);
 
             std::string bt;
             if (0 != backtrace_)
@@ -455,8 +450,8 @@ namespace hpx::threads {
 
         void interrupt(bool const flag = true)
         {
-            std::unique_lock<hpx::util::detail::spinlock> l(
-                spinlock_pool::spinlock_for(this));
+            std::unique_lock<hpx::util::detail::spinlock> l(mtx_);
+
             if (flag && !enabled_interrupt_)
             {
                 l.unlock();
@@ -594,10 +589,13 @@ namespace hpx::threads {
     private:
         thread_priority priority_;
 
+        mutable hpx::util::detail::spinlock mtx_;
+
         bool requested_interrupt_;
         bool enabled_interrupt_;
-        bool ran_exit_funcs_;
         bool const is_stackless_;
+        bool running_exit_funcs_;
+        bool ran_exit_funcs_;
 
         // support scoped child execution
         std::atomic<bool> runs_as_child_;
@@ -657,12 +655,14 @@ namespace hpx::threads {
     }
 
 #if defined(HPX_HAVE_TRACY)
+    // tracy support
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT tracing::region_init_data
     get_region_init_data(thread_data const* thrdptr);
 
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT tracing::fiber_region_init_data
     get_fiber_region_init_data(thread_data const* thrdptr);
 #elif defined(HPX_HAVE_ITTNOTIFY) && HPX_HAVE_ITTNOTIFY != 0
+    // ITTNotify support
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT tracing::region_init_data
     get_region_init_data(thread_data const* thrdptr);
 
