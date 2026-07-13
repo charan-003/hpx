@@ -5,10 +5,11 @@
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 // Tests for the thread exit-callback state maintained by thread_data
-// (thread_data.hpp/.cpp), in particular the atomic has_exit_funcs_
-// callback-presence flag used as a lock-free fast path guard for
-// run_thread_exit_callbacks()/free_thread_exit_callbacks() alongside the
-// spinlock-protected exit_funcs_ list.
+// (thread_data.hpp/.cpp): registration via add_thread_exit_callback(),
+// execution via run_thread_exit_callbacks(), and cleanup via
+// free_thread_exit_callbacks(), all serialized through the per-instance
+// spinlock mtx_ guarding exit_funcs_, running_exit_funcs_ and
+// ran_exit_funcs_.
 
 #define HPX_HAVE_FORCE_NO_CXX_MODULES
 

@@ -226,10 +226,10 @@ void test_concurrent_stress()
 
     backend_type backend(total_items);
 
-    // Bounds how long a consumer may wait without making progress (i.e. without
-    // a successful pop) before it is considered stalled. This guards against
-    // spinning forever if an item is ever lost, turning a silent CI hang into
-    // an actionable test failure.
+    // Bounds how long a producer or a consumer may wait without making progress
+    // (i.e. without a successful push or pop) before it is considered stalled.
+    // This guards against spinning forever if an item is ever lost, turning a
+    // silent CI hang into an actionable test failure.
     constexpr auto stress_stall_timeout = std::chrono::seconds(30);
 
     std::atomic<bool> producers_done(false);
@@ -239,92 +239,76 @@ void test_concurrent_stress()
 
     for (std::uint64_t p = 0; p != num_producers; ++p)
     {
-        producers.emplace_back([&backend, p]() {
+        producers.emplace_back([&, p]() {
+            auto last_progress = std::chrono::steady_clock::now();
             std::uint64_t const base = p * items_per_producer;
             for (std::uint64_t i = 0; i != items_per_producer; ++i)
             {
                 while (!backend.push(base + i))
                 {
-                    std::this_thread::yield();
-                }
-            }
-        });
-    }
-
-    // Stealer threads: pop(steal=true) only.
-    for (std::uint64_t s = 0; s != num_stealers; ++s)
-    {
-        consumers.emplace_back(
-            [&backend, &producers_done, &collected, s, stress_stall_timeout]() {
-                std::uint64_t val = 0;
-                auto last_progress = std::chrono::steady_clock::now();
-                while (true)
-                {
-                    if (backend.pop(val, /*steal=*/true))
-                    {
-                        collected[s].push_back(val);
-                        last_progress = std::chrono::steady_clock::now();
-                    }
-                    else if (producers_done.load(std::memory_order_acquire) &&
-                        backend.empty())
-                    {
-                        break;
-                    }
-                    else
-                    {
-                        if (std::chrono::steady_clock::now() - last_progress >
-                            stress_stall_timeout)
-                        {
-                            HPX_TEST_MSG(false,
-                                "stealer thread stalled: no progress for "
-                                "30s, producers_done=" +
-                                    std::to_string(producers_done.load()) +
-                                    ", backend.empty()=" +
-                                    std::to_string(backend.empty()) +
-                                    " (possible lost item)");
-                            return;
-                        }
-                        std::this_thread::yield();
-                    }
-                }
-            });
-    }
-
-    // Single owner thread: pop(steal=false) only.
-    consumers.emplace_back(
-        [&backend, &producers_done, &collected, stress_stall_timeout]() {
-            std::uint64_t val = 0;
-            auto last_progress = std::chrono::steady_clock::now();
-            while (true)
-            {
-                if (backend.pop(val, /*steal=*/false))
-                {
-                    collected[num_stealers].push_back(val);
-                    last_progress = std::chrono::steady_clock::now();
-                }
-                else if (producers_done.load(std::memory_order_acquire) &&
-                    backend.empty())
-                {
-                    break;
-                }
-                else
-                {
                     if (std::chrono::steady_clock::now() - last_progress >
                         stress_stall_timeout)
                     {
                         HPX_TEST_MSG(false,
-                            "owner thread stalled: no progress for 30s, "
-                            "producers_done=" +
-                                std::to_string(producers_done.load()) +
-                                ", backend.empty()=" +
-                                std::to_string(backend.empty()) +
-                                " (possible lost item)");
+                            std::string("producer thread stalled: no "
+                                        "progress for 30s while pushing "
+                                        "item ") +
+                                std::to_string(base + i));
                         return;
                     }
-                    std::this_thread::yield();
                 }
+                std::this_thread::yield();
             }
+            last_progress = std::chrono::steady_clock::now();
         });
+    }
+
+    auto run_consumer = [&, stress_stall_timeout](bool const steal,
+                            std::size_t const collected_index,
+                            char const* role) {
+        std::uint64_t val = 0;
+        auto last_progress = std::chrono::steady_clock::now();
+        while (true)
+        {
+            if (backend.pop(val, steal))
+            {
+                collected[collected_index].push_back(val);
+                last_progress = std::chrono::steady_clock::now();
+            }
+            else if (producers_done.load(std::memory_order_acquire) &&
+                backend.empty())
+            {
+                break;
+            }
+            else
+            {
+                if (std::chrono::steady_clock::now() - last_progress >
+                    stress_stall_timeout)
+                {
+                    HPX_TEST_MSG(false,
+                        std::string(role) +
+                            " thread stalled: no progress for 30s, "
+                            "producers_done=" +
+                            std::to_string(producers_done.load()) +
+                            ", backend.empty()=" +
+                            std::to_string(backend.empty()) +
+                            " (possible lost item)");
+                    return;
+                }
+                std::this_thread::yield();
+            }
+        }
+    };
+
+    // Stealer threads: pop(steal=true) only.
+    for (std::uint64_t s = 0; s != num_stealers; ++s)
+    {
+        consumers.emplace_back([&, s]() { run_consumer(true, s, "stealer"); });
+    }
+
+    // Single owner thread: pop(steal=false) only.
+    consumers.emplace_back(
+        [&]() { run_consumer(false, num_stealers, "owner"); });
 
     for (auto& t : producers)
     {

@@ -418,8 +418,9 @@ namespace hpx {
                 // make sure the runtime system is not active yet
                 if (get_runtime_ptr() != nullptr)
                 {
-                    std::cerr << "hpx::init: can't initialize runtime system "
-                                 "more than once! Exiting...\n";
+                    std::cerr
+                        << "hpx::local::init: can't initialize runtime system "
+                           "more than once! Exiting...\n";
                     return -1;
                 }
                 return 0;

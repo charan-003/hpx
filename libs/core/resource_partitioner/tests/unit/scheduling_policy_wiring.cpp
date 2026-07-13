@@ -17,6 +17,7 @@
 #include <hpx/modules/resource_partitioner.hpp>
 #include <hpx/modules/testing.hpp>
 
+#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -90,9 +91,26 @@ namespace {
 
 int main(int argc, char* argv[])
 {
-    // Exact match: must resolve to local_priority_fifo and must not be
-    // short-circuited into the local_priority_fifo_double branch that is
-    // checked immediately afterward in partitioner::setup_schedulers().
+    // Explicit scheduling_policy API, bypassing command line parsing.
+    test_explicit_policy(argc, argv);
+
+    // Some CIs invoke tests with --hpx:queuing=... which would cause duplicated
+    // command line option exceptions below. Remove this option from argc/argv
+    // if found.
+    char** end = std::remove_if(&argv[0], &argv[argc], [](char const* arg) {
+        return std::strstr(arg, "--hpx:queuing") != nullptr;
+    });
+
+    if (end != &argv[argc])
+    {
+        argc = static_cast<int>(end - &argv[0]);
+        *end = nullptr;
+    }
+
+    // command line option exceptions below. Exact match: must resolve to
+    // local_priority_fifo and must not be short-circuited into the
+    // local_priority_fifo_double branch that is checked immediately afterward
+    // in partitioner::setup_schedulers().
     test_queuing_string(argc, argv, "local-priority-fifo",
         hpx::resource::scheduling_policy::local_priority_fifo);
 
@@ -104,9 +122,6 @@ int main(int argc, char* argv[])
 
     // A value that is not a prefix of any known scheduler name.
     test_invalid_queuing_string(argc, argv, "not-a-real-scheduler");
-
-    // Explicit scheduling_policy API, bypassing command line parsing.
-    test_explicit_policy(argc, argv);
 
     return hpx::util::report_errors();
 }
