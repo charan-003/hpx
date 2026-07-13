@@ -69,15 +69,15 @@ struct opaque_payload_traits<
 
     static payload_type make(std::uint32_t const value)
     {
-        return payload_type(std::vector<std::uint32_t>{value}, 0);
+        return payload_type(std::vector<std::uint32_t>{value}, 1);
     }
 
     static void check_payload(
         payload_type const& payload, std::uint32_t const expected)
     {
-        HPX_TEST_EQ(payload.data.size(), static_cast<std::size_t>(1));
-        HPX_TEST_EQ(payload.data[0], expected);
-        HPX_TEST_EQ(payload.num_rows, static_cast<std::size_t>(0));
+        HPX_TEST_EQ(payload.data().size(), static_cast<std::size_t>(1));
+        HPX_TEST_EQ(payload.data()[0], expected);
+        HPX_TEST_EQ(payload.num_rows(), static_cast<std::size_t>(1));
     }
 };
 

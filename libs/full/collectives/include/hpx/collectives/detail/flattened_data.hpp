@@ -65,39 +65,40 @@ namespace hpx::collectives::detail {
 
         uniform_rows(
             std::vector<T>&& values, std::size_t const num_rows) noexcept
-          : data(HPX_MOVE(values))
-          , num_rows(num_rows)
+          : data_(HPX_MOVE(values))
+          , num_rows_(num_rows)
         {
+            HPX_ASSERT(is_valid());
         }
 
         explicit uniform_rows(std::vector<T>&& values) noexcept
-          : data(HPX_MOVE(values))
-          , num_rows(data.size())
+          : data_(HPX_MOVE(values))
+          , num_rows_(data_.size())
         {
         }
 
         template <typename Iterator>
         uniform_rows(
             std::size_t const num_rows, Iterator first, Iterator const last)
-          : num_rows(num_rows)
+          : num_rows_(num_rows)
         {
             auto const size = std::distance(first, last);
             HPX_ASSERT(size >= 0);
-            data.reserve(static_cast<std::size_t>(size));
-            append_data_range(data, first, last);
+            data_.reserve(static_cast<std::size_t>(size));
+            append_data_range(data_, first, last);
             HPX_ASSERT(is_valid());
         }
 
         explicit uniform_rows(T const& value)
-          : num_rows(1)
+          : num_rows_(1)
         {
-            data.emplace_back(value);
+            data_.emplace_back(value);
         }
 
         explicit uniform_rows(T&& value)
-          : num_rows(1)
+          : num_rows_(1)
         {
-            data.emplace_back(HPX_MOVE(value));
+            data_.emplace_back(HPX_MOVE(value));
         }
 
         explicit uniform_rows(std::vector<uniform_rows<T>>&& values)
@@ -108,8 +109,8 @@ namespace hpx::collectives::detail {
             if (values.size() == 1)
             {
                 values.front().validate(operation);
-                data = HPX_MOVE(values.front().data);
-                num_rows = values.front().num_rows;
+                data_ = HPX_MOVE(values.front().data_);
+                num_rows_ = values.front().num_rows_;
                 return;
             }
 
@@ -122,10 +123,10 @@ namespace hpx::collectives::detail {
             {
                 value.validate(operation);
                 total_size =
-                    checked_data_size_sum(total_size, value.data.size());
-                total_rows = checked_data_size_sum(total_rows, value.num_rows);
+                    checked_data_size_sum(total_size, value.data_.size());
+                total_rows = checked_data_size_sum(total_rows, value.num_rows_);
 
-                if (value.num_rows != 0)
+                if (value.num_rows_ != 0)
                 {
                     std::size_t const current_row_width = value.row_width();
                     if (have_row_width &&
@@ -141,11 +142,12 @@ namespace hpx::collectives::detail {
                 }
             }
 
-            data.reserve(total_size);
-            num_rows = total_rows;
+            data_.reserve(total_size);
+            num_rows_ = total_rows;
             for (auto& value : values)
             {
-                append_data_range(data, value.data.begin(), value.data.end());
+                append_data_range(
+                    data_, value.data_.begin(), value.data_.end());
             }
 
             HPX_ASSERT(is_valid());
@@ -153,7 +155,8 @@ namespace hpx::collectives::detail {
 
         [[nodiscard]] bool is_valid() const noexcept
         {
-            return num_rows == 0 ? data.empty() : data.size() % num_rows == 0;
+            return num_rows_ == 0 ? data_.empty() :
+                                    data_.size() % num_rows_ == 0;
         }
 
         void validate(char const* const operation) const
@@ -169,11 +172,11 @@ namespace hpx::collectives::detail {
         [[nodiscard]] std::size_t row_width() const
         {
             HPX_ASSERT(is_valid());
-            return num_rows == 0 ? 0 : data.size() / num_rows;
+            return num_rows_ == 0 ? 0 : data_.size() / num_rows_;
         }
 
         [[nodiscard]] uniform_rows extract(
-            std::size_t const slice, std::size_t const num_slices) &
+            std::size_t const slice, std::size_t const num_slices) &&
         {
             // This deliberately moves the selected elements out of the
             // carrier. Communicator finalizers invoke this under the server
@@ -181,8 +184,8 @@ namespace hpx::collectives::detail {
             HPX_ASSERT(is_valid());
             HPX_ASSERT(num_slices != 0 && slice < num_slices);
 
-            std::size_t const division_steps = num_rows / num_slices;
-            std::size_t const remainder = num_rows % num_slices;
+            std::size_t const division_steps = num_rows_ / num_slices;
+            std::size_t const remainder = num_rows_ % num_slices;
             std::size_t const first_row =
                 slice * division_steps + (std::min) (slice, remainder);
             std::size_t const row_count =
@@ -195,41 +198,53 @@ namespace hpx::collectives::detail {
             std::size_t const last = checked_data_size_sum(first, count);
 
             return uniform_rows(
-                row_count, data.begin() + first, data.begin() + last);
+                row_count, data_.begin() + first, data_.begin() + last);
         }
 
         [[nodiscard]] T unwrap_value() &&
         {
             HPX_ASSERT(is_valid());
-            HPX_ASSERT(num_rows == 1 && data.size() == 1);
+            HPX_ASSERT(num_rows_ == 1 && data_.size() == 1);
 
-            return handle_bool<T>(HPX_MOVE(data.front()));
+            return handle_bool<T>(HPX_MOVE(data_.front()));
         }
 
         [[nodiscard]] std::vector<T> unwrap_row() &&
         {
             HPX_ASSERT(is_valid());
-            HPX_ASSERT(num_rows == 1);
-            return HPX_MOVE(data);
+            HPX_ASSERT(num_rows_ == 1);
+            return HPX_MOVE(data_);
         }
 
         [[nodiscard]] std::vector<T> unwrap_values() &&
         {
             HPX_ASSERT(is_valid());
-            HPX_ASSERT(num_rows == data.size());
-            return HPX_MOVE(data);
+            HPX_ASSERT(num_rows_ == data_.size());
+            return HPX_MOVE(data_);
         }
 
-        std::vector<T> data;
-        std::size_t num_rows = 0;
+        [[nodiscard]] std::vector<T> const& data() const noexcept
+        {
+            return data_;
+        }
+
+        [[nodiscard]] std::size_t num_rows() const noexcept
+        {
+            return num_rows_;
+        }
+
+    private:
+        friend class hpx::serialization::access;
+
+        std::vector<T> data_;
+        std::size_t num_rows_ = 0;
 
         template <typename Archive>
         void serialize(Archive& ar, unsigned int const)
         {
-            ar & data & num_rows;
+            ar & data_ & num_rows_;
         }
 
-    private:
         template <typename Iterator>
         static void append_data_range(
             std::vector<T>& destination, Iterator first, Iterator const last)

@@ -472,7 +472,7 @@ namespace hpx::traits {
                 nullptr,
                 // finalizer (invoked after all sites have checked in)
                 [num_sites](auto& data, bool&, std::size_t which) {
-                    return data[0].extract(which, num_sites);
+                    return HPX_MOVE(data[0]).extract(which, num_sites);
                 },
                 num_generations, 1);
         }
@@ -498,7 +498,7 @@ namespace hpx::traits {
                     },
                     // finalizer (invoked after all sites have checked in)
                     [num_sites](auto& data, bool&, std::size_t which) {
-                        return data[0].extract(which, num_sites);
+                        return HPX_MOVE(data[0]).extract(which, num_sites);
                     },
                     num_generations, 1);
             }
@@ -681,13 +681,11 @@ namespace hpx::collectives {
             uniform_rows<T>&& local_result, this_site_arg this_site,
             generation_arg generation, generation_mode num_generations)
         {
-            HPX_ASSERT(local_result.num_rows == local_result.data.size());
-
             if constexpr (std::is_default_constructible_v<T>)
             {
                 return scatter_to_impl<T>(HPX_MOVE(fid),
-                    HPX_MOVE(local_result.data), this_site, generation,
-                    num_generations);
+                    HPX_MOVE(local_result).unwrap_values(), this_site,
+                    generation, num_generations);
             }
             else
             {
@@ -851,7 +849,7 @@ namespace hpx::collectives {
             {
                 static_assert(std::is_same_v<Result, payload_type>);
                 local_result.validate("hpx::collectives::scatter_to");
-                if (local_result.num_rows < num_sites)
+                if (local_result.num_rows() < num_sites)
                 {
                     return hpx::make_exceptional_future<Result>(
                         HPX_GET_EXCEPTION(hpx::error::bad_parameter,
