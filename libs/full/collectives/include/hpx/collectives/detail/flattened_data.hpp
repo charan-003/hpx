@@ -11,11 +11,13 @@
 #include <hpx/config.hpp>
 
 #include <hpx/assert.hpp>
+#include <hpx/collectives/detail/hierarchical_helpers.hpp>
 #include <hpx/modules/errors.hpp>
 #include <hpx/modules/serialization.hpp>
 
 #include <algorithm>
 #include <cstddef>
+#include <iterator>
 #include <limits>
 #include <type_traits>
 #include <utility>
@@ -61,16 +63,29 @@ namespace hpx::collectives::detail {
     {
         uniform_rows() = default;
 
-        uniform_rows(std::vector<T>&& values, std::size_t const num_rows)
+        uniform_rows(
+            std::vector<T>&& values, std::size_t const num_rows) noexcept
           : data(HPX_MOVE(values))
           , num_rows(num_rows)
         {
         }
 
-        explicit uniform_rows(std::vector<T>&& values)
+        explicit uniform_rows(std::vector<T>&& values) noexcept
           : data(HPX_MOVE(values))
           , num_rows(data.size())
         {
+        }
+
+        template <typename Iterator>
+        uniform_rows(
+            std::size_t const num_rows, Iterator first, Iterator const last)
+          : num_rows(num_rows)
+        {
+            auto const size = std::distance(first, last);
+            HPX_ASSERT(size >= 0);
+            data.reserve(static_cast<std::size_t>(size));
+            append_data_range(data, first, last);
+            HPX_ASSERT(is_valid());
         }
 
         explicit uniform_rows(T const& value)
@@ -160,8 +175,9 @@ namespace hpx::collectives::detail {
         [[nodiscard]] uniform_rows extract(
             std::size_t const slice, std::size_t const num_slices) &
         {
-            // Communicator finalizers invoke this under the server lock. Each
-            // site consumes a disjoint row range from this carrier.
+            // This deliberately moves the selected elements out of the
+            // carrier. Communicator finalizers invoke this under the server
+            // lock, and each site consumes a disjoint row range exactly once.
             HPX_ASSERT(is_valid());
             HPX_ASSERT(num_slices != 0 && slice < num_slices);
 
@@ -178,14 +194,8 @@ namespace hpx::collectives::detail {
                 checked_data_size_product(row_count, width);
             std::size_t const last = checked_data_size_sum(first, count);
 
-            uniform_rows result;
-            result.data.reserve(count);
-            result.num_rows = row_count;
-            append_data_range(
-                result.data, data.begin() + first, data.begin() + last);
-
-            HPX_ASSERT(result.is_valid());
-            return result;
+            return uniform_rows(
+                row_count, data.begin() + first, data.begin() + last);
         }
 
         [[nodiscard]] T unwrap_value() &&
@@ -193,14 +203,7 @@ namespace hpx::collectives::detail {
             HPX_ASSERT(is_valid());
             HPX_ASSERT(num_rows == 1 && data.size() == 1);
 
-            if constexpr (std::is_same_v<T, bool>)
-            {
-                return static_cast<bool>(data.front());
-            }
-            else
-            {
-                return HPX_MOVE(data.front());
-            }
+            return handle_bool<T>(HPX_MOVE(data.front()));
         }
 
         [[nodiscard]] std::vector<T> unwrap_row() &&
@@ -237,14 +240,7 @@ namespace hpx::collectives::detail {
             // conversion.
             for (; first != last; ++first)
             {
-                if constexpr (std::is_same_v<T, bool>)
-                {
-                    destination.push_back(static_cast<bool>(*first));
-                }
-                else
-                {
-                    destination.emplace_back(HPX_MOVE(*first));
-                }
+                destination.emplace_back(handle_bool<T>(HPX_MOVE(*first)));
             }
         }
     };

@@ -16,6 +16,7 @@
 #include <cstddef>
 #include <limits>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 using hpx::collectives::detail::checked_data_size_product;
@@ -24,6 +25,27 @@ using hpx::collectives::detail::classify_site;
 using hpx::collectives::detail::get_top_level_groups;
 using hpx::collectives::detail::is_top_level_rep;
 using hpx::collectives::detail::uniform_rows;
+
+struct move_only_value
+{
+    explicit move_only_value(int const value)
+      : value(value)
+    {
+    }
+
+    move_only_value(move_only_value const&) = delete;
+    move_only_value& operator=(move_only_value const&) = delete;
+
+    move_only_value(move_only_value&& other) noexcept
+      : value(other.value)
+    {
+        other.value = -1;
+    }
+
+    move_only_value& operator=(move_only_value&&) = delete;
+
+    int value;
+};
 
 void test_balanced_arity2()
 {
@@ -286,6 +308,17 @@ void test_uniform_rows_slicing()
     auto empty = empty_rows.extract(1, 3);
     HPX_TEST(empty.data.empty());
     HPX_TEST_EQ(empty.num_rows, static_cast<std::size_t>(1));
+
+    std::vector<move_only_value> move_only_values;
+    move_only_values.reserve(3);
+    move_only_values.emplace_back(10);
+    move_only_values.emplace_back(20);
+    move_only_values.emplace_back(30);
+    uniform_rows<move_only_value> move_only_rows(HPX_MOVE(move_only_values), 3);
+    auto middle = move_only_rows.extract(1, 3);
+    HPX_TEST_EQ(middle.data.size(), static_cast<std::size_t>(1));
+    HPX_TEST_EQ(middle.data[0].value, 20);
+    HPX_TEST_EQ(move_only_rows.data[1].value, -1);
 }
 
 void test_uniform_rows_merge()
@@ -337,6 +370,9 @@ void test_uniform_rows_vector_bool()
     HPX_TEST_EQ(slice.num_rows, static_cast<std::size_t>(1));
     HPX_TEST(slice.data[0]);
     HPX_TEST(slice.data[1]);
+
+    uniform_rows<bool> value(true);
+    HPX_TEST(HPX_MOVE(value).unwrap_value());
 }
 
 void test_uniform_rows_validation()
@@ -360,6 +396,11 @@ void test_uniform_rows_validation()
 
 void test_uniform_rows_construction()
 {
+    static_assert(std::is_nothrow_constructible_v<uniform_rows<int>,
+        std::vector<int>&&, std::size_t>);
+    static_assert(
+        std::is_nothrow_constructible_v<uniform_rows<int>, std::vector<int>&&>);
+
     uniform_rows<int> rows(std::vector<int>{1, 2, 3});
     HPX_TEST_EQ(rows.data.size(), static_cast<std::size_t>(3));
     HPX_TEST_EQ(rows.num_rows, static_cast<std::size_t>(3));
