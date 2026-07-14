@@ -11,11 +11,10 @@
 // spinlock mtx_ guarding exit_funcs_, running_exit_funcs_ and
 // ran_exit_funcs_.
 
-#define HPX_HAVE_FORCE_NO_CXX_MODULES
-
 #include <hpx/future.hpp>
 #include <hpx/init.hpp>
 #include <hpx/modules/runtime_local.hpp>
+#include <hpx/modules/synchronization.hpp>
 #include <hpx/modules/testing.hpp>
 #include <hpx/modules/threading_base.hpp>
 
@@ -41,7 +40,7 @@ void test_no_callback_fast_path()
 
     hpx::thread t([&]() {
         {
-            std::lock_guard<hpx::mutex> lk(mtx);
+            std::scoped_lock lk(mtx);
             running = true;
             cond.notify_all();
         }
@@ -66,15 +65,46 @@ void test_single_callback_executes_once()
 {
     std::atomic<int> call_count{0};
 
+    hpx::mutex mtx;
+    hpx::condition_variable cond;
+    bool signaled = false;
+    std::atomic<bool> added = false;
+
     // disable inline execution as this may mis-identify self as the target
     // thread
-    hpx::async(hpx::launch::task, [&call_count]() {
-        hpx::threads::thread_id_type const id = hpx::threads::get_self_id();
+    hpx::async(hpx::launch::task,
+        [&call_count, &mtx, &cond, &signaled, &added]() {
+            hpx::threads::thread_id_type const id = hpx::threads::get_self_id();
 
-        bool const added = hpx::threads::add_thread_exit_callback(
-            id, [&call_count]() { ++call_count; });
-        HPX_TEST(added);
-    }).get();
+            // Make sure this thread doesn't run inline
+            HPX_TEST(!hpx::threads::get_thread_id_data(id)->runs_as_child());
+
+            // hpx::async(...).get() only waits for the task body; the exit callback
+            // runs during thread cleanup afterward, so this can still after the
+            // test for the call_count being incremented below.
+            added = hpx::threads::add_thread_exit_callback(
+                id, [&call_count, &mtx, &cond, &signaled]() {
+                    ++call_count;
+
+                    std::scoped_lock lk(mtx);
+                    signaled = true;
+                    cond.notify_all();
+                });
+        })
+        .get();
+
+    HPX_TEST(added.load());
+
+    // Make sure the exit callback has run to completion (if it was successfully
+    // added).
+    if (added.load())
+    {
+        std::unique_lock<hpx::mutex> lk(mtx);
+        while (!signaled)
+        {
+            cond.wait(lk);
+        }
+    }
 
     HPX_TEST_EQ(call_count.load(), 1);
 }
@@ -94,7 +124,7 @@ void run_concurrent_registration_round(std::size_t const num_racers)
 
     hpx::thread t([&]() {
         {
-            std::lock_guard<hpx::mutex> lk(mtx);
+            std::scoped_lock lk(mtx);
             running = true;
             cond.notify_all();
         }
@@ -177,7 +207,7 @@ void test_post_exit_rejection()
     bool running = false;
 
     hpx::thread t([&]() {
-        std::lock_guard<hpx::mutex> lk(mtx);
+        std::scoped_lock lk(mtx);
         running = true;
         cond.notify_all();
         // falls through and terminates right away

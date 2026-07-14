@@ -136,7 +136,8 @@ namespace hpx::threads {
         if (&ec != &throws)
             ec = make_success_code();
 
-        get_thread_id_data(id)->interruption_point();    // notify thread
+        // notify thread
+        get_thread_id_data(id)->interruption_point();
     }
 
     ///////////////////////////////////////////////////////////////////////////

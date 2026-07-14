@@ -150,6 +150,9 @@ namespace {
                 auto* data = hpx::threads::get_self_id_data();
                 HPX_TEST(data != nullptr);
 
+                // Make sure this thread doesn't run inline
+                HPX_TEST(!data->runs_as_child());
+
                 {
                     std::scoped_lock lk(mtx);
 
