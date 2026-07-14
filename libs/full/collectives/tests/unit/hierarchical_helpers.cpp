@@ -14,40 +14,94 @@
 #include <hpx/modules/collectives.hpp>
 
 #include <cstddef>
-#include <numeric>
+#include <string>
 #include <vector>
 
 using hpx::collectives::detail::classify_site;
-using hpx::collectives::detail::get_top_level_groups;
+using hpx::collectives::detail::get_top_level_group_count;
+using hpx::collectives::detail::get_top_level_group_left;
+using hpx::collectives::detail::get_top_level_group_size;
 using hpx::collectives::detail::is_top_level_rep;
-using hpx::collectives::detail::top_level_group;
+
+std::size_t expected_group_count(std::size_t const n, std::size_t const arity)
+{
+    return arity > n ? n : arity;
+}
+
+std::size_t expected_group_size(
+    std::size_t const group, std::size_t const n, std::size_t const arity)
+{
+    std::size_t const count = expected_group_count(n, arity);
+    std::size_t const division_steps = n / count;
+    std::size_t const remainder = n % count;
+
+    return division_steps + (group < remainder ? 1 : 0);
+}
+
+std::size_t expected_group_left(
+    std::size_t const group, std::size_t const n, std::size_t const arity)
+{
+    std::size_t const count = expected_group_count(n, arity);
+    std::size_t const division_steps = n / count;
+    std::size_t const remainder = n % count;
+
+    return group * division_steps + (group < remainder ? group : remainder);
+}
+
+std::size_t expected_group_right(
+    std::size_t const group, std::size_t const n, std::size_t const arity)
+{
+    return expected_group_left(group, n, arity) +
+        expected_group_size(group, n, arity) - 1;
+}
+
+std::ptrdiff_t expected_classification(
+    std::size_t const site, std::size_t const n, std::size_t const arity)
+{
+    if (site >= n)
+    {
+        return -1;
+    }
+
+    std::size_t const count = expected_group_count(n, arity);
+    for (std::size_t group = 0; group != count; ++group)
+    {
+        if (site >= expected_group_left(group, n, arity) &&
+            site <= expected_group_right(group, n, arity))
+        {
+            return static_cast<std::ptrdiff_t>(group);
+        }
+    }
+
+    return -1;
+}
+
+void check_group(std::size_t const group, std::size_t const n,
+    std::size_t const arity, std::size_t const left, std::size_t const right,
+    std::size_t const size)
+{
+    HPX_TEST_EQ(get_top_level_group_left(group, n, arity), left);
+    HPX_TEST_EQ(get_top_level_group_size(group, n, arity), size);
+    HPX_TEST_EQ(left + size - 1, right);
+}
 
 void test_balanced_arity2()
 {
     // N=8, arity=2 -> two groups of 4: [0,3] and [4,7]
-    auto groups = get_top_level_groups(8, 2);
-    HPX_TEST_EQ(groups.size(), static_cast<std::size_t>(2));
+    HPX_TEST_EQ(get_top_level_group_count(8, 2), static_cast<std::size_t>(2));
 
-    HPX_TEST_EQ(groups[0].left, static_cast<std::size_t>(0));
-    HPX_TEST_EQ(groups[0].right, static_cast<std::size_t>(3));
-    HPX_TEST_EQ(groups[0].size, static_cast<std::size_t>(4));
-
-    HPX_TEST_EQ(groups[1].left, static_cast<std::size_t>(4));
-    HPX_TEST_EQ(groups[1].right, static_cast<std::size_t>(7));
-    HPX_TEST_EQ(groups[1].size, static_cast<std::size_t>(4));
+    check_group(0, 8, 2, 0, 3, 4);
+    check_group(1, 8, 2, 4, 7, 4);
 }
 
 void test_balanced_arity4()
 {
     // N=8, arity=4 -> four groups of 2: [0,1], [2,3], [4,5], [6,7]
-    auto groups = get_top_level_groups(8, 4);
-    HPX_TEST_EQ(groups.size(), static_cast<std::size_t>(4));
+    HPX_TEST_EQ(get_top_level_group_count(8, 4), static_cast<std::size_t>(4));
 
     for (std::size_t i = 0; i != 4; ++i)
     {
-        HPX_TEST_EQ(groups[i].left, i * 2);
-        HPX_TEST_EQ(groups[i].right, i * 2 + 1);
-        HPX_TEST_EQ(groups[i].size, static_cast<std::size_t>(2));
+        check_group(i, 8, 4, i * 2, i * 2 + 1, 2);
     }
 }
 
@@ -55,69 +109,42 @@ void test_unbalanced_n11_arity4()
 {
     // N=11, arity=4 -> 11/4=2 rem 3
     // groups: [0,2](3), [3,5](3), [6,8](3), [9,10](2)
-    auto groups = get_top_level_groups(11, 4);
-    HPX_TEST_EQ(groups.size(), static_cast<std::size_t>(4));
+    HPX_TEST_EQ(get_top_level_group_count(11, 4), static_cast<std::size_t>(4));
 
-    HPX_TEST_EQ(groups[0].left, static_cast<std::size_t>(0));
-    HPX_TEST_EQ(groups[0].right, static_cast<std::size_t>(2));
-    HPX_TEST_EQ(groups[0].size, static_cast<std::size_t>(3));
-
-    HPX_TEST_EQ(groups[1].left, static_cast<std::size_t>(3));
-    HPX_TEST_EQ(groups[1].right, static_cast<std::size_t>(5));
-    HPX_TEST_EQ(groups[1].size, static_cast<std::size_t>(3));
-
-    HPX_TEST_EQ(groups[2].left, static_cast<std::size_t>(6));
-    HPX_TEST_EQ(groups[2].right, static_cast<std::size_t>(8));
-    HPX_TEST_EQ(groups[2].size, static_cast<std::size_t>(3));
-
-    HPX_TEST_EQ(groups[3].left, static_cast<std::size_t>(9));
-    HPX_TEST_EQ(groups[3].right, static_cast<std::size_t>(10));
-    HPX_TEST_EQ(groups[3].size, static_cast<std::size_t>(2));
+    check_group(0, 11, 4, 0, 2, 3);
+    check_group(1, 11, 4, 3, 5, 3);
+    check_group(2, 11, 4, 6, 8, 3);
+    check_group(3, 11, 4, 9, 10, 2);
 }
 
 void test_unbalanced_n7_arity3()
 {
     // N=7, arity=3 -> 7/3=2 rem 1
     // groups: [0,2](3), [3,4](2), [5,6](2)
-    auto groups = get_top_level_groups(7, 3);
-    HPX_TEST_EQ(groups.size(), static_cast<std::size_t>(3));
+    HPX_TEST_EQ(get_top_level_group_count(7, 3), static_cast<std::size_t>(3));
 
-    HPX_TEST_EQ(groups[0].left, static_cast<std::size_t>(0));
-    HPX_TEST_EQ(groups[0].right, static_cast<std::size_t>(2));
-    HPX_TEST_EQ(groups[0].size, static_cast<std::size_t>(3));
-
-    HPX_TEST_EQ(groups[1].left, static_cast<std::size_t>(3));
-    HPX_TEST_EQ(groups[1].right, static_cast<std::size_t>(4));
-    HPX_TEST_EQ(groups[1].size, static_cast<std::size_t>(2));
-
-    HPX_TEST_EQ(groups[2].left, static_cast<std::size_t>(5));
-    HPX_TEST_EQ(groups[2].right, static_cast<std::size_t>(6));
-    HPX_TEST_EQ(groups[2].size, static_cast<std::size_t>(2));
+    check_group(0, 7, 3, 0, 2, 3);
+    check_group(1, 7, 3, 3, 4, 2);
+    check_group(2, 7, 3, 5, 6, 2);
 }
 
 void test_arity_exceeds_n()
 {
     // N=3, arity=8 -> clamp arity to 3, three groups of 1
-    auto groups = get_top_level_groups(3, 8);
-    HPX_TEST_EQ(groups.size(), static_cast<std::size_t>(3));
+    HPX_TEST_EQ(get_top_level_group_count(3, 8), static_cast<std::size_t>(3));
 
     for (std::size_t i = 0; i != 3; ++i)
     {
-        HPX_TEST_EQ(groups[i].left, i);
-        HPX_TEST_EQ(groups[i].right, i);
-        HPX_TEST_EQ(groups[i].size, static_cast<std::size_t>(1));
+        check_group(i, 3, 8, i, i, 1);
     }
 }
 
 void test_single_site()
 {
     // N=1, arity=2 -> one group of 1
-    auto groups = get_top_level_groups(1, 2);
-    HPX_TEST_EQ(groups.size(), static_cast<std::size_t>(1));
+    HPX_TEST_EQ(get_top_level_group_count(1, 2), static_cast<std::size_t>(1));
 
-    HPX_TEST_EQ(groups[0].left, static_cast<std::size_t>(0));
-    HPX_TEST_EQ(groups[0].right, static_cast<std::size_t>(0));
-    HPX_TEST_EQ(groups[0].size, static_cast<std::size_t>(1));
+    check_group(0, 1, 2, 0, 0, 1);
 }
 
 void test_coverage_property()
@@ -127,39 +154,53 @@ void test_coverage_property()
     {
         for (std::size_t arity = 2; arity <= 8; ++arity)
         {
-            auto groups = get_top_level_groups(n, arity);
-
+            std::size_t const count = get_top_level_group_count(n, arity);
             std::size_t total_size = 0;
-            for (auto const& g : groups)
+
+            for (std::size_t group = 0; group != count; ++group)
             {
-                HPX_TEST_EQ(g.size, g.right - g.left + 1);
-                total_size += g.size;
+                std::size_t const left =
+                    get_top_level_group_left(group, n, arity);
+                std::size_t const size =
+                    get_top_level_group_size(group, n, arity);
+
+                total_size += size;
+
+                if (group == 0)
+                {
+                    HPX_TEST_EQ(left, static_cast<std::size_t>(0));
+                }
+                else
+                {
+                    std::size_t const prev_left =
+                        get_top_level_group_left(group - 1, n, arity);
+                    std::size_t const prev_size =
+                        get_top_level_group_size(group - 1, n, arity);
+                    HPX_TEST_EQ(left, prev_left + prev_size);
+                }
+
+                if (group == count - 1)
+                {
+                    HPX_TEST_EQ(left + size - 1, n - 1);
+                }
             }
+
             HPX_TEST_EQ(total_size, n);
-
-            HPX_TEST_EQ(groups.front().left, static_cast<std::size_t>(0));
-            HPX_TEST_EQ(groups.back().right, n - 1);
-
-            for (std::size_t i = 1; i < groups.size(); ++i)
-            {
-                HPX_TEST_EQ(groups[i].left, groups[i - 1].right + 1);
-            }
         }
     }
 }
 
 void test_classify_site_basic()
 {
-    auto groups = get_top_level_groups(11, 4);
-
-    HPX_TEST_EQ(classify_site(0, groups), static_cast<std::ptrdiff_t>(0));
-    HPX_TEST_EQ(classify_site(1, groups), static_cast<std::ptrdiff_t>(0));
-    HPX_TEST_EQ(classify_site(2, groups), static_cast<std::ptrdiff_t>(0));
-    HPX_TEST_EQ(classify_site(3, groups), static_cast<std::ptrdiff_t>(1));
-    HPX_TEST_EQ(classify_site(5, groups), static_cast<std::ptrdiff_t>(1));
-    HPX_TEST_EQ(classify_site(6, groups), static_cast<std::ptrdiff_t>(2));
-    HPX_TEST_EQ(classify_site(9, groups), static_cast<std::ptrdiff_t>(3));
-    HPX_TEST_EQ(classify_site(10, groups), static_cast<std::ptrdiff_t>(3));
+    HPX_TEST_EQ(classify_site(0, 11, 4), static_cast<std::ptrdiff_t>(0));
+    HPX_TEST_EQ(classify_site(1, 11, 4), static_cast<std::ptrdiff_t>(0));
+    HPX_TEST_EQ(classify_site(2, 11, 4), static_cast<std::ptrdiff_t>(0));
+    HPX_TEST_EQ(classify_site(3, 11, 4), static_cast<std::ptrdiff_t>(1));
+    HPX_TEST_EQ(classify_site(5, 11, 4), static_cast<std::ptrdiff_t>(1));
+    HPX_TEST_EQ(classify_site(6, 11, 4), static_cast<std::ptrdiff_t>(2));
+    HPX_TEST_EQ(classify_site(9, 11, 4), static_cast<std::ptrdiff_t>(3));
+    HPX_TEST_EQ(classify_site(10, 11, 4), static_cast<std::ptrdiff_t>(3));
+    HPX_TEST_EQ(classify_site(11, 11, 4), static_cast<std::ptrdiff_t>(-1));
 }
 
 void test_classify_site_exhaustive()
@@ -169,13 +210,10 @@ void test_classify_site_exhaustive()
     {
         for (std::size_t arity = 2; arity <= 8; ++arity)
         {
-            auto groups = get_top_level_groups(n, arity);
-
             for (std::size_t site = 0; site != n; ++site)
             {
-                std::ptrdiff_t g = classify_site(site, groups);
-                HPX_TEST_NEQ(g, static_cast<std::ptrdiff_t>(-1));
-                HPX_TEST(site >= groups[g].left && site <= groups[g].right);
+                HPX_TEST_EQ(classify_site(site, n, arity),
+                    expected_classification(site, n, arity));
             }
         }
     }
@@ -183,32 +221,21 @@ void test_classify_site_exhaustive()
 
 void test_matches_recursive_fill()
 {
-    // Verify that get_top_level_groups produces the same partition as
-    // the top frame of recursively_fill_communicators. That function
-    // uses: division_steps = (right - left + 1) / arity,
-    //       remainder = (right - left + 1) % arity.
-    // We replicate that logic and compare.
+    // Verify that the top-level helpers produce the same partition as the top
+    // frame of recursively_fill_communicators.
     for (std::size_t n = 1; n <= 32; ++n)
     {
         for (std::size_t arity = 2; arity <= 8; ++arity)
         {
-            auto groups = get_top_level_groups(n, arity);
+            std::size_t const count = get_top_level_group_count(n, arity);
+            HPX_TEST_EQ(count, expected_group_count(n, arity));
 
-            std::size_t effective_arity = (arity > n) ? n : arity;
-            std::size_t division_steps = n / effective_arity;
-            std::size_t remainder = n % effective_arity;
-
-            HPX_TEST_EQ(groups.size(), effective_arity);
-
-            std::size_t offset = 0;
-            for (std::size_t i = 0; i != effective_arity; ++i)
+            for (std::size_t group = 0; group != count; ++group)
             {
-                std::size_t expected_size =
-                    division_steps + (i < remainder ? 1 : 0);
-                HPX_TEST_EQ(groups[i].left, offset);
-                HPX_TEST_EQ(groups[i].size, expected_size);
-                HPX_TEST_EQ(groups[i].right, offset + expected_size - 1);
-                offset += expected_size;
+                HPX_TEST_EQ(get_top_level_group_left(group, n, arity),
+                    expected_group_left(group, n, arity));
+                HPX_TEST_EQ(get_top_level_group_size(group, n, arity),
+                    expected_group_size(group, n, arity));
             }
         }
     }
@@ -242,19 +269,15 @@ void test_is_top_level_rep_exhaustive()
     {
         for (std::size_t arity = 2; arity <= 8; ++arity)
         {
-            auto groups = get_top_level_groups(n, arity);
-
             for (std::size_t site = 0; site != n; ++site)
             {
-                bool expected = false;
-                for (auto const& g : groups)
-                {
-                    if (site == g.left)
-                    {
-                        expected = true;
-                        break;
-                    }
-                }
+                std::ptrdiff_t const group =
+                    expected_classification(site, n, arity);
+                bool const expected = group != -1 &&
+                    site ==
+                        expected_group_left(
+                            static_cast<std::size_t>(group), n, arity);
+
                 HPX_TEST_EQ(is_top_level_rep(site, n, arity), expected);
             }
         }
