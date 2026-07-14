@@ -587,9 +587,6 @@ namespace hpx::this_thread {
             hpx::tracing::fiber_suspend_region tracy_suspend(
                 get_suspend_reason(description));
 
-            hpx::tracing::task_suspended(
-                id.noref(), get_suspend_reason(description));
-
             std::atomic<bool> timer_started(false);
             threads::thread_id_ref_type const timer_id =
                 threads::set_thread_state(id.noref(), abs_time, &timer_started,
@@ -598,6 +595,9 @@ namespace hpx::this_thread {
                     threads::thread_priority::boost, true, ec);
             if (ec)
                 return threads::thread_restart_state::unknown;
+
+            hpx::tracing::task_suspended(
+                id.noref(), get_suspend_reason(description));
 
             // We might need to dispatch 'nextid' to it's correct scheduler only
             // if our current scheduler is the same, we should yield to the id
