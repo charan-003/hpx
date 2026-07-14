@@ -14,6 +14,7 @@
 #include <hpx/modules/format.hpp>
 #include <hpx/modules/testing.hpp>
 
+#include <algorithm>
 #include <atomic>
 #include <cstddef>
 #include <exception>
@@ -292,6 +293,44 @@ void collectives_communicator_validation_tests()
     }
 }
 
+void test_owned_local_communicator_basename()
+{
+    using namespace hpx::collectives;
+
+    std::string basename = "/test/barrier/collectives/owned_local_basename/";
+    std::string const original_basename = basename;
+
+    auto const first = create_local_communicator(hpx::launch::sync,
+        basename.c_str(), num_sites_arg(2), this_site_arg(0), generation_arg(),
+        root_site_arg(0));
+    auto const second = create_local_communicator(hpx::launch::sync,
+        basename.c_str(), num_sites_arg(2), this_site_arg(1), generation_arg(),
+        root_site_arg(0));
+
+    // Keep the original buffer alive but overwrite its contents. A server
+    // holding the caller's pointer would then report the overwritten name.
+    std::fill(basename.begin(), basename.end(), 'x');
+
+    auto first_barrier = barrier(first, this_site_arg(0), generation_arg());
+    auto second_barrier = barrier(second, this_site_arg(1), generation_arg());
+    first_barrier.get();
+    second_barrier.get();
+
+    bool caught_exception = false;
+    try
+    {
+        barrier(hpx::launch::sync, first, this_site_arg(0), generation_arg(1));
+    }
+    catch (hpx::exception const& e)
+    {
+        caught_exception = true;
+        HPX_TEST_EQ(e.get_error(), hpx::error::bad_parameter);
+        HPX_TEST(
+            std::string(e.what()).find(original_basename) != std::string::npos);
+    }
+    HPX_TEST(caught_exception);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 int hpx_main(hpx::program_options::variables_map& vm)
 {
@@ -300,6 +339,7 @@ int hpx_main(hpx::program_options::variables_map& vm)
 
     collectives_barrier_generation_tests();
     collectives_communicator_validation_tests();
+    test_owned_local_communicator_basename();
 
     local_tests(vm);
 
