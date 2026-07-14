@@ -109,7 +109,7 @@ namespace hpx::threads::detail {
         if (do_background_work)
         {
             // do background work in parcel layer and in agas
-            background_thread = create_background_thread(scheduler, num_thread,
+            create_background_thread(background_thread, scheduler, num_thread,
                 params, background_running, idle_loop_count);
         }
 
