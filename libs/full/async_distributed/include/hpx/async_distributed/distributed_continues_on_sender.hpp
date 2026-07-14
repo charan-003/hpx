@@ -35,31 +35,18 @@
 #include <type_traits>
 #include <utility>
 
-namespace hpx::distributed::experimental {
+namespace hpx::distributed::experimental { namespace detail {
 
-    namespace detail {
-        struct continues_on_callable
+    struct continues_on_callable
+    {
+        auto operator()() const {}
+
+        template <typename U>
+        auto operator()(U&& val) const
         {
-            auto operator()() const
-            {
-                return;
-            }
-
-            template <typename U, typename... Us>
-            auto operator()(U&& val, Us&&... vals) const
-            {
-                if constexpr (sizeof...(Us) == 0)
-                {
-                    return HPX_FORWARD(U, val);
-                }
-                else
-                {
-                    return hpx::make_tuple(
-                        HPX_FORWARD(U, val), HPX_FORWARD(Us, vals)...);
-                }
-            }
-        };
-    }    // namespace detail
+            return HPX_FORWARD(U, val);
+        }
+    };
 
     // Forward declarations
     template <typename Sender>
@@ -79,47 +66,37 @@ namespace hpx::distributed::experimental {
 
         HPX_NO_UNIQUE_ADDRESS receiver_type downstream_;
         hpx::id_type target_;
+        hpx::future<void>* continuation_future_;
 
         void set_value(Ts... vals) && noexcept
         {
+            hpx::future<void> local_fut;
             hpx::detail::try_catch_exception_ptr(
                 [&]() {
-                    auto fut =
-                        hpx::async(hpx::distributed::detail::
-                                       distributed_invoke_callable_action<
-                                           detail::continues_on_callable,
-                                           std::decay_t<Ts>...>{},
-                            target_, detail::continues_on_callable{},
-                            HPX_MOVE(vals)...);
+                    auto fut = hpx::async(
+                        hpx::distributed::detail::
+                            distributed_invoke_callable_action<
+                                continues_on_callable, std::decay_t<Ts>...>{},
+                        target_, continues_on_callable{}, HPX_MOVE(vals)...);
 
-                    // Dispatch continuation directly without storing the future
-                    fut.then([downstream = HPX_MOVE(downstream_)](
-                                 auto&& f) mutable {
+                    // Dispatch continuation and store the future
+                    local_fut = fut.then([downstream = HPX_MOVE(downstream_)](
+                                             auto&& f) mutable {
                         hpx::detail::try_catch_exception_ptr(
                             [&]() {
-                                using result_type = std::invoke_result_t<
-                                    detail::continues_on_callable, Ts...>;
+                                using result_type =
+                                    std::invoke_result_t<continues_on_callable,
+                                        Ts...>;
                                 if constexpr (std::is_void_v<result_type>)
                                 {
                                     f.get();
                                     hpx::execution::experimental::set_value(
                                         HPX_MOVE(downstream));
                                 }
-                                else if constexpr (sizeof...(Ts) == 1)
+                                else
                                 {
                                     hpx::execution::experimental::set_value(
                                         HPX_MOVE(downstream), f.get());
-                                }
-                                else
-                                {
-                                    hpx::invoke_fused(
-                                        [&](auto&&... args) {
-                                            hpx::execution::experimental::
-                                                set_value(HPX_MOVE(downstream),
-                                                    HPX_FORWARD(decltype(args),
-                                                        args)...);
-                                        },
-                                        f.get());
                                 }
                             },
                             [&](std::exception_ptr ep) {
@@ -132,6 +109,11 @@ namespace hpx::distributed::experimental {
                     hpx::execution::experimental::set_error(
                         HPX_MOVE(downstream_), HPX_MOVE(ep));
                 });
+
+            if (local_fut.valid() && continuation_future_)
+            {
+                *continuation_future_ = HPX_MOVE(local_fut);
+            }
         }
 
         void set_error(std::exception_ptr ep) && noexcept
@@ -165,14 +147,15 @@ namespace hpx::distributed::experimental {
             std::declval<Sender>(), std::declval<upstream_receiver_t>()));
 
         upstream_op_t upstream_op_;
+        hpx::future<void> continuation_future_;
 
         template <typename Sender_, typename Receiver_>
         distributed_continues_on_operation_state(
             Sender_&& sndr, Receiver_&& rcvr, hpx::id_type target)
           : upstream_op_(hpx::execution::experimental::connect(
                 HPX_FORWARD(Sender_, sndr),
-                upstream_receiver_t{
-                    HPX_FORWARD(Receiver_, rcvr), HPX_MOVE(target)}))
+                upstream_receiver_t{HPX_FORWARD(Receiver_, rcvr),
+                    HPX_MOVE(target), &continuation_future_}))
         {
         }
 
@@ -261,6 +244,6 @@ namespace hpx::distributed::experimental {
         }
     };
 
-}    // namespace hpx::distributed::experimental
+}}    // namespace hpx::distributed::experimental::detail
 
 #endif    // HPX_HAVE_NETWORKING
