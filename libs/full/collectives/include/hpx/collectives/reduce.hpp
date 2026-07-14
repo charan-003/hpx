@@ -456,7 +456,7 @@ namespace hpx::traits {
                         {
                             auto it = data.begin();
                             return hpx::reduce(++it, data.end(),
-                                HPX_MOVE(data[0]), HPX_FORWARD(F, op));
+                                HPX_MOVE(data[0]), HPX_MOVE(op));
                         }
                         return HPX_MOVE(data[0]);
                     }
@@ -468,8 +468,7 @@ namespace hpx::traits {
                             return static_cast<bool>(hpx::reduce(++it,
                                 data.end(), static_cast<bool>(data[0]),
                                 [&](auto lhs, auto rhs) {
-                                    return HPX_FORWARD(F, op)(
-                                        static_cast<bool>(lhs),
+                                    return op(static_cast<bool>(lhs),
                                         static_cast<bool>(rhs));
                                 }));
                         }
@@ -600,6 +599,20 @@ namespace hpx::collectives {
             if (this_site.is_default())
             {
                 this_site = agas::get_locality_id();
+            }
+
+            if (auto const error =
+                    validate_hierarchical_communicator(communicators, this_site,
+                        "hpx::collectives::reduce_here (hierarchical)"))
+            {
+                return hpx::make_exceptional_future<std::decay_t<T>>(error);
+            }
+
+            if (auto const error = validate_hierarchical_root_caller(this_site,
+                    "hpx::collectives::reduce_here (hierarchical)",
+                    "reduce_here"))
+            {
+                return hpx::make_exceptional_future<std::decay_t<T>>(error);
             }
 
             if (!is_valid_hierarchical_run_generation(
@@ -779,6 +792,20 @@ namespace hpx::collectives {
                 this_site = agas::get_locality_id();
             }
 
+            if (auto const error =
+                    validate_hierarchical_communicator(communicators, this_site,
+                        "hpx::collectives::reduce_there (hierarchical)"))
+            {
+                return hpx::make_exceptional_future<void>(error);
+            }
+
+            if (auto const error = validate_hierarchical_non_root_caller(
+                    this_site, "hpx::collectives::reduce_there (hierarchical)",
+                    "reduce_here"))
+            {
+                return hpx::make_exceptional_future<void>(error);
+            }
+
             // See reduce_here above for the internal generation mapping.
             if (!is_valid_hierarchical_run_generation(
                     generation, num_generations))
@@ -834,10 +861,19 @@ namespace hpx::collectives {
         generation_arg const generation = generation_arg(),
         root_site_arg const root_site = root_site_arg())
     {
-        HPX_ASSERT(this_site != root_site);
+        this_site_arg const effective_site =
+            detail::resolve_this_site(this_site);
+
+        if (auto const error =
+                detail::validate_site_differs_from_root(effective_site,
+                    root_site, "hpx::collectives::reduce_there", "sending"))
+        {
+            return hpx::make_exceptional_future<void>(error);
+        }
+
         return reduce_there(create_communicator(basename, num_sites_arg(),
-                                this_site, generation, root_site),
-            HPX_FORWARD(T, local_result), this_site);
+                                effective_site, generation, root_site),
+            HPX_FORWARD(T, local_result), effective_site);
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -869,10 +905,8 @@ namespace hpx::collectives {
         generation_arg const generation = generation_arg(),
         root_site_arg const root_site = root_site_arg())
     {
-        HPX_ASSERT(this_site != root_site);
-        reduce_there(create_communicator(basename, num_sites_arg(), this_site,
-                         generation, root_site),
-            HPX_FORWARD(T, local_result), this_site)
+        reduce_there(basename, HPX_FORWARD(T, local_result), this_site,
+            generation, root_site)
             .get();
     }
 
