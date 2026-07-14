@@ -223,7 +223,7 @@ namespace hpx::collectives::detail {
             return HPX_MOVE(data_);
         }
 
-        [[nodiscard]] T take(std::size_t const index) &&
+        [[nodiscard]] T take(std::size_t const index) &
         {
             HPX_ASSERT(index < data_.size());
             return handle_bool<T>(HPX_MOVE(data_[index]));
@@ -391,7 +391,7 @@ namespace hpx::collectives::detail {
             return offsets_[segment + 1] - offsets_[segment];
         }
 
-        [[nodiscard]] T take(std::size_t const index) &&
+        [[nodiscard]] T take(std::size_t const index) &
         {
             HPX_ASSERT(index < data_.size());
             return handle_bool<T>(HPX_MOVE(data_[index]));

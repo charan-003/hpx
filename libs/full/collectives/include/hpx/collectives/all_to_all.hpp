@@ -654,8 +654,8 @@ namespace hpx::collectives {
                         destination_site != dest_left + dest_group_size;
                         ++destination_site)
                     {
-                        destination.emplace_back(HPX_MOVE(gathered).take(
-                            row_left + destination_site));
+                        destination.emplace_back(
+                            gathered.take(row_left + destination_site));
                     }
                     exchange_offsets.push_back(exchange_data.size());
                 }
@@ -732,8 +732,7 @@ namespace hpx::collectives {
                             std::size_t const index =
                                 received.offsets()[group] +
                                 source * my_group_size + j;
-                            scatter_data.emplace_back(
-                                HPX_MOVE(received).take(index));
+                            scatter_data.emplace_back(received.take(index));
                         }
                     }
                 }

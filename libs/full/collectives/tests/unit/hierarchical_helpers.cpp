@@ -333,9 +333,9 @@ void test_is_ragged_rows_trait()
     static_assert(!is_ragged_rows_v<std::vector<int>>);
     using take_type = decltype(&ragged_rows<int>::take);
     static_assert(
-        std::is_invocable_v<take_type, ragged_rows<int>&&, std::size_t>);
+        std::is_invocable_v<take_type, ragged_rows<int>&, std::size_t>);
     static_assert(
-        !std::is_invocable_v<take_type, ragged_rows<int>&, std::size_t>);
+        !std::is_invocable_v<take_type, ragged_rows<int>&&, std::size_t>);
     static_assert(std::is_nothrow_constructible_v<ragged_rows<int>,
         std::vector<int>&&, std::vector<std::size_t>&&>);
 }
@@ -388,7 +388,7 @@ void test_ragged_rows_extract_columns()
     HPX_TEST_EQ(move_only_column.data().size(), static_cast<std::size_t>(2));
     HPX_TEST_EQ(move_only_column.data()[0].value, 2);
     HPX_TEST_EQ(move_only_column.data()[1].value, 4);
-    auto taken = HPX_MOVE(move_only_column).take(1);
+    auto taken = move_only_column.take(1);
     HPX_TEST_EQ(taken.value, 4);
 }
 
@@ -624,9 +624,9 @@ void test_uniform_rows_construction()
 
     using take_type = decltype(&uniform_rows<int>::take);
     static_assert(
-        std::is_invocable_v<take_type, uniform_rows<int>&&, std::size_t>);
+        std::is_invocable_v<take_type, uniform_rows<int>&, std::size_t>);
     static_assert(
-        !std::is_invocable_v<take_type, uniform_rows<int>&, std::size_t>);
+        !std::is_invocable_v<take_type, uniform_rows<int>&&, std::size_t>);
 
     uniform_rows<int> rows(std::vector<int>{1, 2, 3});
     HPX_TEST_EQ(rows.data().size(), static_cast<std::size_t>(3));
@@ -655,7 +655,7 @@ void test_uniform_rows_construction()
     HPX_TEST_EQ(values[2], 3);
 
     uniform_rows<int> releasable(std::vector<int>{4, 5, 6, 7}, 2);
-    HPX_TEST_EQ(HPX_MOVE(releasable).take(2), 6);
+    HPX_TEST_EQ(releasable.take(2), 6);
     auto released = HPX_MOVE(releasable).release_data();
     HPX_TEST_EQ(released.size(), static_cast<std::size_t>(4));
 }
