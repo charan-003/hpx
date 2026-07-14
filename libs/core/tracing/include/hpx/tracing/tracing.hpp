@@ -160,7 +160,7 @@ namespace hpx::tracing {
     constexpr void task_yielded([[maybe_unused]] ThreadId const& id) noexcept
     {
 #if defined(HPX_HAVE_TRACING)
-        auto* thrdptr = threads::get_thread_id_data(id);
+        auto* thrdptr = get_thread_id_data(id);
         using thread_data_type = std::remove_pointer_t<decltype(thrdptr)>;
         task_yielded(thrdptr,
             thread_data_type::get_safe_description(
@@ -173,7 +173,7 @@ namespace hpx::tracing {
         [[maybe_unused]] String const& reason) noexcept
     {
 #if defined(HPX_HAVE_TRACING)
-        auto* thrdptr = threads::get_thread_id_data(id);
+        auto* thrdptr = get_thread_id_data(id);
         using thread_data_type = std::remove_pointer_t<decltype(thrdptr)>;
         if constexpr (std::is_convertible_v<String, char const*>)
         {
@@ -197,7 +197,7 @@ namespace hpx::tracing {
         [[maybe_unused]] StateX statex) noexcept
     {
 #if defined(HPX_HAVE_TRACING)
-        auto* thrdptr = threads::get_thread_id_data(id);
+        auto* thrdptr = get_thread_id_data(id);
         using thread_data_type = std::remove_pointer_t<decltype(thrdptr)>;
         if constexpr (std::is_convertible_v<StateX, char const*>)
         {
@@ -211,7 +211,7 @@ namespace hpx::tracing {
             task_resumed(thrdptr,
                 thread_data_type::get_safe_description(
                     thrdptr->get_description(), "thread"),
-                threads::get_thread_state_ex_name(statex));
+                get_thread_state_ex_name(statex));
         }
 #endif
     }
