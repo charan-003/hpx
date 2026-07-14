@@ -25,8 +25,10 @@ using hpx::collectives::detail::classify_site;
 using hpx::collectives::detail::get_top_level_group_count;
 using hpx::collectives::detail::get_top_level_group_left;
 using hpx::collectives::detail::get_top_level_group_size;
+using hpx::collectives::detail::is_ragged_rows_v;
 using hpx::collectives::detail::is_top_level_rep;
 using hpx::collectives::detail::is_uniform_rows_v;
+using hpx::collectives::detail::ragged_rows;
 using hpx::collectives::detail::uniform_rows;
 
 std::size_t expected_group_count(std::size_t const n, std::size_t const arity)
@@ -321,6 +323,120 @@ void test_is_uniform_rows_trait()
     static_assert(!is_uniform_rows_v<std::vector<int>>);
 }
 
+void test_is_ragged_rows_trait()
+{
+    static_assert(is_ragged_rows_v<ragged_rows<int>>);
+    static_assert(is_ragged_rows_v<ragged_rows<int> const>);
+    static_assert(is_ragged_rows_v<ragged_rows<int>&>);
+    static_assert(is_ragged_rows_v<ragged_rows<int> const&>);
+    static_assert(!is_ragged_rows_v<int>);
+    static_assert(!is_ragged_rows_v<std::vector<int>>);
+    using take_type = decltype(&ragged_rows<int>::take);
+    static_assert(
+        std::is_invocable_v<take_type, ragged_rows<int>&&, std::size_t>);
+    static_assert(
+        !std::is_invocable_v<take_type, ragged_rows<int>&, std::size_t>);
+    static_assert(std::is_nothrow_constructible_v<ragged_rows<int>,
+        std::vector<int>&&, std::vector<std::size_t>&&>);
+}
+
+void test_ragged_rows_extract_columns()
+{
+    std::vector<ragged_rows<int>> values;
+    values.emplace_back(std::vector<int>{3, 4, 103, 104, 203, 204},
+        std::vector<std::size_t>{0, 0, 2, 2, 4, 4, 6});
+    values.emplace_back(std::vector<int>{300, 301, 302, 400, 401, 402},
+        std::vector<std::size_t>{0, 3, 3, 6, 6});
+
+    ragged_rows<int> column_zero(values, 0);
+    HPX_TEST_EQ(column_zero.data().size(), static_cast<std::size_t>(6));
+    HPX_TEST_EQ(column_zero.offsets().size(), static_cast<std::size_t>(3));
+    HPX_TEST_EQ(column_zero.offsets()[0], static_cast<std::size_t>(0));
+    HPX_TEST_EQ(column_zero.offsets()[1], static_cast<std::size_t>(0));
+    HPX_TEST_EQ(column_zero.offsets()[2], static_cast<std::size_t>(6));
+    for (std::size_t i = 0; i != column_zero.data().size(); ++i)
+    {
+        HPX_TEST_EQ(column_zero.data()[i],
+            static_cast<int>(300 + (i / 3) * 100 + i % 3));
+    }
+
+    ragged_rows<int> column_one(values, 1);
+    HPX_TEST_EQ(column_one.data().size(), static_cast<std::size_t>(6));
+    HPX_TEST_EQ(column_one.offsets().size(), static_cast<std::size_t>(3));
+    HPX_TEST_EQ(column_one.offsets()[0], static_cast<std::size_t>(0));
+    HPX_TEST_EQ(column_one.offsets()[1], static_cast<std::size_t>(6));
+    HPX_TEST_EQ(column_one.offsets()[2], static_cast<std::size_t>(6));
+    for (std::size_t i = 0; i != column_one.data().size(); ++i)
+    {
+        HPX_TEST_EQ(
+            column_one.data()[i], static_cast<int>((i / 2) * 100 + 3 + i % 2));
+    }
+
+    std::vector<ragged_rows<move_only_value>> move_only_values;
+    std::vector<move_only_value> first;
+    first.emplace_back(1);
+    first.emplace_back(2);
+    move_only_values.emplace_back(
+        HPX_MOVE(first), std::vector<std::size_t>{0, 1, 2});
+    std::vector<move_only_value> second;
+    second.emplace_back(3);
+    second.emplace_back(4);
+    move_only_values.emplace_back(
+        HPX_MOVE(second), std::vector<std::size_t>{0, 1, 2});
+
+    ragged_rows<move_only_value> move_only_column(move_only_values, 1);
+    HPX_TEST_EQ(move_only_column.data().size(), static_cast<std::size_t>(2));
+    HPX_TEST_EQ(move_only_column.data()[0].value, 2);
+    HPX_TEST_EQ(move_only_column.data()[1].value, 4);
+    auto taken = HPX_MOVE(move_only_column).take(1);
+    HPX_TEST_EQ(taken.value, 4);
+}
+
+void test_ragged_rows_validation()
+{
+    ragged_rows<int> valid_empty_rows(
+        std::vector<int>{}, std::vector<std::size_t>{0, 0, 0});
+    HPX_TEST(valid_empty_rows.is_valid());
+    HPX_TEST_NO_THROW(valid_empty_rows.validate("test_ragged_rows_validation"));
+    HPX_TEST_NO_THROW(valid_empty_rows.validate_for_exchange(
+        2, "test_ragged_rows_validation"));
+
+    auto deserialize_rows = [](std::vector<int> data,
+                                std::vector<std::size_t> offsets) {
+        std::vector<char> buffer;
+        hpx::serialization::output_archive output(buffer);
+        output << data << offsets;
+
+        ragged_rows<int> rows;
+        hpx::serialization::input_archive input(buffer);
+        input >> rows;
+        return rows;
+    };
+
+    auto empty_offsets = deserialize_rows({}, {});
+    auto nonzero_first = deserialize_rows({1}, {1, 1});
+    auto decreasing = deserialize_rows({1, 2}, {0, 2, 1, 2});
+    auto wrong_end = deserialize_rows({1, 2}, {0, 1});
+    ragged_rows<int> incomplete_exchange(
+        std::vector<int>{1}, std::vector<std::size_t>{0, 1});
+
+    HPX_TEST(!empty_offsets.is_valid());
+    HPX_TEST(!nonzero_first.is_valid());
+    HPX_TEST(!decreasing.is_valid());
+    HPX_TEST(!wrong_end.is_valid());
+    HPX_TEST_THROW(
+        empty_offsets.validate("test_ragged_rows_validation"), hpx::exception);
+    HPX_TEST_THROW(
+        nonzero_first.validate("test_ragged_rows_validation"), hpx::exception);
+    HPX_TEST_THROW(
+        decreasing.validate("test_ragged_rows_validation"), hpx::exception);
+    HPX_TEST_THROW(
+        wrong_end.validate("test_ragged_rows_validation"), hpx::exception);
+    HPX_TEST_THROW(incomplete_exchange.validate_for_exchange(
+                       2, "test_ragged_rows_validation"),
+        hpx::exception);
+}
+
 void test_uniform_rows_slicing()
 {
     uniform_rows<int> first(std::vector<int>{10, 11, 20, 21, 30, 31}, 3);
@@ -506,6 +622,12 @@ void test_uniform_rows_construction()
     static_assert(
         std::is_nothrow_constructible_v<uniform_rows<int>, std::vector<int>&&>);
 
+    using take_type = decltype(&uniform_rows<int>::take);
+    static_assert(
+        std::is_invocable_v<take_type, uniform_rows<int>&&, std::size_t>);
+    static_assert(
+        !std::is_invocable_v<take_type, uniform_rows<int>&, std::size_t>);
+
     uniform_rows<int> rows(std::vector<int>{1, 2, 3});
     HPX_TEST_EQ(rows.data().size(), static_cast<std::size_t>(3));
     HPX_TEST_EQ(rows.num_rows(), static_cast<std::size_t>(3));
@@ -531,6 +653,11 @@ void test_uniform_rows_construction()
     HPX_TEST_EQ(values[0], 1);
     HPX_TEST_EQ(values[1], 2);
     HPX_TEST_EQ(values[2], 3);
+
+    uniform_rows<int> releasable(std::vector<int>{4, 5, 6, 7}, 2);
+    HPX_TEST_EQ(HPX_MOVE(releasable).take(2), 6);
+    auto released = HPX_MOVE(releasable).release_data();
+    HPX_TEST_EQ(released.size(), static_cast<std::size_t>(4));
 }
 
 void test_data_size_overflow()
@@ -564,6 +691,30 @@ void test_uniform_rows_serialization()
     HPX_TEST_EQ(restored_rows.num_rows(), rows.num_rows());
 }
 
+void test_ragged_rows_serialization()
+{
+    ragged_rows<std::string> rows(
+        std::vector<std::string>{"zero", "one", "two"},
+        std::vector<std::size_t>{0, 2, 3});
+    std::vector<char> buffer;
+    hpx::serialization::output_archive output(buffer);
+    output << rows;
+
+    ragged_rows<std::string> restored;
+    hpx::serialization::input_archive input(buffer);
+    input >> restored;
+    HPX_TEST_EQ(restored.data().size(), rows.data().size());
+    HPX_TEST_EQ(restored.offsets().size(), rows.offsets().size());
+    for (std::size_t i = 0; i != rows.data().size(); ++i)
+    {
+        HPX_TEST_EQ(restored.data()[i], rows.data()[i]);
+    }
+    for (std::size_t i = 0; i != rows.offsets().size(); ++i)
+    {
+        HPX_TEST_EQ(restored.offsets()[i], rows.offsets()[i]);
+    }
+}
+
 int hpx_main()
 {
     test_balanced_arity2();
@@ -578,7 +729,10 @@ int hpx_main()
     test_matches_recursive_fill();
     test_is_top_level_rep_basic();
     test_is_top_level_rep_exhaustive();
+    test_is_ragged_rows_trait();
     test_is_uniform_rows_trait();
+    test_ragged_rows_extract_columns();
+    test_ragged_rows_validation();
     test_uniform_rows_slicing();
     test_uniform_rows_extract_single_slice();
     test_uniform_rows_merge();
@@ -589,6 +743,7 @@ int hpx_main()
     test_uniform_rows_row_width_zero_rows();
     test_uniform_rows_construction();
     test_data_size_overflow();
+    test_ragged_rows_serialization();
     test_uniform_rows_serialization();
 
     return hpx::finalize();
