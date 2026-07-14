@@ -206,11 +206,11 @@ namespace hpx::threads {
             if (state == thread_schedule_state::pending ||
                 state == thread_schedule_state::pending_boost)
             {
-                hpx::tracing::task_yielded(thrd_data);
+                hpx::tracing::task_yielded(id);
             }
             else if (state == thread_schedule_state::suspended)
             {
-                hpx::tracing::task_suspended(thrd_data, desc);
+                hpx::tracing::task_suspended(id, desc);
             }
 
             // actual yield operation
@@ -223,8 +223,7 @@ namespace hpx::threads {
 
             if (state == thread_schedule_state::suspended)
             {
-                hpx::tracing::task_resumed(
-                    thrd_data, get_thread_state_ex_name(statex));
+                hpx::tracing::task_resumed(id, statex);
             }
         }
 

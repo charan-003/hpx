@@ -495,8 +495,7 @@ namespace hpx::this_thread {
             }
             else if (state == threads::thread_schedule_state::suspended)
             {
-                hpx::tracing::task_suspended(
-                    id.noref(), get_suspend_reason(description));
+                hpx::tracing::task_suspended(id.noref(), description);
             }
 
             // We might need to dispatch 'nextid' to it's correct scheduler only
@@ -596,8 +595,7 @@ namespace hpx::this_thread {
             if (ec)
                 return threads::thread_restart_state::unknown;
 
-            hpx::tracing::task_suspended(
-                id.noref(), get_suspend_reason(description));
+            hpx::tracing::task_suspended(id.noref(), description);
 
             // We might need to dispatch 'nextid' to it's correct scheduler only
             // if our current scheduler is the same, we should yield to the id
