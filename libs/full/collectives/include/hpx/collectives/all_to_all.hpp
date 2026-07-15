@@ -225,7 +225,6 @@ namespace hpx { namespace collectives {
 #include <hpx/modules/type_support.hpp>
 
 #include <cstddef>
-#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -315,16 +314,18 @@ namespace hpx::collectives {
             hierarchical_all_to_all_exchange(uniform_rows<T>&& gathered,
                 std::size_t const group_index, std::size_t const num_sites,
                 std::size_t const arity)
+              : group_index_(group_index)
+              , num_sites_(num_sites)
+              , arity_(arity)
+              , my_group_size_(
+                    get_top_level_group_size(group_index, num_sites, arity))
+              , num_groups_(get_top_level_group_count(num_sites, arity))
             {
                 constexpr char const* operation =
                     "hpx::collectives::all_to_all (hierarchical)";
-                std::size_t const my_group_size =
-                    get_top_level_group_size(group_index, num_sites, arity);
-                std::size_t const num_groups =
-                    get_top_level_group_count(num_sites, arity);
 
                 gathered.validate(operation);
-                if (gathered.num_rows() != my_group_size)
+                if (gathered.num_rows() != my_group_size_)
                 {
                     HPX_THROW_EXCEPTION(hpx::error::invalid_status, operation,
                         "the subtree gather returned an unexpected number of "
@@ -338,35 +339,33 @@ namespace hpx::collectives {
                 }
 
                 std::size_t const exchange_size = checked_data_size_product(
-                    my_group_size, num_sites - my_group_size);
+                    my_group_size_, num_sites_ - my_group_size_);
                 std::size_t const exchange_segments =
-                    checked_data_size_product(my_group_size, num_groups);
+                    checked_data_size_product(my_group_size_, num_groups_);
                 std::size_t const exchange_boundaries =
                     checked_data_size_sum(exchange_segments, 1);
                 std::size_t const diagonal_size =
-                    checked_data_size_product(my_group_size, my_group_size);
+                    checked_data_size_product(my_group_size_, my_group_size_);
 
                 scatter_data_ = HPX_MOVE(gathered).release_data();
 
-                std::vector<T> exchange_data;
-                exchange_data.reserve(exchange_size);
-                std::vector<std::size_t> exchange_offsets;
-                exchange_offsets.reserve(exchange_boundaries);
-                exchange_offsets.push_back(0);
+                exchange_data_.reserve(exchange_size);
+                exchange_offsets_.reserve(exchange_boundaries);
+                exchange_offsets_.push_back(0);
                 diagonal_.reserve(diagonal_size);
 
-                for (std::size_t row = 0; row != my_group_size; ++row)
+                for (std::size_t row = 0; row != my_group_size_; ++row)
                 {
                     std::size_t const row_left =
-                        checked_data_size_product(row, num_sites);
-                    for (std::size_t group = 0; group != num_groups; ++group)
+                        checked_data_size_product(row, num_sites_);
+                    for (std::size_t group = 0; group != num_groups_; ++group)
                     {
                         std::size_t const destination_group_size =
-                            get_top_level_group_size(group, num_sites, arity);
+                            get_top_level_group_size(group, num_sites_, arity_);
                         std::size_t const destination_left =
-                            get_top_level_group_left(group, num_sites, arity);
+                            get_top_level_group_left(group, num_sites_, arity_);
                         auto& destination =
-                            group == group_index ? diagonal_ : exchange_data;
+                            group == group_index_ ? diagonal_ : exchange_data_;
                         for (std::size_t destination_site = destination_left;
                             destination_site !=
                             destination_left + destination_group_size;
@@ -375,30 +374,110 @@ namespace hpx::collectives {
                             destination.emplace_back(handle_bool<T>(HPX_MOVE(
                                 scatter_data_[row_left + destination_site])));
                         }
-                        exchange_offsets.push_back(exchange_data.size());
+                        exchange_offsets_.push_back(exchange_data_.size());
                     }
                 }
 
-                HPX_ASSERT(exchange_data.size() == exchange_size);
+                HPX_ASSERT(exchange_data_.size() == exchange_size);
                 HPX_ASSERT(diagonal_.size() == diagonal_size);
-                exchange_ = ragged_rows<T>(
-                    HPX_MOVE(exchange_data), HPX_MOVE(exchange_offsets));
 
                 // Every gathered element now lives in the exchange or local
                 // diagonal. Keep its allocation for the final scatter rows.
                 scatter_data_.clear();
             }
 
-            [[nodiscard]] std::tuple<ragged_rows<T>, std::vector<T>,
-                std::vector<T>>
-            release() &&
+            [[nodiscard]] ragged_rows<T> release_exchange() &
             {
-                return {HPX_MOVE(exchange_), HPX_MOVE(diagonal_),
-                    HPX_MOVE(scatter_data_)};
+                return ragged_rows<T>(
+                    HPX_MOVE(exchange_data_), HPX_MOVE(exchange_offsets_));
+            }
+
+            [[nodiscard]] uniform_rows<T> transpose(
+                ragged_rows<T>&& received) &&
+            {
+                constexpr char const* operation =
+                    "hpx::collectives::all_to_all (hierarchical)";
+                received.validate(operation);
+                if (received.num_segments() != num_groups_)
+                {
+                    HPX_THROW_EXCEPTION(hpx::error::invalid_status, operation,
+                        "the inter-group exchange returned an unexpected "
+                        "number of blocks");
+                }
+                for (std::size_t group = 0; group != num_groups_; ++group)
+                {
+                    std::size_t const source_group_size =
+                        get_top_level_group_size(group, num_sites_, arity_);
+                    std::size_t const expected_size = group == group_index_ ?
+                        0 :
+                        checked_data_size_product(
+                            source_group_size, my_group_size_);
+                    if (received.segment_size(group) != expected_size)
+                    {
+                        HPX_THROW_EXCEPTION(hpx::error::invalid_status,
+                            operation,
+                            "the inter-group exchange returned a block with "
+                            "an unexpected number of elements");
+                    }
+                }
+
+                std::vector<std::size_t> const received_offsets =
+                    received.offsets();
+                std::vector<T> received_data =
+                    HPX_MOVE(received).release_data();
+
+                // Create one scatter row for each destination site j in this
+                // representative's group. Within each row, source groups are
+                // visited from left to right and their sites from low to high,
+                // preserving global source-site order. Both an off-diagonal
+                // received segment and the retained local diagonal use
+                // [source site within group][destination site within this
+                // group] storage order. Thus source * my_group_size_ + j
+                // selects the value for destination j; off-diagonal data also
+                // starts at received_offsets[group].
+                scatter_data_.reserve(
+                    checked_data_size_product(my_group_size_, num_sites_));
+                for (std::size_t j = 0; j != my_group_size_; ++j)
+                {
+                    for (std::size_t group = 0; group != num_groups_; ++group)
+                    {
+                        std::size_t const source_group_size =
+                            get_top_level_group_size(group, num_sites_, arity_);
+                        for (std::size_t source = 0;
+                            source != source_group_size; ++source)
+                        {
+                            if (group == group_index_)
+                            {
+                                std::size_t const index =
+                                    source * my_group_size_ + j;
+                                scatter_data_.emplace_back(
+                                    handle_bool<T>(HPX_MOVE(diagonal_[index])));
+                            }
+                            else
+                            {
+                                std::size_t const index =
+                                    received_offsets[group] +
+                                    source * my_group_size_ + j;
+                                scatter_data_.emplace_back(handle_bool<T>(
+                                    HPX_MOVE(received_data[index])));
+                            }
+                        }
+                    }
+                }
+                HPX_ASSERT(scatter_data_.size() ==
+                    checked_data_size_product(my_group_size_, num_sites_));
+
+                return uniform_rows<T>(HPX_MOVE(scatter_data_), my_group_size_);
             }
 
         private:
-            ragged_rows<T> exchange_;
+            std::size_t group_index_;
+            std::size_t num_sites_;
+            std::size_t arity_;
+            std::size_t my_group_size_;
+            std::size_t num_groups_;
+            std::vector<T> exchange_data_;
+            std::vector<std::size_t> exchange_offsets_;
             std::vector<T> diagonal_;
             std::vector<T> scatter_data_;
         };
@@ -692,105 +771,27 @@ namespace hpx::collectives {
                     communicators, HPX_MOVE(local_result), first_gen);
 
             std::size_t const group_index = static_cast<std::size_t>(gidx);
-            std::size_t const my_group_size = detail::get_top_level_group_size(
-                group_index, num_sites_val, arity_val);
-            std::size_t const num_groups =
-                detail::get_top_level_group_count(num_sites_val, arity_val);
 
             // Phase 2: Pack one flat sequence of destination-group segments
             // for each gathered row. Retain the local diagonal separately and
             // represent it by empty exchange segments, avoiding its round trip
             // through the inter-group communicator. The constructor also
             // preserves the gathered allocation for the final scatter rows.
-            auto [exchange, diagonal, scatter_data] =
-                detail::hierarchical_all_to_all_exchange<T>(
-                    HPX_MOVE(gathered), group_index, num_sites_val, arity_val)
-                    .release();
+            detail::hierarchical_all_to_all_exchange<T> exchange(
+                HPX_MOVE(gathered), group_index, num_sites_val, arity_val);
 
             // The exchange touches the inter-group communicator once but must
             // advance it by two generations to stay in lock-step with the
             // subtree communicators, so request double_step.
             hpx::future<detail::ragged_rows<T>> received_future =
-                detail::all_to_all(communicators.get(0), HPX_MOVE(exchange),
-                    communicators.site(0), first_gen,
-                    detail::generation_mode::double_step);
+                detail::all_to_all(communicators.get(0),
+                    exchange.release_exchange(), communicators.site(0),
+                    first_gen, detail::generation_mode::double_step);
 
             detail::ragged_rows<T> received = received_future.get();
-            received.validate("hpx::collectives::all_to_all (hierarchical)");
-            if (received.num_segments() != num_groups)
-            {
-                HPX_THROW_EXCEPTION(hpx::error::invalid_status,
-                    "hpx::collectives::all_to_all (hierarchical)",
-                    "the inter-group exchange returned an unexpected number "
-                    "of blocks");
-            }
-            for (std::size_t group = 0; group != num_groups; ++group)
-            {
-                std::size_t const source_group_size =
-                    detail::get_top_level_group_size(
-                        group, num_sites_val, arity_val);
-                std::size_t const expected_size = group == group_index ?
-                    0 :
-                    detail::checked_data_size_product(
-                        source_group_size, my_group_size);
-                if (received.segment_size(group) != expected_size)
-                {
-                    HPX_THROW_EXCEPTION(hpx::error::invalid_status,
-                        "hpx::collectives::all_to_all (hierarchical)",
-                        "the inter-group exchange returned a block with an "
-                        "unexpected number of elements");
-                }
-            }
-
-            std::vector<std::size_t> const received_offsets =
-                received.offsets();
-            std::vector<T> received_data = HPX_MOVE(received).release_data();
-
-            // Phase 3 creates one scatter row for each destination site j in
-            // this representative's group. Within each row, source groups are
-            // visited from left to right and their sites from low to high, so
-            // the appended values preserve global source-site order. Both an
-            // off-diagonal received segment and the retained local diagonal
-            // use [source site within group][destination site within this
-            // group] storage order. Thus source * my_group_size + j selects
-            // the value for destination j; off-diagonal data additionally
-            // starts at received_offsets[group].
-            scatter_data.reserve(detail::checked_data_size_product(
-                my_group_size, num_sites_val));
-            for (std::size_t j = 0; j != my_group_size; ++j)
-            {
-                for (std::size_t group = 0; group != num_groups; ++group)
-                {
-                    std::size_t const source_group_size =
-                        detail::get_top_level_group_size(
-                            group, num_sites_val, arity_val);
-                    for (std::size_t source = 0; source != source_group_size;
-                        ++source)
-                    {
-                        if (group == group_index)
-                        {
-                            std::size_t const index =
-                                source * my_group_size + j;
-                            scatter_data.emplace_back(detail::handle_bool<T>(
-                                HPX_MOVE(diagonal[index])));
-                        }
-                        else
-                        {
-                            std::size_t const index = received_offsets[group] +
-                                source * my_group_size + j;
-                            scatter_data.emplace_back(detail::handle_bool<T>(
-                                HPX_MOVE(received_data[index])));
-                        }
-                    }
-                }
-            }
-            HPX_ASSERT(scatter_data.size() ==
-                detail::checked_data_size_product(
-                    my_group_size, num_sites_val));
 
             return detail::subtree_scatter_at_top_rep(communicators,
-                detail::uniform_rows<T>(HPX_MOVE(scatter_data), my_group_size),
-                second_gen);
+                HPX_MOVE(exchange).transpose(HPX_MOVE(received)), second_gen);
         }
         else
         {

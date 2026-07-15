@@ -390,8 +390,15 @@ void test_ragged_rows_extract_columns()
 
 void test_ragged_rows_validation()
 {
+    ragged_rows<int> default_rows;
     ragged_rows<int> valid_empty_rows(
         std::vector<int>{}, std::vector<std::size_t>{0, 0, 0});
+    HPX_TEST(default_rows.is_valid());
+    HPX_TEST_EQ(default_rows.num_segments(), static_cast<std::size_t>(1));
+    HPX_TEST_EQ(default_rows.offsets().size(), static_cast<std::size_t>(2));
+    HPX_TEST_EQ(default_rows.offsets()[0], static_cast<std::size_t>(0));
+    HPX_TEST_EQ(default_rows.offsets()[1], static_cast<std::size_t>(0));
+    HPX_TEST_NO_THROW(default_rows.validate("test_ragged_rows_validation"));
     HPX_TEST(valid_empty_rows.is_valid());
     HPX_TEST_NO_THROW(valid_empty_rows.validate("test_ragged_rows_validation"));
     HPX_TEST_NO_THROW(valid_empty_rows.validate_for_exchange(
@@ -410,6 +417,7 @@ void test_ragged_rows_validation()
     };
 
     auto empty_offsets = deserialize_rows({}, {});
+    auto single_offset = deserialize_rows({}, {0});
     auto nonzero_first = deserialize_rows({1}, {1, 1});
     auto decreasing = deserialize_rows({1, 2}, {0, 2, 1, 2});
     auto wrong_end = deserialize_rows({1, 2}, {0, 1});
@@ -417,11 +425,14 @@ void test_ragged_rows_validation()
         std::vector<int>{1}, std::vector<std::size_t>{0, 1});
 
     HPX_TEST(!empty_offsets.is_valid());
+    HPX_TEST(!single_offset.is_valid());
     HPX_TEST(!nonzero_first.is_valid());
     HPX_TEST(!decreasing.is_valid());
     HPX_TEST(!wrong_end.is_valid());
     HPX_TEST_THROW(
         empty_offsets.validate("test_ragged_rows_validation"), hpx::exception);
+    HPX_TEST_THROW(
+        single_offset.validate("test_ragged_rows_validation"), hpx::exception);
     HPX_TEST_THROW(
         nonzero_first.validate("test_ragged_rows_validation"), hpx::exception);
     HPX_TEST_THROW(
@@ -682,6 +693,20 @@ void test_uniform_rows_serialization()
 
 void test_ragged_rows_serialization()
 {
+    ragged_rows<std::string> empty_rows;
+    std::vector<char> empty_buffer;
+    hpx::serialization::output_archive empty_output(empty_buffer);
+    empty_output << empty_rows;
+
+    ragged_rows<std::string> restored_empty_rows;
+    hpx::serialization::input_archive empty_input(empty_buffer);
+    empty_input >> restored_empty_rows;
+    HPX_TEST(restored_empty_rows.is_valid());
+    HPX_TEST_EQ(
+        restored_empty_rows.num_segments(), static_cast<std::size_t>(1));
+    HPX_TEST_EQ(
+        restored_empty_rows.offsets().size(), static_cast<std::size_t>(2));
+
     ragged_rows<std::string> rows(
         std::vector<std::string>{"zero", "one", "two"},
         std::vector<std::size_t>{0, 2, 3});

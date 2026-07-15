@@ -59,6 +59,11 @@ namespace hpx::collectives::detail {
     void append_data_range(
         std::vector<T>& destination, Iterator first, Iterator const last)
     {
+        auto const size = std::distance(first, last);
+        HPX_ASSERT(size >= 0);
+        destination.reserve(checked_data_size_sum(
+            destination.size(), static_cast<std::size_t>(size)));
+
         // Inserting a range can instantiate vector's move-assignment path
         // even at end(). Append element-wise so internal carriers require
         // only move construction. vector<bool> additionally needs proxy
@@ -96,9 +101,6 @@ namespace hpx::collectives::detail {
             std::size_t const num_rows, Iterator first, Iterator const last)
           : num_rows_(num_rows)
         {
-            auto const size = std::distance(first, last);
-            HPX_ASSERT(size >= 0);
-            data_.reserve(static_cast<std::size_t>(size));
             append_data_range(data_, first, last);
             HPX_ASSERT(is_valid());
         }
@@ -157,12 +159,12 @@ namespace hpx::collectives::detail {
             }
 
             data_.reserve(total_size);
-            num_rows_ = total_rows;
             for (auto& value : values)
             {
                 append_data_range(
                     data_, value.data_.begin(), value.data_.end());
             }
+            num_rows_ = total_rows;
 
             HPX_ASSERT(is_valid());
         }
@@ -286,7 +288,10 @@ namespace hpx::collectives::detail {
     HPX_CXX_EXPORT template <typename T>
     struct ragged_rows
     {
-        ragged_rows() = default;
+        ragged_rows()
+          : offsets_{0, 0}
+        {
+        }
 
         ragged_rows(std::vector<T>&& values,
             std::vector<std::size_t>&& offsets) noexcept
@@ -347,7 +352,7 @@ namespace hpx::collectives::detail {
 
         [[nodiscard]] bool is_valid() const noexcept
         {
-            return !offsets_.empty() && offsets_.front() == 0 &&
+            return offsets_.size() >= 2 && offsets_.front() == 0 &&
                 offsets_.back() == data_.size() &&
                 std::is_sorted(offsets_.begin(), offsets_.end());
         }

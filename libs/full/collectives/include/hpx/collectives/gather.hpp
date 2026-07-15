@@ -570,45 +570,6 @@ namespace hpx::collectives {
             detail::generation_mode::single_step);
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    namespace detail {
-
-        template <typename T>
-        std::vector<T> gather_data(std::vector<std::vector<T>>&& data)
-        {
-            if (data.size() == 1)
-            {
-                return HPX_MOVE(data.front());
-            }
-
-            std::size_t total_size = 0;
-            for (auto const& row : data)
-            {
-                total_size += row.size();
-            }
-
-            std::vector<T> result;
-            result.reserve(total_size);
-            for (auto&& row : data)
-            {
-                result.insert(result.end(),
-                    std::make_move_iterator(row.begin()),
-                    std::make_move_iterator(row.end()));
-            }
-            return result;
-        }
-
-        template <typename T>
-        hpx::future<std::vector<T>> gather_data(
-            hpx::future<std::vector<std::vector<T>>>&& f)
-        {
-            return hpx::make_future<std::vector<T>>(
-                HPX_MOVE(f), [](std::vector<std::vector<T>>&& data) {
-                    return gather_data(HPX_MOVE(data));
-                });
-        }
-    }    // namespace detail
-
     namespace detail {
 
         // gather_here over a hierarchical_communicator: detail entry carrying
