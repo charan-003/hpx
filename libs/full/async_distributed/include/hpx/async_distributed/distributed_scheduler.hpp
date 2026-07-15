@@ -97,8 +97,8 @@ namespace hpx::distributed::experimental {
             constexpr auto transform_sender(
                 OpTag, Sender&& sndr, Env const&...) const
             {
-                auto&& f = stdexec::__get<1>(HPX_FORWARD(Sender, sndr));
-                auto&& child = stdexec::__get<2>(HPX_FORWARD(Sender, sndr));
+                auto&& f = hpx::get<1>(HPX_FORWARD(Sender, sndr));
+                auto&& child = hpx::get<2>(HPX_FORWARD(Sender, sndr));
 
                 auto env = hpx::execution::experimental::get_env(child);
                 auto sched =

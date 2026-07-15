@@ -61,49 +61,33 @@ namespace hpx::distributed::experimental { namespace detail {
         {
             hpx::detail::try_catch_exception_ptr(
                 [&]() {
-                    if constexpr (sizeof...(Ts) == 0)
-                    {
-                        auto fut =
-                            hpx::async(hpx::distributed::detail::
-                                           distributed_forward_void_action{},
-                                target_);
+                    // We invoke a remote action here to force the attached .then() continuation to execute on the remote target's executor.
+                    auto fut = hpx::async(
+                        hpx::distributed::detail::distributed_forward_action<
+                            std::decay_t<Ts>...>{},
+                        target_, HPX_MOVE(vals)...);
 
-                        continuation_future_ =
-                            fut.then([downstream = HPX_MOVE(downstream_)](
-                                         auto&& f) mutable {
-                                hpx::detail::try_catch_exception_ptr(
-                                    [&]() {
+                    continuation_future_ = fut.then(
+                        [downstream = HPX_MOVE(downstream_)](auto&& f) mutable {
+                            hpx::detail::try_catch_exception_ptr(
+                                [&]() {
+                                    if constexpr (sizeof...(Ts) == 0)
+                                    {
                                         f.get();
                                         hpx::execution::experimental::set_value(
                                             HPX_MOVE(downstream));
-                                    },
-                                    [&](std::exception_ptr ep) {
-                                        hpx::execution::experimental::set_error(
-                                            HPX_MOVE(downstream), HPX_MOVE(ep));
-                                    });
-                            });
-                    }
-                    else
-                    {
-                        auto fut = hpx::async(hpx::distributed::detail::
-                                                  distributed_forward_action<
-                                                      std::decay_t<Ts>...>{},
-                            target_, HPX_MOVE(vals)...);
-
-                        continuation_future_ =
-                            fut.then([downstream = HPX_MOVE(downstream_)](
-                                         auto&& f) mutable {
-                                hpx::detail::try_catch_exception_ptr(
-                                    [&]() {
+                                    }
+                                    else
+                                    {
                                         hpx::execution::experimental::set_value(
                                             HPX_MOVE(downstream), f.get());
-                                    },
-                                    [&](std::exception_ptr ep) {
-                                        hpx::execution::experimental::set_error(
-                                            HPX_MOVE(downstream), HPX_MOVE(ep));
-                                    });
-                            });
-                    }
+                                    }
+                                },
+                                [&](std::exception_ptr ep) {
+                                    hpx::execution::experimental::set_error(
+                                        HPX_MOVE(downstream), HPX_MOVE(ep));
+                                });
+                        });
                 },
                 [&](std::exception_ptr ep) {
                     hpx::execution::experimental::set_error(
@@ -168,7 +152,7 @@ namespace hpx::distributed::experimental { namespace detail {
             if (continuation_future_.valid() &&
                 continuation_future_.has_exception())
             {
-                continuation_future_.get();    // Re-throw or clear exception
+                continuation_future_.wait();
             }
         }
 

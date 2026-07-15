@@ -44,28 +44,25 @@ namespace hpx::distributed::detail {
     {
     };
 
-    template <typename T>
-    inline T distributed_forward(T val)
+    template <typename... Ts>
+    inline auto distributed_forward(Ts... vals)
     {
-        return val;
+        if constexpr (sizeof...(Ts) == 0)
+        {
+            return;
+        }
+        else if constexpr (sizeof...(Ts) == 1)
+        {
+            return (..., HPX_MOVE(vals));
+        }
     }
 
-    inline void distributed_forward_void() {}
-
-    template <typename T>
+    template <typename... Ts>
     struct distributed_forward_action
       : hpx::actions::make_action_t<
-            decltype(&hpx::distributed::detail::distributed_forward<T>),
-            &hpx::distributed::detail::distributed_forward<T>,
-            distributed_forward_action<T>>
-    {
-    };
-
-    struct distributed_forward_void_action
-      : hpx::actions::make_action_t<
-            decltype(&hpx::distributed::detail::distributed_forward_void),
-            &hpx::distributed::detail::distributed_forward_void,
-            distributed_forward_void_action>
+            decltype(&hpx::distributed::detail::distributed_forward<Ts...>),
+            &hpx::distributed::detail::distributed_forward<Ts...>,
+            distributed_forward_action<Ts...>>
     {
     };
 

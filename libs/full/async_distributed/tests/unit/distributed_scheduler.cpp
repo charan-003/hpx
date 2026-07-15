@@ -139,6 +139,31 @@ int hpx_main()
         HPX_TEST(result.has_value());
         HPX_TEST_EQ(std::get<0>(*result), target);
     }
+    // Test exception propagation from remote node
+    {
+        auto locs = hpx::find_all_localities();
+        auto target = locs.empty() ? hpx::find_here() : locs.back();
+        auto sched =
+            hpx::distributed::experimental::distributed_scheduler{target};
+
+        bool caught_exception = false;
+        try
+        {
+            tt::sync_wait(ex::schedule(sched) | ex::then([]() -> int {
+                throw std::runtime_error("test_exception");
+            }));
+        }
+        catch (std::runtime_error const& e)
+        {
+            caught_exception = true;
+            HPX_TEST_EQ(std::string(e.what()), std::string("test_exception"));
+        }
+        catch (...)
+        {
+            HPX_TEST(false);
+        }
+        HPX_TEST(caught_exception);
+    }
 
     return hpx::finalize();
 }

@@ -160,7 +160,7 @@ namespace hpx::distributed::experimental::detail {
                 if (continuation_future_.valid() &&
                     continuation_future_.has_exception())
                 {
-                    continuation_future_.get();
+                    continuation_future_.wait();
                 }
             }
 
