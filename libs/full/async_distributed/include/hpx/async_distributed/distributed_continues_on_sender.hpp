@@ -37,17 +37,6 @@
 
 namespace hpx::distributed::experimental { namespace detail {
 
-    struct continues_on_callable
-    {
-        auto operator()() const {}
-
-        template <typename U>
-        auto operator()(U&& val) const
-        {
-            return HPX_FORWARD(U, val);
-        }
-    };
-
     // Forward declarations
     template <typename Sender>
     struct distributed_continues_on_sender;
@@ -66,54 +55,60 @@ namespace hpx::distributed::experimental { namespace detail {
 
         HPX_NO_UNIQUE_ADDRESS receiver_type downstream_;
         hpx::id_type target_;
-        hpx::future<void>* continuation_future_;
+        hpx::future<void>& continuation_future_;
 
         void set_value(Ts... vals) && noexcept
         {
-            hpx::future<void> local_fut;
             hpx::detail::try_catch_exception_ptr(
                 [&]() {
-                    auto fut = hpx::async(
-                        hpx::distributed::detail::
-                            distributed_invoke_callable_action<
-                                continues_on_callable, std::decay_t<Ts>...>{},
-                        target_, continues_on_callable{}, HPX_MOVE(vals)...);
+                    if constexpr (sizeof...(Ts) == 0)
+                    {
+                        auto fut =
+                            hpx::async(hpx::distributed::detail::
+                                           distributed_forward_void_action{},
+                                target_);
 
-                    // Dispatch continuation and store the future
-                    local_fut = fut.then([downstream = HPX_MOVE(downstream_)](
-                                             auto&& f) mutable {
-                        hpx::detail::try_catch_exception_ptr(
-                            [&]() {
-                                using result_type =
-                                    std::invoke_result_t<continues_on_callable,
-                                        Ts...>;
-                                if constexpr (std::is_void_v<result_type>)
-                                {
-                                    f.get();
-                                    hpx::execution::experimental::set_value(
-                                        HPX_MOVE(downstream));
-                                }
-                                else
-                                {
-                                    hpx::execution::experimental::set_value(
-                                        HPX_MOVE(downstream), f.get());
-                                }
-                            },
-                            [&](std::exception_ptr ep) {
-                                hpx::execution::experimental::set_error(
-                                    HPX_MOVE(downstream), HPX_MOVE(ep));
+                        continuation_future_ =
+                            fut.then([downstream = HPX_MOVE(downstream_)](
+                                         auto&& f) mutable {
+                                hpx::detail::try_catch_exception_ptr(
+                                    [&]() {
+                                        f.get();
+                                        hpx::execution::experimental::set_value(
+                                            HPX_MOVE(downstream));
+                                    },
+                                    [&](std::exception_ptr ep) {
+                                        hpx::execution::experimental::set_error(
+                                            HPX_MOVE(downstream), HPX_MOVE(ep));
+                                    });
                             });
-                    });
+                    }
+                    else
+                    {
+                        auto fut = hpx::async(hpx::distributed::detail::
+                                                  distributed_forward_action<
+                                                      std::decay_t<Ts>...>{},
+                            target_, HPX_MOVE(vals)...);
+
+                        continuation_future_ =
+                            fut.then([downstream = HPX_MOVE(downstream_)](
+                                         auto&& f) mutable {
+                                hpx::detail::try_catch_exception_ptr(
+                                    [&]() {
+                                        hpx::execution::experimental::set_value(
+                                            HPX_MOVE(downstream), f.get());
+                                    },
+                                    [&](std::exception_ptr ep) {
+                                        hpx::execution::experimental::set_error(
+                                            HPX_MOVE(downstream), HPX_MOVE(ep));
+                                    });
+                            });
+                    }
                 },
                 [&](std::exception_ptr ep) {
                     hpx::execution::experimental::set_error(
                         HPX_MOVE(downstream_), HPX_MOVE(ep));
                 });
-
-            if (local_fut.valid() && continuation_future_)
-            {
-                *continuation_future_ = HPX_MOVE(local_fut);
-            }
         }
 
         void set_error(std::exception_ptr ep) && noexcept
@@ -155,7 +150,7 @@ namespace hpx::distributed::experimental { namespace detail {
           : upstream_op_(hpx::execution::experimental::connect(
                 HPX_FORWARD(Sender_, sndr),
                 upstream_receiver_t{HPX_FORWARD(Receiver_, rcvr),
-                    HPX_MOVE(target), &continuation_future_}))
+                    HPX_MOVE(target), continuation_future_}))
         {
         }
 
@@ -168,7 +163,14 @@ namespace hpx::distributed::experimental { namespace detail {
         distributed_continues_on_operation_state& operator=(
             distributed_continues_on_operation_state&&) = delete;
 
-        ~distributed_continues_on_operation_state() = default;
+        ~distributed_continues_on_operation_state()
+        {
+            if (continuation_future_.valid() &&
+                continuation_future_.has_exception())
+            {
+                continuation_future_.get();    // Re-throw or clear exception
+            }
+        }
 
         void start() & noexcept
         {

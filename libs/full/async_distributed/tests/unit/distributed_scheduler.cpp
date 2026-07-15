@@ -50,9 +50,9 @@ struct my_then_callable_2
 
 struct my_schedule_then_callable
 {
-    hpx::tuple<hpx::id_type> operator()() const
+    hpx::id_type operator()() const
     {
-        return hpx::make_tuple(hpx::find_here());
+        return hpx::find_here();
     }
 };
 
@@ -137,7 +137,7 @@ int hpx_main()
             ex::schedule(sched) | ex::then(my_schedule_then_callable{}));
 
         HPX_TEST(result.has_value());
-        HPX_TEST_EQ(hpx::get<0>(std::get<0>(*result)), target);
+        HPX_TEST_EQ(std::get<0>(*result), target);
     }
 
     return hpx::finalize();

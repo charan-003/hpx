@@ -34,8 +34,6 @@ namespace hpx::distributed::detail {
         return HPX_INVOKE(f, HPX_MOVE(vals)...);
     }
 
-    /// Generic struct representing an HPX action that invokes a user-defined callable
-    /// across the network. The callable F and arguments Ts... must be serializable.
     template <typename F, typename... Ts>
     struct distributed_invoke_callable_action
       : hpx::actions::make_action_t<
@@ -43,6 +41,31 @@ namespace hpx::distributed::detail {
                 Ts...>),
             &hpx::distributed::detail::distributed_invoke_callable<F, Ts...>,
             distributed_invoke_callable_action<F, Ts...>>
+    {
+    };
+
+    template <typename T>
+    inline T distributed_forward(T val)
+    {
+        return val;
+    }
+
+    inline void distributed_forward_void() {}
+
+    template <typename T>
+    struct distributed_forward_action
+      : hpx::actions::make_action_t<
+            decltype(&hpx::distributed::detail::distributed_forward<T>),
+            &hpx::distributed::detail::distributed_forward<T>,
+            distributed_forward_action<T>>
+    {
+    };
+
+    struct distributed_forward_void_action
+      : hpx::actions::make_action_t<
+            decltype(&hpx::distributed::detail::distributed_forward_void),
+            &hpx::distributed::detail::distributed_forward_void,
+            distributed_forward_void_action>
     {
     };
 

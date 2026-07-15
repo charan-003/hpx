@@ -31,6 +31,7 @@ namespace hpx::distributed::experimental::detail {
         HPX_NO_UNIQUE_ADDRESS receiver_type downstream_;
         F f_;
         hpx::id_type target_;
+        hpx::future<void>& continuation_future_;
 
         template <typename... Ts>
         void set_value(Ts... vals) && noexcept
@@ -44,30 +45,31 @@ namespace hpx::distributed::experimental::detail {
                         target_, HPX_MOVE(f_), HPX_MOVE(vals)...);
 
                     // Chain continuation to forward the remote result
-                    fut.then([downstream = HPX_MOVE(downstream_)](
-                                 auto&& f) mutable {
-                        hpx::detail::try_catch_exception_ptr(
-                            [&]() {
-                                using result_type =
-                                    std::invoke_result_t<F, Ts...>;
-                                if constexpr (std::is_void_v<result_type>)
-                                {
-                                    f.get();    // wait for completion
-                                    hpx::execution::experimental::set_value(
-                                        HPX_MOVE(downstream));
-                                }
-                                else
-                                {
-                                    auto result = f.get();
-                                    hpx::execution::experimental::set_value(
-                                        HPX_MOVE(downstream), HPX_MOVE(result));
-                                }
-                            },
-                            [&](std::exception_ptr ep) {
-                                hpx::execution::experimental::set_error(
-                                    HPX_MOVE(downstream), HPX_MOVE(ep));
-                            });
-                    });
+                    continuation_future_ = fut.then(
+                        [downstream = HPX_MOVE(downstream_)](auto&& f) mutable {
+                            hpx::detail::try_catch_exception_ptr(
+                                [&]() {
+                                    using result_type =
+                                        std::invoke_result_t<F, Ts...>;
+                                    if constexpr (std::is_void_v<result_type>)
+                                    {
+                                        f.get();    // wait for completion
+                                        hpx::execution::experimental::set_value(
+                                            HPX_MOVE(downstream));
+                                    }
+                                    else
+                                    {
+                                        auto result = f.get();
+                                        hpx::execution::experimental::set_value(
+                                            HPX_MOVE(downstream),
+                                            HPX_MOVE(result));
+                                    }
+                                },
+                                [&](std::exception_ptr ep) {
+                                    hpx::execution::experimental::set_error(
+                                        HPX_MOVE(downstream), HPX_MOVE(ep));
+                                });
+                        });
                 },
                 [&](std::exception_ptr ep) {
                     hpx::execution::experimental::set_error(
@@ -140,6 +142,7 @@ namespace hpx::distributed::experimental::detail {
                     std::declval<distributed_then_receiver<Receiver, F>>()));
 
             upstream_op_t upstream_op_;
+            hpx::future<void> continuation_future_;
 
             template <typename Sender_, typename Receiver_>
             operation_state(
@@ -148,8 +151,17 @@ namespace hpx::distributed::experimental::detail {
                     HPX_FORWARD(Sender_, sndr),
                     distributed_then_receiver<Receiver, F>{
                         HPX_FORWARD(Receiver_, rcvr), HPX_MOVE(f),
-                        HPX_MOVE(target)}))
+                        HPX_MOVE(target), continuation_future_}))
             {
+            }
+
+            ~operation_state()
+            {
+                if (continuation_future_.valid() &&
+                    continuation_future_.has_exception())
+                {
+                    continuation_future_.get();
+                }
             }
 
             friend void tag_invoke(hpx::execution::experimental::start_t,
