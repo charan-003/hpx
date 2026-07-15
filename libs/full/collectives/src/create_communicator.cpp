@@ -64,14 +64,11 @@ namespace hpx::collectives {
             HPX_ASSERT(false);    // shouldn't ever be called
         }
 
-        // Copy basename: it may point at a caller-local buffer (e.g. hierarchical
-        // create_communicator(name.c_str(), ...)) that does not outlive this
-        // component. std::string(nullptr) is undefined, so guard null.
         communicator_server::communicator_server(
-            std::size_t num_sites, char const* basename)
+            std::size_t num_sites, std::string basename)
           : gate_(num_sites)
           , num_sites_(num_sites)
-          , basename_(basename != nullptr ? basename : "")
+          , basename_(HPX_MOVE(basename))
         {
             HPX_ASSERT(
                 num_sites != 0 && num_sites != static_cast<std::size_t>(-1));
@@ -247,7 +244,8 @@ namespace hpx::collectives {
         if (this_site == root_site)
         {
             // create a new communicator
-            auto c = hpx::local_new<communicator>(num_sites, basename);
+            auto c =
+                hpx::local_new<communicator>(num_sites, std::string(basename));
 
             if (init_singleton_communicator(c, num_sites, this_site, root_site))
             {
@@ -318,7 +316,8 @@ namespace hpx::collectives {
         if (this_site == root_site)
         {
             // create a new communicator
-            auto c = hpx::local_new<communicator>(num_sites, basename);
+            auto c =
+                hpx::local_new<communicator>(num_sites, std::string(basename));
 
             if (init_singleton_communicator(c, num_sites, this_site, root_site))
             {
@@ -383,7 +382,8 @@ namespace hpx::collectives {
         if (this_site == root_site)
         {
             // create a new communicator
-            auto c = hpx::local_new<communicator>(num_sites, basename);
+            auto c =
+                hpx::local_new<communicator>(num_sites, std::string(basename));
 
             if (init_singleton_communicator(c, num_sites, this_site, root_site))
             {
@@ -448,7 +448,8 @@ namespace hpx::collectives {
         if (this_site == root_site)
         {
             // create a new communicator
-            auto c = hpx::local_new<communicator>(num_sites, basename);
+            auto c =
+                hpx::local_new<communicator>(num_sites, std::string(basename));
 
             if (init_singleton_communicator(c, num_sites, this_site, root_site))
             {
