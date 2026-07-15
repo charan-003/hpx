@@ -612,34 +612,6 @@ namespace hpx::collectives {
     ////////////////////////////////////////////////////////////////////////////
     namespace detail {
 
-        template <typename T>
-        std::vector<std::vector<T>> scatter_data(
-            std::vector<T>&& data, arity_arg arity)
-        {
-            std::vector<std::vector<T>> grouped(arity);
-            std::size_t division_steps = data.size() / arity;
-            std::size_t remainder = data.size() % arity;
-            std::size_t offset = 0;
-
-            for (std::size_t i = 0; i != arity; ++i)
-            {
-                std::size_t const current_group_size =
-                    division_steps + (i < remainder ? 1 : 0);
-                grouped[i].reserve(current_group_size);
-
-                std::size_t const current_left = offset;
-                std::size_t const current_right =
-                    current_left + current_group_size;
-                offset += current_group_size;
-
-                std::move(data.begin() + current_left,
-                    data.begin() + current_right,
-                    std::back_inserter(grouped[i]));
-            }
-
-            return grouped;
-        }
-
         // Forward declaration: the flat scatter_to detail entry is defined
         // further down, but the hierarchical scatter_from below walks its
         // sub-communicators through it.

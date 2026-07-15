@@ -347,7 +347,8 @@ namespace hpx::collectives {
                 std::size_t const diagonal_size =
                     checked_data_size_product(my_group_size_, my_group_size_);
 
-                scatter_data_ = HPX_MOVE(gathered).release_data();
+                std::vector<T> gathered_data =
+                    HPX_MOVE(gathered).release_data();
 
                 exchange_data_.reserve(exchange_size);
                 exchange_offsets_.reserve(exchange_boundaries);
@@ -372,7 +373,7 @@ namespace hpx::collectives {
                             ++destination_site)
                         {
                             destination.emplace_back(handle_bool<T>(HPX_MOVE(
-                                scatter_data_[row_left + destination_site])));
+                                gathered_data[row_left + destination_site])));
                         }
                         exchange_offsets_.push_back(exchange_data_.size());
                     }
@@ -380,10 +381,6 @@ namespace hpx::collectives {
 
                 HPX_ASSERT(exchange_data_.size() == exchange_size);
                 HPX_ASSERT(diagonal_.size() == diagonal_size);
-
-                // Every gathered element now lives in the exchange or local
-                // diagonal. Keep its allocation for the final scatter rows.
-                scatter_data_.clear();
             }
 
             [[nodiscard]] ragged_rows<T> release_exchange() &
@@ -435,7 +432,8 @@ namespace hpx::collectives {
                 // group] storage order. Thus source * my_group_size_ + j
                 // selects the value for destination j; off-diagonal data also
                 // starts at received_offsets[group].
-                scatter_data_.reserve(
+                std::vector<T> scatter_data;
+                scatter_data.reserve(
                     checked_data_size_product(my_group_size_, num_sites_));
                 for (std::size_t j = 0; j != my_group_size_; ++j)
                 {
@@ -450,7 +448,7 @@ namespace hpx::collectives {
                             {
                                 std::size_t const index =
                                     source * my_group_size_ + j;
-                                scatter_data_.emplace_back(
+                                scatter_data.emplace_back(
                                     handle_bool<T>(HPX_MOVE(diagonal_[index])));
                             }
                             else
@@ -458,16 +456,16 @@ namespace hpx::collectives {
                                 std::size_t const index =
                                     received_offsets[group] +
                                     source * my_group_size_ + j;
-                                scatter_data_.emplace_back(handle_bool<T>(
+                                scatter_data.emplace_back(handle_bool<T>(
                                     HPX_MOVE(received_data[index])));
                             }
                         }
                     }
                 }
-                HPX_ASSERT(scatter_data_.size() ==
+                HPX_ASSERT(scatter_data.size() ==
                     checked_data_size_product(my_group_size_, num_sites_));
 
-                return uniform_rows<T>(HPX_MOVE(scatter_data_), my_group_size_);
+                return uniform_rows<T>(HPX_MOVE(scatter_data), my_group_size_);
             }
 
         private:
@@ -479,7 +477,6 @@ namespace hpx::collectives {
             std::vector<T> exchange_data_;
             std::vector<std::size_t> exchange_offsets_;
             std::vector<T> diagonal_;
-            std::vector<T> scatter_data_;
         };
 
         // all_to_all: detail entry point carrying the internal generation step.
@@ -531,9 +528,18 @@ namespace hpx::collectives {
 
                 if constexpr (is_ragged_rows_v<payload_type>)
                 {
-                    std::vector<payload_type> values;
-                    values.emplace_back(HPX_FORWARD(Payload, local_result));
-                    return hpx::make_ready_future(payload_type(values, 0));
+                    // Match the communicator finalizer: the outgoing carrier
+                    // has one segment per source row, while the received
+                    // carrier has one segment per contributor. With one
+                    // destination column all source-row data is already
+                    // contiguous, so only the offsets need to be collapsed.
+                    payload_type payload(HPX_FORWARD(Payload, local_result));
+                    payload.validate_for_exchange(
+                        num_sites, "hpx::collectives::all_to_all");
+                    auto data = HPX_MOVE(payload).release_data();
+                    std::vector<std::size_t> offsets{0, data.size()};
+                    return hpx::make_ready_future(
+                        payload_type(HPX_MOVE(data), HPX_MOVE(offsets)));
                 }
                 else
                 {
@@ -775,8 +781,7 @@ namespace hpx::collectives {
             // Phase 2: Pack one flat sequence of destination-group segments
             // for each gathered row. Retain the local diagonal separately and
             // represent it by empty exchange segments, avoiding its round trip
-            // through the inter-group communicator. The constructor also
-            // preserves the gathered allocation for the final scatter rows.
+            // through the inter-group communicator.
             detail::hierarchical_all_to_all_exchange<T> exchange(
                 HPX_MOVE(gathered), group_index, num_sites_val, arity_val);
 
