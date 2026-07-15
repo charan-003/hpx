@@ -9,6 +9,7 @@
 
 #include <hpx/config.hpp>
 #include <hpx/preprocessor/cat.hpp>
+#include <hpx/tracing/macros.hpp>
 
 #if defined(DOXYGEN)
 /// \defgroup tracing Tracing API
@@ -25,6 +26,16 @@
 /// - \b task_timer_data: Opaque context passed to task timers.
 /// - \b scoped_task_timer: RAII object for timing execution tasks. Provides
 ///   `yield()`, `stop()`, and `handle_post_execution()`.
+///
+/// \b Task \b Lifecycle \b Hooks:
+/// - \b task_staged: Task description is registered.
+/// - \b task_created: Thread object is fully constructed.
+/// - \b task_executing: Task begins execution on a worker thread.
+/// - \b task_yielded: Task voluntarily yields to the scheduler.
+/// - \b task_suspended: Task is blocked on an external resource.
+/// - \b task_resumed: Task is unblocked and returns to a pending state.
+/// - \b task_completed: Task finishes its execution loop.
+/// - \b task_deleted: Task identity is removed from scheduler maps.
 ///
 /// \b Regions \b & \b Events:
 /// - \b region: General scope annotation.
@@ -113,3 +124,38 @@ namespace hpx::tracing {
     };
 }    // namespace hpx::tracing
 #endif
+
+namespace hpx::tracing {
+
+    template <typename ThreadData>
+    constexpr void task_created([[maybe_unused]] ThreadData* thrdptr,
+        [[maybe_unused]] void const* parent_task_id = nullptr) noexcept
+    {
+#if defined(HPX_HAVE_TRACING)
+        task_created(ThreadData::get_safe_description(
+                         thrdptr->get_description(), "thread"),
+            thrdptr, parent_task_id);
+#endif
+    }
+
+    template <typename ThreadData>
+    constexpr void task_executing([[maybe_unused]] ThreadData* thrdptr) noexcept
+    {
+#if defined(HPX_HAVE_TRACING)
+        task_executing(thrdptr,
+            ThreadData::get_safe_description(
+                thrdptr->get_description(), "thread"),
+            thrdptr->get_last_worker_thread_num());
+#endif
+    }
+
+    template <typename ThreadData>
+    constexpr void task_completed([[maybe_unused]] ThreadData* thrdptr) noexcept
+    {
+#if defined(HPX_HAVE_TRACING)
+        task_completed(thrdptr,
+            ThreadData::get_safe_description(
+                thrdptr->get_description(), "thread"));
+#endif
+    }
+}    // namespace hpx::tracing

@@ -277,8 +277,9 @@ namespace hpx::traits {
                                 "exactly num_sites elements");
                         }
 
-                        result.push_back(Communicator::template handle_bool<T>(
-                            HPX_MOVE(v[which])));
+                        result.push_back(
+                            hpx::collectives::detail::handle_bool<T>(
+                                HPX_MOVE(v[which])));
                     }
                     return result;
                 },
@@ -499,19 +500,15 @@ namespace hpx::collectives {
             this_site = agas::get_locality_id();
         }
 
+        if (auto const error =
+                detail::validate_hierarchical_communicator(communicators,
+                    this_site, "hpx::collectives::all_to_all (hierarchical)"))
+        {
+            return hpx::make_exceptional_future<std::vector<T>>(error);
+        }
+
         std::size_t const num_sites_val = hpx::get<0>(communicators.get_info());
         std::size_t const arity_val = communicators.get_arity();
-
-        // An out-of-range site would classify into no top-level group and
-        // silently take the non-representative branch, hanging the gather.
-        if (this_site >= num_sites_val)
-        {
-            return hpx::make_exceptional_future<std::vector<T>>(
-                HPX_GET_EXCEPTION(hpx::error::bad_parameter,
-                    "hpx::collectives::all_to_all (hierarchical)",
-                    "this_site must be smaller than the number of "
-                    "participating sites"));
-        }
 
         // The phase-2 packing slices each gathered contribution with
         // unchecked iterator arithmetic, so a wrong-size contribution must
@@ -556,11 +553,10 @@ namespace hpx::collectives {
                 detail::generation_mode::double_step);
         }
 
-        auto const groups =
-            detail::get_top_level_groups(num_sites_val, arity_val);
-        auto const gidx = detail::classify_site(this_site, groups);
+        std::ptrdiff_t const gidx =
+            detail::classify_site(this_site, num_sites_val, arity_val);
         bool const is_representative =
-            gidx != -1 && this_site == groups[gidx].left;
+            detail::is_top_level_rep(gidx, this_site, num_sites_val, arity_val);
 
         if (is_representative)
         {
@@ -569,16 +565,22 @@ namespace hpx::collectives {
                 detail::subtree_gather_at_top_rep(
                     communicators, HPX_MOVE(local_result), first_gen);
 
-            std::size_t const my_group_size = groups[gidx].size;
-            std::size_t const num_groups = groups.size();
+            std::size_t const group_index = static_cast<std::size_t>(gidx);
+            std::size_t const my_group_size = detail::get_top_level_group_size(
+                group_index, num_sites_val, arity_val);
+            std::size_t const num_groups =
+                detail::get_top_level_group_count(num_sites_val, arity_val);
 
             // Phase 2: Build exchange blocks -- pack gathered data by
             // destination group, then perform flat all_to_all among reps.
             std::vector<std::vector<T>> exchange_blocks(num_groups);
             for (std::size_t group = 0; group != num_groups; ++group)
             {
-                std::size_t const dest_group_size = groups[group].size;
-                std::size_t const dest_left = groups[group].left;
+                std::size_t const dest_group_size =
+                    detail::get_top_level_group_size(
+                        group, num_sites_val, arity_val);
+                std::size_t const dest_left = detail::get_top_level_group_left(
+                    group, num_sites_val, arity_val);
 
                 exchange_blocks[group].reserve(my_group_size * dest_group_size);
                 for (std::size_t s = 0; s != my_group_size; ++s)
@@ -606,8 +608,12 @@ namespace hpx::collectives {
                 scatter_input[j].resize(num_sites_val);
                 for (std::size_t group = 0; group != num_groups; ++group)
                 {
-                    std::size_t const src_group_size = groups[group].size;
-                    std::size_t const src_left = groups[group].left;
+                    std::size_t const src_group_size =
+                        detail::get_top_level_group_size(
+                            group, num_sites_val, arity_val);
+                    std::size_t const src_left =
+                        detail::get_top_level_group_left(
+                            group, num_sites_val, arity_val);
                     for (std::size_t s = 0; s != src_group_size; ++s)
                     {
                         scatter_input[j][src_left + s] =

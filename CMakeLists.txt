@@ -114,8 +114,15 @@ hpx_force_out_of_tree_build(
   "This project requires an out-of-source-tree build. See README.rst. Clean your CMake cache and CMakeFiles if this message persists."
 )
 
-if(NOT HPX_CMAKE_LOGLEVEL)
-  set(HPX_CMAKE_LOGLEVEL "WARN")
+hpx_option(
+  HPX_WITH_GIT_HOOKS BOOL
+  "Enable git commit hooks for formatting checks on commit (default: OFF)." OFF
+  ADVANCED
+)
+
+if(HPX_WITH_GIT_HOOKS)
+  include(HPX_SetupGitHooks)
+  hpx_setup_git_hooks()
 endif()
 
 # print initial diagnostics
@@ -1544,6 +1551,15 @@ if(HPX_WITH_EXAMPLES_QTHREADS)
     set(HPX_WITH_EXAMPLES_QTHREADS OFF)
   endif()
 endif()
+
+hpx_option(
+  HPX_WITH_EXAMPLES_TASKBENCH
+  BOOL
+  "Enable the task-bench example (fetched from upstream StanfordLegion/task-bench, default: OFF)."
+  OFF
+  CATEGORY "Build Targets"
+  ADVANCED
+)
 
 hpx_option(
   HPX_WITH_EXAMPLES_HDF5 BOOL
