@@ -55,6 +55,20 @@ namespace hpx::collectives::detail {
         return lhs * rhs;
     }
 
+    template <typename T, typename Iterator>
+    void append_data_range(
+        std::vector<T>& destination, Iterator first, Iterator const last)
+    {
+        // Inserting a range can instantiate vector's move-assignment path
+        // even at end(). Append element-wise so internal carriers require
+        // only move construction. vector<bool> additionally needs proxy
+        // conversion.
+        for (; first != last; ++first)
+        {
+            destination.emplace_back(handle_bool<T>(HPX_MOVE(*first)));
+        }
+    }
+
     // A compact carrier for equally sized logical rows. Gather and scatter
     // preserve a uniform row width, so a row count is sufficient to derive
     // every boundary without allocating or serializing an offset table.
@@ -223,12 +237,6 @@ namespace hpx::collectives::detail {
             return HPX_MOVE(data_);
         }
 
-        [[nodiscard]] T take(std::size_t const index) &
-        {
-            HPX_ASSERT(index < data_.size());
-            return handle_bool<T>(HPX_MOVE(data_[index]));
-        }
-
         [[nodiscard]] std::vector<T> release_data() &&
         {
             HPX_ASSERT(is_valid());
@@ -255,20 +263,6 @@ namespace hpx::collectives::detail {
         void serialize(Archive& ar, unsigned int const)
         {
             ar & data_ & num_rows_;
-        }
-
-        template <typename Iterator>
-        static void append_data_range(
-            std::vector<T>& destination, Iterator first, Iterator const last)
-        {
-            // Inserting a range can instantiate vector's move-assignment path
-            // even at end(). Append element-wise so internal carriers require
-            // only move construction. vector<bool> additionally needs proxy
-            // conversion.
-            for (; first != last; ++first)
-            {
-                destination.emplace_back(handle_bool<T>(HPX_MOVE(*first)));
-            }
         }
     };
 
@@ -308,6 +302,8 @@ namespace hpx::collectives::detail {
             // Communicator finalizers call this under the server lock. Each
             // site consumes a disjoint column, so moved elements are visited
             // exactly once even though the shared carriers remain in place.
+            // The result has one segment per input contributor, containing
+            // all of that contributor's selected-column rows.
             constexpr char const* operation =
                 "hpx::collectives::detail::ragged_rows::ragged_rows";
             std::size_t const num_columns = values.size();
@@ -391,10 +387,10 @@ namespace hpx::collectives::detail {
             return offsets_[segment + 1] - offsets_[segment];
         }
 
-        [[nodiscard]] T take(std::size_t const index) &
+        [[nodiscard]] std::vector<T> release_data() &&
         {
-            HPX_ASSERT(index < data_.size());
-            return handle_bool<T>(HPX_MOVE(data_[index]));
+            HPX_ASSERT(is_valid());
+            return HPX_MOVE(data_);
         }
 
         [[nodiscard]] std::vector<T> const& data() const noexcept
@@ -417,20 +413,6 @@ namespace hpx::collectives::detail {
         void serialize(Archive& ar, unsigned int const)
         {
             ar & data_ & offsets_;
-        }
-
-        template <typename Iterator>
-        static void append_data_range(
-            std::vector<T>& destination, Iterator first, Iterator const last)
-        {
-            // Inserting a range can instantiate vector's move-assignment path
-            // even at end(). Append element-wise so internal carriers require
-            // only move construction. vector<bool> additionally needs proxy
-            // conversion.
-            for (; first != last; ++first)
-            {
-                destination.emplace_back(handle_bool<T>(HPX_MOVE(*first)));
-            }
         }
     };
 
