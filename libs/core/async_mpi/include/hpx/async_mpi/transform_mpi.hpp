@@ -136,17 +136,17 @@ namespace hpx::mpi::experimental {
             }
 
             template <typename... Ts>
-                requires(hpx::is_invocable_v<F&&, Ts&&..., MPI_Request*>)
+                requires(hpx::is_invocable_v<F &&, Ts && ..., MPI_Request*>)
             void set_value(Ts&&... ts) && noexcept
             {
                 hpx::detail::try_catch_exception_ptr(
                     [&]() {
-                        if constexpr (std::is_void_v<util::invoke_result_t<
-                                          F&&, Ts&&..., MPI_Request*>>)
+                        if constexpr (std::is_void_v<util::invoke_result_t<F&&,
+                                          Ts&&..., MPI_Request*>>)
                         {
                             MPI_Request request;
-                            HPX_INVOKE(HPX_MOVE(f), HPX_FORWARD(Ts, ts)...,
-                                &request);
+                            HPX_INVOKE(
+                                HPX_MOVE(f), HPX_FORWARD(Ts, ts)..., &request);
                             // When the return type is void, there is no value
                             // to forward to the receiver
                             set_value_request_callback_void(
@@ -157,8 +157,8 @@ namespace hpx::mpi::experimental {
                             MPI_Request request;
                             // When the return type is non-void, we have to
                             // forward the value to the receiver.
-                            auto&& result = HPX_INVOKE(HPX_MOVE(f),
-                                HPX_FORWARD(Ts, ts)..., &request);
+                            auto&& result = HPX_INVOKE(
+                                HPX_MOVE(f), HPX_FORWARD(Ts, ts)..., &request);
                             set_value_request_callback_non_void(request,
                                 HPX_MOVE(r), HPX_MOVE(result),
                                 HPX_FORWARD(Ts, ts)...);
@@ -185,13 +185,12 @@ namespace hpx::mpi::experimental {
                 template <typename... Args>
                 consteval auto operator()() const noexcept
                 {
-                    static_assert(hpx::is_invocable_v<F&&, Args&&...,
-                                      MPI_Request*>,
+                    static_assert(
+                        hpx::is_invocable_v<F&&, Args&&..., MPI_Request*>,
                         "F not invocable with the value_types specified.");
 
-                    using result_type =
-                        hpx::util::invoke_result_t<F&&, Args&&...,
-                            MPI_Request*>;
+                    using result_type = hpx::util::invoke_result_t<F&&,
+                        Args&&..., MPI_Request*>;
 
                     if constexpr (std::is_void_v<result_type>)
                     {
