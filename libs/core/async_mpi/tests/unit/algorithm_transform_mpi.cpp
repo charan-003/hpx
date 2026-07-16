@@ -15,7 +15,6 @@
 #include "algorithm_test_utils.hpp"
 
 #include <atomic>
-#include <memory>
 #include <mpi.h>
 #include <string>
 #include <type_traits>
@@ -75,24 +74,10 @@ void test_transform_mpi_sender_shape()
     static_assert(std::is_same_v<sender_env_type, upstream_env_type>);
 }
 
-void test_transform_mpi_move_only_sender_shape()
-{
-    auto s = ex::just(std::make_unique<int>(42));
-    auto transformed = mpi::transform_mpi(
-        std::move(s), [](std::unique_ptr<int>&, MPI_Request* request) {
-            *request = MPI_REQUEST_NULL;
-            return MPI_SUCCESS;
-        });
-
-    using sender_type = decltype(transformed);
-    static_assert(ex::is_sender_in_v<sender_type, ex::empty_env>);
-}
-
 int hpx_main()
 {
     test_transform_mpi_forwards_env();
     test_transform_mpi_sender_shape();
-    test_transform_mpi_move_only_sender_shape();
 
     int size, rank;
     MPI_Comm comm = MPI_COMM_WORLD;

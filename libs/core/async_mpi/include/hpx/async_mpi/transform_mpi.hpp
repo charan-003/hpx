@@ -18,7 +18,6 @@
 #include <hpx/modules/mpi_base.hpp>
 #include <hpx/modules/tag_invoke.hpp>
 
-#include <cstddef>
 #include <exception>
 #include <type_traits>
 #include <utility>
@@ -110,20 +109,6 @@ namespace hpx::mpi::experimental {
                 request);
         }
 
-        template <typename F, typename Tuple, std::size_t... Is>
-        decltype(auto) invoke_mpi_function(F& f, Tuple& args,
-            MPI_Request* request, hpx::util::index_pack<Is...>)
-        {
-            return HPX_INVOKE(f, hpx::get<Is>(args)..., request);
-        }
-
-        template <typename F, typename Tuple>
-        using invoke_mpi_function_result_t =
-            decltype(invoke_mpi_function(std::declval<F&>(),
-                std::declval<Tuple&>(), std::declval<MPI_Request*>(),
-                hpx::util::make_index_pack_t<
-                    hpx::tuple_size<std::decay_t<Tuple>>::value>{}));
-
         HPX_CXX_CORE_EXPORT template <typename R, typename F>
         struct transform_mpi_receiver
         {
@@ -151,42 +136,32 @@ namespace hpx::mpi::experimental {
             }
 
             template <typename... Ts>
-                requires(hpx::is_invocable_v<std::decay_t<F>&,
-                    std::decay_t<Ts>&..., MPI_Request*>)
+                requires(hpx::is_invocable_v<F&&, Ts&&..., MPI_Request*>)
             void set_value(Ts&&... ts) && noexcept
             {
                 hpx::detail::try_catch_exception_ptr(
                     [&]() {
-                        auto keep_alive =
-                            hpx::make_tuple(HPX_FORWARD(Ts, ts)...);
-                        using keep_alive_type = decltype(keep_alive);
-                        using result_type =
-                            invoke_mpi_function_result_t<std::decay_t<F>,
-                                keep_alive_type>;
-
-                        if constexpr (std::is_void_v<result_type>)
+                        if constexpr (std::is_void_v<util::invoke_result_t<
+                                          F&&, Ts&&..., MPI_Request*>>)
                         {
                             MPI_Request request;
-                            invoke_mpi_function(f, keep_alive, &request,
-                                hpx::util::make_index_pack_t<
-                                    hpx::tuple_size<keep_alive_type>::value>{});
+                            HPX_INVOKE(HPX_MOVE(f), HPX_FORWARD(Ts, ts)...,
+                                &request);
                             // When the return type is void, there is no value
                             // to forward to the receiver
                             set_value_request_callback_void(
-                                request, HPX_MOVE(r), HPX_MOVE(keep_alive));
+                                request, HPX_MOVE(r), HPX_FORWARD(Ts, ts)...);
                         }
                         else
                         {
                             MPI_Request request;
                             // When the return type is non-void, we have to
                             // forward the value to the receiver.
-                            auto&& result = invoke_mpi_function(f, keep_alive,
-                                &request,
-                                hpx::util::make_index_pack_t<
-                                    hpx::tuple_size<keep_alive_type>::value>{});
+                            auto&& result = HPX_INVOKE(HPX_MOVE(f),
+                                HPX_FORWARD(Ts, ts)..., &request);
                             set_value_request_callback_non_void(request,
                                 HPX_MOVE(r), HPX_MOVE(result),
-                                HPX_MOVE(keep_alive));
+                                HPX_FORWARD(Ts, ts)...);
                         }
                     },
                     [&](std::exception_ptr ep) {
@@ -210,13 +185,13 @@ namespace hpx::mpi::experimental {
                 template <typename... Args>
                 consteval auto operator()() const noexcept
                 {
-                    static_assert(hpx::is_invocable_v<std::decay_t<F>&,
-                                      std::decay_t<Args>&..., MPI_Request*>,
+                    static_assert(hpx::is_invocable_v<F&&, Args&&...,
+                                      MPI_Request*>,
                         "F not invocable with the value_types specified.");
 
                     using result_type =
-                        hpx::util::invoke_result_t<std::decay_t<F>&,
-                            std::decay_t<Args>&..., MPI_Request*>;
+                        hpx::util::invoke_result_t<F&&, Args&&...,
+                            MPI_Request*>;
 
                     if constexpr (std::is_void_v<result_type>)
                     {
