@@ -37,7 +37,7 @@ namespace hpx::detail {
     namespace tag_dispatch_detail {
 
         template <typename Tag, typename Base, typename... Args>
-        constexpr bool tag_dispatch_is_nothrow() noexcept
+        consteval bool tag_dispatch_is_nothrow() noexcept
         {
             if constexpr (has_hpx_invoke<Tag, Args...>)
             {
