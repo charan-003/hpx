@@ -559,6 +559,20 @@ namespace hpx::collectives {
                 this_site = agas::get_locality_id();
             }
 
+            if (auto const error =
+                    validate_hierarchical_communicator(communicators, this_site,
+                        "hpx::collectives::broadcast_to (hierarchical)"))
+            {
+                return hpx::make_exceptional_future<std::decay_t<T>>(error);
+            }
+
+            if (auto const error = validate_hierarchical_root_caller(this_site,
+                    "hpx::collectives::broadcast_to (hierarchical)",
+                    "broadcast_to"))
+            {
+                return hpx::make_exceptional_future<std::decay_t<T>>(error);
+            }
+
             // Each sub-communicator advances num_generations per call. Used
             // standalone (double_step) the user generation k maps to the first
             // of its two internal generations (2k-1); used as the broadcast
@@ -731,6 +745,21 @@ namespace hpx::collectives {
                 this_site = agas::get_locality_id();
             }
 
+            if (auto const error =
+                    validate_hierarchical_communicator(communicators, this_site,
+                        "hpx::collectives::broadcast_from (hierarchical)"))
+            {
+                return hpx::make_exceptional_future<T>(error);
+            }
+
+            if (auto const error =
+                    validate_hierarchical_non_root_caller(this_site,
+                        "hpx::collectives::broadcast_from (hierarchical)",
+                        "broadcast_to"))
+            {
+                return hpx::make_exceptional_future<T>(error);
+            }
+
             // See broadcast_to above for the internal generation mapping.
             if (!is_valid_hierarchical_run_generation(
                     generation, num_generations))
@@ -794,10 +823,19 @@ namespace hpx::collectives {
         generation_arg const generation = generation_arg(),
         root_site_arg const root_site = root_site_arg())
     {
-        HPX_ASSERT(this_site != root_site);
+        this_site_arg const effective_site =
+            detail::resolve_this_site(this_site);
+
+        if (auto const error =
+                detail::validate_site_differs_from_root(effective_site,
+                    root_site, "hpx::collectives::broadcast_from", "receiving"))
+        {
+            return hpx::make_exceptional_future<T>(error);
+        }
+
         return broadcast_from<T>(create_communicator(basename, num_sites_arg(),
-                                     this_site, generation, root_site),
-            this_site);
+                                     effective_site, generation, root_site),
+            effective_site);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -829,10 +867,7 @@ namespace hpx::collectives {
         generation_arg const generation = generation_arg(),
         root_site_arg const root_site = root_site_arg())
     {
-        HPX_ASSERT(this_site != root_site);
-        return broadcast_from<T>(create_communicator(basename, num_sites_arg(),
-                                     this_site, generation, root_site),
-            this_site)
+        return broadcast_from<T>(basename, this_site, generation, root_site)
             .get();
     }
 

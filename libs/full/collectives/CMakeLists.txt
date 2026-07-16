@@ -23,6 +23,7 @@ set(collectives_headers
     hpx/collectives/create_communicator.hpp
     hpx/collectives/detail/channel_communicator.hpp
     hpx/collectives/detail/communicator.hpp
+    hpx/collectives/detail/flattened_data.hpp
     hpx/collectives/detail/hierarchical_all_to_all_helpers.hpp
     hpx/collectives/detail/hierarchical_helpers.hpp
     hpx/collectives/detail/hierarchical_scan_helpers.hpp
@@ -66,6 +67,7 @@ set(collectives_sources
     channel_communicator.cpp
     create_communicator.cpp
     detail/channel_communicator_server.cpp
+    detail/hierarchical_helpers.cpp
     exclusive_scan.cpp
     gather.cpp
     inclusive_scan.cpp
@@ -83,6 +85,7 @@ add_hpx_module(
   HEADERS ${collectives_headers}
   MACRO_HEADERS ${collectives_macros_headers}
   ADD_TO_GLOBAL_HEADER
+    "hpx/collectives/detail/flattened_data.hpp"
     "hpx/collectives/detail/hierarchical_all_to_all_helpers.hpp"
     "hpx/collectives/detail/hierarchical_helpers.hpp"
     "hpx/collectives/detail/hierarchical_scan_helpers.hpp"
