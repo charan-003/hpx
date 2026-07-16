@@ -63,6 +63,29 @@ struct opaque_payload_traits;
 
 template <>
 struct opaque_payload_traits<
+    hpx::collectives::detail::ragged_rows<std::uint32_t>>
+{
+    using payload_type = hpx::collectives::detail::ragged_rows<std::uint32_t>;
+
+    static payload_type make(std::uint32_t const value)
+    {
+        return payload_type(
+            std::vector<std::uint32_t>{value}, std::vector<std::size_t>{0, 1});
+    }
+
+    static void check_payload(
+        payload_type const& payload, std::uint32_t const expected)
+    {
+        HPX_TEST_EQ(payload.data().size(), static_cast<std::size_t>(1));
+        HPX_TEST_EQ(payload.data()[0], expected);
+        HPX_TEST_EQ(payload.offsets().size(), static_cast<std::size_t>(2));
+        HPX_TEST_EQ(payload.offsets()[0], static_cast<std::size_t>(0));
+        HPX_TEST_EQ(payload.offsets()[1], static_cast<std::size_t>(1));
+    }
+};
+
+template <>
+struct opaque_payload_traits<
     hpx::collectives::detail::uniform_rows<std::uint32_t>>
 {
     using payload_type = hpx::collectives::detail::uniform_rows<std::uint32_t>;
@@ -82,7 +105,7 @@ struct opaque_payload_traits<
 };
 
 template <typename Payload, typename Communicator>
-void run_opaque_uniform_payload(Communicator const& communicator,
+void run_opaque_flat_payload(Communicator const& communicator,
     std::uint32_t const num_sites, std::uint32_t const this_site)
 {
     using traits = opaque_payload_traits<Payload>;
@@ -126,6 +149,22 @@ void run_opaque_uniform_payload(Communicator const& communicator,
             .get();
     }();
     traits::check_payload(scattered, this_site + 20);
+
+    std::vector<Payload> values;
+    values.reserve(num_sites);
+    for (std::uint32_t destination = 0; destination != num_sites; ++destination)
+    {
+        values.push_back(traits::make(this_site * num_sites + destination));
+    }
+    auto const exchanged = all_to_all(communicator, HPX_MOVE(values),
+        this_site_arg(this_site), generation_arg(3))
+                               .get();
+    HPX_TEST_EQ(exchanged.size(), static_cast<std::size_t>(num_sites));
+    for (std::uint32_t source = 0; source != num_sites; ++source)
+    {
+        traits::check_payload(
+            exchanged[source], source * num_sites + this_site);
+    }
 }
 
 void run_nonassignable_hierarchical_payload(char const* const basename,
@@ -174,6 +213,22 @@ void run_nonassignable_hierarchical_payload(char const* const basename,
             .get();
     }();
     HPX_TEST_EQ(scattered.value, this_site + 40);
+
+    std::vector<nonassignable_payload> values;
+    values.reserve(num_sites);
+    for (std::uint32_t destination = 0; destination != num_sites; ++destination)
+    {
+        values.emplace_back(this_site * num_sites + destination + 50);
+    }
+    auto const exchanged = all_to_all(communicators, HPX_MOVE(values),
+        this_site_arg(this_site), generation_arg(3))
+                               .get();
+    HPX_TEST_EQ(exchanged.size(), static_cast<std::size_t>(num_sites));
+    for (std::uint32_t source = 0; source != num_sites; ++source)
+    {
+        HPX_TEST_EQ(
+            exchanged[source].value, source * num_sites + this_site + 50);
+    }
 }
 
 void run_auto_generation_hierarchical_payloads(
@@ -248,23 +303,37 @@ void test_local_multisite_payload_paths()
     }
 
     constexpr std::uint32_t num_sites = 5;
+    using ragged_payload = hpx::collectives::detail::ragged_rows<std::uint32_t>;
     using uniform_payload =
         hpx::collectives::detail::uniform_rows<std::uint32_t>;
 
     run_local_sites(num_sites, [](std::uint32_t const site) {
         auto const communicator =
+            create_communicator("/test/flattened_payload_local_opaque_offsets/",
+                num_sites_arg(num_sites), this_site_arg(site), generation_arg(),
+                root_site_arg(0));
+        run_opaque_flat_payload<ragged_payload>(communicator, num_sites, site);
+    });
+    run_local_sites(num_sites, [](std::uint32_t const site) {
+        auto const communicator =
             create_communicator("/test/flattened_payload_local_opaque_rows/",
                 num_sites_arg(num_sites), this_site_arg(site), generation_arg(),
                 root_site_arg(0));
-        run_opaque_uniform_payload<uniform_payload>(
-            communicator, num_sites, site);
+        run_opaque_flat_payload<uniform_payload>(communicator, num_sites, site);
+    });
+    run_local_sites(num_sites, [](std::uint32_t const site) {
+        auto const communicators = create_hierarchical_communicator(
+            "/test/flattened_payload_local_hierarchical_opaque_offsets/",
+            num_sites_arg(num_sites), this_site_arg(site), arity_arg(2),
+            generation_arg(), root_site_arg(0), flat_fallback_threshold_arg(0));
+        run_opaque_flat_payload<ragged_payload>(communicators, num_sites, site);
     });
     run_local_sites(num_sites, [](std::uint32_t const site) {
         auto const communicators = create_hierarchical_communicator(
             "/test/flattened_payload_local_hierarchical_opaque_rows/",
             num_sites_arg(num_sites), this_site_arg(site), arity_arg(2),
             generation_arg(), root_site_arg(0), flat_fallback_threshold_arg(0));
-        run_opaque_uniform_payload<uniform_payload>(
+        run_opaque_flat_payload<uniform_payload>(
             communicators, num_sites, site);
     });
     run_local_sites(num_sites, [](std::uint32_t const site) {
@@ -313,26 +382,47 @@ void test_singleton_payload_paths()
         HPX_MOVE(opaque_values), this_site_arg(0), generation_arg(4))
                                       .get();
     traits::check_payload(opaque_scattered, 90);
+
+    auto const exchanged =
+        all_to_all(communicators, std::vector<std::string>{"all_to_all"},
+            this_site_arg(0), generation_arg(5))
+            .get();
+    HPX_TEST_EQ(exchanged.size(), static_cast<std::size_t>(1));
+    HPX_TEST_EQ(exchanged[0], std::string("all_to_all"));
 }
 
 int hpx_main()
 {
     std::uint32_t const this_site = hpx::get_locality_id();
     std::uint32_t const num_sites = hpx::get_num_localities(hpx::launch::sync);
+    using ragged_payload = hpx::collectives::detail::ragged_rows<std::uint32_t>;
     using uniform_payload =
         hpx::collectives::detail::uniform_rows<std::uint32_t>;
+
+    auto const offsets_communicator = create_communicator(
+        "/test/flattened_payload_opaque_offsets/", num_sites_arg(num_sites),
+        this_site_arg(this_site), generation_arg(), root_site_arg(0));
+    run_opaque_flat_payload<ragged_payload>(
+        offsets_communicator, num_sites, this_site);
 
     auto const communicator = create_communicator(
         "/test/flattened_payload_opaque_rows/", num_sites_arg(num_sites),
         this_site_arg(this_site), generation_arg(), root_site_arg(0));
-    run_opaque_uniform_payload<uniform_payload>(
+    run_opaque_flat_payload<uniform_payload>(
         communicator, num_sites, this_site);
+
+    auto const hierarchical_offsets = create_hierarchical_communicator(
+        "/test/flattened_payload_hierarchical_opaque_offsets/",
+        num_sites_arg(num_sites), this_site_arg(this_site), arity_arg(2),
+        generation_arg(), root_site_arg(0), flat_fallback_threshold_arg(0));
+    run_opaque_flat_payload<ragged_payload>(
+        hierarchical_offsets, num_sites, this_site);
 
     auto const hierarchical_communicators = create_hierarchical_communicator(
         "/test/flattened_payload_hierarchical_opaque_rows/",
         num_sites_arg(num_sites), this_site_arg(this_site), arity_arg(2),
         generation_arg(), root_site_arg(0), flat_fallback_threshold_arg(0));
-    run_opaque_uniform_payload<uniform_payload>(
+    run_opaque_flat_payload<uniform_payload>(
         hierarchical_communicators, num_sites, this_site);
     run_nonassignable_hierarchical_payload(
         "/test/flattened_payload_nonassignable/", num_sites, this_site);
