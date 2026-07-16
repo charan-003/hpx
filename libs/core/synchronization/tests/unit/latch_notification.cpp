@@ -30,19 +30,24 @@
 #include <atomic>
 #include <chrono>
 #include <cstddef>
+#include <iostream>
 #include <vector>
 
 namespace {
 
     constexpr std::size_t num_iterations = 25;
-    constexpr std::chrono::seconds wait_deadline(5);
+    constexpr std::chrono::seconds wait_deadline(1);
 
     // Convenience wrapper that turns a lost wakeup into a test failure rather
     // than an indefinite hang.
     void expect_ready(hpx::future<void> const& f)
     {
-        HPX_TEST_EQ(static_cast<int>(f.wait_for(wait_deadline)),
-            static_cast<int>(hpx::future_status::ready));
+        if (!f.is_ready())
+        {
+            HPX_TEST_EQ(static_cast<int>(f.wait_for(wait_deadline)),
+                static_cast<int>(hpx::future_status::ready));
+        }
+        HPX_TEST(f.is_ready());
     }
 }    // namespace
 
@@ -317,16 +322,20 @@ void test_memory_ordering_sanity()
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+#define RUN_TEST(func)                                                         \
+    std::cout << #func << std::endl;                                           \
+    func();
+
 int hpx_main()
 {
-    test_no_lost_wakeups();
-    test_last_decrementer_notification();
-    test_try_wait_only_checks_counter();
-    test_count_down_arrive_and_wait_interleaving();
-    test_reset_rearm();
-    test_reset_if_needed_and_count_up();
-    test_memory_ordering_sanity();
+    RUN_TEST(test_no_lost_wakeups);
+    RUN_TEST(test_last_decrementer_notification);
+    RUN_TEST(test_try_wait_only_checks_counter);
+    RUN_TEST(test_count_down_arrive_and_wait_interleaving);
+    RUN_TEST(test_reset_rearm);
+    RUN_TEST(test_reset_if_needed_and_count_up);
+    RUN_TEST(test_memory_ordering_sanity);
 
     HPX_TEST_EQ(hpx::local::finalize(), 0);
     return 0;
