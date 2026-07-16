@@ -30,6 +30,21 @@ namespace hpx::detail {
         tag_invoke(tag, HPX_FORWARD(Args, args)...);
     };
 
+    template <typename Tag, typename... Args>
+    concept has_invoke_default = requires(
+        Args&&... args) { Tag::invoke_default(HPX_FORWARD(Args, args)...); };
+
+    template <typename Tag, typename Base, typename... Args>
+    inline constexpr bool tag_dispatch_is_nothrow_v =
+        has_hpx_invoke<Tag, Args&&...> ?
+        noexcept(
+            hpx_invoke(std::declval<Tag const&>(), std::declval<Args>()...)) :
+        has_legacy_tag_invoke<Tag, Args&&...> ?
+        hpx::functional::is_nothrow_tag_invocable_v<Tag, Args&&...> :
+        has_invoke_default<Tag, Args&&...> ?
+        noexcept(Tag::invoke_default(std::declval<Args>()...)) :
+        noexcept(std::declval<Base const&>()(std::declval<Args>()...));
+
     // CRTP mixin providing the dispatch logic for converted algorithm CPOs
     // that used to derive (possibly indirectly) from
     // hpx::functional::detail::tag_fallback<Tag>. Dispatch order:
@@ -48,16 +63,15 @@ namespace hpx::detail {
     struct tag_dispatch : Base
     {
         template <typename... Args>
-            requires(
-                has_hpx_invoke<Tag, Args...> ||
+            requires(has_hpx_invoke<Tag, Args...> ||
                 has_legacy_tag_invoke<Tag, Args...> ||
-                requires(Args&&... args) {
-                    Tag::invoke_default(HPX_FORWARD(Args, args)...);
-                } ||
+                has_invoke_default<Tag, Args...> ||
                 requires(Base const& base, Args&&... args) {
                     base(HPX_FORWARD(Args, args)...);
                 })
-        decltype(auto) operator()(Args&&... args) const
+        HPX_HOST_DEVICE HPX_FORCEINLINE constexpr decltype(auto) operator()(
+            Args&&... args) const
+            noexcept(tag_dispatch_is_nothrow_v<Tag, Base, Args...>)
         {
             Tag const& tag = static_cast<Tag const&>(*this);
             if constexpr (has_hpx_invoke<Tag, Args...>)
@@ -69,10 +83,7 @@ namespace hpx::detail {
             {
                 return tag_invoke(tag, HPX_FORWARD(Args, args)...);
             }
-            else if constexpr (requires {
-                                   Tag::invoke_default(
-                                       HPX_FORWARD(Args, args)...);
-                               })
+            else if constexpr (has_invoke_default<Tag, Args...>)
             {
                 return Tag::invoke_default(HPX_FORWARD(Args, args)...);
             }
