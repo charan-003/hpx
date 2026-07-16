@@ -618,7 +618,7 @@ namespace hpx {
     };
 #endif
 
-    HPX_CXX_CORE_EXPORT template <typename T>
+    template <typename T>
     inline constexpr std::size_t tuple_size_v = tuple_size<T>::value;
 
     // template <size_t I, class Tuple>
@@ -855,7 +855,7 @@ namespace hpx {
     }    // namespace std_adl_barrier
 
     // 20.4.2.4, tuple creation functions
-    HPX_CXX_CORE_EXPORT inline constexpr hpx::detail::ignore_type ignore = {};
+    inline constexpr hpx::detail::ignore_type ignore = {};
 
     // template<class... Types>
     // constexpr tuple<VTypes...> make_tuple(Types&&... t);

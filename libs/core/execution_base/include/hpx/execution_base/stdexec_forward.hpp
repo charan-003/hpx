@@ -205,11 +205,10 @@ namespace hpx::execution::experimental {
     HPX_CXX_CORE_EXPORT using stdexec::parallel_policy;
     HPX_CXX_CORE_EXPORT using stdexec::parallel_unsequenced_policy;
     HPX_CXX_CORE_EXPORT using stdexec::unsequenced_policy;
-    HPX_CXX_CORE_EXPORT inline constexpr stdexec::parallel_policy par{};
-    HPX_CXX_CORE_EXPORT inline constexpr stdexec::parallel_unsequenced_policy
-        par_unseq{};
-    HPX_CXX_CORE_EXPORT inline constexpr stdexec::sequenced_policy seq{};
-    HPX_CXX_CORE_EXPORT inline constexpr stdexec::unsequenced_policy unseq{};
+    inline constexpr stdexec::parallel_policy par{};
+    inline constexpr stdexec::parallel_unsequenced_policy par_unseq{};
+    inline constexpr stdexec::sequenced_policy seq{};
+    inline constexpr stdexec::unsequenced_policy unseq{};
 
     HPX_CXX_CORE_EXPORT using exec::split;
     HPX_CXX_CORE_EXPORT using exec::split_t;

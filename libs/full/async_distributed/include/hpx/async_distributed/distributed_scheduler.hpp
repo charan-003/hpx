@@ -97,19 +97,7 @@ namespace hpx::distributed::experimental {
             constexpr auto transform_sender(
                 OpTag, Sender&& sndr, Env const&...) const
             {
-                auto&& f = hpx::get<1>(HPX_FORWARD(Sender, sndr));
-                auto&& child = hpx::get<2>(HPX_FORWARD(Sender, sndr));
-
-                auto env = hpx::execution::experimental::get_env(child);
-                auto sched =
-                    hpx::execution::experimental::get_completion_scheduler<
-                        hpx::execution::experimental::set_value_t>(env);
-                auto target = sched.target();
-
-                return detail::distributed_then_sender<
-                    std::decay_t<decltype(child)>, std::decay_t<decltype(f)>>{
-                    HPX_FORWARD(decltype(child), child),
-                    HPX_FORWARD(decltype(f), f), HPX_MOVE(target)};
+                return HPX_FORWARD(Sender, sndr);
             }
         };
     }    // namespace detail
