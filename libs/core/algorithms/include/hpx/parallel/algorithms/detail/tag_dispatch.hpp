@@ -34,16 +34,36 @@ namespace hpx::detail {
     concept has_invoke_default = requires(
         Args&&... args) { Tag::invoke_default(HPX_FORWARD(Args, args)...); };
 
+    namespace tag_dispatch_detail {
+
+        template <typename Tag, typename Base, typename... Args>
+        constexpr bool tag_dispatch_is_nothrow() noexcept
+        {
+            if constexpr (has_hpx_invoke<Tag, Args...>)
+            {
+                return noexcept(hpx_invoke(
+                    std::declval<Tag const&>(), std::declval<Args>()...));
+            }
+            else if constexpr (has_legacy_tag_invoke<Tag, Args...>)
+            {
+                return hpx::functional::is_nothrow_tag_invocable_v<Tag,
+                    Args...>;
+            }
+            else if constexpr (has_invoke_default<Tag, Args...>)
+            {
+                return noexcept(Tag::invoke_default(std::declval<Args>()...));
+            }
+            else
+            {
+                return noexcept(
+                    std::declval<Base const&>()(std::declval<Args>()...));
+            }
+        }
+    }    // namespace tag_dispatch_detail
+
     template <typename Tag, typename Base, typename... Args>
     inline constexpr bool tag_dispatch_is_nothrow_v =
-        has_hpx_invoke<Tag, Args&&...> ?
-        noexcept(
-            hpx_invoke(std::declval<Tag const&>(), std::declval<Args>()...)) :
-        has_legacy_tag_invoke<Tag, Args&&...> ?
-        hpx::functional::is_nothrow_tag_invocable_v<Tag, Args&&...> :
-        has_invoke_default<Tag, Args&&...> ?
-        noexcept(Tag::invoke_default(std::declval<Args>()...)) :
-        noexcept(std::declval<Base const&>()(std::declval<Args>()...));
+        tag_dispatch_detail::tag_dispatch_is_nothrow<Tag, Base, Args...>();
 
     // CRTP mixin providing the dispatch logic for converted algorithm CPOs
     // that used to derive (possibly indirectly) from
