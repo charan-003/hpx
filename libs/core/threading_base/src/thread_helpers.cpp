@@ -515,11 +515,11 @@ namespace hpx::this_thread {
             if (state == threads::thread_schedule_state::pending ||
                 state == threads::thread_schedule_state::pending_boost)
             {
-                hpx::tracing::task_yielded(id.noref());
+                hpx::tracing::task_yielded(id);
             }
             else if (state == threads::thread_schedule_state::suspended)
             {
-                hpx::tracing::task_suspended(id.noref(), description);
+                hpx::tracing::task_suspended(id, description);
             }
 
             // We might need to dispatch 'nextid' to it's correct scheduler only
@@ -544,7 +544,7 @@ namespace hpx::this_thread {
 
             if (state == threads::thread_schedule_state::suspended)
             {
-                hpx::tracing::task_resumed(id.noref(), statex);
+                hpx::tracing::task_resumed(id, statex);
             }
         }
 
@@ -649,7 +649,7 @@ namespace hpx::this_thread {
             if (ec)
                 return threads::thread_restart_state::unknown;
 
-            hpx::tracing::task_suspended(id.noref(), description);
+            hpx::tracing::task_suspended(id, description);
 
             // We might need to dispatch 'nextid' to it's correct scheduler only
             // if our current scheduler is the same, we should yield to the id
@@ -673,7 +673,7 @@ namespace hpx::this_thread {
                     HPX_MOVE(nextid)));
             }
 
-            hpx::tracing::task_resumed(id.noref(), statex);
+            hpx::tracing::task_resumed(id, statex);
 
             if (statex != threads::thread_restart_state::timeout)
             {
