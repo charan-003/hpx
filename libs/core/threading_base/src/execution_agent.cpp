@@ -221,6 +221,16 @@ namespace hpx::threads {
                     thread_schedule_state::active);
             HPX_ASSERT(state != thread_schedule_state::active);
 
+            if (state == thread_schedule_state::pending ||
+                state == thread_schedule_state::pending_boost)
+            {
+                hpx::tracing::task_yielded(id);
+            }
+            else if (state == thread_schedule_state::suspended)
+            {
+                hpx::tracing::task_suspended(id, desc);
+            }
+
             // actual yield operation
             statex = self_.yield(
                 threads::thread_result_type(state, threads::invalid_thread_id));
@@ -228,6 +238,11 @@ namespace hpx::threads {
             HPX_ASSERT(thrd_data != nullptr &&
                 thrd_data->get_state().state() ==
                     thread_schedule_state::active);
+
+            if (state == thread_schedule_state::suspended)
+            {
+                hpx::tracing::task_resumed(id, statex);
+            }
         }
 
         // handle interruption, if needed

@@ -10,6 +10,7 @@
 #include <hpx/config.hpp>
 #include <hpx/preprocessor/cat.hpp>
 #include <hpx/tracing/macros.hpp>
+#include <type_traits>
 
 #if defined(DOXYGEN)
 /// \defgroup tracing Tracing API
@@ -146,6 +147,72 @@ namespace hpx::tracing {
             ThreadData::get_safe_description(
                 thrdptr->get_description(), "thread"),
             thrdptr->get_last_worker_thread_num());
+#endif
+    }
+
+    // Note: The `constexpr` specifier on these wrapper functions is only truly
+    // meaningful and exercised in the no-tracing configuration (when HPX_HAVE_TRACING
+    // is NOT defined). If tracing is enabled, the code inside the preprocessor block
+    // makes the function non-constexpr, but this is acceptable as long as we do not
+    // try to call these functions in a constant-evaluation context.
+
+    template <typename ThreadId>
+    constexpr void task_yielded([[maybe_unused]] ThreadId const& id) noexcept
+    {
+#if defined(HPX_HAVE_TRACING)
+        auto* thrdptr = get_thread_id_data(id);
+        using thread_data_type = std::remove_pointer_t<decltype(thrdptr)>;
+        task_yielded(thrdptr,
+            thread_data_type::get_safe_description(
+                thrdptr->get_description(), "thread"));
+#endif
+    }
+
+    template <typename ThreadId, typename String>
+    constexpr void task_suspended([[maybe_unused]] ThreadId const& id,
+        [[maybe_unused]] String const& reason) noexcept
+    {
+#if defined(HPX_HAVE_TRACING)
+        auto* thrdptr = get_thread_id_data(id);
+        using thread_data_type = std::remove_pointer_t<decltype(thrdptr)>;
+        if constexpr (std::is_convertible_v<String, char const*>)
+        {
+            task_suspended(thrdptr,
+                thread_data_type::get_safe_description(
+                    thrdptr->get_description(), "thread"),
+                reason);
+        }
+        else
+        {
+            task_suspended(thrdptr,
+                thread_data_type::get_safe_description(
+                    thrdptr->get_description(), "thread"),
+                thread_data_type::get_safe_description(reason, "suspend"));
+        }
+#endif
+    }
+
+    template <typename ThreadId, typename StateX>
+    constexpr void task_resumed([[maybe_unused]] ThreadId const& id,
+        [[maybe_unused]] StateX statex) noexcept
+    {
+#if defined(HPX_HAVE_TRACING)
+        auto* thrdptr = get_thread_id_data(id);
+        using thread_data_type = std::remove_pointer_t<decltype(thrdptr)>;
+        if constexpr (std::is_convertible_v<StateX, char const*>)
+        {
+            task_resumed(thrdptr,
+                thread_data_type::get_safe_description(
+                    thrdptr->get_description(), "thread"),
+                statex);
+        }
+        else
+        {
+            task_resumed(thrdptr,
+                thread_data_type::get_safe_description(
+                    thrdptr->get_description(), "thread"),
+                get_thread_state_ex_name(statex));
+        }
 #endif
     }
 
