@@ -12,6 +12,7 @@
 #include <hpx/assert.hpp>
 #include <hpx/modules/concurrency.hpp>
 #include <hpx/modules/coroutines.hpp>
+#include <hpx/modules/datastructures.hpp>
 #include <hpx/modules/debugging.hpp>
 #include <hpx/modules/errors.hpp>
 #include <hpx/modules/execution_base.hpp>
@@ -27,10 +28,10 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
-#include <forward_list>
 #include <limits>
 #include <memory>
 #include <mutex>
+#include <type_traits>
 #include <utility>
 
 #if defined(HPX_HAVE_THREAD_BACKTRACE_ON_SUSPENSION)
@@ -50,6 +51,55 @@ namespace hpx::threads {
             get_locality_id_type* f);
         HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT std::uint32_t get_locality_id(
             hpx::error_code&);
+
+        ///////////////////////////////////////////////////////////////////////
+        enum class thread_data_state : std::uint8_t
+        {
+            none = 0x00,
+            requested_interrupt = 0x01,
+            enabled_interrupt = 0x02,
+            is_stackless = 0x04,
+            running_exit_funcs = 0x08,
+            ran_exit_funcs = 0x10,
+            is_background = 0x20,
+        };
+
+        constexpr bool operator&(
+            thread_data_state lhs, thread_data_state rhs) noexcept
+        {
+            using type = std::underlying_type_t<thread_data_state>;
+            return static_cast<type>(lhs) & static_cast<type>(rhs);
+        }
+
+        constexpr thread_data_state operator|(
+            thread_data_state lhs, thread_data_state rhs) noexcept
+        {
+            using type = std::underlying_type_t<thread_data_state>;
+            return static_cast<thread_data_state>(
+                static_cast<type>(lhs) | static_cast<type>(rhs));
+        }
+
+        constexpr thread_data_state operator~(thread_data_state s) noexcept
+        {
+            using type = std::underlying_type_t<thread_data_state>;
+            return static_cast<thread_data_state>(~static_cast<type>(s));
+        }
+
+        constexpr void operator|=(
+            thread_data_state& lhs, thread_data_state rhs) noexcept
+        {
+            using type = std::underlying_type_t<thread_data_state>;
+            lhs = static_cast<thread_data_state>(
+                static_cast<type>(lhs) | static_cast<type>(rhs));
+        }
+
+        constexpr void operator&=(
+            thread_data_state& lhs, thread_data_state rhs) noexcept
+        {
+            using type = std::underlying_type_t<thread_data_state>;
+            lhs = static_cast<thread_data_state>(
+                static_cast<type>(lhs) & static_cast<type>(rhs));
+        }
     }    // namespace detail
 
     ////////////////////////////////////////////////////////////////////////////
@@ -78,7 +128,7 @@ namespace hpx::threads {
         thread_data& operator=(thread_data&&) = delete;
 
     public:
-        using spinlock_pool = util::spinlock_pool<thread_data>;
+        using mutex_type = util::detail::spinlock_no_backoff;
 
         /// The get_state function queries the state of this thread instance.
         ///
@@ -375,12 +425,12 @@ namespace hpx::threads {
 #ifdef HPX_HAVE_THREAD_FULLBACKTRACE_ON_SUSPENSION
         char const* get_backtrace() const noexcept
         {
-            std::unique_lock<hpx::util::detail::spinlock> l(mtx_);
+            std::scoped_lock<mutex_type> l(mtx_);
             return backtrace_;
         }
         char const* set_backtrace(char const* value) noexcept
         {
-            std::unique_lock<hpx::util::detail::spinlock> l(mtx_);
+            std::scoped_lock<mutex_type> l(mtx_);
 
             char const* bt = backtrace_;
             backtrace_ = value;
@@ -389,13 +439,13 @@ namespace hpx::threads {
 #else
         util::backtrace const* get_backtrace() const noexcept
         {
-            std::unique_lock<hpx::util::detail::spinlock> l(mtx_);
+            std::scoped_lock<mutex_type> l(mtx_);
             return backtrace_;
         }
         util::backtrace const* set_backtrace(
             util::backtrace const* value) noexcept
         {
-            std::unique_lock<hpx::util::detail::spinlock> l(mtx_);
+            std::scoped_lock<mutex_type> l(mtx_);
 
             util::backtrace const* bt = backtrace_;
             backtrace_ = value;
@@ -406,7 +456,7 @@ namespace hpx::threads {
         // Generate full backtrace for captured stack
         std::string backtrace()
         {
-            std::unique_lock<hpx::util::detail::spinlock> l(mtx_);
+            std::scoped_lock<mutex_type> l(mtx_);
 
             std::string bt;
             if (0 != backtrace_)
@@ -430,38 +480,51 @@ namespace hpx::threads {
             priority_ = priority;
         }
 
-        constexpr bool is_background() const noexcept
+        bool is_background() const noexcept
         {
-            return is_background_;
+            std::scoped_lock<mutex_type> l(mtx_);
+            return state_ & state::is_background;
         }
         void set_is_background() noexcept
         {
-            is_background_ = true;
+            std::scoped_lock<mutex_type> l(mtx_);
+            state_ |= state::is_background;
         }
 
         // handle thread interruption
-        constexpr bool interruption_requested() const noexcept
+        bool interruption_requested() const noexcept
         {
-            return requested_interrupt_;
+            std::scoped_lock<mutex_type> l(mtx_);
+            return state_ & state::requested_interrupt;
         }
 
-        constexpr bool interruption_enabled() const noexcept
+        bool interruption_enabled() const noexcept
         {
-            return enabled_interrupt_;
+            std::scoped_lock<mutex_type> l(mtx_);
+            return state_ & state::enabled_interrupt;
         }
 
-        bool set_interruption_enabled(bool enable) noexcept
+        bool set_interruption_enabled(bool const enable) noexcept
         {
-            using std::swap;
-            swap(enabled_interrupt_, enable);
-            return enable;
+            std::scoped_lock<mutex_type> l(mtx_);
+
+            bool const old_state = state_ & state::enabled_interrupt;
+            if (enable)
+            {
+                state_ |= state::enabled_interrupt;
+            }
+            else
+            {
+                state_ &= ~state::enabled_interrupt;
+            }
+            return old_state;
         }
 
         void interrupt(bool const flag = true)
         {
-            std::unique_lock<hpx::util::detail::spinlock> l(mtx_);
+            std::unique_lock<mutex_type> l(mtx_);
 
-            if (flag && !enabled_interrupt_)
+            if (flag && !(state_ & state::enabled_interrupt))
             {
                 l.unlock();
 
@@ -469,7 +532,15 @@ namespace hpx::threads {
                     "thread_data::interrupt",
                     "interrupts are disabled for this thread");
             }
-            requested_interrupt_ = flag;
+
+            if (flag)
+            {
+                state_ |= state::requested_interrupt;
+            }
+            else
+            {
+                state_ &= ~state::requested_interrupt;
+            }
         }
 
         bool interruption_point(bool throw_on_interrupt = true);
@@ -486,9 +557,10 @@ namespace hpx::threads {
             return runs_as_child_.load(mo);
         }
 
-        HPX_FORCEINLINE constexpr bool is_stackless() const noexcept
+        HPX_FORCEINLINE bool is_stackless() const noexcept
         {
-            return is_stackless_;
+            std::scoped_lock<mutex_type> l(mtx_);
+            return state_ & state::is_stackless;
         }
 
         void destroy_thread() override;
@@ -596,30 +668,25 @@ namespace hpx::threads {
         void rebind_base(thread_init_data& init_data);
 
     private:
-        thread_priority priority_;
+        mutable mutex_type mtx_;
 
-        mutable hpx::util::detail::spinlock mtx_;
+        std::atomic<bool> runs_as_child_;    // support scoped child execution
 
-        bool requested_interrupt_;
-        bool enabled_interrupt_;
-        bool const is_stackless_;
-        bool running_exit_funcs_;
-        bool ran_exit_funcs_;
-        bool is_background_;
-
-        // support scoped child execution
-        std::atomic<bool> runs_as_child_;
-
-        std::uint16_t last_worker_thread_num_;
+        using state = detail::thread_data_state;
+        state state_;
 
         thread_stacksize stacksize_enum_;
-        HPX_NO_UNIQUE_ADDRESS hpx::tracing::task_timer_data timer_data_;
         std::int32_t stacksize_;
+
+        std::uint16_t last_worker_thread_num_;
+        thread_priority priority_;
+
+        HPX_NO_UNIQUE_ADDRESS hpx::tracing::task_timer_data timer_data_;
 
         mutable std::atomic<thread_state> current_state_;
 
         // Singly linked list (heap-allocated)
-        std::forward_list<hpx::function<void()>> exit_funcs_;
+        hpx::detail::forward_list<hpx::function<void()>> exit_funcs_;
 
         // reference to scheduler which created/manages this thread
         policies::scheduler_base* scheduler_base_;
