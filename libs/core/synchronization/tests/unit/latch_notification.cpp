@@ -26,23 +26,31 @@
 #include <hpx/init.hpp>
 #include <hpx/latch.hpp>
 #include <hpx/modules/testing.hpp>
+#include <hpx/thread.hpp>
 
 #include <atomic>
 #include <chrono>
 #include <cstddef>
+#include <iostream>
 #include <vector>
 
 namespace {
 
     constexpr std::size_t num_iterations = 25;
-    constexpr std::chrono::seconds wait_deadline(5);
+    constexpr std::chrono::seconds wait_deadline(1);
 
     // Convenience wrapper that turns a lost wakeup into a test failure rather
     // than an indefinite hang.
-    void expect_ready(hpx::future<void> const& f)
+    void expect_ready(hpx::future<void>& f)
     {
-        HPX_TEST_EQ(static_cast<int>(f.wait_for(wait_deadline)),
-            static_cast<int>(hpx::future_status::ready));
+        if (!f.is_ready())
+        {
+            HPX_TEST_EQ(static_cast<int>(f.wait_for(wait_deadline)),
+                static_cast<int>(hpx::future_status::ready));
+        }
+        HPX_TEST(f.is_ready());
+
+        f.get();    // rethrow exceptions, if needed
     }
 }    // namespace
 
@@ -55,23 +63,34 @@ namespace {
 // `while (cond_.data_.notify_one(...))` loop in notify_waiters().
 void test_no_lost_wakeups()
 {
-    std::size_t const waiter_counts[] = {1, 2, 4, 8, 16};
-
-    for (std::size_t num_waiters : waiter_counts)
+    for (std::size_t const waiter_counts[] = {1, 2, 4, 8, 16};
+        std::size_t num_waiters : waiter_counts)
     {
         for (std::size_t iter = 0; iter != num_iterations; ++iter)
         {
             hpx::latch l(1);
             std::atomic<std::size_t> woken(0);
+            std::atomic<std::size_t> waiting(0);
 
             std::vector<hpx::future<void>> results;
             results.reserve(num_waiters);
             for (std::size_t i = 0; i != num_waiters; ++i)
             {
-                results.push_back(hpx::async([&l, &woken]() {
-                    l.wait();
-                    ++woken;
-                }));
+                // make sure the new task is not executed inline
+                results.push_back(
+                    hpx::async(hpx::launch::task, [&l, &woken, &waiting]() {
+                        ++waiting;
+                        l.wait();
+                        ++woken;
+                    }));
+            }
+
+            // make sure all waiters have actually reached l.wait() before
+            // releasing the latch, so that this exercises the blocking/notify
+            // path rather than a race that some waiters might miss
+            while (waiting.load(std::memory_order_acquire) != num_waiters)
+            {
+                hpx::this_thread::yield();
             }
 
             l.count_down(1);
@@ -104,33 +123,42 @@ void test_no_lost_wakeups()
 // waiters.
 void test_last_decrementer_notification()
 {
-    constexpr std::size_t decrementer_counts[] = {2, 4, 8, 16};
-
-    for (std::size_t const num_decrementers : decrementer_counts)
+    for (constexpr std::size_t decrementer_counts[] = {2, 4, 8, 16};
+        std::size_t const num_decrementers : decrementer_counts)
     {
         for (std::size_t iter = 0; iter != num_iterations; ++iter)
         {
             constexpr std::size_t num_waiters = 8;
             hpx::latch l(static_cast<std::ptrdiff_t>(num_decrementers));
             std::atomic<std::size_t> woken(0);
+            std::atomic<std::size_t> waiting(0);
 
             std::vector<hpx::future<void>> results;
             results.reserve(num_decrementers + num_waiters);
 
-            // Launch waiters and decrementers interleaved (rather than
-            // waiters-then-decrementers) to maximize the chance that some
-            // waiters arrive at the predicate check exactly around the time the
-            // last decrementer flips notified_.
+            // Launch all waiters first and make sure each of them has actually
+            // reached l.wait() before launching the decrementers, so that all
+            // waiters are guaranteed to be blocked when the last.
             for (std::size_t i = 0; i != num_waiters; ++i)
             {
-                results.push_back(hpx::async([&l, &woken]() {
-                    l.wait();
-                    ++woken;
-                }));
+                // make sure the new task is not executed inline
+                results.push_back(
+                    hpx::async(hpx::launch::task, [&l, &woken, &waiting]() {
+                        ++waiting;
+                        l.wait();
+                        ++woken;
+                    }));
             }
+
+            while (waiting.load(std::memory_order_acquire) != num_waiters)
+            {
+                hpx::this_thread::yield();
+            }
+
             for (std::size_t i = 0; i != num_decrementers; ++i)
             {
-                results.push_back(hpx::async([&l]() { l.count_down(1); }));
+                results.push_back(
+                    hpx::async(hpx::launch::task, [&l]() { l.count_down(1); }));
             }
 
             for (auto& f : results)
@@ -174,20 +202,30 @@ void test_count_down_arrive_and_wait_interleaving()
         hpx::latch l(
             static_cast<std::ptrdiff_t>(num_decrementers + num_waiters));
         std::atomic<std::size_t> woken(0);
+        std::atomic<std::size_t> waiting(0);
 
         std::vector<hpx::future<void>> results;
         results.reserve(num_decrementers + num_waiters);
 
+        // make sure the new task is not executed inline
         for (std::size_t i = 0; i != num_decrementers; ++i)
         {
-            results.push_back(hpx::async([&l]() { l.count_down(1); }));
+            results.push_back(
+                hpx::async(hpx::launch::task, [&l]() { l.count_down(1); }));
         }
         for (std::size_t i = 0; i != num_waiters; ++i)
         {
-            results.push_back(hpx::async([&l, &woken]() {
-                l.arrive_and_wait();
-                ++woken;
-            }));
+            results.push_back(
+                hpx::async(hpx::launch::task, [&l, &woken, &waiting]() {
+                    ++waiting;
+                    l.arrive_and_wait();
+                    ++woken;
+                }));
+        }
+
+        while (waiting.load(std::memory_order_acquire) != num_waiters)
+        {
+            hpx::this_thread::yield();
         }
 
         for (auto& f : results)
@@ -216,7 +254,9 @@ void test_reset_rearm()
         l.reset(1);
         HPX_TEST(!l.try_wait());
 
-        hpx::future<void> f = hpx::async([&l]() { l.wait(); });
+        // make sure the new task is not executed inline
+        hpx::future<void> f =
+            hpx::async(hpx::launch::task, [&l]() { l.wait(); });
 
         // The latch cannot possibly be ready yet -- wait() may only return once
         // counter_ == 0 and notified_ is set, neither of which can happen
@@ -256,12 +296,14 @@ void test_reset_if_needed_and_count_up()
         results.reserve(num_callers);
         for (std::size_t i = 0; i != num_callers; ++i)
         {
-            results.push_back(hpx::async([&l, &reset_count]() {
-                if (l.reset_if_needed_and_count_up(n, count))
-                {
-                    ++reset_count;
-                }
-            }));
+            // make sure the new task is not executed inline
+            results.push_back(
+                hpx::async(hpx::launch::task, [&l, &reset_count]() {
+                    if (l.reset_if_needed_and_count_up(n, count))
+                    {
+                        ++reset_count;
+                    }
+                }));
         }
 
         for (auto& f : results)
@@ -301,10 +343,12 @@ void test_memory_ordering_sanity()
         results.reserve(num_waiters);
         for (std::size_t i = 0; i != num_waiters; ++i)
         {
-            results.push_back(hpx::async([&l, &shared_value]() {
-                l.wait();
-                HPX_TEST_EQ(shared_value, static_cast<std::size_t>(42));
-            }));
+            // make sure the new task is not executed inline
+            results.push_back(
+                hpx::async(hpx::launch::task, [&l, &shared_value]() {
+                    l.wait();
+                    HPX_TEST_EQ(shared_value, static_cast<std::size_t>(42));
+                }));
         }
 
         shared_value = 42;
@@ -317,16 +361,20 @@ void test_memory_ordering_sanity()
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+#define RUN_TEST(func)                                                         \
+    std::cout << #func << std::endl;                                           \
+    func();
+
 int hpx_main()
 {
-    test_no_lost_wakeups();
-    test_last_decrementer_notification();
-    test_try_wait_only_checks_counter();
-    test_count_down_arrive_and_wait_interleaving();
-    test_reset_rearm();
-    test_reset_if_needed_and_count_up();
-    test_memory_ordering_sanity();
+    RUN_TEST(test_no_lost_wakeups);
+    RUN_TEST(test_last_decrementer_notification);
+    RUN_TEST(test_try_wait_only_checks_counter);
+    RUN_TEST(test_count_down_arrive_and_wait_interleaving);
+    RUN_TEST(test_reset_rearm);
+    RUN_TEST(test_reset_if_needed_and_count_up);
+    RUN_TEST(test_memory_ordering_sanity);
 
     HPX_TEST_EQ(hpx::local::finalize(), 0);
     return 0;
