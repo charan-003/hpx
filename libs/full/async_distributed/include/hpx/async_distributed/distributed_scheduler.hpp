@@ -27,8 +27,6 @@
 
 #if defined(HPX_HAVE_NETWORKING)
 
-#include <hpx/async_distributed/distributed_continues_on_sender.hpp>
-#include <hpx/async_distributed/distributed_then_sender.hpp>
 #include <hpx/execution/algorithms/detail/sync_wait_domain.hpp>
 #include <hpx/execution_base/stdexec_forward.hpp>
 #include <hpx/modules/errors.hpp>
@@ -37,15 +35,8 @@
 #include <hpx/modules/naming_base.hpp>
 
 #include <exception>
-#include <iostream>
 #include <type_traits>
-#include <typeinfo>
 #include <utility>
-
-// Forward declaration to allow matching the tag without including the header
-namespace stdexec {
-    struct then_t;
-}
 
 namespace hpx::distributed::experimental {
 
@@ -67,33 +58,17 @@ namespace hpx::distributed::experimental {
     // HPX-cooperative waiting (spinlock + condition_variable_any) instead
     // of OS-blocking, preventing deadlocks with --hpx:threads=1.
     //
-    // The standard continues_on / schedule_from algorithms already work
-    // with our schedule() sender: they store completion data locally,
-    // start the schedule-sender (which hops to the remote locality),
-    // and replay the data on the downstream receiver.  No domain
-    // transform_sender override is needed for continues_on.
+    // Currently a pass-through: all senders are forwarded unchanged.
+    // Domain-level interception of ex::then / ex::let_value for remote
+    // dispatch will be added once component-based receiver marshalling
+    // is implemented (nvexec-style).
     namespace detail {
         struct distributed_domain
           : hpx::execution::experimental::detail::sync_wait_domain
         {
-            // SFINAE overload for anything NOT then
-            template <typename OpTag, typename Sender, typename... Env,
-                typename std::enable_if_t<
-                    !(std::is_same_v<stdexec::tag_of_t<Sender>,
-                        hpx::execution::experimental::then_t>),
-                    int> = 0>
-            constexpr auto transform_sender(
-                OpTag, Sender&& sndr, Env const&...) const
-            {
-                return HPX_FORWARD(Sender, sndr);
-            }
-
-            // SFINAE overload for then
-            template <typename OpTag, typename Sender, typename... Env,
-                typename std::enable_if_t<
-                    std::is_same_v<stdexec::tag_of_t<Sender>,
-                        hpx::execution::experimental::then_t>,
-                    int> = 0>
+            // Pass-through: forward all senders unchanged.
+            // Remote dispatch logic will be added here in a future phase.
+            template <typename OpTag, typename Sender, typename... Env>
             constexpr auto transform_sender(
                 OpTag, Sender&& sndr, Env const&...) const
             {
@@ -104,13 +79,12 @@ namespace hpx::distributed::experimental {
 
     namespace detail {
         ///////////////////////////////////////////////////////////////////////////
-        // Operation state: bridges the schedule action into the P2300 receiver protocol.
+        // Operation state: bridges the schedule action into the P2300
+        // receiver protocol.
         //
         // Lifetime contract (P2300 section 6.9.7):
         //   The operation_state is pinned in memory by the caller and must
-        //   outlive the async operation.  We capture `this` in the .then()
-        //   continuation, which is safe because the future's shared state
-        //   prevents destruction until the continuation fires.
+        //   outlive the async operation.
         template <typename Receiver>
         struct distributed_operation_state
         {
@@ -142,8 +116,6 @@ namespace hpx::distributed::experimental {
                             HPX_MOVE(receiver_));
                     },
                     [&](std::exception_ptr ep) {
-                        // If hpx::async itself throws (e.g. invalid target),
-                        // route the error to the receiver.
                         hpx::execution::experimental::set_error(
                             HPX_MOVE(receiver_), HPX_MOVE(ep));
                     });
@@ -158,8 +130,8 @@ namespace hpx::distributed::experimental {
         // Sender returned by distributed_scheduler::schedule().
         //
         // Completion signatures:
-        //   set_value()             - remote action completed successfully
-        //   set_error(exception_ptr) - remote action or network transport failed
+        //   set_value()             - schedule completed successfully
+        //   set_error(exception_ptr) - schedule or network transport failed
         //   set_stopped()           - included for concept conformance
         struct distributed_schedule_sender
         {
@@ -233,12 +205,8 @@ namespace hpx::distributed::experimental {
             auto get_env() const noexcept;
 
         private:
-            // Allow env to access the scheduler stored in the sender.
-            // The scheduler is reconstructed from target_ on demand.
             hpx::id_type target_;
 
-            // The sender needs to remember which scheduler created it so
-            // that get_completion_scheduler can return it.
             friend struct hpx::distributed::experimental::distributed_scheduler;
             friend struct env;
         };
@@ -267,7 +235,7 @@ namespace hpx::distributed::experimental {
         ~distributed_scheduler() = default;
 
         /// P2300 schedule CPO: returns a sender that, when started,
-        /// dispatches a void action to the target locality.
+        /// completes with set_value().
         [[nodiscard]] detail::distributed_schedule_sender schedule() const
         {
             return detail::distributed_schedule_sender{target_};
