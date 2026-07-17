@@ -189,6 +189,7 @@ namespace hpx {
 #include <hpx/modules/type_support.hpp>
 #include <hpx/parallel/algorithms/detail/dispatch.hpp>
 #include <hpx/parallel/algorithms/detail/set_operation.hpp>
+#include <hpx/parallel/algorithms/detail/tag_dispatch.hpp>
 #include <hpx/parallel/util/detail/algorithm_result.hpp>
 #include <hpx/parallel/util/detail/sender_util.hpp>
 #include <hpx/parallel/util/result_types.hpp>
@@ -317,9 +318,9 @@ namespace hpx {
     ///////////////////////////////////////////////////////////////////////////
     // CPO for hpx::set_intersection
     HPX_CXX_CORE_EXPORT inline constexpr struct set_intersection_t final
-      : hpx::detail::tag_parallel_algorithm<set_intersection_t>
+      : hpx::detail::tag_dispatch<set_intersection_t,
+            hpx::detail::tag_parallel_algorithm<set_intersection_t>>
     {
-    private:
         template <typename ExPolicy, typename FwdIter1, typename FwdIter2,
             typename FwdIter3, typename Pred = hpx::parallel::detail::less>
         // clang-format off
@@ -334,9 +335,9 @@ namespace hpx {
                 >
             )
         // clang-format on
-        friend decltype(auto) tag_fallback_invoke(set_intersection_t,
-            ExPolicy&& policy, FwdIter1 first1, FwdIter1 last1, FwdIter2 first2,
-            FwdIter2 last2, FwdIter3 dest, Pred op = Pred())
+        static decltype(auto) invoke_default(ExPolicy&& policy, FwdIter1 first1,
+            FwdIter1 last1, FwdIter2 first2, FwdIter2 last2, FwdIter3 dest,
+            Pred op = Pred())
         {
             static_assert(std::forward_iterator<FwdIter1>,
                 "Requires at least forward iterator.");
@@ -376,9 +377,8 @@ namespace hpx {
                 >
             )
         // clang-format on
-        friend FwdIter3 tag_fallback_invoke(set_intersection_t, FwdIter1 first1,
-            FwdIter1 last1, FwdIter2 first2, FwdIter2 last2, FwdIter3 dest,
-            Pred op = Pred())
+        static FwdIter3 invoke_default(FwdIter1 first1, FwdIter1 last1,
+            FwdIter2 first2, FwdIter2 last2, FwdIter3 dest, Pred op = Pred())
         {
             static_assert(std::input_iterator<FwdIter1>,
                 "Requires at least input iterator.");
