@@ -15,13 +15,13 @@
 ///   LOCAL LOCALITY                     REMOTE LOCALITY
 ///   ==============                     ===============
 ///
-///   upstream_sender                    distributed_receiver_component<T>
+///   upstream_sender                    [work executes here]
 ///        |                                    |
 ///        v                                    |
 ///   continues_on(sched)                       |
 ///        |                                    |
 ///        v                                    |
-///   distributed_op_state ---- parcel ---->  [component lives here]
+///   distributed_op_state ---- parcel ---->  remote work
 ///        |                                    |
 ///        |  <---- set_value_action(T) -----   |
 ///        |  <---- set_error_action(eptr) --   |
@@ -40,9 +40,10 @@
 /// locality) through a well-defined, serializable interface.
 ///
 /// Serialization Boundary:
-///   - set_value_action: The value type T must be serializable via HPX's
-///     serialization framework. This is enforced at compile time by the
-///     action registration machinery.
+///   - set_value_action: The value type T is expected to be an
+///     hpx::tuple<Ts...> packing the multi-value result (following the
+///     standard sender/receiver contract). T must be serializable via
+///     HPX's serialization framework.
 ///   - set_error_action: Uses std::exception_ptr, which HPX already
 ///     knows how to serialize across localities.
 ///   - set_stopped_action: No payload, always serializable.
@@ -51,12 +52,16 @@
 
 #if defined(HPX_HAVE_NETWORKING)
 
+#include <hpx/assert.hpp>
+#include <hpx/datastructures/tuple.hpp>
 #include <hpx/modules/actions_base.hpp>
 #include <hpx/modules/components_base.hpp>
 #include <hpx/modules/execution_base.hpp>
 #include <hpx/modules/naming_base.hpp>
 
+#include <cstddef>
 #include <exception>
+#include <memory>
 #include <type_traits>
 #include <utility>
 
@@ -65,96 +70,72 @@ namespace hpx::distributed::experimental::detail {
     ///////////////////////////////////////////////////////////////////////////
     /// Type-erased receiver wrapper.
     ///
-    /// Since HPX components must have fixed types (no templates on the
-    /// component itself for action registration), we type-erase the
-    /// downstream receiver behind a virtual interface parameterized
-    /// only on the value type T.
+    /// The downstream receiver is type-erased behind this virtual interface,
+    /// parameterized on the value type T. T is expected to be an
+    /// hpx::tuple<Ts...> representing the packed multi-value result.
+    /// For void execution (no values), T is hpx::tuple<> (empty tuple).
     ///
-    /// This is the "callback" that the remote locality invokes via
-    /// component actions.
+    /// All completion methods are noexcept, conforming to the standard
+    /// sender/receiver protocol (P2300 section 5.5).
     template <typename T>
     struct receiver_bridge_base
     {
         virtual ~receiver_bridge_base() = default;
-        virtual void complete_value(T val) = 0;
-        virtual void complete_error(std::exception_ptr ep) = 0;
-        virtual void complete_stopped() = 0;
-    };
-
-    /// Specialization for void values (schedule-only, no payload).
-    template <>
-    struct receiver_bridge_base<void>
-    {
-        virtual ~receiver_bridge_base() = default;
-        virtual void complete_value() = 0;
-        virtual void complete_error(std::exception_ptr ep) = 0;
-        virtual void complete_stopped() = 0;
+        virtual void complete_value(T val) noexcept = 0;
+        virtual void complete_error(std::exception_ptr ep) noexcept = 0;
+        virtual void complete_stopped() noexcept = 0;
     };
 
     ///////////////////////////////////////////////////////////////////////////
     /// Concrete receiver bridge that wraps a real P2300 receiver.
     ///
-    /// This captures the downstream receiver by value and forwards
-    /// completion signals to it using the P2300 protocol.
+    /// Captures the downstream receiver by value and forwards completion
+    /// signals to it using the P2300 protocol. Handles void (empty tuple)
+    /// and multi-value (non-empty tuple) cases via if constexpr.
     template <typename Receiver, typename T>
     struct receiver_bridge final : receiver_bridge_base<T>
     {
         using receiver_type = std::decay_t<Receiver>;
 
-        explicit receiver_bridge(Receiver&& rcvr)
-          : receiver_(HPX_FORWARD(Receiver, rcvr))
+        explicit receiver_bridge(Receiver&& rcvr) noexcept
+          : receiver_(HPX_MOVE(rcvr))
         {
         }
 
-        void complete_value(T val) override
+        void complete_value(T val) noexcept override
+        {
+            if constexpr (hpx::tuple_size<T>::value == 0)
+            {
+                // Void case: empty tuple, call set_value with no value args.
+                hpx::execution::experimental::set_value(HPX_MOVE(receiver_));
+            }
+            else
+            {
+                // Value case: unpack the tuple into individual set_value args.
+                unpack_and_set_value(HPX_MOVE(val),
+                    std::make_index_sequence<hpx::tuple_size<T>::value>{});
+            }
+        }
+
+        void complete_error(std::exception_ptr ep) noexcept override
+        {
+            hpx::execution::experimental::set_error(
+                HPX_MOVE(receiver_), HPX_MOVE(ep));
+        }
+
+        void complete_stopped() noexcept override
+        {
+            hpx::execution::experimental::set_stopped(HPX_MOVE(receiver_));
+        }
+
+    private:
+        template <std::size_t... Is>
+        void unpack_and_set_value(T val, std::index_sequence<Is...>) noexcept
         {
             hpx::execution::experimental::set_value(
-                HPX_MOVE(receiver_), HPX_MOVE(val));
+                HPX_MOVE(receiver_), hpx::get<Is>(HPX_MOVE(val))...);
         }
 
-        void complete_error(std::exception_ptr ep) override
-        {
-            hpx::execution::experimental::set_error(
-                HPX_MOVE(receiver_), HPX_MOVE(ep));
-        }
-
-        void complete_stopped() override
-        {
-            hpx::execution::experimental::set_stopped(HPX_MOVE(receiver_));
-        }
-
-    private:
-        receiver_type receiver_;
-    };
-
-    /// Specialization for void receiver bridge.
-    template <typename Receiver>
-    struct receiver_bridge<Receiver, void> final : receiver_bridge_base<void>
-    {
-        using receiver_type = std::decay_t<Receiver>;
-
-        explicit receiver_bridge(Receiver&& rcvr)
-          : receiver_(HPX_FORWARD(Receiver, rcvr))
-        {
-        }
-
-        void complete_value() override
-        {
-            hpx::execution::experimental::set_value(HPX_MOVE(receiver_));
-        }
-
-        void complete_error(std::exception_ptr ep) override
-        {
-            hpx::execution::experimental::set_error(
-                HPX_MOVE(receiver_), HPX_MOVE(ep));
-        }
-
-        void complete_stopped() override
-        {
-            hpx::execution::experimental::set_stopped(HPX_MOVE(receiver_));
-        }
-
-    private:
         receiver_type receiver_;
     };
 
@@ -165,8 +146,8 @@ namespace hpx::distributed::experimental::detail {
     /// receiver bridge and exposes three component actions that the REMOTE
     /// locality can invoke to signal completion.
     ///
-    /// Template parameter T is the value type that flows through set_value.
-    /// For void execution, use T = void (via the specialization).
+    /// Template parameter T is the packed value type (typically an
+    /// hpx::tuple<Ts...>). For void execution, use T = hpx::tuple<>.
     ///
     /// Lifecycle:
     ///   1. Created by the local operation_state during connect().
@@ -190,7 +171,7 @@ namespace hpx::distributed::experimental::detail {
         template <typename Receiver>
         explicit distributed_receiver_component(Receiver&& rcvr)
           : bridge_(
-                new receiver_bridge<Receiver, T>(HPX_FORWARD(Receiver, rcvr)))
+                std::make_unique<receiver_bridge<Receiver, T>>(HPX_MOVE(rcvr)))
         {
         }
 
@@ -200,26 +181,20 @@ namespace hpx::distributed::experimental::detail {
 
         void on_set_value(T val)
         {
-            if (bridge_)
-            {
-                bridge_->complete_value(HPX_MOVE(val));
-            }
+            HPX_ASSERT(bridge_);
+            bridge_->complete_value(HPX_MOVE(val));
         }
 
         void on_set_error(std::exception_ptr ep)
         {
-            if (bridge_)
-            {
-                bridge_->complete_error(HPX_MOVE(ep));
-            }
+            HPX_ASSERT(bridge_);
+            bridge_->complete_error(HPX_MOVE(ep));
         }
 
         void on_set_stopped()
         {
-            if (bridge_)
-            {
-                bridge_->complete_stopped();
-            }
+            HPX_ASSERT(bridge_);
+            bridge_->complete_stopped();
         }
 
         HPX_DEFINE_COMPONENT_ACTION(
@@ -231,64 +206,6 @@ namespace hpx::distributed::experimental::detail {
 
     private:
         std::unique_ptr<receiver_bridge_base<T>> bridge_;
-    };
-
-    ///////////////////////////////////////////////////////////////////////////
-    /// Specialization for void values.
-    ///
-    /// When T=void, set_value carries no payload. This is used for
-    /// ex::schedule() which signals with set_value() (no args).
-    template <>
-    class distributed_receiver_component<void>
-      : public hpx::components::component_base<
-            distributed_receiver_component<void>>
-    {
-    public:
-        using base_type = hpx::components::component_base<
-            distributed_receiver_component<void>>;
-
-        distributed_receiver_component() = default;
-
-        template <typename Receiver>
-        explicit distributed_receiver_component(Receiver&& rcvr)
-          : bridge_(new receiver_bridge<Receiver, void>(
-                HPX_FORWARD(Receiver, rcvr)))
-        {
-        }
-
-        void on_set_value()
-        {
-            if (bridge_)
-            {
-                bridge_->complete_value();
-            }
-        }
-
-        void on_set_error(std::exception_ptr ep)
-        {
-            if (bridge_)
-            {
-                bridge_->complete_error(HPX_MOVE(ep));
-            }
-        }
-
-        void on_set_stopped()
-        {
-            if (bridge_)
-            {
-                bridge_->complete_stopped();
-            }
-        }
-
-        HPX_DEFINE_COMPONENT_ACTION(
-            distributed_receiver_component, on_set_value, set_value_action)
-        HPX_DEFINE_COMPONENT_ACTION(
-            distributed_receiver_component, on_set_error, set_error_action)
-        HPX_DEFINE_COMPONENT_ACTION(
-            distributed_receiver_component, on_set_stopped, set_stopped_action)
-
-    private:
-        std::unique_ptr<receiver_bridge_base<void>> bridge_;
     };
 
 }    // namespace hpx::distributed::experimental::detail

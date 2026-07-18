@@ -27,9 +27,9 @@
 
 #if defined(HPX_HAVE_NETWORKING)
 
-#include <hpx/execution/algorithms/detail/sync_wait_domain.hpp>
 #include <hpx/execution_base/stdexec_forward.hpp>
 #include <hpx/modules/errors.hpp>
+#include <hpx/modules/execution.hpp>
 #include <hpx/modules/execution_base.hpp>
 #include <hpx/modules/futures.hpp>
 #include <hpx/modules/naming_base.hpp>

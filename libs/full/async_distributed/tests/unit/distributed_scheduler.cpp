@@ -20,7 +20,7 @@
 #include <hpx/modules/execution.hpp>
 #include <hpx/modules/testing.hpp>
 
-#include <hpx/async_distributed/distributed_scheduler.hpp>
+#include <hpx/modules/async_distributed.hpp>
 
 #include <exception>
 #include <string>
