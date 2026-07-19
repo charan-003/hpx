@@ -53,9 +53,9 @@
 #if defined(HPX_HAVE_NETWORKING)
 
 #include <hpx/assert.hpp>
-#include <hpx/datastructures/tuple.hpp>
 #include <hpx/modules/actions_base.hpp>
 #include <hpx/modules/components_base.hpp>
+#include <hpx/modules/datastructures.hpp>
 #include <hpx/modules/execution_base.hpp>
 #include <hpx/modules/naming_base.hpp>
 
@@ -111,9 +111,9 @@ namespace hpx::distributed::experimental::detail {
             }
             else
             {
-                // Value case: unpack the tuple into individual set_value args.
-                unpack_and_set_value(HPX_MOVE(val),
-                    std::make_index_sequence<hpx::tuple_size<T>::value>{});
+                // Forward the packed tuple directly to set_value.
+                hpx::execution::experimental::set_value(
+                    HPX_MOVE(receiver_), HPX_MOVE(val));
             }
         }
 
@@ -129,13 +129,6 @@ namespace hpx::distributed::experimental::detail {
         }
 
     private:
-        template <std::size_t... Is>
-        void unpack_and_set_value(T val, std::index_sequence<Is...>) noexcept
-        {
-            hpx::execution::experimental::set_value(
-                HPX_MOVE(receiver_), hpx::get<Is>(HPX_MOVE(val))...);
-        }
-
         receiver_type receiver_;
     };
 

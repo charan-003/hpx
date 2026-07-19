@@ -110,8 +110,11 @@ void test_schedule_then_local()
     HPX_TEST_EQ(std::get<0>(*result), 42);
 }
 
-// Test 8: ex::just(value) | ex::continues_on(sched) routes through domain.
-void test_continues_on_routes_through_domain()
+// Test 8: ex::just(value) | ex::continues_on(sched) resolves the domain
+// customization point. Note: This currently only tests that the tag-invoke
+// resolves to distributed_domain. Physical remote execution routing will be
+// implemented next.
+void test_continues_on_resolves_domain_cpo()
 {
     auto sched =
         hpx::distributed::experimental::distributed_scheduler{hpx::find_here()};
@@ -308,7 +311,7 @@ int hpx_main()
     test_void_execution_local();
     test_void_execution_remote();
     test_schedule_then_local();
-    test_continues_on_routes_through_domain();
+    test_continues_on_resolves_domain_cpo();
     test_continues_on_void();
     test_schedule_then_remote_locality();
 

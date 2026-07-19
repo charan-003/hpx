@@ -27,7 +27,6 @@
 
 #if defined(HPX_HAVE_NETWORKING)
 
-#include <hpx/execution_base/stdexec_forward.hpp>
 #include <hpx/modules/errors.hpp>
 #include <hpx/modules/execution.hpp>
 #include <hpx/modules/execution_base.hpp>
@@ -91,8 +90,7 @@ namespace hpx::distributed::experimental {
             using receiver_type = std::decay_t<Receiver>;
 
             template <typename Receiver_>
-            distributed_operation_state(
-                Receiver_&& r, hpx::id_type target) noexcept
+            distributed_operation_state(Receiver_&& r, hpx::id_type target)
               : receiver_(HPX_FORWARD(Receiver_, r))
               , target_(HPX_MOVE(target))
             {
