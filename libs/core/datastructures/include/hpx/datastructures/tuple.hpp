@@ -855,7 +855,7 @@ namespace hpx {
     }    // namespace std_adl_barrier
 
     // 20.4.2.4, tuple creation functions
-    inline constexpr hpx::detail::ignore_type ignore = {};
+    HPX_CXX_CORE_EXPORT inline constexpr hpx::detail::ignore_type ignore = {};
 
     // template<class... Types>
     // constexpr tuple<VTypes...> make_tuple(Types&&... t);
