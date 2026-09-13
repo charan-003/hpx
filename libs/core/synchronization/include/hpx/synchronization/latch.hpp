@@ -336,14 +336,15 @@ namespace hpx::lcos::local {
         {
             HPX_ASSERT(n >= 0);
 
+            std::scoped_lock l(mtx_.data_);
+
             std::ptrdiff_t const old_count =
                 counter_.exchange(n, std::memory_order_acq_rel);
 
             HPX_ASSERT(old_count == 0);
             HPX_UNUSED(old_count);
 
-            std::scoped_lock l(mtx_.data_);
-            notified_ = false;
+            notified_ = (n == 0);
         }
 
         /// Effects: Equivalent to:
