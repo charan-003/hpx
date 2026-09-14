@@ -336,15 +336,35 @@ namespace hpx::lcos::local {
         {
             HPX_ASSERT(n >= 0);
 
-            std::scoped_lock l(mtx_.data_);
+            bool notify = false;
+            {
+                std::scoped_lock l(mtx_.data_);
 
-            std::ptrdiff_t const old_count =
-                counter_.exchange(n, std::memory_order_acq_rel);
+                std::ptrdiff_t const old_count =
+                    counter_.exchange(n, std::memory_order_relaxed);
 
-            HPX_ASSERT(old_count == 0);
-            HPX_UNUSED(old_count);
+                HPX_ASSERT(old_count == 0);
+                HPX_UNUSED(old_count);
 
-            notified_ = (n == 0);
+                notified_ = (n == 0);
+                notify = (n == 0);
+            }
+
+            // 26111: Caller failing to release lock 'this->mtx_.data_'
+            // 26115: Failing to release lock 'this->mtx_.data_'
+            // 26117: Releasing unheld lock 'this->mtx_.data_'
+#if defined(HPX_MSVC)
+#pragma warning(push)
+#pragma warning(disable : 26111 26115 26117)
+#endif
+            if (notify)
+            {
+                std::unique_lock l(mtx_.data_);
+                notify_waiters(HPX_MOVE(l));
+            }
+#if defined(HPX_MSVC)
+#pragma warning(pop)
+#endif
         }
 
         /// Effects: Equivalent to:

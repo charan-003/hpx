@@ -60,6 +60,7 @@ void test_latch_reset_zero_wait_deadlock()
         }
         catch (...)
         {
+            // Suppress exception to allow test cleanup.
         }
     }
 }
@@ -91,6 +92,7 @@ void test_latch_reset_zero_arrive_and_wait_deadlock()
         }
         catch (...)
         {
+            // Suppress exception to allow test cleanup.
         }
     }
 }
