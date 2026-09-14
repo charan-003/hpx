@@ -8,8 +8,11 @@
 #include <hpx/init.hpp>
 #include <hpx/latch.hpp>
 #include <hpx/modules/testing.hpp>
+#include <hpx/thread.hpp>
 
+#include <atomic>
 #include <chrono>
+#include <cstddef>
 
 void test_latch_reset_zero_wait_deadlock()
 {
@@ -97,10 +100,77 @@ void test_latch_reset_zero_arrive_and_wait_deadlock()
     }
 }
 
+void test_latch_reset_concurrent_race()
+{
+    constexpr std::size_t iterations = 10000;
+
+    for (std::size_t i = 0; i < iterations; ++i)
+    {
+        hpx::lcos::local::latch l(0);
+        HPX_TEST(l.is_ready());
+
+        std::atomic<bool> start{false};
+
+        hpx::future<void> f_reset = hpx::async([&l, &start] {
+            while (!start.load(std::memory_order_relaxed))
+            {
+                hpx::this_thread::yield();
+            }
+            l.reset(1);
+        });
+
+        hpx::future<void> f_count_down = hpx::async([&l, &start] {
+            while (!start.load(std::memory_order_relaxed))
+            {
+                hpx::this_thread::yield();
+            }
+            while (l.try_wait())
+            {
+                hpx::this_thread::yield();
+            }
+            l.count_down(1);
+        });
+
+        start.store(true, std::memory_order_release);
+
+        f_reset.get();
+        f_count_down.get();
+
+        hpx::future<void> f = hpx::async([&l] { l.wait(); });
+
+        hpx::future_status const status =
+            f.wait_for(std::chrono::milliseconds(500));
+
+        HPX_TEST_MSG(status == hpx::future_status::ready,
+            "DEADLOCK DETECTED: l.wait() blocked indefinitely after concurrent "
+            "reset(1) and count_down(1)");
+
+        if (status != hpx::future_status::ready)
+        {
+            l.abort_all();
+            try
+            {
+                f.get();
+            }
+            catch (...)
+            {
+                // Suppress exception to allow test cleanup.
+            }
+            return;
+        }
+
+        f.get();
+
+        HPX_TEST(l.is_ready());
+        HPX_TEST(l.try_wait());
+    }
+}
+
 int hpx_main()
 {
     test_latch_reset_zero_wait_deadlock();
     test_latch_reset_zero_arrive_and_wait_deadlock();
+    test_latch_reset_concurrent_race();
 
     HPX_TEST_EQ(hpx::local::finalize(), 0);
     return 0;
