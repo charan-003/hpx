@@ -61,10 +61,9 @@ void test_latch_reset_zero_wait_deadlock()
         {
             f.get();
         }
+        // NOLINTNEXTLINE(bugprone-empty-catch)
         catch (...)
         {
-            // Intentionally suppress exceptions to allow test cleanup
-            static_cast<void>(0);
         }
     }
 }
@@ -94,10 +93,9 @@ void test_latch_reset_zero_arrive_and_wait_deadlock()
         {
             f.get();
         }
+        // NOLINTNEXTLINE(bugprone-empty-catch)
         catch (...)
         {
-            // Intentionally suppress exceptions to allow test cleanup
-            static_cast<void>(0);
         }
     }
 }
@@ -154,10 +152,9 @@ void test_latch_reset_concurrent_race()
             {
                 f.get();
             }
+            // NOLINTNEXTLINE(bugprone-empty-catch)
             catch (...)
             {
-                // Intentionally suppress exceptions to allow test cleanup
-                static_cast<void>(0);
             }
             return;
         }
