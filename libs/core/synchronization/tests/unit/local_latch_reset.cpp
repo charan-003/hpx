@@ -64,6 +64,7 @@ void test_latch_reset_zero_wait_deadlock()
         catch (...)
         {
             // Intentionally suppress exceptions to allow test cleanup
+            static_cast<void>(0);
         }
     }
 }
@@ -96,6 +97,7 @@ void test_latch_reset_zero_arrive_and_wait_deadlock()
         catch (...)
         {
             // Intentionally suppress exceptions to allow test cleanup
+            static_cast<void>(0);
         }
     }
 }
@@ -155,6 +157,7 @@ void test_latch_reset_concurrent_race()
             catch (...)
             {
                 // Intentionally suppress exceptions to allow test cleanup
+                static_cast<void>(0);
             }
             return;
         }
