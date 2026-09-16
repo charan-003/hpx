@@ -586,3 +586,50 @@ We then use hpx::for_each with a parallel execution policy and attach our custom
 
 This pattern is especially useful in larger applications with many tasks, as annotations make it much easier
 to trace and debug the execution of parallel algorithms.
+
+.. _parallel_scheduler:
+
+P2079 parallel scheduler
+========================
+
+C++26 (`P2079R10 <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2079r10.html>`_)
+exposes ``std::execution::get_parallel_scheduler()``. |hpx| implements this as
+``hpx::execution::experimental::get_parallel_scheduler()``.
+
+Earlier drafts of the same paper (P2079R2) used the names ``system_context`` and
+``system_scheduler``. Those public types were dropped. The default backend in
+|hpx| runs on HPX worker threads from the default thread pool, not on raw OS
+threads.
+
+.. code-block:: c++
+
+    #include <hpx/execution.hpp>
+    #include <hpx/init.hpp>
+
+    int hpx_main()
+    {
+        namespace ex = hpx::execution::experimental;
+
+        auto snd = ex::schedule(ex::get_parallel_scheduler()) |
+            ex::then([] { return 42; });
+        auto [val] = ex::sync_wait(std::move(snd)).value();
+
+        return hpx::local::finalize();
+    }
+
+To bind the scheduler to a named HPX pool created with the resource
+partitioner, install the existing HPX backend for that pool. There is no
+need to write a custom ``parallel_scheduler_backend`` class:
+
+.. code-block:: c++
+
+    namespace ex = hpx::execution::experimental;
+
+    ex::set_parallel_scheduler_backend(
+        ex::make_hpx_parallel_scheduler_backend(
+            hpx::resource::get_thread_pool("custom")));
+
+    auto snd = ex::schedule(ex::get_parallel_scheduler()) |
+        ex::then([] { /* runs on the "custom" pool */ });
+    ex::sync_wait(std::move(snd));
+

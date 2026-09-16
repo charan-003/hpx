@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Sai Charan Arvapally
+// Copyright (c) 2026 the-ivii
 //
 // SPDX-License-Identifier: BSL-1.0
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -165,5 +166,25 @@ namespace hpx::execution::experimental {
     // in-flight on the current backend.
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT void set_parallel_scheduler_backend(
         std::shared_ptr<parallel_scheduler_backend> new_backend);
+
+    /// Create a parallel_scheduler backend bound to \p pool.
+    ///
+    /// Install the result with \ref set_parallel_scheduler_backend so that
+    /// later \ref get_parallel_scheduler calls run on that HPX thread pool.
+    /// Look named pools up at the call site, for example:
+    /// \code
+    ///     set_parallel_scheduler_backend(
+    ///         make_hpx_parallel_scheduler_backend(
+    ///             hpx::resource::get_thread_pool("custom")));
+    /// \endcode
+    ///
+    /// \param pool  HPX thread pool that should execute scheduled work.
+    ///
+    /// \returns A backend wrapping \c thread_pool_policy_scheduler on
+    ///          \p pool.
+    HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT
+        std::shared_ptr<parallel_scheduler_backend>
+        make_hpx_parallel_scheduler_backend(
+            hpx::threads::thread_pool_base& pool);
 
 }    // namespace hpx::execution::experimental
