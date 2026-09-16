@@ -14,6 +14,7 @@ tests.examples.modules.algorithms.run_on_all
 tests.examples.modules.checkpoint.1d_stencil_4_checkpoint
 tests.examples.modules.executors.executor_with_thread_hooks
 tests.examples.modules.executors.disable_thread_stealing_executor
+tests.examples.modules.executors.parallel_scheduler
 tests.examples.modules.program_options.config_file_types
 tests.examples.modules.program_options.custom_syntax
 tests.examples.modules.program_options.env_options
