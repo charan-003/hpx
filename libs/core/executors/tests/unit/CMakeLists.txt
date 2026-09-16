@@ -57,6 +57,8 @@ foreach(test ${tests})
     FOLDER ${folder_name}
   )
 
+  target_link_libraries(${test}_test PRIVATE hpx_executors_test_utilities)
+
   add_hpx_unit_test("modules.executors" ${test} ${${test}_PARAMETERS})
 
 endforeach()

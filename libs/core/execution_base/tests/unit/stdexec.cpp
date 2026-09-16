@@ -189,15 +189,18 @@ void test_counting_scope_concurrent_join()
 
     scope.close();
 
-    // Start join() on a separate thread
+    // Start join() on a separate thread; signal entry before blocking
     std::atomic<bool> join_done{false};
+    std::binary_semaphore join_entered{0};
     std::thread joiner([&]() {
+        join_entered.release();
         ex::sync_wait(scope.join());
         join_done.store(true, std::memory_order_release);
     });
 
-    // The held operation is still blocked; join() must not complete
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    // Wait for the join thread to have started; task 0 is still held,
+    // so join() cannot have completed yet
+    join_entered.acquire();
     HPX_TEST(!join_done.load(std::memory_order_acquire));
 
     // Release the held operation
@@ -257,15 +260,18 @@ void test_counting_scope_multithreaded_spawn()
 
     scope.close();
 
-    // Start join() on a separate thread
+    // Start join() on a separate thread; signal entry before blocking
     std::atomic<bool> join_done{false};
+    std::binary_semaphore join_entered{0};
     std::thread joiner([&]() {
+        join_entered.release();
         ex::sync_wait(scope.join());
         join_done.store(true, std::memory_order_release);
     });
 
-    // The held operation is still blocked; join() must not complete
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    // Wait for the join thread to have started; task 0 is still held,
+    // so join() cannot have completed yet
+    join_entered.acquire();
     HPX_TEST(!join_done.load(std::memory_order_acquire));
 
     // Release the held operation

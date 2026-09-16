@@ -14,6 +14,8 @@
 
 #include <hpx/modules/synchronization.hpp>
 
+#include <async_scope_test_utilities.hpp>
+
 #include <atomic>
 #include <exception>
 #include <stdexcept>
@@ -25,20 +27,7 @@
 namespace ex = hpx::execution::experimental;
 namespace tt = hpx::this_thread::experimental;
 
-// scope.join() has no completion scheduler. ex::sync_wait(scope.join())
-// from hpx_main can take stdexec's OS-blocking wait and starve the pool.
-// start_detached with get_start_scheduler connects join immediately;
-// binary_semaphore::acquire suspends the HPX task instead.
-template <typename Scope>
-void wait_join(Scope& scope)
-{
-    hpx::binary_semaphore done{0};
-    ex::start_detached(
-        scope.join() | ex::then([&]() noexcept { done.release(); }),
-        ex::make_env(
-            ex::prop(ex::get_start_scheduler, ex::thread_pool_scheduler{})));
-    done.acquire();
-}
+using hpx::test::wait_join;
 
 // spawn_future with thread_pool_scheduler: value propagation
 void test_spawn_future_value()
@@ -153,16 +142,22 @@ void test_join_blocks_for_async_work()
     // receiver env; start_detached with that env connects join
     // immediately. continues_on does not inject a start scheduler.
     std::atomic<bool> join_done{false};
+    hpx::binary_semaphore join_started{0};
     hpx::binary_semaphore join_finished{0};
 
-    ex::start_detached(scope.join() | ex::then([&]() noexcept {
-        join_done.store(true, std::memory_order_release);
-        join_finished.release();
-    }),
+    ex::start_detached(ex::schedule(ex::thread_pool_scheduler{}) |
+            ex::then([&]() noexcept { join_started.release(); }) |
+            ex::let_value([&]() { return scope.join(); }) |
+            ex::then([&]() noexcept {
+                join_done.store(true, std::memory_order_release);
+                join_finished.release();
+            }),
         ex::make_env(
             ex::prop(ex::get_start_scheduler, ex::thread_pool_scheduler{})));
 
-    // Task 0 is still held, so join() cannot have completed
+    // Wait until the join pipeline has been entered; task 0 is still
+    // held, so join() cannot have completed yet
+    join_started.acquire();
     HPX_TEST(!join_done.load(std::memory_order_acquire));
 
     // Release the held operation
