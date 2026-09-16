@@ -167,28 +167,4 @@ namespace hpx::execution::experimental {
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT void set_parallel_scheduler_backend(
         std::shared_ptr<parallel_scheduler_backend> new_backend);
 
-    /// Create a parallel_scheduler backend bound to \p pool.
-    ///
-    /// Install the result with \ref set_parallel_scheduler_backend so that
-    /// later \ref get_parallel_scheduler calls run on that HPX thread pool.
-    /// Look named pools up at the call site, for example:
-    /// \code
-    ///     set_parallel_scheduler_backend(
-    ///         make_hpx_parallel_scheduler_backend(
-    ///             hpx::resource::get_thread_pool("custom")));
-    /// \endcode
-    ///
-    /// \param pool  HPX thread pool that should execute scheduled work.
-    ///
-    /// \pre \p pool must outlive this backend and every operation scheduled
-    ///      through it. The backend stores a non-owning pointer; it does not
-    ///      extend the lifetime of the pool.
-    ///
-    /// \returns A backend wrapping \c thread_pool_policy_scheduler on
-    ///          \p pool.
-    HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT
-        std::shared_ptr<parallel_scheduler_backend>
-        make_hpx_parallel_scheduler_backend(
-            hpx::threads::thread_pool_base& pool);
-
 }    // namespace hpx::execution::experimental

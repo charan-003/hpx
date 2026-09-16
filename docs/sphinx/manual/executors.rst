@@ -618,18 +618,19 @@ threads.
     }
 
 To bind the scheduler to a named HPX pool created with the resource
-partitioner, install the existing HPX backend for that pool. There is no
+partitioner, pass that pool to ``get_parallel_scheduler``. There is no
 need to write a custom ``parallel_scheduler_backend`` class:
 
 .. code-block:: c++
 
     namespace ex = hpx::execution::experimental;
 
-    ex::set_parallel_scheduler_backend(
-        ex::make_hpx_parallel_scheduler_backend(
-            hpx::resource::get_thread_pool("custom")));
-
-    auto snd = ex::schedule(ex::get_parallel_scheduler()) |
+    auto snd = ex::schedule(ex::get_parallel_scheduler(
+                   hpx::resource::get_thread_pool("custom"))) |
         ex::then([] { /* runs on the "custom" pool */ });
     ex::sync_wait(std::move(snd));
+
+``get_thread_pool`` throws ``hpx::exception`` for an unknown pool name.
+The pool must outlive the scheduler; HPX does not extend the pool's
+lifetime or diagnose a dangling pool.
 

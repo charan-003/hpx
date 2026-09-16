@@ -5,17 +5,23 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 #include <hpx/assert.hpp>
+#include <hpx/executors/async.hpp>
 #include <hpx/executors/parallel_scheduler.hpp>
 #include <hpx/init.hpp>
+#include <hpx/modules/async_combinators.hpp>
+#include <hpx/modules/errors.hpp>
+#include <hpx/modules/futures.hpp>
 #include <hpx/modules/resource_partitioner.hpp>
 #include <hpx/modules/runtime_local.hpp>
 #include <hpx/modules/testing.hpp>
 #include <hpx/thread.hpp>
 
 #include <algorithm>
+#include <atomic>
 #include <cstddef>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace ex = hpx::execution::experimental;
 
@@ -24,14 +30,21 @@ std::size_t const max_threads = (std::min) (std::size_t(4),
 
 int hpx_main()
 {
-    auto orig = ex::query_parallel_scheduler_backend();
     auto& custom = hpx::resource::get_thread_pool("custom");
 
-    ex::set_parallel_scheduler_backend(
-        ex::make_hpx_parallel_scheduler_backend(custom));
+    // Unknown pool names fail at lookup with hpx::exception, not UB.
+    HPX_TEST(!hpx::resource::pool_exists("no-such-pool"));
+    HPX_TEST_THROW(
+        hpx::resource::get_thread_pool("no-such-pool"), hpx::exception);
+
+    // Lifetime of `custom` is caller responsibility: get_parallel_scheduler
+    // stores a non-owning pointer and does not keep the pool alive. Debug
+    // builds assert that the pool currently has OS threads; a dangling pool
+    // after this call is not diagnosed.
+    auto sched = ex::get_parallel_scheduler(custom);
 
     std::string seen;
-    auto snd = ex::schedule(ex::get_parallel_scheduler()) | ex::then([&seen] {
+    auto snd = ex::schedule(sched) | ex::then([&seen] {
         auto* pool = hpx::this_thread::get_pool();
         HPX_TEST(pool != nullptr);
         seen = pool->get_pool_name();
@@ -39,7 +52,37 @@ int hpx_main()
     ex::sync_wait(std::move(snd));
     HPX_TEST_EQ(seen, std::string("custom"));
 
-    ex::set_parallel_scheduler_backend(orig);
+    // Concurrent construction of pool-bound schedulers and concurrent
+    // schedule() on one shared backend must be safe.
+    std::atomic<int> hits{0};
+    std::vector<hpx::future<void>> tasks;
+    tasks.reserve(16);
+    for (int i = 0; i != 8; ++i)
+    {
+        tasks.push_back(hpx::async([&custom, &hits] {
+            auto s = ex::get_parallel_scheduler(custom);
+            ex::sync_wait(ex::schedule(s) | ex::then([&hits] {
+                auto* pool = hpx::this_thread::get_pool();
+                HPX_TEST(pool != nullptr);
+                HPX_TEST_EQ(pool->get_pool_name(), std::string("custom"));
+                hits.fetch_add(1, std::memory_order_relaxed);
+            }));
+        }));
+    }
+    for (int i = 0; i != 8; ++i)
+    {
+        tasks.push_back(hpx::async([&sched, &hits] {
+            ex::sync_wait(ex::schedule(sched) | ex::then([&hits] {
+                auto* pool = hpx::this_thread::get_pool();
+                HPX_TEST(pool != nullptr);
+                HPX_TEST_EQ(pool->get_pool_name(), std::string("custom"));
+                hits.fetch_add(1, std::memory_order_relaxed);
+            }));
+        }));
+    }
+    hpx::wait_all(tasks);
+    HPX_TEST_EQ(hits.load(std::memory_order_relaxed), 16);
+
     return hpx::local::finalize();
 }
 

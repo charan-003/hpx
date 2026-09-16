@@ -777,26 +777,21 @@ int hpx_main(int, char*[])
         HPX_TEST(s1.get_backend().get() == s2.get_backend().get());
     }
 
-    // make_hpx_parallel_scheduler_backend binds work to a given HPX pool
+    // get_parallel_scheduler(pool) binds work to a given HPX pool
     {
-        auto orig = ex::query_parallel_scheduler_backend();
         auto* pool = hpx::this_thread::get_pool();
         HPX_TEST(pool != nullptr);
 
-        ex::set_parallel_scheduler_backend(
-            ex::make_hpx_parallel_scheduler_backend(*pool));
+        auto sched = ex::get_parallel_scheduler(*pool);
 
         std::string seen;
-        auto snd =
-            ex::schedule(ex::get_parallel_scheduler()) | ex::then([&seen] {
-                auto* p = hpx::this_thread::get_pool();
-                HPX_TEST(p != nullptr);
-                seen = p->get_pool_name();
-            });
+        auto snd = ex::schedule(sched) | ex::then([&seen] {
+            auto* p = hpx::this_thread::get_pool();
+            HPX_TEST(p != nullptr);
+            seen = p->get_pool_name();
+        });
         ex::sync_wait(std::move(snd));
         HPX_TEST_EQ(seen, pool->get_pool_name());
-
-        ex::set_parallel_scheduler_backend(orig);
     }
 
     // set_parallel_scheduler_backend() actually replaces the live backend
