@@ -787,8 +787,8 @@ int hpx_main(int, char*[])
             ex::make_hpx_parallel_scheduler_backend(*pool));
 
         std::string seen;
-        auto snd = ex::schedule(ex::get_parallel_scheduler()) |
-            ex::then([&seen] {
+        auto snd =
+            ex::schedule(ex::get_parallel_scheduler()) | ex::then([&seen] {
                 auto* p = hpx::this_thread::get_pool();
                 HPX_TEST(p != nullptr);
                 seen = p->get_pool_name();
