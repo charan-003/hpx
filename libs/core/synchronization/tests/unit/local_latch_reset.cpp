@@ -53,18 +53,9 @@ void test_latch_reset_zero_wait_deadlock()
         "DEADLOCK DETECTED: l.wait() blocked indefinitely after reset(0) "
         "despite counter_ == 0 and is_ready() == true");
 
-    if (status != hpx::future_status::ready)
+    if (status == hpx::future_status::ready)
     {
-        // Unblock the deadlocked thread so test runner can complete and report failure
-        l.abort_all();
-        try
-        {
-            f.get();
-        }
-        // NOLINTNEXTLINE(bugprone-empty-catch)
-        catch (...)
-        {
-        }
+        f.get();
     }
 }
 
@@ -86,17 +77,9 @@ void test_latch_reset_zero_arrive_and_wait_deadlock()
         "DEADLOCK DETECTED: l.arrive_and_wait(0) blocked indefinitely after "
         "reset(0)");
 
-    if (status != hpx::future_status::ready)
+    if (status == hpx::future_status::ready)
     {
-        l.abort_all();
-        try
-        {
-            f.get();
-        }
-        // NOLINTNEXTLINE(bugprone-empty-catch)
-        catch (...)
-        {
-        }
+        f.get();
     }
 }
 
@@ -145,21 +128,14 @@ void test_latch_reset_concurrent_race()
             "DEADLOCK DETECTED: l.wait() blocked indefinitely after concurrent "
             "reset(1) and count_down(1)");
 
-        if (status != hpx::future_status::ready)
+        if (status == hpx::future_status::ready)
         {
-            l.abort_all();
-            try
-            {
-                f.get();
-            }
-            // NOLINTNEXTLINE(bugprone-empty-catch)
-            catch (...)
-            {
-            }
+            f.get();
+        }
+        else
+        {
             return;
         }
-
-        f.get();
 
         HPX_TEST(l.is_ready());
         HPX_TEST(l.try_wait());
@@ -172,8 +148,7 @@ int hpx_main()
     test_latch_reset_zero_arrive_and_wait_deadlock();
     test_latch_reset_concurrent_race();
 
-    HPX_TEST_EQ(hpx::local::finalize(), 0);
-    return 0;
+    return hpx::local::finalize();
 }
 
 int main(int argc, char* argv[])
