@@ -180,6 +180,10 @@ namespace hpx::execution::experimental {
     ///
     /// \param pool  HPX thread pool that should execute scheduled work.
     ///
+    /// \pre \p pool must outlive this backend and every operation scheduled
+    ///      through it. The backend stores a non-owning pointer; it does not
+    ///      extend the lifetime of the pool.
+    ///
     /// \returns A backend wrapping \c thread_pool_policy_scheduler on
     ///          \p pool.
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT
