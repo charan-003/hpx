@@ -103,7 +103,7 @@ namespace hpx {
             if (old_count == update)
             {
                 notified_ = true;
-                cond_.data_.notify_all(HPX_MOVE(l));
+                notify_waiters(HPX_MOVE(l));
             }
         }
 
@@ -131,11 +131,7 @@ namespace hpx {
 
             std::unique_lock l(mtx_.data_);
 
-            // Robust predicate loop.
-            while (counter_.load(std::memory_order_acquire) > 0 || !notified_)
-            {
-                cond_.data_.wait(l, "hpx::latch::wait");
-            }
+            wait_locked(l);
 
             HPX_ASSERT_LOCKED(l, counter_.load(std::memory_order_relaxed) == 0);
             HPX_ASSERT_LOCKED(l, notified_);
@@ -168,12 +164,7 @@ namespace hpx {
 #endif
             if (old_count > update)
             {
-                // Robust predicate loop.
-                while (
-                    counter_.load(std::memory_order_acquire) > 0 || !notified_)
-                {
-                    cond_.data_.wait(l, "hpx::latch::arrive_and_wait");
-                }
+                wait_locked(l);
 
                 HPX_ASSERT_LOCKED(
                     l, counter_.load(std::memory_order_relaxed) == 0);
@@ -183,6 +174,15 @@ namespace hpx {
             {
                 notified_ = true;
                 notify_waiters(HPX_MOVE(l));
+            }
+        }
+
+    private:
+        void wait_locked(std::unique_lock<mutex_type>& l) const
+        {
+            while (counter_.load(std::memory_order_acquire) > 0 || !notified_)
+            {
+                cond_.data_.wait(l, "hpx::latch::wait");
             }
         }
 
@@ -331,7 +331,7 @@ namespace hpx::lcos::local {
 
             if (notified_)
             {
-                cond_.data_.notify_all(HPX_MOVE(l));
+                notify_waiters(HPX_MOVE(l));
             }
         }
 
