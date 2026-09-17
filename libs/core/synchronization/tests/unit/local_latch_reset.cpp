@@ -44,19 +44,7 @@ void test_latch_reset_zero_wait_deadlock()
     // Since !notified_ is true, wait() unconditionally deadlocks on cond_.wait().
     // We launch wait() in an asynchronous task and check for completion.
     hpx::future<void> f = hpx::async([&l] { l.wait(); });
-
-    hpx::future_status const status =
-        f.wait_for(std::chrono::milliseconds(500));
-
-    // This assertion MUST FAIL on current master because l.wait() deadlocks!
-    HPX_TEST_MSG(status == hpx::future_status::ready,
-        "DEADLOCK DETECTED: l.wait() blocked indefinitely after reset(0) "
-        "despite counter_ == 0 and is_ready() == true");
-
-    if (status == hpx::future_status::ready)
-    {
-        f.get();
-    }
+    f.get();
 }
 
 void test_latch_reset_zero_arrive_and_wait_deadlock()
@@ -69,18 +57,7 @@ void test_latch_reset_zero_arrive_and_wait_deadlock()
     HPX_TEST(l.is_ready());
 
     hpx::future<void> f = hpx::async([&l] { l.arrive_and_wait(0); });
-
-    hpx::future_status const status =
-        f.wait_for(std::chrono::milliseconds(500));
-
-    HPX_TEST_MSG(status == hpx::future_status::ready,
-        "DEADLOCK DETECTED: l.arrive_and_wait(0) blocked indefinitely after "
-        "reset(0)");
-
-    if (status == hpx::future_status::ready)
-    {
-        f.get();
-    }
+    f.get();
 }
 
 void test_latch_reset_concurrent_race()
@@ -120,22 +97,7 @@ void test_latch_reset_concurrent_race()
         f_count_down.get();
 
         hpx::future<void> f = hpx::async([&l] { l.wait(); });
-
-        hpx::future_status const status =
-            f.wait_for(std::chrono::milliseconds(500));
-
-        HPX_TEST_MSG(status == hpx::future_status::ready,
-            "DEADLOCK DETECTED: l.wait() blocked indefinitely after concurrent "
-            "reset(1) and count_down(1)");
-
-        if (status == hpx::future_status::ready)
-        {
-            f.get();
-        }
-        else
-        {
-            return;
-        }
+        f.get();
 
         HPX_TEST(l.is_ready());
         HPX_TEST(l.try_wait());

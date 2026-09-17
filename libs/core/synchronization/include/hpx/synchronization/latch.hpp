@@ -93,29 +93,18 @@ namespace hpx {
         {
             HPX_ASSERT(update >= 0);
 
-            // Explicit atomic RMW for clearer memory-order intent.
-            std::ptrdiff_t const new_count =
-                counter_.fetch_sub(update, std::memory_order_acq_rel) - update;
+            std::unique_lock<mutex_type> l(mtx_.data_);
 
-            HPX_ASSERT(new_count >= 0);
+            std::ptrdiff_t const old_count =
+                counter_.fetch_sub(update, std::memory_order_acq_rel);
 
-            // 26111: Caller failing to release lock 'this->mtx_.data_'
-            // 26115: Failing to release lock 'this->mtx_.data_'
-            // 26117: Releasing unheld lock 'this->mtx_.data_'
-#if defined(HPX_MSVC)
-#pragma warning(push)
-#pragma warning(disable : 26111 26115 26117)
-#endif
-            if (new_count == 0)
+            HPX_ASSERT(old_count >= update);
+
+            if (old_count == update)
             {
-                std::unique_lock l(mtx_.data_);
                 notified_ = true;
-
-                notify_waiters(HPX_MOVE(l));
+                cond_.data_.notify_all(HPX_MOVE(l));
             }
-#if defined(HPX_MSVC)
-#pragma warning(pop)
-#endif
         }
 
         /// Returns:        With very low probability false. Otherwise,
@@ -338,15 +327,11 @@ namespace hpx::lcos::local {
 
             std::unique_lock<mutex_type> l(mtx_.data_);
             counter_.store(n, std::memory_order_release);
+            notified_ = (n == 0);
 
-            if (n == 0)
+            if (notified_)
             {
-                notified_ = true;
                 cond_.data_.notify_all(HPX_MOVE(l));
-            }
-            else
-            {
-                notified_ = false;
             }
         }
 
