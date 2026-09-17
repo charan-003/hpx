@@ -339,9 +339,10 @@ combinators surprise new users:
 
 * ``hpx::when_all()`` combines futures into a future of a tuple of futures,
   e.g. ``hpx::future<hpx::tuple<hpx::future<int>, hpx::future<double>>>``
-  for ``hpx::when_all(f1, f2)``. The continuation attached to that future
-  receives the tuple and has to unpack it and ``get()`` the inner futures
-  itself (or use ``hpx::split_future()``).
+  for ``hpx::when_all(f1, f2)``. The callable passed to ``then()`` on that
+  future again receives the outer future (see above) and has to ``get()``
+  it to obtain the tuple, then ``get()`` the inner futures (or pass the
+  outer future to ``hpx::split_future()``).
 
 * A callable passed to :hpx:func:`hpx::async` cannot take non-const
   reference arguments; arguments are passed by value (decay-copied) into
@@ -358,11 +359,13 @@ combinators surprise new users:
       // f.get() == 6, y is unchanged
 
   ``const`` references are allowed. ``std::reference_wrapper`` (i.e.
-  passing ``std::ref(x)``) compiles as well and the task then accesses the
-  caller's object directly; this is a data race unless the caller does not
-  touch the object until the returned future is ready. Prefer returning the
-  result, or use ``hpx::dataflow()`` or explicit synchronization (for
-  example :hpx:class:`hpx::mutex`) for shared mutable state.
+  passing ``std::ref(x)``) compiles as well, and the task then accesses
+  the caller's object directly; this is a data race if the caller accesses
+  the object concurrently with the task, so either wait on the returned
+  future before touching the object again, or synchronize all accesses
+  (for example with :hpx:class:`hpx::mutex`). Prefer returning the result,
+  or use ``hpx::dataflow()`` to let |hpx| handle dependencies between
+  futures.
 
 .. _extend_futures:
 
