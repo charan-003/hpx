@@ -375,41 +375,6 @@
 /// if the second argument with an appended suffix '_action' resolves to a valid,
 /// unqualified C++ type name.
 ///
-#if defined(HPX_COMPUTE_DEVICE_CODE)
-// Emit an empty struct so the _action name exists during device parsing.
-// Consumers only need name lookup inside template bodies that never run on
-// the GPU. Member access on the stub fails at the site; boolean traits like
-// is_base_of resolve to false silently, which is fine for host-only code.
-#define HPX_DEFINE_COMPONENT_ACTION_3(component, func, name)                   \
-    struct name                                                                \
-    {                                                                          \
-    }; /**/
-#define HPX_DEFINE_COMPONENT_ACTION_2(component, func)                         \
-    HPX_DEFINE_COMPONENT_ACTION_3(component, func, HPX_PP_CAT(func, _action))  \
-    /**/
-#define HPX_DEFINE_COMPONENT_ACTION_(...)                                      \
-    HPX_PP_EXPAND(HPX_PP_CAT(                                                  \
-        HPX_DEFINE_COMPONENT_ACTION_, HPX_PP_NARGS(__VA_ARGS__))(__VA_ARGS__)) \
-    /**/
-#define HPX_DEFINE_COMPONENT_ACTION(...)                                       \
-    HPX_DEFINE_COMPONENT_ACTION_(__VA_ARGS__)                                  \
-    /**/
-#define HPX_DEFINE_COMPONENT_DIRECT_ACTION_3(component, func, name)            \
-    struct name                                                                \
-    {                                                                          \
-    }; /**/
-#define HPX_DEFINE_COMPONENT_DIRECT_ACTION_2(component, func)                  \
-    HPX_DEFINE_COMPONENT_DIRECT_ACTION_3(                                      \
-        component, func, HPX_PP_CAT(func, _action))                            \
-    /**/
-#define HPX_DEFINE_COMPONENT_DIRECT_ACTION_(...)                               \
-    HPX_PP_EXPAND(HPX_PP_CAT(HPX_DEFINE_COMPONENT_DIRECT_ACTION_,              \
-        HPX_PP_NARGS(__VA_ARGS__))(__VA_ARGS__))                               \
-    /**/
-#define HPX_DEFINE_COMPONENT_DIRECT_ACTION(...)                                \
-    HPX_DEFINE_COMPONENT_DIRECT_ACTION_(__VA_ARGS__)                           \
-    /**/
-#else
 #define HPX_DEFINE_COMPONENT_ACTION(...)                                       \
     HPX_DEFINE_COMPONENT_ACTION_(__VA_ARGS__)                                  \
     /**/
@@ -474,8 +439,6 @@
     /**/
 /// \endcond
 
-#endif
-
 ////////////////////////////////////////////////////////////////////////////////
 // from hpx/actions_base/plain_action.hpp
 
@@ -537,13 +500,7 @@
     HPX_DEFINE_PLAIN_ACTION_3(HPX_PP_EMPTY(), func, name)                      \
     /**/
 
-#if defined(HPX_COMPUTE_DEVICE_CODE)
-// Same rationale as HPX_DEFINE_COMPONENT_ACTION_3 above.
-#define HPX_DEFINE_PLAIN_ACTION_3(Prefix, func, name)                          \
-    Prefix struct name                                                         \
-    {                                                                          \
-    } /**/
-#elif defined(HPX_HAVE_CXX26_REFLECTION)
+#if defined(HPX_HAVE_CXX26_REFLECTION)
 /// When C++26 reflection is available, HPX_DEFINE_PLAIN_ACTION_2 uses
 /// reflect_action<^^func> instead of make_action_t. This eliminates the
 /// need for HPX_REGISTER_ACTION while keeping the same user-facing syntax.
