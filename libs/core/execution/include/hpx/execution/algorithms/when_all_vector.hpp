@@ -382,7 +382,8 @@ namespace hpx::when_all_vector_detail {
             {
                 if (--predecessors_remaining == 0)
                 {
-                    if (!set_stopped_error_called)
+                    if (!set_stopped_error_called.load(
+                            std::memory_order_acquire))
                     {
                         if constexpr (is_void_value_type)
                         {
