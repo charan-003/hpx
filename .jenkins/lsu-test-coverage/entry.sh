@@ -49,6 +49,7 @@ hpx_slurm_run "${HPX_SLURM_TIMEOUT:-6h}" \
     --job-name="${job_name}" \
     --nodes="1" \
     --partition="${configuration_slurm_partition}" \
+    --exclude="medusa08" \
     --time="05:00:00" \
     --output="jenkins-hpx-${configuration_name}.out" \
     --error="jenkins-hpx-${configuration_name}.err" \

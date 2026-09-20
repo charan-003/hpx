@@ -53,7 +53,7 @@ hpx_slurm_run "${HPX_SLURM_TIMEOUT:-7h}" \
     --job-name="${job_name}" \
     --nodes="${configuration_slurm_num_nodes}" \
     --partition="${configuration_slurm_partition}" \
-    --exclude="bahram" \
+    --exclude="bahram,medusa08" \
     --time="06:00:00" \
     --output="jenkins-hpx-${configuration_name_with_build_type}.out" \
     --error="jenkins-hpx-${configuration_name_with_build_type}.err" \
