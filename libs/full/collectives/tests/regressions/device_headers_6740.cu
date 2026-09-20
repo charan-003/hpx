@@ -11,13 +11,10 @@
 // APIs in host member functions of a class that also owns a __global__ kernel.
 // Compile-only smoke test; a successful build is the pass.
 
-#include <hpx/async_colocated/async_colocated.hpp>
-#include <hpx/async_colocated/async_colocated_callback.hpp>
-#include <hpx/async_colocated/post_colocated.hpp>
-#include <hpx/async_colocated/post_colocated_callback.hpp>
-#include <hpx/async_distributed/base_lco_with_value.hpp>
 #include <hpx/collectives.hpp>
-#include <hpx/lcos_distributed/channel.hpp>
+#include <hpx/modules/async_colocated.hpp>
+#include <hpx/modules/async_distributed.hpp>
+#include <hpx/modules/lcos_distributed.hpp>
 #include <hpx/modules/parcelset.hpp>
 #include <hpx/modules/runtime_configuration.hpp>
 
