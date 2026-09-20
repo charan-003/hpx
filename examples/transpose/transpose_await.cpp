@@ -105,8 +105,9 @@ struct sub_block
         ar & size_;
         if (size_ > 0)
         {
-            data_ = new double[size_];
-            hpx::serialization::array<double> arr(data_, size_);
+            std::size_t const count = static_cast<std::size_t>(size_);
+            data_ = new double[count];
+            hpx::serialization::array<double> arr(data_, count);
             ar >> arr;
             mode_ = owning;
         }
@@ -117,7 +118,8 @@ struct sub_block
         ar & size_;
         if (size_ > 0)
         {
-            hpx::serialization::array<double> arr(data_, size_);
+            hpx::serialization::array<double> arr(
+                data_, static_cast<std::size_t>(size_));
             ar << arr;
         }
     }
@@ -134,14 +136,14 @@ struct block_component : hpx::components::component_base<block_component>
     block_component() {}
 
     block_component(std::uint64_t size)
-      : data_(size)
+      : data_(static_cast<std::size_t>(size))
     {
     }
 
     sub_block get_sub_block(std::uint64_t offset, std::uint64_t size)
     {
         HPX_ASSERT(!data_.empty());
-        return sub_block(&data_[offset], size);
+        return sub_block(&data_[static_cast<std::size_t>(offset)], size);
     }
 
     HPX_DEFINE_COMPONENT_ACTION(block_component, get_sub_block)
@@ -154,13 +156,13 @@ struct block : hpx::components::client_base<block, block_component>
     typedef hpx::components::client_base<block, block_component> base_type;
     block() {}
 
-    block(std::uint64_t id, char const* base_name)
+    block(std::size_t id, char const* base_name)
       : base_type(hpx::find_from_basename(base_name, id))
     {
         get_id();
     }
 
-    block(std::uint64_t id, std::uint64_t size, char const* base_name)
+    block(std::size_t id, std::uint64_t size, char const* base_name)
       : base_type(hpx::new_<block_component>(hpx::find_here(), size))
     {
         hpx::register_with_basename(base_name, get_id(), id);
@@ -187,29 +189,29 @@ HPX_REGISTER_COMPONENT(block_component_type, block_component)
 typedef block_component::get_sub_block_action get_sub_block_action;
 HPX_REGISTER_ACTION(get_sub_block_action)
 
-void transpose(sub_block const A, sub_block B, std::uint64_t block_order,
-    std::uint64_t tile_size);
+void transpose(sub_block const A, sub_block B, std::size_t block_order,
+    std::size_t tile_size);
 
-double test_results(std::uint64_t order, std::uint64_t block_order,
-    std::vector<block>& trans, std::uint64_t blocks_start,
-    std::uint64_t blocks_end);
+double test_results(std::size_t order, std::size_t block_order,
+    std::vector<block>& trans, std::size_t blocks_start,
+    std::size_t blocks_end);
 
 ///////////////////////////////////////////////////////////////////////////////
 // The returned value type has to be the same as the return type used for
 // co_await below
 hpx::future<sub_block> transpose_phase(std::vector<block> const& A,
-    std::vector<block>& B, std::uint64_t block_order, std::uint64_t b,
-    std::uint64_t num_blocks, std::uint64_t /* num_local_blocks */,
-    std::uint64_t block_size, std::uint64_t tile_size)
+    std::vector<block>& B, std::size_t block_order, std::size_t b,
+    std::size_t num_blocks, std::size_t /* num_local_blocks */,
+    std::size_t block_size, std::size_t tile_size)
 {
-    std::uint64_t const from_phase = b;
-    std::uint64_t const A_offset = from_phase * block_size;
+    std::size_t const from_phase = b;
+    std::size_t const A_offset = from_phase * block_size;
 
     auto phase_range = hpx::util::counting_shape(num_blocks);
-    for (std::uint64_t phase : phase_range)
+    for (std::size_t phase : phase_range)
     {
-        std::uint64_t const from_block = phase;
-        std::uint64_t const B_offset = phase * block_size;
+        std::size_t const from_block = phase;
+        std::size_t const B_offset = phase * block_size;
 
         hpx::future<sub_block> from =
             A[from_block].get_sub_block(A_offset, block_size);
@@ -228,36 +230,36 @@ int hpx_main(hpx::program_options::variables_map& vm)
         hpx::id_type here = hpx::find_here();
         bool root = here == hpx::find_root_locality();
 
-        std::uint64_t num_localities = hpx::get_num_localities().get();
+        std::size_t num_localities = hpx::get_num_localities().get();
 
-        std::uint64_t order = vm["matrix_size"].as<std::uint64_t>();
-        std::uint64_t iterations = vm["iterations"].as<std::uint64_t>();
-        std::uint64_t num_local_blocks = vm["num_blocks"].as<std::uint64_t>();
-        std::uint64_t tile_size = order;
+        std::size_t order = vm["matrix_size"].as<std::size_t>();
+        std::size_t iterations = vm["iterations"].as<std::size_t>();
+        std::size_t num_local_blocks = vm["num_blocks"].as<std::size_t>();
+        std::size_t tile_size = order;
 
         if (vm.count("tile_size"))
-            tile_size = vm["tile_size"].as<std::uint64_t>();
+            tile_size = vm["tile_size"].as<std::size_t>();
 
         verbose = vm.count("verbose") ? true : false;
 
-        std::uint64_t bytes =
-            static_cast<std::uint64_t>(2.0 * sizeof(double) * order * order);
+        std::uint64_t bytes = static_cast<std::uint64_t>(2.0 * sizeof(double) *
+            static_cast<double>(order) * static_cast<double>(order));
 
-        std::uint64_t num_blocks = num_localities * num_local_blocks;
+        std::size_t num_blocks = num_localities * num_local_blocks;
 
-        std::uint64_t block_order = order / num_blocks;
-        std::uint64_t col_block_size = order * block_order;
+        std::size_t block_order = order / num_blocks;
+        std::size_t col_block_size = order * block_order;
 
-        std::uint64_t id = hpx::get_locality_id();
+        std::size_t id = hpx::get_locality_id();
 
         std::vector<block> A(num_blocks);
         std::vector<block> B(num_blocks);
 
-        std::uint64_t blocks_start = id * num_local_blocks;
-        std::uint64_t blocks_end = (id + 1) * num_local_blocks;
+        std::size_t blocks_start = id * num_local_blocks;
+        std::size_t blocks_end = (id + 1) * num_local_blocks;
 
         // Actually allocate the block components in AGAS
-        for (std::uint64_t b = 0; b != num_blocks; ++b)
+        for (std::size_t b = 0; b != num_blocks; ++b)
         {
             // Allocate block
             if (b >= blocks_start && b != blocks_end)
@@ -291,15 +293,15 @@ int hpx_main(hpx::program_options::variables_map& vm)
 
         // Fill the original matrix, set transpose to known garbage value.
         auto range = hpx::util::counting_shape(blocks_start, blocks_end);
-        for_each(par, range, [&](std::uint64_t b) {
+        for_each(par, range, [&](std::size_t b) {
             std::shared_ptr<block_component> A_ptr =
                 hpx::get_ptr<block_component>(A[b].get_id()).get();
             std::shared_ptr<block_component> B_ptr =
                 hpx::get_ptr<block_component>(B[b].get_id()).get();
 
-            for (std::uint64_t i = 0; i != order; ++i)
+            for (std::size_t i = 0; i != order; ++i)
             {
-                for (std::uint64_t j = 0; j != block_order; ++j)
+                for (std::size_t j = 0; j != block_order; ++j)
                 {
                     double col_val =
                         COL_SHIFT * static_cast<double>(b * block_order + j);
@@ -315,14 +317,14 @@ int hpx_main(hpx::program_options::variables_map& vm)
         double mintime =
             366.0 * 24.0 * 3600.0;    // set the minimum time to a large value;
                                       // one leap year should be enough
-        for (std::uint64_t iter = 0; iter < iterations; ++iter)
+        for (std::size_t iter = 0; iter < iterations; ++iter)
         {
             hpx::chrono::high_resolution_timer t;
 
             auto range = hpx::util::counting_shape(blocks_start, blocks_end);
 
-            std::uint64_t const block_size = block_order * block_order;
-            for_each(par, range, [&](std::uint64_t b) {
+            std::size_t const block_size = block_order * block_order;
+            for_each(par, range, [&](std::size_t b) {
                 transpose_phase(A, B, block_order, b, num_blocks,
                     num_local_blocks, block_size, tile_size)
                     .get();
@@ -352,7 +354,7 @@ int hpx_main(hpx::program_options::variables_map& vm)
                 std::cout << "Solution validates\n";
                 avgtime = avgtime /
                     static_cast<double>((std::max) (iterations - 1,
-                        static_cast<std::uint64_t>(1)));
+                        static_cast<std::size_t>(1)));
                 std::cout << "Rate (MB/s): " << 1.e-6 * bytes / mintime << ", "
                           << "Avg time (s): " << avgtime << ", "
                           << "Min time (s): " << mintime << ", "
@@ -380,14 +382,14 @@ int main(int argc, char* argv[])
     options_description desc_commandline;
     // clang-format off
     desc_commandline.add_options()
-        ("matrix_size", value<std::uint64_t>()->default_value(1024),
+        ("matrix_size", value<std::size_t>()->default_value(1024),
          "Matrix Size")
-        ("iterations", value<std::uint64_t>()->default_value(10),
+        ("iterations", value<std::size_t>()->default_value(10),
          "# iterations")
-        ("tile_size", value<std::uint64_t>(),
+        ("tile_size", value<std::size_t>(),
          "Number of tiles to divide the individual matrix blocks for improved "
          "cache and TLB performance")
-        ("num_blocks", value<std::uint64_t>()->default_value(1),
+        ("num_blocks", value<std::size_t>()->default_value(1),
          "Number of blocks to divide the individual matrix blocks for "
          "improved cache and TLB performance")
         ( "verbose", "Verbose output")
@@ -405,21 +407,21 @@ int main(int argc, char* argv[])
     return hpx::init(argc, argv, init_args);
 }
 
-void transpose(sub_block const A, sub_block B, std::uint64_t block_order,
-    std::uint64_t tile_size)
+void transpose(sub_block const A, sub_block B, std::size_t block_order,
+    std::size_t tile_size)
 {
     if (tile_size < block_order)
     {
-        for (std::uint64_t i = 0; i != block_order; i += tile_size)
+        for (std::size_t i = 0; i != block_order; i += tile_size)
         {
-            for (std::uint64_t j = 0; j != block_order; j += tile_size)
+            for (std::size_t j = 0; j != block_order; j += tile_size)
             {
-                std::uint64_t max_i = (std::min) (block_order, i + tile_size);
-                std::uint64_t max_j = (std::min) (block_order, j + tile_size);
+                std::size_t max_i = (std::min) (block_order, i + tile_size);
+                std::size_t max_j = (std::min) (block_order, j + tile_size);
 
-                for (std::uint64_t it = i; it != max_i; ++it)
+                for (std::size_t it = i; it != max_i; ++it)
                 {
-                    for (std::uint64_t jt = j; jt != max_j; ++jt)
+                    for (std::size_t jt = j; jt != max_j; ++jt)
                     {
                         B[it + block_order * jt] = A[jt + block_order * it];
                     }
@@ -429,9 +431,9 @@ void transpose(sub_block const A, sub_block B, std::uint64_t block_order,
     }
     else
     {
-        for (std::uint64_t i = 0; i != block_order; ++i)
+        for (std::size_t i = 0; i != block_order; ++i)
         {
-            for (std::uint64_t j = 0; j != block_order; ++j)
+            for (std::size_t j = 0; j != block_order; ++j)
             {
                 B[i + block_order * j] = A[j + block_order * i];
             }
@@ -439,9 +441,8 @@ void transpose(sub_block const A, sub_block B, std::uint64_t block_order,
     }
 }
 
-double test_results(std::uint64_t order, std::uint64_t block_order,
-    std::vector<block>& trans, std::uint64_t blocks_start,
-    std::uint64_t blocks_end)
+double test_results(std::size_t order, std::size_t block_order,
+    std::vector<block>& trans, std::size_t blocks_start, std::size_t blocks_end)
 {
     using hpx::transform_reduce;
     using hpx::execution::par;
@@ -451,14 +452,14 @@ double test_results(std::uint64_t order, std::uint64_t block_order,
     double errsq = transform_reduce(
         par, std::begin(range), std::end(range), 0.0,
         [](double lhs, double rhs) { return lhs + rhs; },
-        [&](std::uint64_t b) -> double {
+        [&](std::size_t b) -> double {
             sub_block trans_block =
                 trans[b].get_sub_block(0, order * block_order).get();
             double errsq = 0.0;
-            for (std::uint64_t i = 0; i < order; ++i)
+            for (std::size_t i = 0; i < order; ++i)
             {
                 double col_val = COL_SHIFT * i;
-                for (std::uint64_t j = 0; j < block_order; ++j)
+                for (std::size_t j = 0; j < block_order; ++j)
                 {
                     double diff = trans_block[i * block_order + j] -
                         (col_val +
