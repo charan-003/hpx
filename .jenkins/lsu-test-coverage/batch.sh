@@ -45,10 +45,27 @@ ctest_status=$?
 
 
 # Tests are finished; Collect coverage data
-./grcov . -s ${src_dir} -o lcov.info -t lcov --log "grcov-log.txt" --ignore-not-existing --ignore "/*"
+coverage_status=0
+if ! ./grcov . -s "${src_dir}" -o lcov.info -t lcov --log "grcov-log.txt" \
+        --ignore-not-existing --ignore "/*"; then
+    echo "Error: grcov failed to generate coverage data."
+    coverage_status=1
+elif [[ ! -s lcov.info ]]; then
+    echo "Error: grcov produced no coverage data."
+    coverage_status=1
+fi
 
 # Upload to Codacy
-bash <(curl -Ls https://coverage.codacy.com/get.sh) report -r lcov.info --language CPP -t ${CODACY_TOKEN} --commit-uuid ${GIT_COMMIT}
+if [[ "${coverage_status}" -eq 0 ]]; then
+    if ! bash <(curl -Ls https://coverage.codacy.com/get.sh) report -r lcov.info \
+            --language CPP -t "${CODACY_TOKEN}" --commit-uuid "${GIT_COMMIT}"; then
+        echo "Error: uploading coverage to Codacy failed."
+        coverage_status=1
+    fi
+fi
 
 echo "${ctest_status}" > "jenkins-hpx-${configuration_name}-ctest-status.txt"
-exit $ctest_status
+if [[ "${ctest_status}" -ne 0 ]]; then
+    exit "${ctest_status}"
+fi
+exit "${coverage_status}"
