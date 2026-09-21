@@ -10,6 +10,8 @@ set(autolink_SOURCES autolink.cpp autolink_exports.cpp autolink_no_autolink.cpp
                      autolink_no_lib.cpp
 )
 
+set(autolink_FLAGS COMPILE_FLAGS -DHPX_HAVE_STATIC_LINKING)
+
 foreach(test ${tests})
   if(DEFINED ${test}_SOURCES)
     set(sources ${${test}_SOURCES})
