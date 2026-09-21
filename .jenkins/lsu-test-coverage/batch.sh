@@ -39,15 +39,24 @@ cmake \
 # Build
 cmake --build "${build_dir}" --target tests examples
 
-# Run tests
-ctest --test-dir "${build_dir}" --output-on-failure
+# Run tests. A serial run of the instrumented suite takes two to three hours,
+# which together with the build does not fit into the job's time limit. Use the
+# same parallelism and per-test timeout as the build matrix.
+ctest --test-dir "${build_dir}" --output-on-failure --parallel 4 --timeout 300
 ctest_status=$?
 
 
 # Tests are finished; Collect coverage data
+# grcov writes one function record for every template instantiation in every
+# translation unit. For HPX those records make up more than 99% of a report
+# of over 20 GB. Codacy reads the line records only, so drop the function
+# records while streaming the report to disk.
 coverage_status=0
-if ! ./grcov . -s "${src_dir}" -o lcov.info -t lcov --log "grcov-log.txt" \
-        --ignore-not-existing --ignore "/*"; then
+./grcov . -s "${src_dir}" -t lcov --log "grcov-log.txt" \
+    --ignore-not-existing --ignore "/*" |
+    grep -v -E '^(FN|FNDA|FNF|FNH):' > lcov.info
+grcov_status="${PIPESTATUS[0]}"
+if [[ "${grcov_status}" -ne 0 ]]; then
     echo "Error: grcov failed to generate coverage data."
     coverage_status=1
 elif [[ ! -s lcov.info ]]; then
