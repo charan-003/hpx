@@ -197,7 +197,7 @@ function(add_hpx_module libname modulename)
     endforeach(header_file)
     if(NOT ${modulename}_NO_CONFIG_IN_GENERATED_HEADERS)
       set(module_headers
-          "${module_headers}\n#if defined(HPX_HAVE_STATIC_LINKING) && !defined(HPX_${libname_upper}_EXPORTS) && !defined(HPX_EXPORTS)\n"
+          "${module_headers}\n#if defined(HPX_HAVE_STATIC_LINKING) && !defined(HPX_${libname_upper}_EXPORTS)\n"
       )
       set(module_headers
           "${module_headers}#define HPX_AUTOLINK_LIB_NAME \"hpx_${modulename}\"\n"
