@@ -1020,7 +1020,8 @@ namespace hpx {
     }    // namespace detail
 
     ///////////////////////////////////////////////////////////////////////////
-    int finalize(double shutdown_timeout, double localwait, error_code& ec)
+    int detail::finalize_impl(
+        double shutdown_timeout, double localwait, error_code& ec)
     {
         if (!threads::get_self_ptr())
         {
@@ -1068,7 +1069,13 @@ namespace hpx {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    int disconnect([[maybe_unused]] double shutdown_timeout,
+    int finalize(double shutdown_timeout, double localwait, error_code& ec)
+    {
+        return detail::finalize_impl(shutdown_timeout, localwait, ec);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    int detail::disconnect_impl([[maybe_unused]] double shutdown_timeout,
         [[maybe_unused]] double localwait, [[maybe_unused]] error_code& ec)
     {
 #if defined(HPX_HAVE_DISTRIBUTED_RUNTIME)
@@ -1124,6 +1131,12 @@ namespace hpx {
 #endif
 
         return 0;
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    int disconnect(double shutdown_timeout, double localwait, error_code& ec)
+    {
+        return detail::disconnect_impl(shutdown_timeout, localwait, ec);
     }
 
 #if defined(HPX_HAVE_DISTRIBUTED_RUNTIME)
