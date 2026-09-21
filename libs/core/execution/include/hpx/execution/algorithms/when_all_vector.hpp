@@ -511,7 +511,8 @@ namespace hpx::when_all_vector_detail {
     when_all_vector_sender_impl<Sender>::when_all_vector_sender_type::
         when_all_vector_receiver<Receiver>::set_error(Error&& error) && noexcept
     {
-        if (!op_state.set_stopped_error_called.exchange(true))
+        if (!op_state.set_stopped_error_called.exchange(
+                true, std::memory_order_acq_rel))
         {
             op_state.stop_source_.request_stop();
             try
@@ -535,7 +536,8 @@ namespace hpx::when_all_vector_detail {
         when_all_vector_receiver<Receiver>::set_stopped() && noexcept
     {
         // request stop only if we're not in error state
-        if (!op_state.set_stopped_error_called.exchange(true))
+        if (!op_state.set_stopped_error_called.exchange(
+                true, std::memory_order_acq_rel))
         {
             op_state.stop_source_.request_stop();
         }
@@ -564,7 +566,8 @@ namespace hpx::when_all_vector_detail {
             }
             catch (...)
             {
-                if (!op_state.set_stopped_error_called.exchange(true))
+                if (!op_state.set_stopped_error_called.exchange(
+                        true, std::memory_order_acq_rel))
                 {
                     // NOLINTNEXTLINE(bugprone-throw-keyword-missing)
                     op_state.error = std::current_exception();
