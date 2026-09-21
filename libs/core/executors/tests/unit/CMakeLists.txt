@@ -22,6 +22,7 @@ set(tests
     parallel_policy_executor
     parallel_scheduler
     parallel_scheduler_named_pool
+    policy_traits
     polymorphic_executor
     scheduler_executor
     sequenced_executor
