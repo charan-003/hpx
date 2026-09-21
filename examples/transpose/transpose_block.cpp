@@ -45,7 +45,7 @@ struct sub_block
     {
     }
 
-    sub_block(double* data, std::uint64_t size)
+    sub_block(double* data, std::size_t size)
       : size_(size)
       , data_(data)
       , mode_(reference)
@@ -106,9 +106,8 @@ struct sub_block
         // clang-format on
         if (size_ > 0)
         {
-            std::size_t const count = static_cast<std::size_t>(size_);
-            data_ = new double[count];
-            hpx::serialization::array<double> arr(data_, count);
+            data_ = new double[size_];
+            hpx::serialization::array<double> arr(data_, size_);
             ar >> arr;
             mode_ = owning;
         }
@@ -121,15 +120,14 @@ struct sub_block
         // clang-format on
         if (size_ > 0)
         {
-            hpx::serialization::array<double> arr(
-                data_, static_cast<std::size_t>(size_));
+            hpx::serialization::array<double> arr(data_, size_);
             ar << arr;
         }
     }
 
     HPX_SERIALIZATION_SPLIT_MEMBER()
 
-    std::uint64_t size_;
+    std::size_t size_;
     double* data_;
     mode mode_;
 };
@@ -138,15 +136,15 @@ struct block_component : hpx::components::component_base<block_component>
 {
     block_component() {}
 
-    block_component(std::uint64_t size)
-      : data_(static_cast<std::size_t>(size))
+    block_component(std::size_t size)
+      : data_(size)
     {
     }
 
-    sub_block get_sub_block(std::uint64_t offset, std::uint64_t size)
+    sub_block get_sub_block(std::size_t offset, std::size_t size)
     {
         HPX_ASSERT(!data_.empty());
-        return sub_block(&data_[static_cast<std::size_t>(offset)], size);
+        return sub_block(&data_[offset], size);
     }
 
     HPX_DEFINE_COMPONENT_DIRECT_ACTION(block_component, get_sub_block)
@@ -164,13 +162,12 @@ struct block : hpx::components::client_base<block, block_component>
     {
     }
 
-    block(std::size_t /* id */, std::uint64_t size, char const* /* base_name */)
+    block(std::size_t /* id */, std::size_t size, char const* /* base_name */)
       : base_type(hpx::new_<block_component>(hpx::find_here(), size))
     {
     }
 
-    hpx::future<sub_block> get_sub_block(
-        std::uint64_t offset, std::uint64_t size)
+    hpx::future<sub_block> get_sub_block(std::size_t offset, std::size_t size)
     {
         block_component::get_sub_block_action act;
         return hpx::async(act, get_id(), offset, size);
