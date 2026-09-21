@@ -592,7 +592,7 @@ to trace and debug the execution of parallel algorithms.
 P2079 parallel scheduler
 ========================
 
-C++26 (`P2079R10 <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2079r10.html>`_)
+C++26 (`P2079 <https://wg21.link/p2079>`_)
 exposes ``std::execution::get_parallel_scheduler()``. |hpx| implements this as
 ``hpx::execution::experimental::get_parallel_scheduler()``.
 
