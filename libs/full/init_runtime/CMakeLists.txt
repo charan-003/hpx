@@ -68,7 +68,7 @@ add_hpx_module(
     "hpx/init_runtime/start_impl.hpp"
     "hpx/init_runtime/pre_main.hpp"
   DEPENDENCIES hpx_core
-  MODULE_DEPENDENCIES hpx_command_line_handling hpx_parcelset_base
+  MODULE_DEPENDENCIES hpx_command_line_handling hpx_parcelset_base hpx_timing
                       ${init_runtime_optional_module_dependencies}
   CMAKE_SUBDIRS examples tests
 )

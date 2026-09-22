@@ -15,11 +15,11 @@
 #if defined(HPX_HAVE_DISTRIBUTED_RUNTIME)
 #include <hpx/modules/naming_base.hpp>
 #endif
+#include <hpx/modules/timing.hpp>
 
 #include <hpx/config/warnings_prefix.hpp>
 
 #include <chrono>
-#include <optional>
 
 namespace hpx::detail {
     HPX_CXX_EXPORT HPX_EXPORT int finalize_impl(
@@ -50,7 +50,7 @@ namespace hpx {
     ///           HPX-threads. In any case the shutdown will not proceed as long
     ///           as there is at least one pending/running HPX-thread.
     ///
-    ///           The default value (`-1.0`) will try to find a globally set
+    ///           The value (`-1.0`) will try to find a globally set
     ///           timeout value (can be set as the configuration parameter
     ///           `hpx.shutdown_timeout`), and if that is not set or `-1.0` as
     ///           well, it will disable any timeout, each connected
@@ -60,7 +60,7 @@ namespace hpx {
     ///           (in microseconds) before the connected localities will be
     ///           notified and the overall shutdown process starts.
     ///
-    ///           The default value (`-1.0`) will try to find a globally set
+    ///           The value (`-1.0`) will try to find a globally set
     ///           wait time value (can be set as the configuration parameter
     ///           "hpx.finalize_wait_time"), and if this is not set or `-1.0`
     ///           as well, it will disable any addition local wait time before
@@ -78,7 +78,7 @@ namespace hpx {
     ///           hpx::exception.
     ///
     /// \note     This overload is deprecated, use the overload taking
-    ///           std::optional<std::chrono::microseconds> arguments instead.
+    ///           hpx::chrono::steady_duration arguments instead.
     ///
     /// This function will block and wait for all connected localities to exit
     /// before returning to the caller. It should be the last HPX-function
@@ -88,10 +88,9 @@ namespace hpx {
     /// functions do not need to be called both.
     HPX_DEPRECATED_V(2, 1,
         "hpx::finalize with double timeout arguments is deprecated, use "
-        "the overload taking std::optional<std::chrono::microseconds> "
-        "arguments instead")
+        "the overload taking hpx::chrono::steady_duration arguments instead")
     HPX_CXX_EXPORT HPX_EXPORT int finalize(double shutdown_timeout,
-        double localwait = -1.0, hpx::error_code& ec = throws);
+        double localwait, hpx::error_code& ec = throws);
 
     /// \brief Main function to gracefully terminate the HPX runtime system.
     ///
@@ -147,21 +146,12 @@ namespace hpx {
     ///           the shutdown will not proceed as long as there is at least
     ///           one pending/running HPX-thread.
     ///
-    ///           The default value (`std::nullopt`) will try to find a
-    ///           globally set timeout value (can be set as the configuration
-    ///           parameter `hpx.shutdown_timeout`), and if that is not set or
-    ///           `-1.0` as well, it will disable any timeout, each connected
-    ///           locality will wait for all existing HPX-threads to terminate.
-    ///
-    /// \param localwait This parameter allows to specify a local wait time
-    ///           before the connected localities will be notified and the
-    ///           overall shutdown process starts.
-    ///
-    ///           The default value (`std::nullopt`) will try to find a
-    ///           globally set wait time value (can be set as the
-    ///           configuration parameter "hpx.finalize_wait_time"), and if
-    ///           this is not set or `-1.0` as well, it will disable any
-    ///           addition local wait time before proceeding.
+    ///           Any std::chrono::duration is implicitly convertible to
+    ///           hpx::chrono::steady_duration, e.g.
+    ///           `hpx::finalize(std::chrono::seconds(60))`. Pass the timeout
+    ///           explicitly to use it; call the overload taking no arguments
+    ///           to use the globally configured default (see configuration
+    ///           parameter `hpx.shutdown_timeout`).
     ///
     /// \param ec [in,out] this represents the error status on exit, if this
     ///           is pre-initialized to \a hpx#throws the function will throw
@@ -181,14 +171,14 @@ namespace hpx {
     /// Using this function is an alternative to \a hpx::disconnect, these
     /// functions do not need to be called both.
     HPX_CXX_EXPORT inline int finalize(
-        std::optional<std::chrono::microseconds> shutdown_timeout,
-        std::optional<std::chrono::microseconds> localwait = std::nullopt,
+        hpx::chrono::steady_duration shutdown_timeout,
         hpx::error_code& ec = throws)
     {
-        return hpx::detail::finalize_impl(shutdown_timeout ?
-                static_cast<double>(shutdown_timeout->count()) :
-                -1.0,
-            localwait ? static_cast<double>(localwait->count()) : -1.0, ec);
+        auto const shutdown_timeout_us =
+            std::chrono::duration_cast<std::chrono::microseconds>(
+                shutdown_timeout.value());
+        return hpx::detail::finalize_impl(
+            static_cast<double>(shutdown_timeout_us.count()), -1.0, ec);
     }
 
     /// \brief Terminate any application non-gracefully.
@@ -219,7 +209,7 @@ namespace hpx {
     ///           HPX-threads. In any case the shutdown will not proceed as long
     ///           as there is at least one pending/running HPX-thread.
     ///
-    ///           The default value (`-1.0`) will try to find a globally set
+    ///           The value (`-1.0`) will try to find a globally set
     ///           timeout value (can be set as the configuration parameter
     ///           "hpx.shutdown_timeout"), and if that is not set or `-1.0` as
     ///           well, it will disable any timeout, each connected
@@ -229,7 +219,7 @@ namespace hpx {
     ///           (in microseconds) before the connected localities will be
     ///           notified and the overall shutdown process starts.
     ///
-    ///           The default value (`-1.0`) will try to find a globally set
+    ///           The value (`-1.0`) will try to find a globally set
     ///           wait time value (can be set as the configuration parameter
     ///           `hpx.finalize_wait_time`), and if this is not set or `-1.0`
     ///           as well, it will disable any addition local wait time before
@@ -247,7 +237,7 @@ namespace hpx {
     ///           hpx::exception.
     ///
     /// \note     This overload is deprecated, use the overload taking
-    ///           std::optional<std::chrono::microseconds> arguments instead.
+    ///           hpx::chrono::steady_duration arguments instead.
     ///
     /// This function will block and wait for this locality to finish executing
     /// before returning to the caller. It should be the last HPX-function
@@ -255,10 +245,9 @@ namespace hpx {
     ///
     HPX_DEPRECATED_V(2, 1,
         "hpx::disconnect with double timeout arguments is deprecated, use "
-        "the overload taking std::optional<std::chrono::microseconds> "
-        "arguments instead")
+        "the overload taking hpx::chrono::steady_duration arguments instead")
     HPX_CXX_EXPORT HPX_EXPORT int disconnect(double shutdown_timeout,
-        double localwait = -1.0, hpx::error_code& ec = throws);
+        double localwait, hpx::error_code& ec = throws);
 
     /// \brief Disconnect this locality from the application.
     ///
@@ -304,21 +293,12 @@ namespace hpx {
     ///           will not proceed as long as there is at least one
     ///           pending/running HPX-thread.
     ///
-    ///           The default value (`std::nullopt`) will try to find a
-    ///           globally set timeout value (can be set as the configuration
-    ///           parameter "hpx.shutdown_timeout"), and if that is not set or
-    ///           `-1.0` as well, it will disable any timeout, each connected
-    ///           locality will wait for all existing HPX-threads to terminate.
-    ///
-    /// \param localwait This parameter allows to specify a local wait time
-    ///           before the connected localities will be notified and the
-    ///           overall shutdown process starts.
-    ///
-    ///           The default value (`std::nullopt`) will try to find a
-    ///           globally set wait time value (can be set as the
-    ///           configuration parameter `hpx.finalize_wait_time`), and if
-    ///           this is not set or `-1.0` as well, it will disable any
-    ///           addition local wait time before proceeding.
+    ///           Any std::chrono::duration is implicitly convertible to
+    ///           hpx::chrono::steady_duration, e.g.
+    ///           `hpx::disconnect(std::chrono::seconds(60))`. Pass the timeout
+    ///           explicitly to use it; call the overload taking no arguments
+    ///           to use the globally configured default (see configuration
+    ///           parameter `hpx.shutdown_timeout`).
     ///
     /// \param ec [in,out] this represents the error status on exit, if this
     ///           is pre-initialized to \a hpx#throws the function will throw
@@ -336,14 +316,14 @@ namespace hpx {
     /// called by any locality being disconnected.
     ///
     HPX_CXX_EXPORT inline int disconnect(
-        std::optional<std::chrono::microseconds> shutdown_timeout,
-        std::optional<std::chrono::microseconds> localwait = std::nullopt,
+        hpx::chrono::steady_duration shutdown_timeout,
         hpx::error_code& ec = throws)
     {
-        return hpx::detail::disconnect_impl(shutdown_timeout ?
-                static_cast<double>(shutdown_timeout->count()) :
-                -1.0,
-            localwait ? static_cast<double>(localwait->count()) : -1.0, ec);
+        auto const shutdown_timeout_us =
+            std::chrono::duration_cast<std::chrono::microseconds>(
+                shutdown_timeout.value());
+        return hpx::detail::disconnect_impl(
+            static_cast<double>(shutdown_timeout_us.count()), -1.0, ec);
     }
 
 #if defined(HPX_HAVE_DISTRIBUTED_RUNTIME)
