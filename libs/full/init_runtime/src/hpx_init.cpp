@@ -1093,8 +1093,7 @@ namespace hpx {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    int finalize(
-        hpx::chrono::steady_duration shutdown_timeout, error_code& ec)
+    int finalize(hpx::chrono::steady_duration shutdown_timeout, error_code& ec)
     {
         auto const shutdown_timeout_us =
             std::chrono::duration_cast<std::chrono::microseconds>(
