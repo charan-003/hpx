@@ -41,7 +41,7 @@
 
 #include <windows.h>
 
-#include <cstdlib>
+#include <cstddef>
 #include <string>
 
 namespace {
@@ -86,7 +86,8 @@ int main()
 
     // Step 2: load a module DbgHelp has never heard of, and capture a
     // real backtrace with one of its frames inside that module.
-    HMODULE const helper = LoadLibraryW(L"dbghelp_refresh_module_list_7608_helper.dll");
+    HMODULE const helper =
+        LoadLibraryW(L"dbghelp_refresh_module_list_7608_helper.dll");
     HPX_TEST(helper != nullptr);
     if (helper == nullptr)
     {

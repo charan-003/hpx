@@ -29,13 +29,12 @@ foreach(test ${tests})
 endforeach()
 
 if(WIN32)
-  # Companion DLL for dbghelp_refresh_module_list_7608_test. It is
-  # deliberately not linked into that executable: the whole point of
-  # #7608 is a module that DbgHelp does not know about until after
-  # SymInitialize has already run, so this must only enter the process
-  # via LoadLibraryW, at test runtime, exactly like a plugin would. A
-  # plain add_library is used rather than add_hpx_library because this
-  # is test fixture data, not an HPX module.
+  # Companion DLL for dbghelp_refresh_module_list_7608_test. It is deliberately
+  # not linked into that executable: the whole point of #7608 is a module that
+  # DbgHelp does not know about until after SymInitialize has already run, so
+  # this must only enter the process via LoadLibraryW, at test runtime, exactly
+  # like a plugin would. A plain add_library is used rather than add_hpx_library
+  # because this is test fixture data, not an HPX module.
   add_library(
     dbghelp_refresh_module_list_7608_helper SHARED
     dbghelp_refresh_module_list_7608_helper.cpp
@@ -46,10 +45,9 @@ if(WIN32)
                RUNTIME_OUTPUT_DIRECTORY
                "$<TARGET_FILE_DIR:dbghelp_refresh_module_list_7608_test>"
   )
-  # The test process loads this by relative file name and relies on the
-  # default DLL search order finding it next to the executable, so the
-  # two must land in the same output directory and the helper must exist
-  # before the test runs.
+  # The test process loads this by relative file name and relies on the default
+  # DLL search order finding it next to the executable, so the two must land in
+  # the same output directory and the helper must exist before the test runs.
   add_dependencies(
     dbghelp_refresh_module_list_7608_test
     dbghelp_refresh_module_list_7608_helper

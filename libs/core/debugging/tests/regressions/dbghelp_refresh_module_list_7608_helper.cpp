@@ -23,11 +23,15 @@
 extern "C" __declspec(dllexport) void call_into_helper(void (*callback)())
 {
     // Do not tail-call/inline this away: the caller relies on this
-    // function's own return address showing up as a stack frame.
-    volatile int guard = 1;
+    // function's own return address showing up as a stack frame. A
+    // volatile write after callback() returns keeps the call from being
+    // the last operation on this path, so it cannot be tail-call
+    // optimized into replacing this frame.
+    int volatile guard = 1;
     if (guard)
     {
         callback();
+        guard = 0;
     }
 }
 

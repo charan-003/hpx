@@ -460,7 +460,8 @@ namespace hpx::util::stack_trace {
                     constexpr ULONGLONG refresh_interval_ms = 500;
 
                     ULONGLONG const now = GetTickCount64();
-                    if (now - last_refresh_tick >= refresh_interval_ms)
+                    if (last_refresh_tick == 0 ||
+                        now - last_refresh_tick >= refresh_interval_ms)
                     {
                         last_refresh_tick = now;
 
