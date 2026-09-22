@@ -73,17 +73,17 @@ namespace hpx {
     /// \note     This overload is deprecated, use the overload taking
     ///           hpx::chrono::steady_duration arguments instead.
     ///
-    /// This function will block and wait for all connected localities to exit
-    /// before returning to the caller. It should be the last HPX-function
-    /// called by any application.
+    /// This function will not wait for all connected localities to exit,
+    /// rather it informs all connected localities that they should exit
+    /// whenever there is no more work to be done.
     ///
     /// Using this function is an alternative to \a hpx::disconnect, these
     /// functions do not need to be called both.
-    HPX_DEPRECATED_V(2, 0,
+    HPX_CXX_EXPORT HPX_DEPRECATED_V(2, 0,
         "hpx::finalize with double timeout arguments is deprecated, use "
         "the overload taking hpx::chrono::steady_duration arguments instead")
-    HPX_CXX_EXPORT HPX_EXPORT int finalize(double shutdown_timeout,
-        double localwait, hpx::error_code& ec = throws);
+        HPX_EXPORT int finalize(double shutdown_timeout, double localwait,
+            hpx::error_code& ec = throws);
 
     /// \brief Main function to gracefully terminate the HPX runtime system.
     ///
@@ -125,17 +125,17 @@ namespace hpx {
     /// \note     This overload is deprecated, use the overload taking
     ///           hpx::chrono::steady_duration arguments instead.
     ///
-    /// This function will block and wait for all connected localities to exit
-    /// before returning to the caller. It should be the last HPX-function
-    /// called by any application.
+    /// This function will not wait for all connected localities to exit,
+    /// rather it informs all connected localities that they should exit
+    /// whenever there is no more work to be done.
     ///
     /// Using this function is an alternative to \a hpx::disconnect, these
     /// functions do not need to be called both.
-    HPX_DEPRECATED_V(2, 0,
+    HPX_CXX_EXPORT HPX_DEPRECATED_V(2, 0,
         "hpx::finalize with double timeout arguments is deprecated, use "
         "the overload taking hpx::chrono::steady_duration arguments instead")
-    HPX_CXX_EXPORT HPX_EXPORT int finalize(
-        double shutdown_timeout, hpx::error_code& ec = throws);
+        HPX_EXPORT
+        int finalize(double shutdown_timeout, hpx::error_code& ec = throws);
 
     /// \brief Main function to gracefully terminate the HPX runtime system.
     ///
@@ -160,9 +160,9 @@ namespace hpx {
     ///           parameter \a ec. Otherwise, it throws an instance of
     ///           hpx::exception.
     ///
-    /// This function will block and wait for all connected localities to exit
-    /// before returning to the caller. It should be the last HPX-function
-    /// called by any application.
+    /// This function will not wait for all connected localities to exit,
+    /// rather it informs all connected localities that they should exit
+    /// whenever there is no more work to be done.
     ///
     /// Using this function is an alternative to \a hpx::disconnect, these
     /// functions do not need to be called both.
@@ -206,9 +206,9 @@ namespace hpx {
     ///           parameter \a ec. Otherwise, it throws an instance of
     ///           hpx::exception.
     ///
-    /// This function will block and wait for all connected localities to exit
-    /// before returning to the caller. It should be the last HPX-function
-    /// called by any application.
+    /// This function will not wait for all connected localities to exit,
+    /// rather it informs all connected localities that they should exit
+    /// whenever there is no more work to be done.
     ///
     /// Using this function is an alternative to \a hpx::disconnect, these
     /// functions do not need to be called both.
@@ -274,15 +274,15 @@ namespace hpx {
     /// \note     This overload is deprecated, use the overload taking
     ///           hpx::chrono::steady_duration arguments instead.
     ///
-    /// This function will block and wait for this locality to finish executing
-    /// before returning to the caller. It should be the last HPX-function
-    /// called by any locality being disconnected.
+    /// This function will not wait for this locality to finish executing,
+    /// rather it informs this locality that it should disconnect whenever
+    /// there is no more work to be done.
     ///
-    HPX_DEPRECATED_V(2, 0,
+    HPX_CXX_EXPORT HPX_DEPRECATED_V(2, 0,
         "hpx::disconnect with double timeout arguments is deprecated, use "
         "the overload taking hpx::chrono::steady_duration arguments instead")
-    HPX_CXX_EXPORT HPX_EXPORT int disconnect(double shutdown_timeout,
-        double localwait, hpx::error_code& ec = throws);
+        HPX_EXPORT int disconnect(double shutdown_timeout, double localwait,
+            hpx::error_code& ec = throws);
 
     /// \brief Disconnect this locality from the application.
     ///
@@ -317,18 +317,18 @@ namespace hpx {
     ///           parameter \a ec. Otherwise, it throws an instance of
     ///           hpx::exception.
     ///
-    /// This function will block and wait for this locality to finish executing
-    /// before returning to the caller. It should be the last HPX-function
-    /// called by any locality being disconnected.
+    /// This function will not wait for this locality to finish executing,
+    /// rather it informs this locality that it should disconnect whenever
+    /// there is no more work to be done.
     ///
     /// \note     This overload is deprecated, use the overload taking
     ///           hpx::chrono::steady_duration arguments instead.
     ///
-    HPX_DEPRECATED_V(2, 0,
+    HPX_CXX_EXPORT HPX_DEPRECATED_V(2, 0,
         "hpx::disconnect with double timeout arguments is deprecated, use "
         "the overload taking hpx::chrono::steady_duration arguments instead")
-    HPX_CXX_EXPORT HPX_EXPORT int disconnect(
-        double shutdown_timeout, hpx::error_code& ec = throws);
+        HPX_EXPORT
+        int disconnect(double shutdown_timeout, hpx::error_code& ec = throws);
 
     /// \brief Disconnect this locality from the application.
     ///
@@ -349,9 +349,9 @@ namespace hpx {
     ///           parameter \a ec. Otherwise, it throws an instance of
     ///           hpx::exception.
     ///
-    /// This function will block and wait for this locality to finish executing
-    /// before returning to the caller. It should be the last HPX-function
-    /// called by any locality being disconnected.
+    /// This function will not wait for this locality to finish executing,
+    /// rather it informs this locality that it should disconnect whenever
+    /// there is no more work to be done.
     ///
     HPX_CXX_EXPORT HPX_EXPORT int disconnect(hpx::error_code& ec = throws);
 
@@ -389,9 +389,9 @@ namespace hpx {
     ///           parameter \a ec. Otherwise, it throws an instance of
     ///           hpx::exception.
     ///
-    /// This function will block and wait for this locality to finish executing
-    /// before returning to the caller. It should be the last HPX-function
-    /// called by any locality being disconnected.
+    /// This function will not wait for this locality to finish executing,
+    /// rather it informs this locality that it should disconnect whenever
+    /// there is no more work to be done.
     ///
     HPX_CXX_EXPORT HPX_EXPORT int disconnect(
         hpx::chrono::steady_duration shutdown_timeout,

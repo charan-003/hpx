@@ -1019,9 +1019,9 @@ namespace hpx {
             return default_;
         }
 
-        HPX_CXX_EXPORT int finalize_impl(
+        int finalize_impl(
             double shutdown_timeout, double localwait, error_code& ec);
-        HPX_CXX_EXPORT int disconnect_impl(
+        int disconnect_impl(
             double shutdown_timeout, double localwait, error_code& ec);
     }    // namespace detail
 
