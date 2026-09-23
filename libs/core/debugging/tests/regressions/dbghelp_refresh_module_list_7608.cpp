@@ -36,6 +36,8 @@
 
 #if defined(HPX_MSVC) && defined(HPX_HAVE_STACKTRACES)
 
+#include <hpx/debugging/detail/dbghelp_lock.hpp>
+#include <hpx/debugging/detail/dbghelp_symbol_cache.hpp>
 #include <hpx/modules/debugging.hpp>
 #include <hpx/modules/testing.hpp>
 
@@ -74,6 +76,21 @@ namespace {
         return false;
     }
 
+    // Returns the return address of the first frame whose resolved line
+    // contains the given needle, or nullptr if there is none.
+    [[nodiscard]] void* find_frame_address(
+        hpx::util::backtrace const& bt, std::string const& needle)
+    {
+        for (std::size_t i = 0; i != bt.stack_size(); ++i)
+        {
+            if (bt.trace_line(i).find(needle) != std::string::npos)
+            {
+                return bt.return_address(i);
+            }
+        }
+        return nullptr;
+    }
+
 }    // namespace
 
 int main()
@@ -83,6 +100,8 @@ int main()
     // this call exists only to establish the stale-snapshot precondition
     // #7608 describes.
     (void) hpx::util::trace();
+
+    void* helper_frame = nullptr;
 
     // Step 2: load a module DbgHelp has never heard of, and capture a
     // real backtrace with one of its frames inside that module.
@@ -114,6 +133,7 @@ int main()
             // #7608 fix this resolves to "???" because DbgHelp's module
             // table was never refreshed.
             HPX_TEST(any_frame_names(*g_captured, "call_into_helper"));
+            helper_frame = find_frame_address(*g_captured, "call_into_helper");
         }
     }
 
@@ -134,6 +154,26 @@ int main()
     // Step 5: load the helper again. It may or may not land at the same
     // address as before; either way a stale cache entry from the first
     // load must not produce a wrong or missing symbol.
+    //
+    // Plant a sentinel for the first load's frame address. If the reload
+    // reuses that address, the cached entry's allocation base no longer
+    // matches the live module, so it must be dropped rather than served.
+    if (helper_frame != nullptr)
+    {
+        hpx::util::detail::dbghelp_scoped_lock const l;
+        auto& cache = hpx::util::detail::get_dbghelp_symbol_cache();
+        cache.clear();
+
+        hpx::util::detail::resolved_symbol_info sentinel;
+        sentinel.name = "stale_cache_sentinel";
+        sentinel.allocation_base = 0;
+        cache.insert(reinterpret_cast<DWORD64>(helper_frame), sentinel);
+    }
+
+    // A refresh may have just been throttled (500ms in backtrace.cpp); wait
+    // it out so a relocated reload can still trigger a module list refresh.
+    Sleep(600);
+
     HMODULE const reloaded =
         LoadLibraryW(L"dbghelp_refresh_module_list_7608_helper.dll");
     HPX_TEST(reloaded != nullptr);
@@ -149,6 +189,7 @@ int main()
             if (g_captured.has_value())
             {
                 HPX_TEST(any_frame_names(*g_captured, "call_into_helper"));
+                HPX_TEST(!any_frame_names(*g_captured, "stale_cache_sentinel"));
             }
         }
         g_captured.reset();
