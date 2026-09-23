@@ -93,6 +93,22 @@ int main()
         HPX_TEST_EQ(out.displacement, fresh.displacement);
     }
 
+    {
+        // The allocation base recorded for validating a cache hit (see
+        // #7608) survives the round trip unchanged.
+        dbghelp_symbol_cache cache;
+
+        resolved_symbol_info in;
+        in.name = "some_function";
+        in.displacement = 0x10;
+        in.allocation_base = 0x400000;
+        cache.insert(0x1000, in);
+
+        resolved_symbol_info out;
+        HPX_TEST(cache.try_get(0x1000, out));
+        HPX_TEST_EQ(out.allocation_base, in.allocation_base);
+    }
+
     return hpx::util::report_errors();
 }
 #else

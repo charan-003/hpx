@@ -434,8 +434,8 @@ namespace hpx::util::stack_trace {
             // unloaded and its address range reused, drop the cache and
             // resolve again (#7608).
             bool force_refresh = false;
-            if (cache_hit && resolved.allocation_base !=
-                    query_allocation_base(address))
+            if (cache_hit &&
+                resolved.allocation_base != query_allocation_base(address))
             {
                 symbol_cache.clear();
                 cache_hit = false;

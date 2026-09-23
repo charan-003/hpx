@@ -42,6 +42,7 @@
 #include <windows.h>
 
 #include <cstddef>
+#include <optional>
 #include <string>
 
 namespace {
@@ -51,14 +52,13 @@ namespace {
     // Populated by helper_callback() from inside the helper DLL's stack
     // frame; checked back on the test's own thread once
     // call_into_helper() returns.
-    hpx::util::backtrace* g_captured = nullptr;
+    std::optional<hpx::util::backtrace> g_captured;
 
     void helper_callback()
     {
         // Captured while call_into_helper()'s frame (inside the helper
         // DLL) is still on the stack, so it shows up in frames_.
-        static hpx::util::backtrace bt;
-        g_captured = &bt;
+        g_captured.emplace();
     }
 
     [[nodiscard]] bool any_frame_names(
@@ -105,8 +105,8 @@ int main()
     {
         call_into_helper(&helper_callback);
 
-        HPX_TEST(g_captured != nullptr);
-        if (g_captured != nullptr)
+        HPX_TEST(g_captured.has_value());
+        if (g_captured.has_value())
         {
             // Step 3: at least one captured frame must be the
             // call_into_helper() return address, inside a module that
@@ -126,10 +126,34 @@ int main()
     // the scenario the module-list-changed cache clear exists for), only
     // that resolving continues to work at all.
     FreeLibrary(helper);
-    g_captured = nullptr;
+    g_captured.reset();
 
     std::string const post_unload_trace = hpx::util::trace();
     HPX_TEST(!post_unload_trace.empty());
+
+    // Step 5: load the helper again. It may or may not land at the same
+    // address as before; either way a stale cache entry from the first
+    // load must not produce a wrong or missing symbol.
+    HMODULE const reloaded =
+        LoadLibraryW(L"dbghelp_refresh_module_list_7608_helper.dll");
+    HPX_TEST(reloaded != nullptr);
+    if (reloaded != nullptr)
+    {
+        auto* const reloaded_call = reinterpret_cast<call_into_helper_t>(
+            GetProcAddress(reloaded, "call_into_helper"));
+        HPX_TEST(reloaded_call != nullptr);
+        if (reloaded_call != nullptr)
+        {
+            reloaded_call(&helper_callback);
+            HPX_TEST(g_captured.has_value());
+            if (g_captured.has_value())
+            {
+                HPX_TEST(any_frame_names(*g_captured, "call_into_helper"));
+            }
+        }
+        g_captured.reset();
+        FreeLibrary(reloaded);
+    }
 
     return hpx::util::report_errors();
 }
