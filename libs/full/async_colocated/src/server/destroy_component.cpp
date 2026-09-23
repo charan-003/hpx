@@ -60,6 +60,19 @@ namespace hpx::components::server {
 
                 return;
             }
+
+            // The address may have been resolved before the component migrated
+            // away and back. Forwarding it unchanged would bring the request
+            // straight back here with the same address, so look it up again
+            // and retry once if it moved.
+            naming::address current;
+            error_code ec(throwmode::lightweight);
+            if (agas::resolve_local(gid, current, ec) && !ec &&
+                current.address_ != addr.address_)
+            {
+                destroy_component(gid, current);
+                return;
+            }
         }
 
         // apply remotely (only if runtime is not stopping)
