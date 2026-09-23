@@ -1095,11 +1095,11 @@ namespace hpx {
     ///////////////////////////////////////////////////////////////////////////
     int finalize(hpx::chrono::steady_duration shutdown_timeout, error_code& ec)
     {
-        auto const shutdown_timeout_us =
-            std::chrono::duration_cast<std::chrono::microseconds>(
+        // the runtime expects the timeout in seconds
+        auto const shutdown_timeout_s =
+            std::chrono::duration_cast<std::chrono::duration<double>>(
                 shutdown_timeout.value());
-        return detail::finalize_impl(
-            static_cast<double>(shutdown_timeout_us.count()), -1.0, ec);
+        return detail::finalize_impl(shutdown_timeout_s.count(), -1.0, ec);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -1183,11 +1183,11 @@ namespace hpx {
     int disconnect(
         hpx::chrono::steady_duration shutdown_timeout, error_code& ec)
     {
-        auto const shutdown_timeout_us =
-            std::chrono::duration_cast<std::chrono::microseconds>(
+        // the runtime expects the timeout in seconds
+        auto const shutdown_timeout_s =
+            std::chrono::duration_cast<std::chrono::duration<double>>(
                 shutdown_timeout.value());
-        return detail::disconnect_impl(
-            static_cast<double>(shutdown_timeout_us.count()), -1.0, ec);
+        return detail::disconnect_impl(shutdown_timeout_s.count(), -1.0, ec);
     }
 
 #if defined(HPX_HAVE_DISTRIBUTED_RUNTIME)

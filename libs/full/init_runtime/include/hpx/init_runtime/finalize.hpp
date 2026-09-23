@@ -36,7 +36,7 @@ namespace hpx {
     /// all registered shutdown functions (see \a hpx::init) on all localities.
     ///
     /// \param shutdown_timeout This parameter allows to specify a timeout (in
-    ///           microseconds), specifying how long any of the connected
+    ///           seconds), specifying how long any of the connected
     ///           localities should wait for pending tasks to be executed.
     ///           After this timeout, all suspended HPX-threads will be aborted.
     ///           Note, that this function will not abort any running
@@ -98,7 +98,7 @@ namespace hpx {
     /// all registered shutdown functions (see \a hpx::init) on all localities.
     ///
     /// \param shutdown_timeout This parameter allows to specify a timeout (in
-    ///           microseconds), specifying how long any of the connected
+    ///           seconds), specifying how long any of the connected
     ///           localities should wait for pending tasks to be executed.
     ///           After this timeout, all suspended HPX-threads will be aborted.
     ///           Note, that this function will not abort any running
@@ -237,7 +237,7 @@ namespace hpx {
     /// all registered shutdown functions (see \a hpx::init) on this locality.
     //
     /// \param shutdown_timeout This parameter allows to specify a timeout (in
-    ///           microseconds), specifying how long this locality should wait
+    ///           seconds), specifying how long this locality should wait
     ///           for pending tasks to be executed. After this timeout, all
     ///           suspended HPX-threads will be aborted.
     ///           Note, that this function will not abort any running
@@ -293,7 +293,7 @@ namespace hpx {
     /// all registered shutdown functions (see \a hpx::init) on this locality.
     ///
     /// \param shutdown_timeout This parameter allows to specify a timeout (in
-    ///           microseconds), specifying how long this locality should wait
+    ///           seconds), specifying how long this locality should wait
     ///           for pending tasks to be executed. After this timeout, all
     ///           suspended HPX-threads will be aborted.
     ///           Note, that this function will not abort any running
