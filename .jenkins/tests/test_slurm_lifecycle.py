@@ -141,7 +141,9 @@ class SlurmLifecycle(unittest.TestCase):
             ('' if exclude is None else
              'configuration_slurm_exclude=' + exclude + '\n'))
         status_script = jenkins / "common/set_github_status.sh"
-        status_script.write_text("#!/bin/sh\nexit 0\n")
+        status_script.write_text(
+            '#!/bin/sh\necho "$4" >> ' +
+            shlex.quote(str(self.path / "statuses")) + '\n')
         status_script.chmod(0o755)
         comment_script = target / "comment_github.sh"
         comment_script.write_text("#!/bin/sh\nexit 0\n")
@@ -182,6 +184,28 @@ class SlurmLifecycle(unittest.TestCase):
                     sbatch = self.calls("sbatch")[-1]
                     self.assertEqual([arg for arg in sbatch
                                       if arg.startswith("--exclude")], expected)
+
+    def test_entries_run_when_previous_jobs_cannot_be_cleared(self):
+        uid = str(os.getuid())
+        pull_requests = (
+            ("lsu", "jenkins-hpx-7-test-debug",
+             dict(ghprbPullId="7", ghprbActualCommit="fixture",
+                  ghprbPullLink="https://github.com/org/repo/pull/7")),
+            ("lsu-perftests", "jenkins-hpx-7-test", dict(ghprbPullId="7")),
+            ("lsu-test-coverage", "jenkins-hpx-7-test", dict(CHANGE_ID="7")),
+        )
+        for lane, job_name, env in pull_requests:
+            with self.subTest(lane=lane):
+                self.log.unlink(missing_ok=True)
+                code, _, err = self.finish(
+                    self.start_entry(lane, CANCEL_EXIT="8", **env))
+                self.assertEqual(code, 0, err)
+                self.assertIn("starting this build anyway", err)
+                self.assertEqual(self.calls("scancel"),
+                                 [["--user=" + uid, "--name=" + job_name]])
+                self.assertEqual(len(self.calls("sbatch")), 1)
+        # Only the build matrix posts commit statuses from its entry script.
+        self.assertEqual((self.path / "statuses").read_text(), "success\n")
 
     def test_entries_reject_success_sentinel_after_slurm_failure(self):
         for lane in ("lsu", "lsu-perftests", "lsu-test-coverage"):
