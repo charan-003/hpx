@@ -454,8 +454,14 @@ namespace hpx::util {
             all_options[options_type::desc_cfgfile].add(
                 all_options[options_type::counter_options]);
 #endif
+            util::commandline_error_mode const parser_mode =
+                error_mode & util::commandline_error_mode::ignore_aliases;
+
+            hpx::program_options::ext_parser const parser{
+                detail::option_parser(rtcfg, node, as_bool(parser_mode))};
+
             bool const result = hpx::local::detail::parse_commandline(rtcfg,
-                all_options, app_options, args, vm, error_mode, visible,
+                all_options, app_options, args, vm, parser, error_mode, visible,
                 unregistered_options);
 
             if (result && visible != nullptr)
