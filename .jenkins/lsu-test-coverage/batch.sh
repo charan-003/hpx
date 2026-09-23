@@ -64,13 +64,20 @@ elif [[ ! -s lcov.info ]]; then
     coverage_status=1
 fi
 
-# Upload to Codacy
+# Upload to Codacy. Download the uploader to a file first: running it through
+# bash <(curl ...) hides a failed download, because bash happily runs the
+# empty script it gets and reports success.
 if [[ "${coverage_status}" -eq 0 ]]; then
-    if ! bash <(curl -Ls https://coverage.codacy.com/get.sh) report -r lcov.info \
-            --language CPP -t "${CODACY_TOKEN}" --commit-uuid "${GIT_COMMIT}"; then
+    if ! curl --fail --location --silent --show-error \
+            https://coverage.codacy.com/get.sh -o codacy-uploader.sh; then
+        echo "Error: downloading the Codacy uploader failed."
+        coverage_status=1
+    elif ! bash codacy-uploader.sh report -r lcov.info --language CPP \
+            -t "${CODACY_TOKEN}" --commit-uuid "${GIT_COMMIT}"; then
         echo "Error: uploading coverage to Codacy failed."
         coverage_status=1
     fi
+    rm -f codacy-uploader.sh
 fi
 
 echo "${ctest_status}" > "jenkins-hpx-${configuration_name}-ctest-status.txt"

@@ -52,9 +52,14 @@ if command == 'grcov':
     sys.stdout.write(os.environ['GRCOV_REPORT'])
     sys.exit(int(os.environ.get('GRCOV_EXIT', 0)))
 if command == 'curl':
-    # Stands in for the Codacy reporter that batch.sh pipes into bash.
-    print('cat "$3" > "${FIXTURE_ROOT}/uploaded.info"')
-    print('exit ' + os.environ.get('CODACY_EXIT', '0'))
+    # Stands in for downloading the Codacy uploader. A failed download writes
+    # nothing, like curl --fail.
+    code = int(os.environ.get('CURL_EXIT', 0))
+    if code:
+        sys.exit(code)
+    Path(args[args.index('-o') + 1]).write_text(
+        'cat "$3" > "${FIXTURE_ROOT}/uploaded.info"\n'
+        'exit ' + os.environ.get('CODACY_EXIT', '0') + '\n')
     sys.exit(0)
 raise RuntimeError('Unexpected command: ' + command)
 '''
@@ -89,6 +94,7 @@ class CoverageResultsTest(unittest.TestCase):
                 ['/bin/bash', str(SCRIPT)], cwd=root, env=env,
                 capture_output=True, text=True, timeout=10)
             self.assertEqual(result.returncode, expected, result.stderr)
+            self.assertFalse((root / 'codacy-uploader.sh').exists())
             calls = [json.loads(line) for line in
                      (root / 'calls.jsonl').read_text().splitlines()]
             uploaded = root / 'uploaded.info'
@@ -121,6 +127,13 @@ class CoverageResultsTest(unittest.TestCase):
         self.assertEqual(report, '')
         self.assertIn('no coverage data', result.stdout)
         self.assertIsNone(uploaded)
+
+    def test_uploader_download_failure_fails_the_run(self):
+        result, calls, _, uploaded, _ = self.run_batch(1, CURL_EXIT=22)
+        self.assertIn('downloading the Codacy uploader failed', result.stdout)
+        self.assertIsNone(uploaded)
+        curl = next(args for name, args in calls if name == 'curl')
+        self.assertIn('--fail', curl)
 
     def test_upload_failure_fails_the_run(self):
         result, _, _, _, _ = self.run_batch(1, CODACY_EXIT=7)
