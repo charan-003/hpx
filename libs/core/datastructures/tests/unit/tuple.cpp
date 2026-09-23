@@ -603,6 +603,10 @@ void tuple_derived_from_pair_test()
 
     HPX_TEST_EQ(d.first_hash(), std::size_t(42));
     HPX_TEST_EQ(d.second_hash(), std::size_t(43));
+
+    // std::get must also keep compiling when called outside the class
+    HPX_TEST_EQ(std::get<0>(d), std::size_t(42));
+    HPX_TEST_EQ(std::get<1>(d), std::size_t(43));
 }
 #endif
 

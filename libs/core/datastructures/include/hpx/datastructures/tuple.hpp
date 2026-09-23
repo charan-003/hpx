@@ -133,29 +133,6 @@ namespace hpx {
         typename Enable = void>
     struct tuple_element;    // undefined
 
-    namespace detail {
-
-        // Detects whether T is a specialization of hpx::tuple. Used to
-        // constrain std_adl_barrier::get below by deducing a single,
-        // unconstrained Tuple type parameter (an exact-type match) instead
-        // of deducing a template parameter pack against the hpx::tuple<Ts...>
-        // pattern directly. The latter relies on the "deduction from a base
-        // class" rule and triggers a conformance bug in MSVC's overload
-        // resolution when the injected hpx::get overloads are merged, via a
-        // using-declaration, into namespace std alongside std::get for
-        // std::pair: calling std::get<I> on a type derived from std::pair
-        // then fails to compile (see #4371).
-        template <typename T>
-        struct is_hpx_tuple : std::false_type
-        {
-        };
-
-        template <typename... Ts>
-        struct is_hpx_tuple<hpx::tuple<Ts...>> : std::true_type
-        {
-        };
-    }    // namespace detail
-
     // Hide implementations of get<> inside an internal namespace to be able to
     // import those into the namespace std below without pulling in all of
     // hpx::util.
@@ -194,29 +171,25 @@ namespace hpx {
     // it can be injected into the std:: namespace
     namespace std_adl_barrier {
 
-        HPX_CXX_CORE_EXPORT template <std::size_t I, typename Tuple>
+        HPX_CXX_CORE_EXPORT template <std::size_t I, typename... Ts>
         constexpr HPX_HOST_DEVICE HPX_FORCEINLINE
-            std::enable_if_t<hpx::detail::is_hpx_tuple<Tuple>::value,
-                typename hpx::tuple_element<I, Tuple>::type&>
-            get(Tuple& t) noexcept;
+            typename hpx::tuple_element<I, hpx::tuple<Ts...>>::type&
+            get(hpx::tuple<Ts...>& t) noexcept;
 
-        HPX_CXX_CORE_EXPORT template <std::size_t I, typename Tuple>
+        HPX_CXX_CORE_EXPORT template <std::size_t I, typename... Ts>
         constexpr HPX_HOST_DEVICE HPX_FORCEINLINE
-            std::enable_if_t<hpx::detail::is_hpx_tuple<Tuple>::value,
-                typename hpx::tuple_element<I, Tuple>::type const&>
-            get(Tuple const& t) noexcept;
+            typename hpx::tuple_element<I, hpx::tuple<Ts...>>::type const&
+            get(hpx::tuple<Ts...> const& t) noexcept;
 
-        HPX_CXX_CORE_EXPORT template <std::size_t I, typename Tuple>
-        constexpr HPX_HOST_DEVICE HPX_FORCEINLINE std::enable_if_t<
-            hpx::detail::is_hpx_tuple<std::decay_t<Tuple>>::value,
-            typename hpx::tuple_element<I, Tuple>::type&&>
-        get(Tuple&& t) noexcept;
-
-        HPX_CXX_CORE_EXPORT template <std::size_t I, typename Tuple>
+        HPX_CXX_CORE_EXPORT template <std::size_t I, typename... Ts>
         constexpr HPX_HOST_DEVICE HPX_FORCEINLINE
-            std::enable_if_t<hpx::detail::is_hpx_tuple<Tuple>::value,
-                typename hpx::tuple_element<I, Tuple>::type const&&>
-            get(Tuple const&& t) noexcept;
+            typename hpx::tuple_element<I, hpx::tuple<Ts...>>::type&&
+            get(hpx::tuple<Ts...>&& t) noexcept;
+
+        HPX_CXX_CORE_EXPORT template <std::size_t I, typename... Ts>
+        constexpr HPX_HOST_DEVICE HPX_FORCEINLINE
+            typename hpx::tuple_element<I, hpx::tuple<Ts...>>::type const&&
+            get(hpx::tuple<Ts...> const&& t) noexcept;
     }    // namespace std_adl_barrier
 
     HPX_CXX_CORE_EXPORT using hpx::adl_barrier::get;
@@ -237,7 +210,17 @@ namespace std {
     {
     };
 
-    HPX_CXX_CORE_EXPORT using hpx::std_adl_barrier::get;
+    // Inject hpx::adl_barrier::get (not hpx::std_adl_barrier::get) here:
+    // adl_barrier::get deduces a single, unconstrained Tuple type parameter,
+    // whereas std_adl_barrier::get deduces a parameter pack against the
+    // hpx::tuple<Ts...> class-template pattern. The latter, once merged via
+    // this using-declaration into std::get's own overload set for
+    // std::pair, relies on the "deduction from a base class" rule for any
+    // std::get<I> call whose argument type is not a plain hpx::tuple. On
+    // MSVC this is a documented conformance bug: instead of silently
+    // excluding the non-matching overload, calling std::get<I> on a type
+    // derived from std::pair fails to compile (see #4371).
+    HPX_CXX_CORE_EXPORT using hpx::adl_barrier::get;
 
     // Specialize basic_common_reference for hpx::tuple so that types like
     // zip_iterator can satisfy std::indirectly_readable (which requires
@@ -848,42 +831,38 @@ namespace hpx {
 
     namespace std_adl_barrier {
 
-        HPX_CXX_CORE_EXPORT template <std::size_t I, typename Tuple>
+        HPX_CXX_CORE_EXPORT template <std::size_t I, typename... Ts>
         constexpr HPX_HOST_DEVICE HPX_FORCEINLINE
-            std::enable_if_t<hpx::detail::is_hpx_tuple<Tuple>::value,
-                typename tuple_element<I, Tuple>::type&>
-            get(Tuple& t) noexcept
+            typename tuple_element<I, tuple<Ts...>>::type&
+            get(tuple<Ts...>& t) noexcept
         {
-            return tuple_element<I, Tuple>::get(t);
+            return tuple_element<I, tuple<Ts...>>::get(t);
         }
 
-        HPX_CXX_CORE_EXPORT template <std::size_t I, typename Tuple>
+        HPX_CXX_CORE_EXPORT template <std::size_t I, typename... Ts>
         constexpr HPX_HOST_DEVICE HPX_FORCEINLINE
-            std::enable_if_t<hpx::detail::is_hpx_tuple<Tuple>::value,
-                typename tuple_element<I, Tuple>::type const&>
-            get(Tuple const& t) noexcept
+            typename tuple_element<I, tuple<Ts...>>::type const&
+            get(tuple<Ts...> const& t) noexcept
         {
-            return tuple_element<I, Tuple>::get(t);
+            return tuple_element<I, tuple<Ts...>>::get(t);
         }
 
-        HPX_CXX_CORE_EXPORT template <std::size_t I, typename Tuple>
-        constexpr HPX_HOST_DEVICE HPX_FORCEINLINE std::enable_if_t<
-            hpx::detail::is_hpx_tuple<std::decay_t<Tuple>>::value,
-            typename tuple_element<I, Tuple>::type&&>
-        get(Tuple&& t) noexcept
+        HPX_CXX_CORE_EXPORT template <std::size_t I, typename... Ts>
+        constexpr HPX_HOST_DEVICE HPX_FORCEINLINE
+            typename tuple_element<I, tuple<Ts...>>::type&&
+            get(tuple<Ts...>&& t) noexcept
         {
-            return std::forward<typename tuple_element<I, Tuple>::type>(
+            return std::forward<typename tuple_element<I, tuple<Ts...>>::type>(
                 get<I>(t));
         }
 
-        HPX_CXX_CORE_EXPORT template <std::size_t I, typename Tuple>
+        HPX_CXX_CORE_EXPORT template <std::size_t I, typename... Ts>
         constexpr HPX_HOST_DEVICE HPX_FORCEINLINE
-            std::enable_if_t<hpx::detail::is_hpx_tuple<Tuple>::value,
-                typename tuple_element<I, Tuple>::type const&&>
-            get(Tuple const&& t) noexcept
+            typename tuple_element<I, tuple<Ts...>>::type const&&
+            get(tuple<Ts...> const&& t) noexcept
         {
-            return std::forward<typename tuple_element<I, Tuple>::type const>(
-                get<I>(t));
+            return std::forward<
+                typename tuple_element<I, tuple<Ts...>>::type const>(get<I>(t));
         }
     }    // namespace std_adl_barrier
 
