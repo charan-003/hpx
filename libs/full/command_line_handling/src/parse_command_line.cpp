@@ -91,7 +91,10 @@ namespace hpx::util {
                 std::string() :
                 trim_whitespace(s.substr(p1 + 1));
 
-            if (auto const* d = desc.find_nothrow(option_name, false);
+            // Command-line parsing uses unix_style, which allows
+            // unambiguous long-option abbreviations. Use the same matching
+            // rule when determining the value semantics of an ignored option.
+            if (auto const* d = desc.find_nothrow(option_name, true);
                 d != nullptr)
             {
                 auto const semantic = d->semantic();
