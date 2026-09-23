@@ -210,16 +210,11 @@ namespace std {
     {
     };
 
-    // Inject hpx::adl_barrier::get (not hpx::std_adl_barrier::get) here:
-    // adl_barrier::get deduces a single, unconstrained Tuple type parameter,
-    // whereas std_adl_barrier::get deduces a parameter pack against the
-    // hpx::tuple<Ts...> class-template pattern. The latter, once merged via
-    // this using-declaration into std::get's own overload set for
-    // std::pair, relies on the "deduction from a base class" rule for any
-    // std::get<I> call whose argument type is not a plain hpx::tuple. On
-    // MSVC this is a documented conformance bug: instead of silently
-    // excluding the non-matching overload, calling std::get<I> on a type
-    // derived from std::pair fails to compile (see #4371).
+    // Inject hpx::adl_barrier::get rather than hpx::std_adl_barrier::get:
+    // adl_barrier::get deduces a plain Tuple type, whereas
+    // std_adl_barrier::get deduces a pack against the hpx::tuple<Ts...>
+    // pattern. Merged into the overload set of std::get for std::pair, the
+    // latter makes MSVC fail on types derived from std::pair (see #4371).
     HPX_CXX_CORE_EXPORT using hpx::adl_barrier::get;
 
     // Specialize basic_common_reference for hpx::tuple so that types like
