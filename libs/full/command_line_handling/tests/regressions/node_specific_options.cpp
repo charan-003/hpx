@@ -66,6 +66,17 @@ namespace {
         HPX_TEST_EQ(vm.count("hpx:pu-step"), std::size_t(0));
     }
 
+    void test_non_matching_space_separated_values(
+        hpx::util::section const& rtcfg)
+    {
+        auto const vm = parse(
+            rtcfg, 0, {"--hpx:1:threads", "2", "--hpx:1:bind", "compact"});
+
+        HPX_TEST_EQ(vm.count("hpx:threads"), std::size_t(0));
+        HPX_TEST_EQ(vm.count("hpx:bind"), std::size_t(0));
+        HPX_TEST_EQ(vm.count("hpx:positional"), std::size_t(0));
+    }
+
     void test_matching_and_non_matching_options(hpx::util::section const& rtcfg)
     {
         auto const vm = parse(rtcfg, 1,
@@ -95,6 +106,7 @@ int main()
     test_matching_flag(rtcfg);
     test_node_specific_bind(rtcfg);
     test_non_matching_options(rtcfg);
+    test_non_matching_space_separated_values(rtcfg);
     test_matching_and_non_matching_options(rtcfg);
     test_unknown_node_ignores_node_specific_options(rtcfg);
 

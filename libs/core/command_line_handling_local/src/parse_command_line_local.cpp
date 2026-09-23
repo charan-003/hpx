@@ -639,6 +639,17 @@ namespace hpx::local::detail {
             ("hpx:ignore",
                 value<std::vector<std::string> >()->zero_tokens()->composing(),
                 "this option will be silently ignored")
+            ("hpx:ignore-value",
+                value<std::vector<std::string> >()->composing(),
+                "this option and its value will be silently ignored")
+            ("hpx:ignore-optional-value",
+                value<std::vector<std::string> >()
+                    ->implicit_value(std::vector<std::string>{}, "")
+                    ->composing(),
+                "this option and its optional value will be silently ignored")
+            ("hpx:ignore-multitoken",
+                value<std::vector<std::string> >()->multitoken()->composing(),
+                "this option and its values will be silently ignored")
         ;
         // clang-format on
 
