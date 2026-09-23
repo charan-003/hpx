@@ -4,6 +4,10 @@
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+/// \file hpx/executors/parallel_scheduler.hpp
+/// \page hpx::execution::experimental::get_parallel_scheduler, hpx::execution::experimental::parallel_scheduler, hpx::execution::experimental::parallel_scheduler_domain
+/// \headerfile hpx/execution.hpp
+
 #pragma once
 
 #include <hpx/config.hpp>

@@ -598,37 +598,22 @@ exposes ``std::execution::get_parallel_scheduler()``. |hpx| implements this as
 
 Earlier drafts of the same paper (P2079R2) used the names ``system_context`` and
 ``system_scheduler``. Those public types were dropped. The default backend in
-|hpx| runs on HPX worker threads from the default thread pool, not on raw OS
-threads.
+|hpx| reuses the default thread pool's worker threads instead of spawning a
+separate thread pool for the scheduler.
 
-.. code-block:: c++
-
-    #include <hpx/execution.hpp>
-    #include <hpx/init.hpp>
-
-    int hpx_main()
-    {
-        namespace ex = hpx::execution::experimental;
-
-        auto snd = ex::schedule(ex::get_parallel_scheduler()) |
-            ex::then([] { return 42; });
-        auto [val] = ex::sync_wait(std::move(snd)).value();
-
-        return hpx::local::finalize();
-    }
+.. literalinclude:: ../../libs/core/executors/examples/parallel_scheduler.cpp
+   :language: c++
+   :start-after: //[get_parallel_scheduler
+   :end-before: //]
 
 To bind the scheduler to a named HPX pool created with the resource
 partitioner, pass that pool to ``get_parallel_scheduler``. There is no
 need to write a custom ``parallel_scheduler_backend`` class:
 
-.. code-block:: c++
-
-    namespace ex = hpx::execution::experimental;
-
-    auto snd = ex::schedule(ex::get_parallel_scheduler(
-                   hpx::resource::get_thread_pool("custom"))) |
-        ex::then([] { /* runs on the "custom" pool */ });
-    ex::sync_wait(std::move(snd));
+.. literalinclude:: ../../libs/core/executors/examples/parallel_scheduler.cpp
+   :language: c++
+   :start-after: //[get_parallel_scheduler_named_pool
+   :end-before: //]
 
 ``get_thread_pool`` throws ``hpx::exception`` for an unknown pool name.
 The pool must outlive the scheduler; HPX does not extend the pool's
