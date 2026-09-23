@@ -178,8 +178,12 @@ hpx_slurm_run()
         return 1
     fi
     # Install EXIT after starting the child so cleanup always has a valid PID.
+    # The execution budget starts when a poll first sees the job running, which
+    # can be a few seconds after the queue deadline. The watchdog only exists
+    # to stop a client that no longer responds, so give it a minute on top of
+    # both budgets rather than letting it end a job that is still within them.
     timeout --foreground --kill-after=5s \
-        "$((queue_seconds + runtime_seconds))s" \
+        "$((queue_seconds + runtime_seconds + 60))s" \
         sbatch --parsable --wait "$@" > "${submission_file}" &
     submission_pid=$!
     printf -v cleanup_trap 'hpx_slurm_cleanup "$?" %q %q' \

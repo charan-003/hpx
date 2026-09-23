@@ -248,6 +248,31 @@ class SlurmLifecycle(unittest.TestCase):
         self.assertEqual(code, 0, err)
         self.assertEqual(self.calls("scancel"), [])
 
+    def test_watchdog_leaves_room_past_both_budgets(self):
+        # A job allocated at the queue deadline is only seen running on the
+        # next poll, so its execution budget ends after queue + runtime. Log
+        # the watchdog's duration through a wrapper around the real timeout.
+        wrapper = self.path / "timeout"
+        wrapper.write_text(
+            "#!" + sys.executable + "\n"
+            "import json, os, sys\n"
+            "with open(os.environ['CALL_LOG'], 'a') as log:\n"
+            "    log.write(json.dumps(['timeout'] + sys.argv[1:]) + '\\n')\n"
+            "os.execv(os.environ['REAL_TIMEOUT'],"
+            " ['timeout'] + sys.argv[1:])\n")
+        wrapper.chmod(0o755)
+        code, _, err = self.finish(self.start(
+            'hpx_slurm_run 4s batch.sh', HPX_SLURM_QUEUE_TIMEOUT="5s",
+            REAL_TIMEOUT=shutil.which("timeout")))
+        self.assertEqual(code, 0, err)
+        watchdog = [args for args in self.calls("timeout") if "sbatch" in args]
+        self.assertEqual(len(watchdog), 1, self.calls("timeout"))
+        bound = next(arg for arg in watchdog[0] if arg.endswith("s") and
+                     arg[:-1].isdigit())
+        # queue (5 s) + runtime (4 s), plus more than the 30 s a queue poll
+        # may take before it reports the job as running.
+        self.assertGreater(int(bound[:-1]), 5 + 4 + 30)
+
     def test_completion_during_query_preserves_batch_failure(self):
         code, _, err = self.finish(self.start(
             JOB_DELAY="2", JOB_EXIT="42", QUEUE_DELAY="3", QUEUE_EXIT="6"))
