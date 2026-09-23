@@ -55,7 +55,12 @@ if name == "scancel":
 if name == "squeue":
     time.sleep(float(os.environ.get("QUEUE_DELAY", "0")))
     if any(arg.startswith("--jobs=") for arg in sys.argv):
-        submitted = float(Path(os.environ["READY"]).read_text())
+        # sbatch prints the job ID just before it writes READY, so a query
+        # can land in between. Treat that as a job submitted this moment.
+        try:
+            submitted = float(Path(os.environ["READY"]).read_text())
+        except (FileNotFoundError, ValueError):
+            submitted = time.monotonic()
         pending = float(os.environ.get("PENDING_DELAY", "0"))
         print("PENDING" if time.monotonic() - submitted < pending else
               os.environ.get("JOB_STATE", "RUNNING"))
