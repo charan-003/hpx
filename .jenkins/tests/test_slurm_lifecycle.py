@@ -120,7 +120,7 @@ class SlurmLifecycle(unittest.TestCase):
             time.sleep(0.01)
         self.assertTrue(self.ready.exists(), "stub submission never completed")
 
-    def start_entry(self, lane, **env):
+    def start_entry(self, lane, exclude=None, **env):
         jenkins = self.path / ".jenkins"
         target = jenkins / lane
         target.mkdir(parents=True, exist_ok=True)
@@ -132,7 +132,9 @@ class SlurmLifecycle(unittest.TestCase):
         (target / config).write_text(
             'configuration_slurm_num_nodes=1\n'
             'configuration_slurm_partition=test\n'
-            'configuration_slurm_nodelist=test\n')
+            'configuration_slurm_nodelist=test\n' +
+            ('' if exclude is None else
+             'configuration_slurm_exclude=' + exclude + '\n'))
         status_script = jenkins / "common/set_github_status.sh"
         status_script.write_text("#!/bin/sh\nexit 0\n")
         status_script.chmod(0o755)
@@ -162,6 +164,19 @@ class SlurmLifecycle(unittest.TestCase):
             with self.subTest(lane=lane):
                 code, _, err = self.finish(self.start_entry(lane))
                 self.assertEqual(code, 0, err)
+
+    def test_entries_pass_the_configured_node_exclusion(self):
+        for lane in ("lsu", "lsu-test-coverage"):
+            for exclude, expected in ((None, []),
+                                      ("node7,node9", ["--exclude=node7,node9"])):
+                with self.subTest(lane=lane, exclude=exclude):
+                    self.log.unlink(missing_ok=True)
+                    code, _, err = self.finish(
+                        self.start_entry(lane, exclude=exclude))
+                    self.assertEqual(code, 0, err)
+                    sbatch = self.calls("sbatch")[-1]
+                    self.assertEqual([arg for arg in sbatch
+                                      if arg.startswith("--exclude")], expected)
 
     def test_entries_reject_success_sentinel_after_slurm_failure(self):
         for lane in ("lsu", "lsu-perftests", "lsu-test-coverage"):
