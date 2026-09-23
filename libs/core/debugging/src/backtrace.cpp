@@ -416,8 +416,33 @@ namespace hpx::util::stack_trace {
             hpx::util::detail::dbghelp_scoped_lock const l;
             auto& symbol_cache = hpx::util::detail::get_dbghelp_symbol_cache();
 
+            auto const query_allocation_base = [](DWORD64 addr) -> DWORD64 {
+                MEMORY_BASIC_INFORMATION mbi;
+                if (VirtualQuery(reinterpret_cast<LPCVOID>(addr), &mbi,
+                        sizeof(mbi)) == 0)
+                {
+                    return 0;
+                }
+                return reinterpret_cast<DWORD64>(mbi.AllocationBase);
+            };
+
             hpx::util::detail::resolved_symbol_info resolved;
-            if (!symbol_cache.try_get(address, resolved))
+            bool cache_hit = symbol_cache.try_get(address, resolved);
+
+            // A cached entry is only valid if the memory region it was
+            // resolved in is still the same one. If the module was
+            // unloaded and its address range reused, drop the cache and
+            // resolve again (#7608).
+            bool force_refresh = false;
+            if (cache_hit && resolved.allocation_base !=
+                    query_allocation_base(address))
+            {
+                symbol_cache.clear();
+                cache_hit = false;
+                force_refresh = true;
+            }
+
+            if (!cache_hit)
             {
                 DWORD64 displacement = 0;
 
@@ -437,7 +462,7 @@ namespace hpx::util::stack_trace {
                                symbol) != FALSE;
                 };
 
-                bool resolved_ok = try_resolve();
+                bool resolved_ok = !force_refresh && try_resolve();
                 if (!resolved_ok)
                 {
                     // SymInitialize(..., TRUE) only snapshots the loaded
@@ -460,7 +485,7 @@ namespace hpx::util::stack_trace {
                     constexpr ULONGLONG refresh_interval_ms = 500;
 
                     ULONGLONG const now = GetTickCount64();
-                    if (last_refresh_tick == 0 ||
+                    if (force_refresh || last_refresh_tick == 0 ||
                         now - last_refresh_tick >= refresh_interval_ms)
                     {
                         last_refresh_tick = now;
@@ -485,6 +510,7 @@ namespace hpx::util::stack_trace {
                 {
                     resolved.name.assign(symbol->Name, symbol->NameLen);
                     resolved.displacement = displacement;
+                    resolved.allocation_base = query_allocation_base(address);
                     symbol_cache.insert(address, resolved);
                 }
                 else

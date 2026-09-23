@@ -30,6 +30,12 @@ namespace hpx::util::detail {
     {
         std::string name;
         DWORD64 displacement = 0;
+
+        /// The AllocationBase (as reported by VirtualQuery) of the memory
+        /// region containing the address when it was resolved. Used to
+        /// detect a cached entry whose module was unloaded and whose
+        /// address range was reused by another module (see #7608).
+        DWORD64 allocation_base = 0;
     };
 
     /// \brief A process-wide cache mapping addresses already resolved by
