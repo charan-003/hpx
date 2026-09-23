@@ -51,6 +51,12 @@ if command == 'grcov':
     assert '-o' not in args, 'The report must be streamed, not written whole'
     sys.stdout.write(os.environ['GRCOV_REPORT'])
     sys.exit(int(os.environ.get('GRCOV_EXIT', 0)))
+if command == 'grep':
+    # Stands in for a filter that fails part way through, for example on a
+    # full disk, after writing the first record.
+    lines = sys.stdin.read().splitlines(keepends=True)
+    sys.stdout.write(next(l for l in lines if not l.startswith('FN')))
+    sys.exit(int(os.environ['FILTER_EXIT']))
 if command == 'curl':
     # Stands in for downloading the Codacy uploader. A failed download writes
     # nothing, like curl --fail.
@@ -77,7 +83,10 @@ class CoverageResultsTest(unittest.TestCase):
             stub = bindir / 'stub'
             stub.write_text('#!' + sys.executable + '\n' + STUB)
             stub.chmod(0o700)
-            for tool in ('cmake', 'ctest', 'curl'):
+            tools = ['cmake', 'ctest', 'curl']
+            if 'FILTER_EXIT' in updates:
+                tools.append('grep')
+            for tool in tools:
                 (bindir / tool).symlink_to(stub)
             # batch.sh runs the grcov that entry.sh unpacked next to it.
             (root / 'grcov').symlink_to(stub)
@@ -126,6 +135,12 @@ class CoverageResultsTest(unittest.TestCase):
             1, report='FN:1,only\nFNDA:1,only\n')
         self.assertEqual(report, '')
         self.assertIn('no coverage data', result.stdout)
+        self.assertIsNone(uploaded)
+
+    def test_filter_failure_fails_the_run(self):
+        result, _, report, uploaded, _ = self.run_batch(1, FILTER_EXIT=2)
+        self.assertEqual(report, 'TN:\n')
+        self.assertIn('filtering the coverage data failed', result.stdout)
         self.assertIsNone(uploaded)
 
     def test_uploader_download_failure_fails_the_run(self):

@@ -55,9 +55,17 @@ coverage_status=0
 ./grcov . -s "${src_dir}" -t lcov --log "grcov-log.txt" \
     --ignore-not-existing --ignore "/*" |
     grep -v -E '^(FN|FNDA|FNF|FNH):' > lcov.info
-grcov_status="${PIPESTATUS[0]}"
+pipeline_status=("${PIPESTATUS[@]}")
+grcov_status="${pipeline_status[0]}"
+filter_status="${pipeline_status[1]}"
 if [[ "${grcov_status}" -ne 0 ]]; then
     echo "Error: grcov failed to generate coverage data."
+    coverage_status=1
+elif [[ "${filter_status}" -gt 1 ]]; then
+    # grep exits 1 when every record was filtered out, which the next check
+    # reports. Anything higher is an error, such as a failed write, and can
+    # leave a partial report behind.
+    echo "Error: filtering the coverage data failed."
     coverage_status=1
 elif [[ ! -s lcov.info ]]; then
     echo "Error: grcov produced no coverage data."
