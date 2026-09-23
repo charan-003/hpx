@@ -89,8 +89,10 @@ namespace {
 // previously run tests in this file left behind, so every epoch used below is
 // read back from join()'s return value (peer1.join_epoch / peer2.join_epoch)
 // rather than hardcoded - see that test's comment for why.
-hpx::supervision::joined_peer test_mirroring_survives_epoch_rollover(
-    hpx::id_type const& peer_locality)
+// Returns the rejoined peer, or nothing if the rejoin never produced a new
+// epoch. In that case the fencing test below has nothing valid to work with.
+std::optional<hpx::supervision::joined_peer>
+test_mirroring_survives_epoch_rollover(hpx::id_type const& peer_locality)
 {
     hpx::supervision::registry const r(hpx::find_here());
 
@@ -171,8 +173,9 @@ hpx::supervision::joined_peer test_mirroring_survives_epoch_rollover(
     {
         // The rejoin never minted a fresh epoch. Publishing the second
         // sequence under the stale one would wait for state that can no
-        // longer arrive, so stop with the single failure above.
-        return peer2;
+        // longer arrive, so stop here and let the caller skip the fencing
+        // test too, leaving the single failure above.
+        return std::nullopt;
     }
 
     // --- Simulated rejoin: epoch N+1 ---
@@ -319,9 +322,12 @@ int hpx_main()
 
     if (is_observer)
     {
-        hpx::supervision::joined_peer peer =
+        std::optional<hpx::supervision::joined_peer> const peer =
             test_mirroring_survives_epoch_rollover(peer_locality);
-        test_fencing_without_prior_successful_query(peer_locality, peer);
+        if (peer)
+        {
+            test_fencing_without_prior_successful_query(peer_locality, *peer);
+        }
     }
 
     hpx::distributed::barrier::synchronize();
