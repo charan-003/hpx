@@ -30,6 +30,12 @@ namespace hpx::util::detail {
     {
         std::string name;
         DWORD64 displacement = 0;
+
+        /// The AllocationBase (as reported by VirtualQuery) of the memory
+        /// region containing the address when it was resolved. Used to
+        /// detect a cached entry whose module was unloaded and whose
+        /// address range was reused by another module (see #7608).
+        DWORD64 allocation_base = 0;
     };
 
     /// \brief A process-wide cache mapping addresses already resolved by
@@ -60,6 +66,16 @@ namespace hpx::util::detail {
         ///        the least recently used entry first if the cache is
         ///        already at capacity.
         void insert(DWORD64 address, resolved_symbol_info const& value);
+
+        /// \brief Drop every cached resolution.
+        ///
+        /// \note Used after a DbgHelp module-list refresh (see #7608):
+        ///       once the set of loaded modules has changed, an address
+        ///       already in the cache may now belong to a different
+        ///       module (or one that no longer exists), so the safe
+        ///       choice is to forget everything rather than reason
+        ///       about which entries are still valid.
+        void clear();
 
     private:
         struct impl;
