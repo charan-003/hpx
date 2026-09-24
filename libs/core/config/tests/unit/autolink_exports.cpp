@@ -6,13 +6,13 @@
 
 #include <hpx/config.hpp>
 
-// Test export macro guard (HPX_EXPORTS - internal library build)
-#define HPX_EXPORTS
+// Test export macro guard (HPX_CORE_EXPORTS - internal core library build)
+#define HPX_CORE_EXPORTS
 #include <hpx/modules/version.hpp>
-#undef HPX_EXPORTS
+#undef HPX_CORE_EXPORTS
 
 #if defined(HPX_AUTOLINK_LIB_NAME)
-#error "HPX_AUTOLINK_LIB_NAME should be undefined when HPX_EXPORTS is set"
+#error "HPX_AUTOLINK_LIB_NAME should be undefined when HPX_CORE_EXPORTS is set"
 #endif
 
 void test_exports() {}
