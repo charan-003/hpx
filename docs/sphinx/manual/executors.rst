@@ -603,8 +603,8 @@ separate thread pool for the scheduler.
 
 .. literalinclude:: ../../libs/core/executors/examples/parallel_scheduler.cpp
    :language: c++
-   :start-after: //[get_parallel_scheduler
-   :end-before: //]
+   :start-after: //[get_parallel_scheduler_default
+   :end-before: //get_parallel_scheduler_default]
 
 To bind the scheduler to a named HPX pool created with the resource
 partitioner, pass that pool to ``get_parallel_scheduler``. There is no
@@ -613,7 +613,7 @@ need to write a custom ``parallel_scheduler_backend`` class:
 .. literalinclude:: ../../libs/core/executors/examples/parallel_scheduler.cpp
    :language: c++
    :start-after: //[get_parallel_scheduler_named_pool
-   :end-before: //]
+   :end-before: //get_parallel_scheduler_named_pool]
 
 ``get_thread_pool`` throws ``hpx::exception`` for an unknown pool name.
 The pool must outlive the scheduler; HPX does not extend the pool's

@@ -25,11 +25,11 @@ int hpx_main()
 {
     namespace ex = hpx::execution::experimental;
 
-    //[get_parallel_scheduler
+    //[get_parallel_scheduler_default
     auto snd = ex::schedule(ex::get_parallel_scheduler()) |
         ex::then([] { return 42; });
     auto [val] = ex::sync_wait(std::move(snd)).value();
-    //]
+    //get_parallel_scheduler_default]
 
     std::cout << "parallel_scheduler ran, got " << val << "\n";
 
@@ -40,7 +40,7 @@ int hpx_main()
             // runs on the "custom" pool
         });
     ex::sync_wait(std::move(named));
-    //]
+    //get_parallel_scheduler_named_pool]
 
     std::cout << "named-pool parallel_scheduler ran on "
               << hpx::resource::get_thread_pool("custom").get_pool_name()
