@@ -24,6 +24,8 @@ namespace {
     using hpx::threads::coroutines::coroutine;
     using hpx::threads::coroutines::detail::coroutine_self;
 
+    constexpr std::ptrdiff_t coroutine_stack_size = std::ptrdiff_t{256} * 1024;
+
     void yield()
     {
         coroutine_self::get_self()->yield(
@@ -78,20 +80,24 @@ namespace {
                 // Keep alternate iterations shallow throughout cleanup.
                 if (deep)
                 {
+                    bool caught = false;
                     try
                     {
                         throw std::runtime_error("resumed coroutine");
                     }
                     catch (std::runtime_error const&)
                     {
+                        caught = true;
                     }
+                    HPX_TEST(caught);
                 }
                 return coroutine::result_type{
                     thread_schedule_state::terminated, invalid_thread_id};
             };
         };
 
-        coroutine c(make_function(true), invalid_thread_id, 256 * 1024);
+        coroutine c(
+            make_function(true), invalid_thread_id, coroutine_stack_size);
         c.init();
 #if defined(HPX_HAVE_ADDRESS_SANITIZER)
         void const* stack_bottom = nullptr;
@@ -133,7 +139,7 @@ namespace {
                 use_stack(8);
                 throw std::runtime_error("coroutine exit");
             },
-            invalid_thread_id, 256 * 1024);
+            invalid_thread_id, coroutine_stack_size);
         HPX_TEST_EQ(c().first, thread_schedule_state::pending);
         bool caught = false;
         try
@@ -157,7 +163,7 @@ namespace {
         coroutine outer(
             [&](coroutine::arg_type) {
                 coroutine direct(
-                    make_function(), invalid_thread_id, 256 * 1024);
+                    make_function(), invalid_thread_id, coroutine_stack_size);
                 direct.invoke_directly();
                 HPX_TEST(direct.impl()->exited());
                 c.rebind(make_function(), invalid_thread_id);
@@ -168,7 +174,7 @@ namespace {
                 return coroutine::result_type{
                     thread_schedule_state::terminated, invalid_thread_id};
             },
-            invalid_thread_id, 256 * 1024);
+            invalid_thread_id, coroutine_stack_size);
         HPX_TEST_EQ(outer().first, thread_schedule_state::terminated);
     }
 }    // namespace
