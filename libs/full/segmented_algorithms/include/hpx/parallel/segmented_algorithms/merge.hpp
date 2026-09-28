@@ -258,7 +258,7 @@ namespace hpx::parallel::detail {
         std::size_t len1, std::size_t len2, std::size_t k)
     {
         diagonal_search_state state{
-            k, k > len2 ? k - len2 : 0, (std::min)(k, len1)};
+            k, k > len2 ? k - len2 : 0, (std::min) (k, len1)};
 
         if (state.a_low == state.a_high)
         {
@@ -288,10 +288,10 @@ namespace hpx::parallel::detail {
         std::size_t const high_from_left_b = state.k - left.b;
 
         state.a_low =
-            (std::max)(state.a_low, (std::max)(left.a, low_from_right_b));
+            (std::max) (state.a_low, (std::max) (left.a, low_from_right_b));
 
         state.a_high =
-            (std::min)(state.a_high, (std::min)(right.a, high_from_left_b));
+            (std::min) (state.a_high, (std::min) (right.a, high_from_left_b));
 
         HPX_ASSERT(state.a_low <= state.a_high);
 
@@ -874,7 +874,7 @@ namespace hpx::parallel::detail {
             std::size_t const remaining = total_size - global_offset;
 
             std::size_t const chunk_size =
-                (std::min)((std::min)(available, remaining), max_chunk_size);
+                (std::min) ((std::min) (available, remaining), max_chunk_size);
 
             HPX_ASSERT(chunk_size != 0);
 
