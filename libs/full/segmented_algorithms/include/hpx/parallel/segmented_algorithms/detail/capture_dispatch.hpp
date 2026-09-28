@@ -114,6 +114,124 @@ namespace hpx::parallel::detail {
         return results;
     }
 
+    template <typename ExPolicy, typename T1, typename T2>
+    std::pair<T1, T2> get_capture_results(
+        hpx::future<T1> operation1, hpx::future<T2> operation2)
+    {
+        operation1.wait();
+        operation2.wait();
+
+        bool const exceptional1 = operation1.has_exception();
+        bool const exceptional2 = operation2.has_exception();
+
+        if (exceptional1 || exceptional2)
+        {
+            std::list<std::exception_ptr> errors;
+
+            using exception_handler =
+                parallel::util::detail::handle_remote_exceptions<
+                    std::decay_t<ExPolicy>>;
+
+            if (exceptional1)
+            {
+                exception_handler::call(
+                    operation1.get_exception_ptr(), errors);
+            }
+
+            if (exceptional2)
+            {
+                exception_handler::call(
+                    operation2.get_exception_ptr(), errors);
+            }
+
+            if (!errors.empty())
+            {
+                throw hpx::exception_list(HPX_MOVE(errors));
+            }
+
+            if (exceptional1)
+            {
+                operation1.get();
+            }
+
+            if (exceptional2)
+            {
+                operation2.get();
+            }
+
+            HPX_UNREACHABLE;
+        }
+
+        return {operation1.get(), operation2.get()};
+    }
+
+    template <typename ExPolicy, typename T1, typename T2>
+    std::pair<std::vector<T1>, std::vector<T2>> get_capture_results(
+        std::vector<hpx::future<T1>> operations1,
+        std::vector<hpx::future<T2>> operations2)
+    {
+        bool const exceptional1 = hpx::wait_all_nothrow(operations1);
+        bool const exceptional2 = hpx::wait_all_nothrow(operations2);
+
+        if (exceptional1 || exceptional2)
+        {
+            std::list<std::exception_ptr> errors;
+
+            using exception_handler =
+                parallel::util::detail::handle_remote_exceptions<
+                    std::decay_t<ExPolicy>>;
+
+            // Both groups have already completed. It is now safe for either
+            // handler to propagate an exception.
+            if (exceptional1)
+            {
+                exception_handler::call(operations1, errors);
+            }
+
+            if (exceptional2)
+            {
+                exception_handler::call(operations2, errors);
+            }
+
+            if (!errors.empty())
+            {
+                throw hpx::exception_list(HPX_MOVE(errors));
+            }
+
+            // Defensive fallback if the exception handler neither records nor
+            // propagates an exceptional future.
+            for (auto& operation : operations1)
+            {
+                operation.get();
+            }
+
+            for (auto& operation : operations2)
+            {
+                operation.get();
+            }
+
+            HPX_UNREACHABLE;
+        }
+
+        std::vector<T1> results1;
+        results1.reserve(operations1.size());
+
+        for (auto& operation : operations1)
+        {
+            results1.push_back(operation.get());
+        }
+
+        std::vector<T2> results2;
+        results2.reserve(operations2.size());
+
+        for (auto& operation : operations2)
+        {
+            results2.push_back(operation.get());
+        }
+
+        return {HPX_MOVE(results1), HPX_MOVE(results2)};
+    }
+
     template <typename LocalIterator>
     struct partition_range
     {
@@ -305,9 +423,7 @@ namespace hpx::parallel::detail {
         hpx::id_type const& routing_partition_id,
         std::vector<indexed_partition_range<LocalIterator>> ranges)
     {
-        using iterator_type = std::decay_t<LocalIterator>;
-
-        send_values_action<Value, iterator_type> act;
+        send_values_action<Value, LocalIterator> act;
 
         return hpx::async(
             act, hpx::colocated(routing_partition_id), HPX_MOVE(ranges));
@@ -382,14 +498,12 @@ namespace hpx::parallel::detail {
         typename Proj>
     hpx::future<std::vector<projected_value_result<Key>>>
     capture_projected_values_async(hpx::id_type const& routing_partition_id,
-        std::vector<projected_value_request<std::decay_t<LocalIterator>>>
-            requests,
+        std::vector<projected_value_request<LocalIterator>> requests,
         Proj&& projection)
     {
-        using iterator_type = std::decay_t<LocalIterator>;
         using projection_type = std::decay_t<Proj>;
 
-        get_projected_values_action<Key, iterator_type, projection_type> act;
+        get_projected_values_action<Key, LocalIterator, projection_type> act;
 
         return handle_capture_exceptions<ExPolicy>(
             hpx::async(act, hpx::colocated(routing_partition_id),
@@ -494,14 +608,13 @@ namespace hpx::parallel::detail {
             hpx::id_type const& routing_partition_id,
             std::vector<indexed_partition_range<LocalIterator>> ranges)
         {
-            using iterator_type = std::decay_t<LocalIterator>;
             using result_type = collected_partition_values<Value>;
 
             if (source_locality == destination_locality)
             {
                 auto copy_values =
                     [ranges = HPX_MOVE(ranges)]() mutable -> result_type {
-                    return transmitter<Value, iterator_type>::send_values(
+                    return transmitter<Value, LocalIterator>::send_values(
                         HPX_MOVE(ranges));
                 };
 
@@ -515,7 +628,7 @@ namespace hpx::parallel::detail {
                 }
             }
 
-            return capture_async<Value, iterator_type>(
+            return capture_async<Value, LocalIterator>(
                 routing_partition_id, HPX_MOVE(ranges));
         }
 
@@ -612,6 +725,13 @@ namespace hpx::parallel::detail {
 
                 batch_results =
                     get_capture_results<policy_type>(HPX_MOVE(batch_futures));
+            }
+
+            // A single locality batch preserves the original range order, so its
+            // receive buffer can be returned directly without reassembly.
+            if (batch_results.size() == 1)
+            {
+                return HPX_MOVE(batch_results.front().values);
             }
 
             struct range_location
@@ -983,7 +1103,6 @@ namespace hpx::parallel::detail {
         // aggregates policy-dependent exceptions instead of losing failures
         // from later chunks. Capturing values1 and values2 keeps all input
         // iterators valid until every operation completes.
-
         static result_type invoke_chunks_parallel(Algo const& algo,
             ExPolicy policy, chunk_list_type chunks,
             std::shared_ptr<values_type1> values1,
@@ -1170,6 +1289,24 @@ namespace hpx::parallel::detail {
             return ranges;
         }
 
+        template <typename Value, typename RangeList>
+        static hpx::future<std::vector<Value>> collect_range_async(
+            RangeList ranges)
+        {
+            using values_type = std::vector<Value>;
+
+            if (ranges.empty())
+            {
+                return hpx::make_ready_future(values_type{});
+            }
+
+            return hpx::async(
+                [ranges = HPX_MOVE(ranges)]() mutable -> values_type {
+                    return range_collector<ExPolicy, is_seq>::
+                        template collect_range<Value>(HPX_MOVE(ranges));
+                });
+        }
+
         // Collect and execute one byte-bounded group of output chunks.
         //
         // Input ranges are flattened so collection can coalesce requests by
@@ -1204,16 +1341,23 @@ namespace hpx::parallel::detail {
             }
             else
             {
-                auto values1_f = hpx::async(
-                    [ranges = HPX_MOVE(ranges1)]() mutable -> values_type1 {
-                        return range_collector<ExPolicy, is_seq>::
-                            template collect_range<Value1>(HPX_MOVE(ranges));
-                    });
-                auto values2_f = hpx::async(
-                    [ranges = HPX_MOVE(ranges2)]() mutable -> values_type2 {
-                        return range_collector<ExPolicy, is_seq>::
-                            template collect_range<Value2>(HPX_MOVE(ranges));
-                    });
+                auto values1_f =
+                    collect_range_async<Value1>(HPX_MOVE(ranges1));
+
+                hpx::future<values_type2> values2_f;
+
+                try
+                {
+                    values2_f =
+                        collect_range_async<Value2>(HPX_MOVE(ranges2));
+                }
+                catch (...)
+                {
+                    // Do not leave the first collection running if launching the
+                    // second collection fails.
+                    values1_f.wait();
+                    throw;
+                }
 
                 static constexpr bool is_task_policy =
                     hpx::is_async_execution_policy_v<std::decay_t<ExPolicy>>;
@@ -1227,10 +1371,13 @@ namespace hpx::parallel::detail {
                             hpx::future<values_type1> ready1,
                             hpx::future<values_type2> ready2) mutable
                             -> result_type {
-                            auto shared1 =
-                                std::make_shared<values_type1>(ready1.get());
-                            auto shared2 =
-                                std::make_shared<values_type2>(ready2.get());
+                            auto collected = get_capture_results<ExPolicy>(
+                                HPX_MOVE(ready1), HPX_MOVE(ready2));
+
+                            auto shared1 = std::make_shared<values_type1>(
+                                HPX_MOVE(collected.first));
+                            auto shared2 = std::make_shared<values_type2>(
+                                HPX_MOVE(collected.second));
 
                             return invoke_chunks(algorithm, HPX_MOVE(policy),
                                 HPX_MOVE(chunks), HPX_MOVE(shared1),
@@ -1240,14 +1387,17 @@ namespace hpx::parallel::detail {
                 }
                 else
                 {
+                    auto collected = get_capture_results<ExPolicy>(
+                        HPX_MOVE(values1_f), HPX_MOVE(values2_f));
+
                     auto shared1 =
-                        std::make_shared<values_type1>(values1_f.get());
+                        std::make_shared<values_type1>(HPX_MOVE(collected.first));
                     auto shared2 =
-                        std::make_shared<values_type2>(values2_f.get());
+                        std::make_shared<values_type2>(HPX_MOVE(collected.second));
 
                     return invoke_chunks(algo, HPX_MOVE(policy),
-                        HPX_MOVE(chunks), HPX_MOVE(shared1), HPX_MOVE(shared2),
-                        HPX_MOVE(args)...);
+                        HPX_MOVE(chunks), HPX_MOVE(shared1),
+                        HPX_MOVE(shared2), HPX_MOVE(args)...);
                 }
             }
         }
@@ -1266,6 +1416,12 @@ namespace hpx::parallel::detail {
             std::size_t const result_count = chunks.size();
 
             auto batches = make_byte_batches(HPX_MOVE(chunks));
+
+            if (batches.size() == 1)
+            {
+                return getfrom_chunks(algo, HPX_MOVE(policy),
+                    HPX_MOVE(batches.front()), HPX_MOVE(args)...);
+            }
 
             constexpr bool is_task_policy =
                 hpx::is_async_execution_policy_v<std::decay_t<ExPolicy>>;

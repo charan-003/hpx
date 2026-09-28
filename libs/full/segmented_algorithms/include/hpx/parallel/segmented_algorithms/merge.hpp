@@ -23,9 +23,11 @@
 #include <cstdint>
 #include <exception>
 #include <iterator>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -44,6 +46,8 @@ namespace hpx::parallel::detail {
         std::vector<partition_range<local_iterator>> ranges;
         std::vector<std::size_t> partition_ends;
         std::vector<hpx::id_type> locality_ids;
+        std::vector<std::size_t> locality_slots;
+        std::vector<hpx::id_type> unique_locality_ids;
 
         std::size_t size() const noexcept
         {
@@ -69,6 +73,8 @@ namespace hpx::parallel::detail {
         table.ranges = make_partition_ranges(first, last);
         table.partition_ends.reserve(table.ranges.size());
         table.locality_ids.reserve(table.ranges.size());
+        table.locality_slots.reserve(table.ranges.size());
+        table.unique_locality_ids.reserve(table.ranges.size());
 
         std::size_t offset = 0;
 
@@ -79,8 +85,30 @@ namespace hpx::parallel::detail {
 
             table.partition_ends.push_back(offset);
 
-            table.locality_ids.push_back(
-                get_partition_locality(range.partition_id));
+            hpx::id_type const locality_id =
+                get_partition_locality(range.partition_id);
+
+            table.locality_ids.push_back(locality_id);
+
+            auto locality = std::find(
+                table.unique_locality_ids.begin(),
+                table.unique_locality_ids.end(), locality_id);
+
+            std::size_t locality_slot;
+
+            if (locality == table.unique_locality_ids.end())
+            {
+                locality_slot = table.unique_locality_ids.size();
+
+                table.unique_locality_ids.push_back(locality_id);
+            }
+            else
+            {
+                locality_slot = static_cast<std::size_t>(
+                    std::distance(table.unique_locality_ids.begin(), locality));
+            }
+
+            table.locality_slots.push_back(locality_slot);
         }
         return table;
     }
@@ -90,6 +118,8 @@ namespace hpx::parallel::detail {
     {
         hpx::id_type locality_id;
         hpx::id_type partition_id;
+        std::size_t locality_slot;
+        std::size_t logical_index;
         LocalIterator position;
     };
 
@@ -123,6 +153,7 @@ namespace hpx::parallel::detail {
         auto const& range = table.ranges[partition_index];
 
         return {table.locality_ids[partition_index], range.partition_id,
+            table.locality_slots[partition_index], index,
             std::next(range.first, local_offset)};
     }
 
@@ -135,50 +166,72 @@ namespace hpx::parallel::detail {
         std::vector<projected_value_request<LocalIterator>> requests;
     };
 
-    // Add one projected-value request to the batch for its source locality.
-    //
-    // Requests are first coalesced by locality so all required positions on
-    // that locality can be obtained with one action. Within the locality batch,
-    // identical partition positions are deduplicated.
-    //
-    // A deduplicated request stores multiple targets, allowing one transported
-    // key to satisfy several diagonal searches or both boundaries of adjacent
-    // output chunks.
+    struct probe_request_location
+    {
+        std::size_t batch_index;
+        std::size_t request_index;
+    };
+
+    using probe_request_lookup =
+        std::unordered_map<std::size_t, probe_request_location>;
+
+    inline constexpr std::size_t invalid_probe_batch_index =
+        (std::numeric_limits<std::size_t>::max)();
+
+    // Adds a projected-value probe to its source-locality batch. The per-round
+    // lookup deduplicates identical input positions in expected constant time,
+    // while each request retains every diagonal search target that needs it.
 
     template <typename LocalIterator>
     void append_probe(std::vector<locality_probe_batch<LocalIterator>>& batches,
+        probe_request_lookup& lookup, std::vector<std::size_t>& locality_to_batch,
         partition_position<LocalIterator> position, std::size_t search_index,
         std::uint8_t operand_index)
     {
-        auto batch = std::find_if(
-            batches.begin(), batches.end(), [&position](auto const& candidate) {
-                return candidate.locality_id == position.locality_id;
-            });
-
-        if (batch == batches.end())
-        {
-            batches.push_back(
-                {position.locality_id, position.partition_id, {}});
-            batch = std::prev(batches.end());
-        }
-
-        auto request = std::find_if(batch->requests.begin(),
-            batch->requests.end(), [&position](auto const& candidate) {
-                return candidate.partition_id == position.partition_id &&
-                    candidate.position == position.position;
-            });
-
         projected_value_target const target{search_index, operand_index};
 
-        if (request == batch->requests.end())
+        auto const existing = lookup.find(position.logical_index);
+
+        if (existing != lookup.end())
         {
-            batch->requests.emplace_back(projected_value_request<LocalIterator>{
-                position.partition_id, {target}, HPX_MOVE(position.position)});
+            auto const& location = existing->second;
+
+            HPX_ASSERT(location.batch_index < batches.size());
+            HPX_ASSERT(location.request_index <
+                batches[location.batch_index].requests.size());
+
+            batches[location.batch_index]
+                .requests[location.request_index]
+                .targets.emplace_back(target);
+
+            return;
         }
-        else
+
+        HPX_ASSERT(position.locality_slot < locality_to_batch.size());
+
+        std::size_t batch_index =
+            locality_to_batch[position.locality_slot];
+
+        if (batch_index == invalid_probe_batch_index)
         {
-            request->targets.emplace_back(target);
+            batch_index = batches.size();
+
+            batches.push_back(locality_probe_batch<LocalIterator>{
+                position.locality_id, position.partition_id, {}});
+
+            locality_to_batch[position.locality_slot] = batch_index;
         }
+
+        HPX_ASSERT(batch_index < batches.size());
+
+        auto& requests = batches[batch_index].requests;
+        std::size_t const request_index = requests.size();
+
+        requests.emplace_back(projected_value_request<LocalIterator>{
+            position.partition_id, {target}, HPX_MOVE(position.position)});
+
+        lookup.emplace(position.logical_index,
+            probe_request_location{batch_index, request_index});
     }
 
     struct diagonal_search_state
@@ -216,6 +269,41 @@ namespace hpx::parallel::detail {
         }
 
         return state;
+    }
+
+    HPX_FORCEINLINE void constrain_diagonal_state(
+        diagonal_search_state& state,
+        diagonal_search_state const& left,
+        diagonal_search_state const& right)
+    {
+        HPX_ASSERT(left.complete);
+        HPX_ASSERT(right.complete);
+        HPX_ASSERT(left.k <= state.k);
+        HPX_ASSERT(state.k <= right.k);
+
+        // The co-ranks are monotonic:
+        // left.a <= state.a <= right.a
+        // left.b <= state.b <= right.b
+        std::size_t const low_from_right_b =
+            state.k > right.b ? state.k - right.b : 0;
+
+        HPX_ASSERT(state.k >= left.b);
+        std::size_t const high_from_left_b = state.k - left.b;
+
+        state.a_low = (std::max)(
+            state.a_low, (std::max)(left.a, low_from_right_b));
+
+        state.a_high = (std::min)(
+            state.a_high, (std::min)(right.a, high_from_left_b));
+
+        HPX_ASSERT(state.a_low <= state.a_high);
+
+        if (state.a_low == state.a_high)
+        {
+            state.a = state.a_low;
+            state.b = state.k - state.a;
+            state.complete = true;
+        }
     }
 
     enum : std::uint8_t
@@ -271,8 +359,10 @@ namespace hpx::parallel::detail {
         Table1 const& table1, Table2 const& table2,
         std::vector<locality_probe_batch<typename Table1::local_iterator>>&
             batches1,
+        probe_request_lookup& lookup1, std::vector<std::size_t>& locality_to_batch1,
         std::vector<locality_probe_batch<typename Table2::local_iterator>>&
             batches2,
+        probe_request_lookup& lookup2, std::vector<std::size_t>& locality_to_batch2,
         diagonal_probe_values<Key1, Key2>& values)
     {
         values.reset();
@@ -296,18 +386,22 @@ namespace hpx::parallel::detail {
 
         if (state.a != 0 && state.b != len2)
         {
-            append_probe(batches1, find_partition_position(table1, state.a - 1),
-                search_index, input_previous);
-            append_probe(batches2, find_partition_position(table2, state.b),
-                search_index, input_current);
+            append_probe(batches1, lookup1, locality_to_batch1,
+                find_partition_position(table1, state.a - 1), search_index,
+                input_previous);
+            append_probe(batches2, lookup2, locality_to_batch2,
+                find_partition_position(table2, state.b), search_index,
+                input_current);
         }
 
         if (state.b != 0 && state.a != len1)
         {
-            append_probe(batches2, find_partition_position(table2, state.b - 1),
-                search_index, input_previous);
-            append_probe(batches1, find_partition_position(table1, state.a),
-                search_index, input_current);
+            append_probe(batches2, lookup2, locality_to_batch2,
+                find_partition_position(table2, state.b - 1), search_index,
+                input_previous);
+            append_probe(batches1, lookup1, locality_to_batch1,
+                find_partition_position(table1, state.a), search_index,
+                input_current);
         }
     }
 
@@ -471,8 +565,22 @@ namespace hpx::parallel::detail {
                 std::vector<locality_probe_batch<local_iterator1>> batches1;
                 std::vector<locality_probe_batch<local_iterator2>> batches2;
 
-                prepare_diagonal_probes(state, search_index, len1, len2, table1,
-                    table2, batches1, batches2, values[search_index]);
+                probe_request_lookup lookup1;
+                probe_request_lookup lookup2;
+
+                lookup1.reserve(2);
+                lookup2.reserve(2);
+
+                std::vector<std::size_t> locality_to_batch1(
+                    table1.unique_locality_ids.size(), invalid_probe_batch_index);
+
+                std::vector<std::size_t> locality_to_batch2(
+                    table2.unique_locality_ids.size(), invalid_probe_batch_index);
+
+                prepare_diagonal_probes(state, search_index, len1, len2,
+                    table1, table2, batches1, lookup1, locality_to_batch1,
+                    batches2, lookup2, locality_to_batch2,
+                    values[search_index]);
 
                 if (state.complete)
                 {
@@ -538,6 +646,18 @@ namespace hpx::parallel::detail {
             std::vector<locality_probe_batch<local_iterator1>> batches1;
             std::vector<locality_probe_batch<local_iterator2>> batches2;
 
+            probe_request_lookup lookup1;
+            probe_request_lookup lookup2;
+
+            lookup1.reserve(2 * states.size());
+            lookup2.reserve(2 * states.size());
+
+            std::vector<std::size_t> locality_to_batch1(
+                table1.unique_locality_ids.size(), invalid_probe_batch_index);
+
+            std::vector<std::size_t> locality_to_batch2(
+                table2.unique_locality_ids.size(), invalid_probe_batch_index);
+
             for (std::size_t search_index = 0; search_index != states.size();
                 ++search_index)
             {
@@ -545,8 +665,9 @@ namespace hpx::parallel::detail {
                 {
                     all_complete = false;
                     prepare_diagonal_probes(states[search_index], search_index,
-                        len1, len2, table1, table2, batches1, batches2,
-                        values[search_index]);
+                        len1, len2, table1, table2, batches1, lookup1,
+                        locality_to_batch1, batches2, lookup2,
+                        locality_to_batch2, values[search_index]);
                 }
             }
 
@@ -560,24 +681,37 @@ namespace hpx::parallel::detail {
             operations1.reserve(batches1.size());
             operations2.reserve(batches2.size());
 
-            for (auto& batch : batches1)
+            try
             {
-                operations1.push_back(capture_projected_values_async<ExPolicy,
-                    Key1, local_iterator1>(batch.routing_partition_id,
-                    HPX_MOVE(batch.requests), proj1));
+                for (auto& batch : batches1)
+                {
+                    operations1.push_back(capture_projected_values_async<ExPolicy,
+                        Key1, local_iterator1>(batch.routing_partition_id,
+                        HPX_MOVE(batch.requests), proj1));
+                }
+
+                for (auto& batch : batches2)
+                {
+                    operations2.push_back(capture_projected_values_async<ExPolicy,
+                        Key2, local_iterator2>(batch.routing_partition_id,
+                        HPX_MOVE(batch.requests), proj2));
+                }
+            }
+            catch (...)
+            {
+                // Both input groups must finish before an exception
+                // from either group is propagated. Destroying an HPX
+                // future does not wait for its operation.
+                (void) hpx::wait_all_nothrow(operations1);
+                (void) hpx::wait_all_nothrow(operations2);
+                throw;
             }
 
-            for (auto& batch : batches2)
-            {
-                operations2.push_back(capture_projected_values_async<ExPolicy,
-                    Key2, local_iterator2>(batch.routing_partition_id,
-                    HPX_MOVE(batch.requests), proj2));
-            }
+            auto completed = get_capture_results<ExPolicy>(
+                HPX_MOVE(operations1), HPX_MOVE(operations2));
 
-            auto completed1 =
-                get_capture_results<ExPolicy>(HPX_MOVE(operations1));
-            auto completed2 =
-                get_capture_results<ExPolicy>(HPX_MOVE(operations2));
+            auto completed1 = HPX_MOVE(completed.first);
+            auto completed2 = HPX_MOVE(completed.second);
 
             for (auto& results : completed1)
             {
@@ -596,6 +730,85 @@ namespace hpx::parallel::detail {
                 update_diagonal_state(states[search_index], len1, len2,
                     values[search_index], comp);
             }
+        }
+    }
+
+    template <typename ExPolicy, typename Key1, typename Key2, typename Table1,
+        typename Table2, typename Comp, typename Proj1, typename Proj2,
+        typename IsSeq>
+    void resolve_constrained_diagonal_intersections(
+        std::vector<diagonal_search_state>& states,
+        std::size_t len1, std::size_t len2,
+        Table1 const& table1, Table2 const& table2,
+        Comp& comp, Proj1& proj1, Proj2& proj2, IsSeq is_seq)
+    {
+        HPX_ASSERT(states.size() >= 2);
+        HPX_ASSERT(states.front().complete);
+        HPX_ASSERT(states.back().complete);
+
+        using interval_type = std::pair<std::size_t, std::size_t>;
+
+        std::vector<interval_type> intervals;
+        intervals.emplace_back(0, states.size() - 1);
+
+        while (!intervals.empty())
+        {
+            std::vector<interval_type> next_intervals;
+            std::vector<std::size_t> state_indices;
+            std::vector<diagonal_search_state> level_states;
+
+            next_intervals.reserve(intervals.size() * 2);
+            state_indices.reserve(intervals.size());
+            level_states.reserve(intervals.size());
+
+            for (auto const& interval : intervals)
+            {
+                std::size_t const left_index = interval.first;
+                std::size_t const right_index = interval.second;
+
+                if (right_index - left_index <= 1)
+                {
+                    continue;
+                }
+
+                std::size_t const middle_index =
+                    left_index + (right_index - left_index) / 2;
+
+                constrain_diagonal_state(states[middle_index],
+                    states[left_index], states[right_index]);
+
+                state_indices.push_back(middle_index);
+                level_states.push_back(states[middle_index]);
+
+                if (middle_index - left_index > 1)
+                {
+                    next_intervals.emplace_back(left_index, middle_index);
+                }
+
+                if (right_index - middle_index > 1)
+                {
+                    next_intervals.emplace_back(middle_index, right_index);
+                }
+            }
+
+            if (level_states.empty())
+            {
+                break;
+            }
+
+            resolve_diagonal_intersections<ExPolicy, Key1, Key2>(
+                level_states, len1, len2, table1, table2,
+                comp, proj1, proj2, is_seq);
+
+            for (std::size_t index = 0; index != state_indices.size(); ++index)
+            {
+                HPX_ASSERT(level_states[index].complete);
+
+                states[state_indices[index]] =
+                    HPX_MOVE(level_states[index]);
+            }
+
+            intervals = HPX_MOVE(next_intervals);
         }
     }
 
@@ -895,7 +1108,7 @@ namespace hpx::parallel::detail {
             states.push_back(make_diagonal_state(len1, len2, position.k1));
         }
 
-        resolve_diagonal_intersections<ExPolicy, key_type1, key_type2>(
+        resolve_constrained_diagonal_intersections<ExPolicy, key_type1, key_type2>(
             states, len1, len2, table1, table2, comp, proj1, proj2, is_seq);
 
         HPX_ASSERT(states.size() == output_positions.size() + 1);
