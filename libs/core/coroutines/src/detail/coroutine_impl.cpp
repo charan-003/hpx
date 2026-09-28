@@ -64,7 +64,7 @@ namespace hpx::threads::coroutines::detail {
         do
         {
 #if defined(HPX_HAVE_ADDRESS_SANITIZER)
-            finish_switch_fiber(nullptr, m_caller);
+            finish_switch_fiber(this->asan_fake_stack, m_caller);
 #endif
             {
                 coroutine_self* old_self = coroutine_self::get_self();
@@ -89,7 +89,7 @@ namespace hpx::threads::coroutines::detail {
 
                 // Reset early as the destructors may still yield.
                 this->reset_tss();
-                this->reset(false);
+                this->reset();
 
                 // return value to other side of the fence
                 this->bind_result(result_last);
@@ -140,7 +140,7 @@ namespace hpx::threads::coroutines::detail {
             }
 
             this->reset_tss();
-            this->reset(true);
+            this->reset();
 
             this->bind_result(result_last);
         }
