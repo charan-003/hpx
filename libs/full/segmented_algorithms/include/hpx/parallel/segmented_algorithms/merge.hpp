@@ -90,8 +90,7 @@ namespace hpx::parallel::detail {
 
             table.locality_ids.push_back(locality_id);
 
-            auto locality = std::find(
-                table.unique_locality_ids.begin(),
+            auto locality = std::find(table.unique_locality_ids.begin(),
                 table.unique_locality_ids.end(), locality_id);
 
             std::size_t locality_slot;
@@ -184,7 +183,8 @@ namespace hpx::parallel::detail {
 
     template <typename LocalIterator>
     void append_probe(std::vector<locality_probe_batch<LocalIterator>>& batches,
-        probe_request_lookup& lookup, std::vector<std::size_t>& locality_to_batch,
+        probe_request_lookup& lookup,
+        std::vector<std::size_t>& locality_to_batch,
         partition_position<LocalIterator> position, std::size_t search_index,
         std::uint8_t operand_index)
     {
@@ -209,8 +209,7 @@ namespace hpx::parallel::detail {
 
         HPX_ASSERT(position.locality_slot < locality_to_batch.size());
 
-        std::size_t batch_index =
-            locality_to_batch[position.locality_slot];
+        std::size_t batch_index = locality_to_batch[position.locality_slot];
 
         if (batch_index == invalid_probe_batch_index)
         {
@@ -259,7 +258,7 @@ namespace hpx::parallel::detail {
         std::size_t len1, std::size_t len2, std::size_t k)
     {
         diagonal_search_state state{
-            k, k > len2 ? k - len2 : 0, (std::min) (k, len1)};
+            k, k > len2 ? k - len2 : 0, (std::min)(k, len1)};
 
         if (state.a_low == state.a_high)
         {
@@ -271,10 +270,8 @@ namespace hpx::parallel::detail {
         return state;
     }
 
-    HPX_FORCEINLINE void constrain_diagonal_state(
-        diagonal_search_state& state,
-        diagonal_search_state const& left,
-        diagonal_search_state const& right)
+    HPX_FORCEINLINE void constrain_diagonal_state(diagonal_search_state& state,
+        diagonal_search_state const& left, diagonal_search_state const& right)
     {
         HPX_ASSERT(left.complete);
         HPX_ASSERT(right.complete);
@@ -290,11 +287,11 @@ namespace hpx::parallel::detail {
         HPX_ASSERT(state.k >= left.b);
         std::size_t const high_from_left_b = state.k - left.b;
 
-        state.a_low = (std::max)(
-            state.a_low, (std::max)(left.a, low_from_right_b));
+        state.a_low =
+            (std::max)(state.a_low, (std::max)(left.a, low_from_right_b));
 
-        state.a_high = (std::min)(
-            state.a_high, (std::min)(right.a, high_from_left_b));
+        state.a_high =
+            (std::min)(state.a_high, (std::min)(right.a, high_from_left_b));
 
         HPX_ASSERT(state.a_low <= state.a_high);
 
@@ -359,10 +356,12 @@ namespace hpx::parallel::detail {
         Table1 const& table1, Table2 const& table2,
         std::vector<locality_probe_batch<typename Table1::local_iterator>>&
             batches1,
-        probe_request_lookup& lookup1, std::vector<std::size_t>& locality_to_batch1,
+        probe_request_lookup& lookup1,
+        std::vector<std::size_t>& locality_to_batch1,
         std::vector<locality_probe_batch<typename Table2::local_iterator>>&
             batches2,
-        probe_request_lookup& lookup2, std::vector<std::size_t>& locality_to_batch2,
+        probe_request_lookup& lookup2,
+        std::vector<std::size_t>& locality_to_batch2,
         diagonal_probe_values<Key1, Key2>& values)
     {
         values.reset();
@@ -572,15 +571,16 @@ namespace hpx::parallel::detail {
                 lookup2.reserve(2);
 
                 std::vector<std::size_t> locality_to_batch1(
-                    table1.unique_locality_ids.size(), invalid_probe_batch_index);
+                    table1.unique_locality_ids.size(),
+                    invalid_probe_batch_index);
 
                 std::vector<std::size_t> locality_to_batch2(
-                    table2.unique_locality_ids.size(), invalid_probe_batch_index);
+                    table2.unique_locality_ids.size(),
+                    invalid_probe_batch_index);
 
-                prepare_diagonal_probes(state, search_index, len1, len2,
-                    table1, table2, batches1, lookup1, locality_to_batch1,
-                    batches2, lookup2, locality_to_batch2,
-                    values[search_index]);
+                prepare_diagonal_probes(state, search_index, len1, len2, table1,
+                    table2, batches1, lookup1, locality_to_batch1, batches2,
+                    lookup2, locality_to_batch2, values[search_index]);
 
                 if (state.complete)
                 {
@@ -685,16 +685,18 @@ namespace hpx::parallel::detail {
             {
                 for (auto& batch : batches1)
                 {
-                    operations1.push_back(capture_projected_values_async<ExPolicy,
-                        Key1, local_iterator1>(batch.routing_partition_id,
-                        HPX_MOVE(batch.requests), proj1));
+                    operations1.push_back(
+                        capture_projected_values_async<ExPolicy, Key1,
+                            local_iterator1>(batch.routing_partition_id,
+                            HPX_MOVE(batch.requests), proj1));
                 }
 
                 for (auto& batch : batches2)
                 {
-                    operations2.push_back(capture_projected_values_async<ExPolicy,
-                        Key2, local_iterator2>(batch.routing_partition_id,
-                        HPX_MOVE(batch.requests), proj2));
+                    operations2.push_back(
+                        capture_projected_values_async<ExPolicy, Key2,
+                            local_iterator2>(batch.routing_partition_id,
+                            HPX_MOVE(batch.requests), proj2));
                 }
             }
             catch (...)
@@ -737,9 +739,8 @@ namespace hpx::parallel::detail {
         typename Table2, typename Comp, typename Proj1, typename Proj2,
         typename IsSeq>
     void resolve_constrained_diagonal_intersections(
-        std::vector<diagonal_search_state>& states,
-        std::size_t len1, std::size_t len2,
-        Table1 const& table1, Table2 const& table2,
+        std::vector<diagonal_search_state>& states, std::size_t len1,
+        std::size_t len2, Table1 const& table1, Table2 const& table2,
         Comp& comp, Proj1& proj1, Proj2& proj2, IsSeq is_seq)
     {
         HPX_ASSERT(states.size() >= 2);
@@ -796,16 +797,14 @@ namespace hpx::parallel::detail {
                 break;
             }
 
-            resolve_diagonal_intersections<ExPolicy, Key1, Key2>(
-                level_states, len1, len2, table1, table2,
-                comp, proj1, proj2, is_seq);
+            resolve_diagonal_intersections<ExPolicy, Key1, Key2>(level_states,
+                len1, len2, table1, table2, comp, proj1, proj2, is_seq);
 
             for (std::size_t index = 0; index != state_indices.size(); ++index)
             {
                 HPX_ASSERT(level_states[index].complete);
 
-                states[state_indices[index]] =
-                    HPX_MOVE(level_states[index]);
+                states[state_indices[index]] = HPX_MOVE(level_states[index]);
             }
 
             intervals = HPX_MOVE(next_intervals);
@@ -875,7 +874,7 @@ namespace hpx::parallel::detail {
             std::size_t const remaining = total_size - global_offset;
 
             std::size_t const chunk_size =
-                (std::min) ((std::min) (available, remaining), max_chunk_size);
+                (std::min)((std::min)(available, remaining), max_chunk_size);
 
             HPX_ASSERT(chunk_size != 0);
 
@@ -1108,7 +1107,8 @@ namespace hpx::parallel::detail {
             states.push_back(make_diagonal_state(len1, len2, position.k1));
         }
 
-        resolve_constrained_diagonal_intersections<ExPolicy, key_type1, key_type2>(
+        resolve_constrained_diagonal_intersections<ExPolicy, key_type1,
+            key_type2>(
             states, len1, len2, table1, table2, comp, proj1, proj2, is_seq);
 
         HPX_ASSERT(states.size() == output_positions.size() + 1);

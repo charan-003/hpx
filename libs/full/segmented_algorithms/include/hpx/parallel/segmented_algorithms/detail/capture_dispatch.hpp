@@ -134,14 +134,12 @@ namespace hpx::parallel::detail {
 
             if (exceptional1)
             {
-                exception_handler::call(
-                    operation1.get_exception_ptr(), errors);
+                exception_handler::call(operation1.get_exception_ptr(), errors);
             }
 
             if (exceptional2)
             {
-                exception_handler::call(
-                    operation2.get_exception_ptr(), errors);
+                exception_handler::call(operation2.get_exception_ptr(), errors);
             }
 
             if (!errors.empty())
@@ -264,11 +262,11 @@ namespace hpx::parallel::detail {
     constexpr std::size_t max_capture_batch_elements() noexcept
     {
         constexpr std::size_t element_bytes =
-            (std::max) (sizeof(Value1), sizeof(Value2));
+            (std::max)(sizeof(Value1), sizeof(Value2));
 
         constexpr std::size_t count = max_capture_batch_bytes / element_bytes;
 
-        return (std::max) (std::size_t(1), count);
+        return (std::max)(std::size_t(1), count);
     }
 
     template <typename LocalIterator>
@@ -1300,11 +1298,11 @@ namespace hpx::parallel::detail {
                 return hpx::make_ready_future(values_type{});
             }
 
-            return hpx::async(
-                [ranges = HPX_MOVE(ranges)]() mutable -> values_type {
-                    return range_collector<ExPolicy, is_seq>::
-                        template collect_range<Value>(HPX_MOVE(ranges));
-                });
+            return hpx::async([ranges = HPX_MOVE(
+                                   ranges)]() mutable -> values_type {
+                return range_collector<ExPolicy,
+                    is_seq>::template collect_range<Value>(HPX_MOVE(ranges));
+            });
         }
 
         // Collect and execute one byte-bounded group of output chunks.
@@ -1341,15 +1339,13 @@ namespace hpx::parallel::detail {
             }
             else
             {
-                auto values1_f =
-                    collect_range_async<Value1>(HPX_MOVE(ranges1));
+                auto values1_f = collect_range_async<Value1>(HPX_MOVE(ranges1));
 
                 hpx::future<values_type2> values2_f;
 
                 try
                 {
-                    values2_f =
-                        collect_range_async<Value2>(HPX_MOVE(ranges2));
+                    values2_f = collect_range_async<Value2>(HPX_MOVE(ranges2));
                 }
                 catch (...)
                 {
@@ -1390,14 +1386,14 @@ namespace hpx::parallel::detail {
                     auto collected = get_capture_results<ExPolicy>(
                         HPX_MOVE(values1_f), HPX_MOVE(values2_f));
 
-                    auto shared1 =
-                        std::make_shared<values_type1>(HPX_MOVE(collected.first));
-                    auto shared2 =
-                        std::make_shared<values_type2>(HPX_MOVE(collected.second));
+                    auto shared1 = std::make_shared<values_type1>(
+                        HPX_MOVE(collected.first));
+                    auto shared2 = std::make_shared<values_type2>(
+                        HPX_MOVE(collected.second));
 
                     return invoke_chunks(algo, HPX_MOVE(policy),
-                        HPX_MOVE(chunks), HPX_MOVE(shared1),
-                        HPX_MOVE(shared2), HPX_MOVE(args)...);
+                        HPX_MOVE(chunks), HPX_MOVE(shared1), HPX_MOVE(shared2),
+                        HPX_MOVE(args)...);
                 }
             }
         }
