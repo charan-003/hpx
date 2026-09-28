@@ -171,6 +171,8 @@ namespace hpx::threads::coroutines::detail {
             {
                 // Function and thread-local destructors have finished, including
                 // any yields. Recycle only after leaving the coroutine stack.
+                // Direct execution uses coroutine_impl::invoke_directly(),
+                // which bypasses invoke() and does not recycle a stack.
                 this->reset_stack(false);
 
                 if (m_exit_status == context_exit_status::exited_return)

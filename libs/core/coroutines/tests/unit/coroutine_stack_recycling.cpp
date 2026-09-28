@@ -162,13 +162,35 @@ namespace {
         // advise that caller's stack nor require its own allocated stack.
         coroutine outer(
             [&](coroutine::arg_type) {
+                auto* caller_self = coroutine_self::get_self();
                 coroutine direct(
                     make_function(), invalid_thread_id, coroutine_stack_size);
                 direct.invoke_directly();
                 HPX_TEST(direct.impl()->exited());
+                HPX_TEST_EQ(coroutine_self::get_self(), caller_self);
+
+                direct.rebind(
+                    [](coroutine::arg_type) -> coroutine::result_type {
+                        throw std::runtime_error("direct coroutine exit");
+                    },
+                    invalid_thread_id);
+                bool direct_caught = false;
+                try
+                {
+                    direct.invoke_directly();
+                }
+                catch (std::runtime_error const&)
+                {
+                    direct_caught = true;
+                }
+                HPX_TEST(direct_caught);
+                HPX_TEST(direct.impl()->exited());
+                HPX_TEST_EQ(coroutine_self::get_self(), caller_self);
+
                 c.rebind(make_function(), invalid_thread_id);
                 c.invoke_directly();
                 HPX_TEST(c.impl()->exited());
+                HPX_TEST_EQ(coroutine_self::get_self(), caller_self);
                 c.rebind(make_function(), invalid_thread_id);
                 HPX_TEST_EQ(c().first, thread_schedule_state::terminated);
                 return coroutine::result_type{
