@@ -203,7 +203,8 @@ namespace {
 
 int main()
 {
-#if defined(__linux__) || defined(__FreeBSD__)
+#if defined(__linux) || defined(linux) || defined(__linux__) ||                \
+    defined(__FreeBSD__)
     namespace posix = hpx::threads::coroutines::detail::posix;
     int const old_mode = posix::unbind_on_reset;
     bool const old_guard_pages = posix::use_guard_pages;
