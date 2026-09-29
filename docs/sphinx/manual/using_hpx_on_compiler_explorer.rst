@@ -150,11 +150,12 @@ Studio:
 .. code-block:: powershell
 
    PS> $hpx = 'C:\path\to\hpx'
+   PS> $boost = 'C:\path\to\boost'
    PS> $libs = (Get-ChildItem "$hpx\lib\hpx*.lib").FullName
    PS> cl /std:c++20 /O2 /EHsc /MD /GR /bigobj /permissive- `
          /Zc:__cplusplus /Zc:preprocessor /Zc:inline /Zc:throwingNew `
          /Zc:rvalueCast /Zc:strictStrings `
-         /DHPX_APPLICATION_EXPORTS /I "$hpx\include" `
+         /DHPX_APPLICATION_EXPORTS /I "$hpx\include" /I "$boost\include" `
          my_program.cpp `
          /link $libs libhwloc.dll.a psapi.lib shlwapi.lib
 
@@ -168,6 +169,12 @@ the import library of the prebuilt hwloc that ``HPX_WITH_FETCH_HWLOC=ON``
 downloads; use your own hwloc import library otherwise, and add
 ``/LIBPATH:`` for it if it is not on the ``LIB`` path. Put the hwloc DLL next
 to the executable or on ``PATH`` before running it.
+
+A godbolt-minimal build uses Boost as a header-only dependency, so only the
+Boost include path is needed. Configurations with
+``HPX_WITH_GENERIC_CONTEXT_COROUTINES=ON`` also link the Boost ``context``,
+``thread``, and ``chrono`` libraries; add those to the ``/link`` part together
+with a ``/LIBPATH:`` for them.
 
 Prefer ``HPX::hpx`` plus ``HPX::wrap_main`` from CMake where possible, since
 they supply these options and the module libraries automatically. Compiler

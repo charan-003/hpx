@@ -61,7 +61,7 @@ function Get-CommandLine([string]$file)
 $clFlags = (Get-CommandLine 'CL.command.1.tlog') `
     -replace '/c\s', '' `
     -replace '/F[od]"[^"]*"', '' `
-    -replace '\S+\.CPP\s*$', ''
+    -replace '(?i)("[^"]+\.cpp"|\S+\.cpp)\s*$', ''
 
 # Keep only the libraries (.lib, and .dll.a for the fetched hwloc). Relative
 # ones are relative to the CMake build directory, so run cl from there.
