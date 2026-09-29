@@ -541,55 +541,8 @@ launch policy ``hpx::launch::sync`` can be used to make
 :hpx:member:`hpx::lcos::local::channel::get` block until a value is set and
 return the value directly.
 
-A channel component is created on one :term:`locality` and can be sent to
-another :term:`locality` using an action. This example also demonstrates how a
-channel can be used as a range of values:
-
-.. literalinclude:: ../../examples/quickstart/channel_docs.cpp
-   :language: c++
-   :start-after: //[channel
-   :end-before: //]
-
-.. _register_channel:
-
-Registering channel components
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Before a channel component can be created for a given value type, that type has
-to be registered with the ``HPX_REGISTER_CHANNEL`` macro. The macro exists in
-two forms::
-
-    HPX_REGISTER_CHANNEL(type);
-    HPX_REGISTER_CHANNEL(type, name);
-
-The one-argument form uses ``type`` as ``name``. The macro has to be placed in
-the global namespace in exactly one translation unit. Any other translation unit
-using the channel has to use ``HPX_REGISTER_CHANNEL_DECLARATION`` (taking the
-same arguments) instead.
-
-The ``type`` and ``name`` arguments are used to generate unique C++ identifiers
-internally. Because of this, they must not contain characters that are illegal
-in a C++ identifier, such as angle brackets, commas, or scope resolution
-operators. This means that a written out template type fails to compile::
-
-    // This fails to compile
-    HPX_REGISTER_CHANNEL(std::vector<int>);
-
-Use a type alias instead::
-
-    // This compiles
-    using VecInt = std::vector<int>;
-    HPX_REGISTER_CHANNEL(VecInt);
-
-    // typedef also works
-    typedef std::vector<int> VecInt2;
-    HPX_REGISTER_CHANNEL(VecInt2);
-
-.. important::
-
-   This is expected behavior and applies to any type whose spelling contains
-   characters outside of what is valid in a C++ identifier. Always define a
-   type alias before registering a templated or otherwise qualified type.
+Channels can also be used across localities as channel components. See
+:ref:`distributed_channels` for how to create and register them.
 
 
 .. _task_block:
