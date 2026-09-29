@@ -18,8 +18,7 @@
 /// Derived<Executor, Parameters>, where Derived is the
 /// template <typename, typename> class the concrete policy is written as.
 /// hpx::execution::experimental::rebind_executor_t builds on top of that
-/// combined operation and is what hpx::execution::detail::execution_policy
-/// itself uses internally for on(), with(), and query().
+/// combined operation.
 ///
 /// That combined operation requires every execution policy to be shaped
 /// exactly as Derived<Executor, Parameters>, which is awkward for a policy
@@ -30,15 +29,18 @@
 /// opt in to rebinding along either axis without being forced into that
 /// shape at all. The default implementations of both customization points
 /// forward to rebind_executor_t, so they share its implementation rather
-/// than duplicating it, and the executor-only and parameters-only
-/// overloads of hpx::execution::experimental::create_rebound_policy
-/// route through rebind_policy_executor_t and rebind_policy_parameters_t
-/// below.
+/// than duplicating it. The matching construction-side customization
+/// points live in create_rebound_policy.hpp; the executor-only and
+/// parameters-only overloads of
+/// hpx::execution::experimental::create_rebound_policy, as well as
+/// on(), with(), and the scheduling property queries of
+/// hpx::execution::detail::execution_policy, go through both.
 
 #pragma once
 
 #include <hpx/config.hpp>
 #include <hpx/execution/executors/rebind_executor.hpp>
+#include <hpx/modules/execution_base.hpp>
 #include <hpx/modules/type_support.hpp>
 
 #include <type_traits>
@@ -104,10 +106,9 @@ namespace hpx::execution::detail {
     ///        parameters.
     ///
     /// To make a policy type participate, either rely on the default
-    /// below (which requires nothing more than what
-    /// hpx::execution::detail::execution_policy already provides: a
-    /// nested \c executor_parameters_type member and a nested
-    /// \c rebind<Executor_, Parameters_>::type member template), or
+    /// below (which requires nothing more than a nested
+    /// \c rebind<Executor_, Parameters_>::type member template, as
+    /// hpx::execution::detail::execution_policy provides), or
     /// specialize rebind_policy_executor for the policy type directly to
     /// define bespoke behavior. A direct specialization does not need to
     /// derive from hpx::execution::detail::execution_policy, or from
@@ -143,12 +144,18 @@ namespace hpx::execution::detail {
         ///
         /// The default implementation forwards to
         /// hpx::execution::experimental::rebind_executor_t, supplying
-        /// Policy's current \c executor_parameters_type as the
-        /// Parameters_ argument so that only the executor changes.
+        /// Policy's current executor parameters type as the Parameters_
+        /// argument so that only the executor changes. That type is
+        /// obtained through
+        /// hpx::execution::experimental::extract_executor_parameters_t,
+        /// so a Policy without a nested \c executor_parameters_type falls
+        /// back to sequential_executor_parameters, and an explicit
+        /// specialization of extract_executor_parameters is honored.
         using type =
             hpx::execution::experimental::rebind_executor_t<decayed_policy_type,
                 decayed_executor_type,
-                typename decayed_policy_type::executor_parameters_type>;
+                hpx::execution::experimental::extract_executor_parameters_t<
+                    decayed_policy_type>>;
     };
 
     namespace detail {

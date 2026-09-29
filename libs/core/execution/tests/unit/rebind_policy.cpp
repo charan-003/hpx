@@ -4,11 +4,13 @@
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-/// Compile-time tests for the orthogonal rebind_policy_executor_t and
-/// rebind_policy_parameters_t customization points. Everything here is
-/// checked with static_assert; nothing needs to run.
+/// Tests for the orthogonal rebind_policy_executor_t and
+/// rebind_policy_parameters_t customization points and their
+/// construction-side counterparts. Type-level properties are checked with
+/// static_assert; the construction tests run.
 
 #include <hpx/modules/execution.hpp>
+#include <hpx/modules/execution_base.hpp>
 #include <hpx/modules/testing.hpp>
 
 // hpx::execution::detail::parallel_policy_shim,
@@ -22,6 +24,7 @@
 #include <hpx/modules/executors.hpp>
 
 #include <type_traits>
+#include <utility>
 
 namespace exd = hpx::execution::detail;
 
@@ -442,8 +445,274 @@ namespace construction_state_tests {
 }    // namespace construction_state_tests
 
 ///////////////////////////////////////////////////////////////////////////
+// Rebinding only the executor obtains the unchanged parameters type through
+// hpx::execution::experimental::extract_executor_parameters_t, the same way
+// create_rebound_policy did before the per-axis customization points were
+// introduced: a policy without a nested executor_parameters_type falls back
+// to sequential_executor_parameters, and an explicit specialization of
+// extract_executor_parameters is honored.
+namespace parameter_extraction_tests {
+
+    struct tagged_executor
+    {
+        using execution_category = hpx::execution::parallel_execution_tag;
+
+        int id = 0;
+    };
+
+    struct custom_parameters
+    {
+        int id = 0;
+    };
+
+    // No nested executor_parameters_type member.
+    template <typename Executor, typename Parameters>
+    struct no_parameters_member_policy
+    {
+        using execution_category = hpx::execution::parallel_execution_tag;
+
+        template <typename Executor_, typename Parameters_>
+        struct rebind
+        {
+            using type = no_parameters_member_policy<Executor_, Parameters_>;
+        };
+
+        no_parameters_member_policy(Executor exec, Parameters params)
+          : exec_(exec)
+          , params_(params)
+        {
+        }
+
+        Executor executor() const
+        {
+            return exec_;
+        }
+
+        Parameters parameters() const
+        {
+            return params_;
+        }
+
+        Executor exec_;
+        Parameters params_;
+    };
+
+    // Same shape, but with an explicit extract_executor_parameters
+    // specialization below.
+    template <typename Executor, typename Parameters>
+    struct extracted_parameters_policy
+      : no_parameters_member_policy<Executor, Parameters>
+    {
+        using no_parameters_member_policy<Executor,
+            Parameters>::no_parameters_member_policy;
+
+        template <typename Executor_, typename Parameters_>
+        struct rebind
+        {
+            using type = extracted_parameters_policy<Executor_, Parameters_>;
+        };
+    };
+
+}    // namespace parameter_extraction_tests
+
+namespace hpx::execution::experimental {
+
+    template <>
+    struct is_one_way_executor<parameter_extraction_tests::tagged_executor>
+      : std::true_type
+    {
+    };
+
+    template <typename Executor, typename Parameters>
+    struct extract_executor_parameters<parameter_extraction_tests::
+            extracted_parameters_policy<Executor, Parameters>>
+    {
+        using type = Parameters;
+    };
+
+}    // namespace hpx::execution::experimental
+
+namespace parameter_extraction_tests {
+
+    using fallback_policy = no_parameters_member_policy<tagged_executor,
+        hpx::execution::experimental::sequential_executor_parameters>;
+
+    static_assert(
+        std::is_same_v<
+            exd::rebind_policy_executor_t<fallback_policy, tagged_executor>,
+            fallback_policy>,
+        "a policy without executor_parameters_type keeps "
+        "sequential_executor_parameters when rebinding the executor");
+
+    using specialized_policy =
+        extracted_parameters_policy<tagged_executor, custom_parameters>;
+
+    static_assert(
+        std::is_same_v<
+            exd::rebind_policy_executor_t<specialized_policy, tagged_executor>,
+            specialized_policy>,
+        "an explicit extract_executor_parameters specialization is honored "
+        "when rebinding the executor");
+
+    void run()
+    {
+        fallback_policy const fallback(tagged_executor{1}, {});
+
+        auto rebound_fallback =
+            hpx::execution::experimental::create_rebound_policy(
+                fallback, tagged_executor{2});
+
+        HPX_TEST_EQ(rebound_fallback.executor().id, 2);
+
+        specialized_policy const specialized(
+            tagged_executor{1}, custom_parameters{3});
+
+        auto rebound_specialized =
+            hpx::execution::experimental::create_rebound_policy(
+                specialized, tagged_executor{2});
+
+        HPX_TEST_EQ(rebound_specialized.executor().id, 2);
+        HPX_TEST_EQ(rebound_specialized.parameters().id, 3);
+    }
+}    // namespace parameter_extraction_tests
+
+///////////////////////////////////////////////////////////////////////////
+// A policy that cannot be constructed from just (executor, parameters): it
+// needs a label that only the original policy knows. It opts in to both
+// construction-side customization points, and the label has to survive
+// rebinding along either axis, through create_rebound_policy as well as
+// through the per-axis function objects directly.
+namespace custom_construction_tests {
+
+    using construction_state_tests::labeled_executor;
+    using construction_state_tests::labeled_parameters;
+
+    template <typename Executor, typename Parameters>
+    struct three_argument_policy
+    {
+        using executor_type = Executor;
+        using executor_parameters_type = Parameters;
+
+        template <typename Executor_, typename Parameters_>
+        struct rebind
+        {
+            using type = three_argument_policy<Executor_, Parameters_>;
+        };
+
+        three_argument_policy(int label, Executor exec, Parameters params)
+          : label_(label)
+          , exec_(exec)
+          , params_(params)
+        {
+        }
+
+        int label() const
+        {
+            return label_;
+        }
+
+        Executor executor() const
+        {
+            return exec_;
+        }
+
+        Parameters parameters() const
+        {
+            return params_;
+        }
+
+        int label_;
+        Executor exec_;
+        Parameters params_;
+    };
+
+}    // namespace custom_construction_tests
+
+namespace hpx::execution::detail {
+
+    template <typename Executor, typename Parameters, typename NewExecutor>
+    struct construct_rebound_policy_executor<
+        custom_construction_tests::three_argument_policy<Executor, Parameters>,
+        NewExecutor>
+    {
+        using result_type =
+            custom_construction_tests::three_argument_policy<NewExecutor,
+                Parameters>;
+
+        template <typename Executor_>
+        static result_type call(
+            custom_construction_tests::three_argument_policy<Executor,
+                Parameters> const& policy,
+            Executor_&& exec)
+        {
+            return result_type(policy.label(), std::forward<Executor_>(exec),
+                policy.parameters());
+        }
+    };
+
+    template <typename Executor, typename Parameters, typename NewParameters>
+    struct construct_rebound_policy_parameters<
+        custom_construction_tests::three_argument_policy<Executor, Parameters>,
+        NewParameters>
+    {
+        using result_type =
+            custom_construction_tests::three_argument_policy<Executor,
+                NewParameters>;
+
+        template <typename Parameters_>
+        static result_type call(
+            custom_construction_tests::three_argument_policy<Executor,
+                Parameters> const& policy,
+            Parameters_&& params)
+        {
+            return result_type(policy.label(), policy.executor(),
+                std::forward<Parameters_>(params));
+        }
+    };
+}    // namespace hpx::execution::detail
+
+namespace custom_construction_tests {
+
+    void run()
+    {
+        using policy_type =
+            three_argument_policy<labeled_executor, labeled_parameters>;
+
+        policy_type const policy(
+            42, labeled_executor{1}, labeled_parameters{1});
+
+        auto rebound_by_executor =
+            hpx::execution::experimental::create_rebound_policy(
+                policy, labeled_executor{2});
+
+        HPX_TEST_EQ(rebound_by_executor.label(), 42);
+        HPX_TEST_EQ(rebound_by_executor.executor().id, 2);
+        HPX_TEST_EQ(rebound_by_executor.parameters().id, 1);
+
+        auto rebound_by_parameters =
+            hpx::execution::experimental::create_rebound_policy(
+                policy, labeled_parameters{2});
+
+        HPX_TEST_EQ(rebound_by_parameters.label(), 42);
+        HPX_TEST_EQ(rebound_by_parameters.executor().id, 1);
+        HPX_TEST_EQ(rebound_by_parameters.parameters().id, 2);
+
+        // The per-axis function objects dispatch to the same hooks.
+        auto rebound_directly = exd::create_rebound_policy_parameters(
+            exd::create_rebound_policy_executor(policy, labeled_executor{3}),
+            labeled_parameters{4});
+
+        HPX_TEST_EQ(rebound_directly.label(), 42);
+        HPX_TEST_EQ(rebound_directly.executor().id, 3);
+        HPX_TEST_EQ(rebound_directly.parameters().id, 4);
+    }
+}    // namespace custom_construction_tests
+
+///////////////////////////////////////////////////////////////////////////
 int main()
 {
     construction_state_tests::run();
+    parameter_extraction_tests::run();
+    custom_construction_tests::run();
     return hpx::util::report_errors();
 }
