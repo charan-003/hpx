@@ -83,22 +83,32 @@ if(NOT TARGET tracy::tracy)
   )
   target_link_libraries(tracy INTERFACE TracyClient)
 
+  # Ship TracyClient alongside the tracy wrapper so consumers can resolve
+  # tracy::TracyClient without a separate find_package(Tracy).
   install(
-    TARGETS tracy
+    TARGETS tracy TracyClient
     EXPORT HPXTracyTarget
     COMPONENT core
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   )
 
+  # libbacktrace is Tracy's bundled internal impl; its headers include a generic
+  # config.h that would collide with any consumer's own build. Tracy's upstream
+  # install(FILES) excludes it for the same reason.
   install(
     DIRECTORY ${TRACY_ROOT}/public/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     COMPONENT core
     FILES_MATCHING
     PATTERN "*.hpp"
+    PATTERN "*.h"
+    PATTERN "libbacktrace" EXCLUDE
   )
 
   export(
-    TARGETS tracy
+    TARGETS tracy TracyClient
     NAMESPACE tracy::
     FILE "${CMAKE_BINARY_DIR}/lib/cmake/${HPX_PACKAGE_NAME}/HPXTracyTarget.cmake"
   )

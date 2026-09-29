@@ -43,6 +43,11 @@ else()
   include(HPX_SetupStdexec)
 endif()
 
+# Tracy is only fetched when HPX_WITH_TRACY is on; no external mode.
+if(HPX_WITH_TRACY)
+  include("${CMAKE_CURRENT_LIST_DIR}/HPXTracyTarget.cmake")
+endif()
+
 # NLohnmann JSON can be installed by HPX or externally installed. In the first
 # case we use exported targets, in the second we find JSON again using
 # find_package.
