@@ -9,7 +9,6 @@
 #pragma once
 
 #include <hpx/config.hpp>
-#include <hpx/executors/detail/indexed_shape.hpp>
 #include <hpx/modules/concepts.hpp>
 #include <hpx/modules/datastructures.hpp>
 #include <hpx/modules/execution.hpp>
@@ -183,21 +182,20 @@ namespace hpx::execution::experimental {
 
         // Range shape overload
         template <typename F, typename S, typename... Ts>
-            requires std::ranges::forward_range<S const>
+            requires std::ranges::random_access_range<S const> &&
+            std::ranges::sized_range<S const>
         decltype(auto) bulk_async_execute(
-            F&& f, S const& input_shape, Ts&&... ts) const
+            F&& f, S const& shape, Ts&&... ts) const
         {
-            decltype(auto) shape = detail::make_indexed_shape(input_shape);
             using shape_element = hpx::traits::range_traits<S>::value_type;
             using result_type = hpx::util::detail::invoke_deferred_result_t<F,
                 shape_element, Ts...>;
 
             if constexpr (std::is_void_v<result_type>)
             {
-                // stdexec::bulk requires an integral shape. Iterator ranges of
-                // forward chunks need not provide a constant-time size.
-                using size_type = decltype(std::ranges::distance(shape));
-                size_type const n = std::ranges::distance(shape);
+                // stdexec::bulk requires an integral shape.
+                using size_type = decltype(std::ranges::size(shape));
+                size_type const n = std::ranges::size(shape);
                 return bulk(schedule(sched_), n,
                     [shape,
                         bound_f = hpx::bind_back(HPX_FORWARD(F, f),
@@ -216,8 +214,8 @@ namespace hpx::execution::experimental {
                     "explicit_scheduler_executor::bulk_async_execution "
                     "can result in data races!");
 
-                using size_type = decltype(std::ranges::distance(shape));
-                size_type const shape_size = std::ranges::distance(shape);
+                using size_type = decltype(std::ranges::size(shape));
+                size_type const shape_size = std::ranges::size(shape);
 
                 using result_vector_type = std::vector<result_type>;
                 result_vector_type result_vector(shape_size);
@@ -255,11 +253,11 @@ namespace hpx::execution::experimental {
 
         // Range shape overload
         template <typename F, typename S, typename... Ts>
-            requires std::ranges::forward_range<S const>
+            requires std::ranges::random_access_range<S const> &&
+            std::ranges::sized_range<S const>
         decltype(auto) bulk_sync_execute(
-            F&& f, S const& input_shape, Ts&&... ts) const
+            F&& f, S const& shape, Ts&&... ts) const
         {
-            decltype(auto) shape = detail::make_indexed_shape(input_shape);
             hpx::this_thread::experimental::sync_wait(bulk_async_execute(
                 HPX_FORWARD(F, f), shape, HPX_FORWARD(Ts, ts)...));
         }
@@ -280,11 +278,11 @@ namespace hpx::execution::experimental {
 
         // Range shape overload
         template <typename F, typename S, typename Future, typename... Ts>
-            requires std::ranges::forward_range<S const>
+            requires std::ranges::random_access_range<S const> &&
+            std::ranges::sized_range<S const>
         auto bulk_then_execute(
-            F&& f, S const& input_shape, Future&& predecessor, Ts&&... ts) const
+            F&& f, S const& shape, Future&& predecessor, Ts&&... ts) const
         {
-            decltype(auto) shape = detail::make_indexed_shape(input_shape);
             using result_type =
                 parallel::execution::detail::then_bulk_function_result_t<F, S,
                     Future, Ts...>;
@@ -295,8 +293,8 @@ namespace hpx::execution::experimental {
             auto pre_req =
                 when_all(keep_future(HPX_FORWARD(Future, predecessor)));
 
-            using size_type = decltype(std::ranges::distance(shape));
-            size_type const n = std::ranges::distance(shape);
+            using size_type = decltype(std::ranges::size(shape));
+            size_type const n = std::ranges::size(shape);
             return continues_on(HPX_MOVE(pre_req), sched_) |
                 bulk(n,
                     [shape,
