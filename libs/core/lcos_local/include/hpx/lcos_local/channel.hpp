@@ -420,6 +420,13 @@ namespace hpx::lcos::local {
                 return push_active_;
             }
 
+            template <typename Lock>
+            bool has_pending_pop_request(Lock& l) const noexcept
+            {
+                HPX_ASSERT_OWNS_LOCK(l);
+                return pop_active_;
+            }
+
         private:
             T val_;
             hpx::packaged_task<void()> push_;
@@ -534,6 +541,12 @@ namespace hpx::lcos::local {
                 }
 
                 closed_ = true;
+
+                if (!buffer_.has_pending_request(l) &&
+                    !buffer_.has_pending_pop_request(l))
+                {
+                    return 0;
+                }
 
                 // all pending requests which can't be satisfied have to be
                 // canceled at this point
