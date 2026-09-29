@@ -35,7 +35,10 @@ namespace hpx::detail {
     HPX_CXX_CORE_EXPORT template <typename T>
     using empty_vtable_t = typename empty_vtable_type<T>::type;
 
-#if !defined(HPX_MSVC) && !defined(__CUDACC__) &&                              \
+    // On Windows the empty vtable types are imported from the HPX DLL in
+    // shared builds, and the address of an object whose vtable is imported
+    // is not a constant expression, so fall back to a function-local static.
+#if !defined(HPX_WINDOWS) && !defined(__CUDACC__) &&                           \
     !defined(HPX_COMPUTE_DEVICE_CODE)
     HPX_CXX_CORE_EXPORT template <typename T>
     inline constexpr empty_vtable_t<T> empty_vtable{};
