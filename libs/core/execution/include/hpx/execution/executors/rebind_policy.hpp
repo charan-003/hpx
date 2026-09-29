@@ -28,9 +28,12 @@
 /// class template. This header adds two smaller, independently
 /// specializable customization points, one per axis, so a policy can
 /// opt in to rebinding along either axis without being forced into that
-/// shape at all. This is purely additive: nothing here replaces or is
-/// called by the existing combined rebind_executor_t, on(), with(), or
-/// query() machinery.
+/// shape at all. The default implementations of both customization points
+/// forward to rebind_executor_t, so they share its implementation rather
+/// than duplicating it, and the executor-only and parameters-only
+/// overloads of hpx::execution::experimental::create_rebound_policy
+/// route through rebind_policy_executor_t and rebind_policy_parameters_t
+/// below.
 
 #pragma once
 
@@ -59,8 +62,9 @@ namespace hpx::execution::detail {
     using rebind_policy_executor_category_t = hpx::execution::experimental::
         detail::policy_execution_category_or_unsequenced_t<Policy>;
 
-    /// \brief The execution category of Policy's own, current executor
-    ///        (i.e. Policy::executor_type), or Policy's own execution
+    /// \brief The execution category of the executor Policy currently
+    ///        holds (i.e. Policy::executor_type), as opposed to a new
+    ///        Executor it is being rebound to, or Policy's own execution
     ///        category (see rebind_policy_executor_category_t above) if
     ///        Policy has no nested \c executor_type member.
     ///
@@ -75,24 +79,24 @@ namespace hpx::execution::detail {
     /// specialization, rather than hard-failing to compile a Policy the
     /// default implementation was never going to be used for anyway.
     template <typename Policy>
-    struct rebind_policy_own_executor_category
+    struct rebind_policy_current_executor_category
     {
     private:
         template <typename T>
         using executor_type_of = T::executor_type;
 
-        using own_executor_type =
+        using current_executor_type =
             hpx::util::detected_or_t<void, executor_type_of, Policy>;
 
     public:
-        using type = std::conditional_t<std::is_void_v<own_executor_type>,
+        using type = std::conditional_t<std::is_void_v<current_executor_type>,
             rebind_policy_executor_category_t<Policy>,
-            hpx::traits::executor_execution_category_t<own_executor_type>>;
+            hpx::traits::executor_execution_category_t<current_executor_type>>;
     };
 
     template <typename Policy>
-    using rebind_policy_own_executor_category_t =
-        rebind_policy_own_executor_category<Policy>::type;
+    using rebind_policy_current_executor_category_t =
+        rebind_policy_current_executor_category<Policy>::type;
     /// \endcond
 
     /// \brief Customization point controlling how an execution policy is
@@ -263,7 +267,7 @@ namespace hpx::execution::detail {
         /// the same contract, rather than only one of the two axes being
         /// independently guarded.
         ///
-        /// category2 goes through rebind_policy_own_executor_category_t
+        /// category2 goes through rebind_policy_current_executor_category_t
         /// rather than accessing Policy::executor_type directly, since a
         /// Policy participating only through a direct specialization of
         /// rebind_policy_parameters need not expose that member at all.
@@ -276,13 +280,13 @@ namespace hpx::execution::detail {
             using category1 =
                 rebind_policy_executor_category_t<decayed_policy_type>;
             using category2 =
-                rebind_policy_own_executor_category_t<decayed_policy_type>;
+                rebind_policy_current_executor_category_t<decayed_policy_type>;
 
             static_assert(
                 hpx::execution::experimental::detail::is_not_weaker_v<category2,
                     category1>,
-                "the execution category of Policy's own executor must not "
-                "be weaker than that of Policy; see hpx::execution::"
+                "the execution category of Policy's current executor must "
+                "not be weaker than that of Policy; see hpx::execution::"
                 "experimental::rebind_executor");
 
         public:
