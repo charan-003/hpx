@@ -628,7 +628,7 @@ namespace custom_construction_tests {
 
 }    // namespace custom_construction_tests
 
-namespace hpx::execution::detail {
+namespace hpx::execution::experimental {
 
     template <typename Executor, typename Parameters, typename NewExecutor>
     struct construct_rebound_policy_executor<
@@ -669,7 +669,7 @@ namespace hpx::execution::detail {
                 std::forward<Parameters_>(params));
         }
     };
-}    // namespace hpx::execution::detail
+}    // namespace hpx::execution::experimental
 
 namespace custom_construction_tests {
 
@@ -698,8 +698,10 @@ namespace custom_construction_tests {
         HPX_TEST_EQ(rebound_by_parameters.parameters().id, 2);
 
         // The per-axis function objects dispatch to the same hooks.
-        auto rebound_directly = exd::create_rebound_policy_parameters(
-            exd::create_rebound_policy_executor(policy, labeled_executor{3}),
+        namespace hpxexp = hpx::execution::experimental;
+
+        auto rebound_directly = hpxexp::create_rebound_policy_parameters(
+            hpxexp::create_rebound_policy_executor(policy, labeled_executor{3}),
             labeled_parameters{4});
 
         HPX_TEST_EQ(rebound_directly.label(), 42);
