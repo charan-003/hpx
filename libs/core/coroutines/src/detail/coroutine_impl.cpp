@@ -60,12 +60,15 @@ namespace hpx::threads::coroutines::detail {
         // yield value once the thread function has finished executing
         result_type result_last;
 
+#if defined(HPX_HAVE_ADDRESS_SANITIZER)
+        // Complete the first switch started by the caller in do_invoke(),
+        // restoring the destination coroutine's saved fake stack.
+        finish_switch_fiber(this->asan_fake_stack, m_caller);
+#endif
+
         // loop as long this coroutine has been rebound
         do
         {
-#if defined(HPX_HAVE_ADDRESS_SANITIZER)
-            finish_switch_fiber(this->asan_fake_stack, m_caller);
-#endif
             {
                 coroutine_self* old_self = coroutine_self::get_self();
                 coroutine_stackful_self self(this, old_self);
@@ -96,6 +99,14 @@ namespace hpx::threads::coroutines::detail {
             }
 
             this->do_return(status);
+
+#if defined(HPX_HAVE_ADDRESS_SANITIZER) &&                                     \
+    defined(HPX_HAVE_FIBER_BASED_COROUTINES)
+            // A rebound Windows fiber resumes after do_return(). Restore the
+            // destination coroutine's saved fake stack before entering the
+            // next iteration.
+            finish_switch_fiber(this->asan_fake_stack, m_caller);
+#endif
         } while (this->m_state == context_state::running);
 
         // should not get here, never
