@@ -129,13 +129,50 @@ never initialised and all API calls crash at startup. See
 :ref:`hpx_main_implementation_linux` for a detailed explanation of the
 mechanism.
 
-Windows does not support -Wl,-wrap=main (GNU ld). On Windows, hpx/hpx_main.hpp redefines main as hpx_startup::user_main, so a raw MSVC link of the same snippet uses hpx_wrap.lib, hpx_init.lib, hpx.lib, and hpx_core.lib as the base set, with no wrap option. Add each additional module .lib your program actually needs — for example hpx_include_local.lib when using hpx/experimental/sandbox.hpp — since those symbols are not merged into the four base libraries. Prefer HPX::hpx plus HPX::wrap_main from CMake, which pull in module dependencies automatically. Compiler Explorer Execute runs in a Linux sandbox; the Windows path matters for MSVC compile-only sessions and for local godbolt-minimal builds on Windows.
-
 .. important::
 
    ``-DHPX_APPLICATION_EXPORTS`` must be passed as a preprocessor definition
    when compiling application code against the static libraries. Omitting it
    causes link failures related to |hpx|'s symbol visibility macros.
+
+.. _using_hpx_ce_linking_msvc:
+
+Linking without CMake on Windows (MSVC)
+---------------------------------------
+
+``-Wl,-wrap=main`` is a GNU ld option and has no MSVC equivalent. On Windows,
+``hpx/hpx_main.hpp`` instead redefines ``main`` as ``hpx_startup::user_main``,
+and ``hpx_wrap.lib`` provides the real ``main`` that starts the |hpx| runtime
+before calling it. A raw ``cl.exe`` build therefore needs no wrap option, only
+``hpx_wrap.lib`` on the link line. From a Developer PowerShell for Visual
+Studio:
+
+.. code-block:: powershell
+
+   PS> $hpx = 'C:\path\to\hpx'
+   PS> $libs = (Get-ChildItem "$hpx\lib\hpx*.lib").FullName
+   PS> cl /std:c++20 /O2 /EHsc /MD /GR /bigobj /permissive- `
+         /Zc:__cplusplus /Zc:preprocessor /Zc:inline /Zc:throwingNew `
+         /Zc:rvalueCast /Zc:strictStrings `
+         /DHPX_APPLICATION_EXPORTS /I "$hpx\include" `
+         my_program.cpp `
+         /link $libs libhwloc.dll.a psapi.lib shlwapi.lib
+
+As on Linux, a static install ships one ``.lib`` per module in addition to
+``hpx_wrap.lib``, ``hpx_init.lib``, ``hpx.lib``, and ``hpx_core.lib``, so pass
+all of them. No ``--start-group`` equivalent is needed: ``link.exe`` searches
+every library on the command line until all symbols are resolved. The
+``/Zc:`` options, ``/bigobj``, and ``/permissive-`` are the options the
+``HPX::hpx`` CMake target passes on to its consumers. ``libhwloc.dll.a`` is
+the import library of the prebuilt hwloc that ``HPX_WITH_FETCH_HWLOC=ON``
+downloads; use your own hwloc import library otherwise, and add
+``/LIBPATH:`` for it if it is not on the ``LIB`` path. Put the hwloc DLL next
+to the executable or on ``PATH`` before running it.
+
+Prefer ``HPX::hpx`` plus ``HPX::wrap_main`` from CMake where possible, since
+they supply these options and the module libraries automatically. Compiler
+Explorer's execution sandbox runs Linux, so the Windows path matters for MSVC
+compile-only sessions and for local godbolt-minimal builds on Windows.
 
 .. _using_hpx_ce_writing_code:
 
