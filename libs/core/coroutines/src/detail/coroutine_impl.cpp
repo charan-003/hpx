@@ -102,9 +102,10 @@ namespace hpx::threads::coroutines::detail {
 
 #if defined(HPX_HAVE_ADDRESS_SANITIZER) &&                                     \
     defined(HPX_HAVE_FIBER_BASED_COROUTINES)
-            // A rebound Windows fiber resumes after do_return(). Restore the
-            // destination coroutine's saved fake stack before entering the
-            // next iteration.
+            // Only a rebound Windows fiber resumes after do_return(). Other
+            // backends recreate the context and re-enter operator() above.
+            // Restore the destination coroutine's saved fake stack before
+            // entering the next iteration.
             finish_switch_fiber(this->asan_fake_stack, m_caller);
 #endif
         } while (this->m_state == context_state::running);
