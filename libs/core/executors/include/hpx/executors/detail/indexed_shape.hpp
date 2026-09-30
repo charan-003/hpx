@@ -14,7 +14,6 @@
 #include <cstddef>
 #include <iterator>
 #include <ranges>
-#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -57,20 +56,20 @@ namespace hpx::execution::experimental::detail {
             }
         }
 
-        std::atomic<std::size_t> count{0};
+        std::atomic<std::size_t> count{1};
     };
 
     template <typename S>
     class indexed_shape_iterator
       : public hpx::util::iterator_facade<indexed_shape_iterator<S>,
-            std::ranges::range_value_t<S const>,
+            std::iter_value_t<std::ranges::iterator_t<S const>> const,
             std::random_access_iterator_tag,
-            std::ranges::range_reference_t<S const>>
+            std::iter_reference_t<std::ranges::iterator_t<S const>>>
     {
     private:
         using storage_type = indexed_shape_storage<S>;
-        using position_iterator = typename std::vector<
-            std::ranges::iterator_t<S const>>::const_iterator;
+        using position_iterator =
+            std::vector<std::ranges::iterator_t<S const>>::const_iterator;
 
     public:
         indexed_shape_iterator() = default;
@@ -87,37 +86,38 @@ namespace hpx::execution::experimental::detail {
         {
         }
 
-        using use_brackets_proxy = std::false_type;
-
     private:
         friend class hpx::util::iterator_core_access;
 
         std::ranges::range_reference_t<S const> dereference() const
+            noexcept(noexcept(**current_))
         {
             return **current_;
         }
 
-        void increment()
+        void increment() noexcept(noexcept(++current_))
         {
             ++current_;
         }
 
-        void decrement()
+        void decrement() noexcept(noexcept(--current_))
         {
             --current_;
         }
 
-        void advance(std::ptrdiff_t n)
+        void advance(std::ptrdiff_t n) noexcept(noexcept(current_ += n))
         {
             current_ += n;
         }
 
         std::ptrdiff_t distance_to(indexed_shape_iterator const& other) const
+            noexcept(noexcept(other.current_ - current_))
         {
             return other.current_ - current_;
         }
 
         bool equal(indexed_shape_iterator const& other) const
+            noexcept(noexcept(current_ == other.current_))
         {
             return current_ == other.current_;
         }
@@ -136,7 +136,7 @@ namespace hpx::execution::experimental::detail {
         if constexpr (std::ranges::random_access_range<S const> &&
             std::ranges::sized_range<S const>)
         {
-            return (shape);
+            return shape;
         }
         else
         {
@@ -147,7 +147,8 @@ namespace hpx::execution::experimental::detail {
             static_assert(std::ranges::random_access_range<range_type>);
             static_assert(std::ranges::sized_range<range_type>);
 
-            hpx::intrusive_ptr<storage_type> state(new storage_type(shape));
+            hpx::intrusive_ptr<storage_type> state(
+                new storage_type(shape), false);
             auto const first = state->positions.cbegin();
             auto const last = state->positions.cend();
 
