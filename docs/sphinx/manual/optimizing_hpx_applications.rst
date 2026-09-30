@@ -399,7 +399,8 @@ Usage
 ``hpx_stat_viewer.py`` reads HPX counter data from standard input in ``csv-short``
 transient format. This allows it to be used for both live monitoring and
 post-mortem analysis of log files. Like ``hpx-top.py``, it is installed into the
-``bin`` directory of the |hpx| installation.
+``bin`` directory of the |hpx| installation; the examples below use the path
+inside the source tree.
 
 To monitor a live application with smart filtering:
 
