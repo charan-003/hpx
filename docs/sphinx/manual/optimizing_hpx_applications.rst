@@ -331,7 +331,9 @@ Usage
 
 HPX-Top is implemented as a Python script that acts as a wrapper around your |hpx|
 application. It automatically configures the necessary performance counters and
-output formats.
+output formats. The script is installed into the ``bin`` directory of the
+|hpx| installation alongside ``hpxrun.py``; the examples below use the path
+inside the source tree.
 
 The tool requires the ``rich`` Python library for rendering the terminal UI:
 
@@ -396,7 +398,8 @@ Usage
 
 ``hpx_stat_viewer.py`` reads HPX counter data from standard input in ``csv-short``
 transient format. This allows it to be used for both live monitoring and
-post-mortem analysis of log files.
+post-mortem analysis of log files. Like ``hpx-top.py``, it is installed into the
+``bin`` directory of the |hpx| installation.
 
 To monitor a live application with smart filtering:
 
@@ -416,8 +419,7 @@ Technical Details
 
 The dashboard implements a thread-safe parser that handles HPX's CSV-short format.
 The anomaly detection engine uses a smoothing factor of 0.4 for its EMA calculations,
-balancing responsiveness with stability. It is officially integrated into the HPX installation
-rules under the ``tools`` component.
+balancing responsiveness with stability.
 
 A simple example
 ----------------
