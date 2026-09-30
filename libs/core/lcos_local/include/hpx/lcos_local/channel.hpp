@@ -542,7 +542,7 @@ namespace hpx::lcos::local {
 
                 closed_ = true;
 
-                if (!buffer_.has_pending_request(l) &&
+                if ((buffer_.is_empty(l) || !buffer_.has_pending_request(l)) &&
                     !buffer_.has_pending_pop_request(l))
                 {
                     return 0;
