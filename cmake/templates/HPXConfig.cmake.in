@@ -43,8 +43,9 @@ else()
   include(HPX_SetupStdexec)
 endif()
 
-# Tracy is only fetched when HPX_WITH_TRACY is on; no external mode.
-if(HPX_WITH_TRACY)
+# Shared builds keep Tracy inside hpx_core, so only static builds need
+# the Tracy targets to link.
+if(HPX_WITH_TRACY AND HPX_WITH_STATIC_LINKING)
   include("${CMAKE_CURRENT_LIST_DIR}/HPXTracyTarget.cmake")
 endif()
 
