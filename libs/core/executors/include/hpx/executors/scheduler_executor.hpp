@@ -9,6 +9,7 @@
 #pragma once
 
 #include <hpx/config.hpp>
+#include <hpx/executors/detail/indexed_shape.hpp>
 #include <hpx/modules/datastructures.hpp>
 #include <hpx/modules/execution.hpp>
 #include <hpx/modules/execution_base.hpp>
@@ -158,20 +159,6 @@ namespace hpx::execution::experimental {
         }
     }    // namespace detail
 
-    namespace detail {
-
-        HPX_CXX_CORE_EXPORT template <typename F, typename... Ts>
-        auto captured_args_then(F&& f, Ts&&... ts)
-        {
-            return [bound_f = hpx::bind_back(
-                        HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...)](
-                       auto i, auto&& predecessor, auto& v) mutable {
-                v[i] = HPX_INVOKE(bound_f, i,
-                    HPX_FORWARD(decltype(predecessor), predecessor));
-            };
-        }
-    }    // namespace detail
-
     ///////////////////////////////////////////////////////////////////////////
     // A scheduler_executor wraps any P2300 scheduler and implements the
     // executor functionalities for those.
@@ -308,17 +295,17 @@ namespace hpx::execution::experimental {
 
         // BulkTwoWayExecutor interface
         template <typename F, typename S, typename... Ts>
-            requires std::ranges::random_access_range<S const> &&
-            std::ranges::sized_range<S const>
-        auto bulk_async_execute(F&& f, S const& shape, Ts&&... ts) const
+            requires std::ranges::forward_range<S const>
+        auto bulk_async_execute(F&& f, S const& input_shape, Ts&&... ts) const
         {
+            decltype(auto) shape = detail::make_indexed_shape(input_shape);
             using shape_element = hpx::traits::range_traits<S>::value_type;
             using result_type = hpx::util::detail::invoke_deferred_result_t<F,
                 shape_element, Ts...>;
 
             // hpx::execution::experimental::bulk requires integral shape
-            using size_type = decltype(std::ranges::size(shape));
-            size_type const n = std::ranges::size(shape);
+            using size_type = decltype(std::ranges::distance(shape));
+            size_type const n = std::ranges::distance(shape);
 
             if constexpr (std::is_void_v<result_type>)
             {
@@ -416,16 +403,16 @@ namespace hpx::execution::experimental {
         }
 
         template <typename F, typename S, typename... Ts>
-            requires std::ranges::random_access_range<S const> &&
-            std::ranges::sized_range<S const>
-        auto bulk_sync_execute(F&& f, S const& shape, Ts&&... ts) const
+            requires std::ranges::forward_range<S const>
+        auto bulk_sync_execute(F&& f, S const& input_shape, Ts&&... ts) const
         {
+            decltype(auto) shape = detail::make_indexed_shape(input_shape);
             using shape_element = hpx::traits::range_traits<S>::value_type;
             using result_type = hpx::util::detail::invoke_deferred_result_t<F,
                 shape_element, Ts...>;
 
-            using size_type = decltype(std::ranges::size(shape));
-            size_type const n = std::ranges::size(shape);
+            using size_type = decltype(std::ranges::distance(shape));
+            size_type const n = std::ranges::distance(shape);
 
             if constexpr (detail::has_thread_pool_backend<
                               std::decay_t<BaseScheduler>>::value)
@@ -482,11 +469,12 @@ namespace hpx::execution::experimental {
         }
 
         template <typename F, typename S, typename Future, typename... Ts>
-            requires std::ranges::random_access_range<S const> &&
-            std::ranges::sized_range<S const>
+            requires std::ranges::forward_range<S const>
         decltype(auto) bulk_then_execute(
-            F&& f, S const& shape, Future&& predecessor, Ts&&... ts) const
+            F&& f, S const& input_shape, Future&& predecessor, Ts&&... ts) const
         {
+            auto shape = detail::make_indexed_shape(input_shape);
+            auto const n = std::ranges::distance(shape);
             using result_type =
                 parallel::execution::detail::then_bulk_function_result_t<F, S,
                     Future, Ts...>;
@@ -496,8 +484,15 @@ namespace hpx::execution::experimental {
                 auto pre_req =
                     when_all(keep_future(HPX_FORWARD(Future, predecessor)));
 
-                auto loop = bulk(continues_on(HPX_MOVE(pre_req), sched_), shape,
-                    hpx::bind_back(HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...));
+                auto loop = bulk(continues_on(HPX_MOVE(pre_req), sched_), n,
+                    [shape,
+                        bound_f = hpx::bind_back(
+                            HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...)](
+                        auto i, auto&... receiver_args) mutable {
+                        HPX_INVOKE(bound_f,
+                            *std::ranges::next(std::ranges::begin(shape), i),
+                            receiver_args...);
+                    });
 
                 return make_future(HPX_MOVE(loop));
             }
@@ -511,13 +506,19 @@ namespace hpx::execution::experimental {
                     "data races!");
 
                 // the overall return value is future<std::vector<result_type>>
-                auto pre_req = when_all(
-                    keep_future(HPX_FORWARD(Future, predecessor)),
-                    just(std::vector<result_type>(std::ranges::size(shape))));
+                auto pre_req =
+                    when_all(keep_future(HPX_FORWARD(Future, predecessor)),
+                        just(std::vector<result_type>(n)));
 
-                auto loop = bulk(continues_on(HPX_MOVE(pre_req), sched_), shape,
-                    detail::captured_args_then(
-                        HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...));
+                auto loop = bulk(continues_on(HPX_MOVE(pre_req), sched_), n,
+                    [shape,
+                        bound_f = hpx::bind_back(
+                            HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...)](
+                        auto i, auto&& predecessor, auto& values) mutable {
+                        values[i] = HPX_INVOKE(bound_f,
+                            *std::ranges::next(std::ranges::begin(shape), i),
+                            HPX_FORWARD(decltype(predecessor), predecessor));
+                    });
 
                 return make_future(then(
                     HPX_MOVE(loop), [](auto&&, std::vector<result_type>&& v) {
