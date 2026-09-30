@@ -703,7 +703,7 @@ namespace hpx::execution::experimental::detail {
 
 namespace hpx::execution::experimental {
 
-#if defined(HPX_MSVC) || !defined(HPX_HAVE_CXX20_TRIVIAL_VIRTUAL_DESTRUCTOR)
+#if defined(HPX_WINDOWS) || !defined(HPX_HAVE_CXX20_TRIVIAL_VIRTUAL_DESTRUCTOR)
     namespace detail {
         // This helper only exists to make it possible to use
         // any_(unique_)sender in global variables or in general static that may
@@ -730,7 +730,7 @@ namespace hpx::execution::experimental {
 
     HPX_CXX_CORE_EXPORT template <typename... Ts>
     class unique_any_sender
-#if defined(HPX_MSVC)
+#if defined(HPX_WINDOWS)
       : private detail::any_sender_static_empty_vtable_helper<Ts...>
 #endif
     {
@@ -799,7 +799,7 @@ namespace hpx::execution::experimental {
 
     HPX_CXX_CORE_EXPORT template <typename... Ts>
     class any_sender
-#if defined(HPX_MSVC)
+#if defined(HPX_WINDOWS)
       : private detail::any_sender_static_empty_vtable_helper<Ts...>
 #endif
     {
