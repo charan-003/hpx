@@ -623,3 +623,9 @@ need to write a custom ``parallel_scheduler_backend`` class:
 The pool must outlive the scheduler; HPX does not extend the pool's
 lifetime or diagnose a dangling pool.
 
+Replacement backends receive a ``parallel_scheduler_receiver_proxy`` for
+each operation. The proxy's ``try_query<P>(query)`` member exposes supported
+properties from the connected receiver's environment. In particular,
+``try_query<inplace_stop_token>(get_stop_token)`` returns the receiver's stop
+token when its environment provides that type. Unsupported query and result
+type combinations return ``std::nullopt``.
