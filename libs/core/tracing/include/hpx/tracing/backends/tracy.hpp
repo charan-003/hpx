@@ -18,8 +18,6 @@
 
 #include <hpx/modules/tracy.hpp>
 
-#include <tracy/TracyC.h>
-
 #include <hpx/config/warnings_prefix.hpp>
 
 namespace hpx::tracing {
@@ -35,13 +33,12 @@ namespace hpx::tracing {
         return name;
     }
 
-    // Inline connection-gate. When no Tracy client is attached, the per-task
-    // hot-path entries below short-circuit at the call site to a single
-    // atomic load.
+    // Goes through hpx::tracy so users need no Tracy headers and the
+    // symbol is exported from hpx_core on Windows.
     namespace detail {
         HPX_CXX_CORE_EXPORT inline bool is_profiler_connected() noexcept
         {
-            return ___tracy_connected() != 0;
+            return hpx::tracy::is_profiler_connected();
         }
     }    // namespace detail
 
