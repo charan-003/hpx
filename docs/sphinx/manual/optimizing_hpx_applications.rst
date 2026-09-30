@@ -307,6 +307,11 @@ health and performance of distributed |hpx| applications. Inspired by tools like
 ``htop`` and ``btop``, it provides a high-level overview of system utilization,
 network flow, and internal runtime metrics.
 
+.. note::
+
+   ``hpx-top.py`` is experimental. It may continue to evolve or be removed in
+   a future release.
+
 .. figure:: ../_static/images/hpx_top.png
    :alt: HPX-Top Dashboard Screenshot
    :align: center
@@ -371,6 +376,11 @@ HPX Smart Telemetry (hpx_stat_viewer)
 performance dashboard designed to identify performance anomalies in real-time.
 While ``hpx-top`` provides a broad system overview, ``hpx_stat_viewer`` focuses on
 deep-dive analysis of specific metrics with built-in heuristic alerting.
+
+.. note::
+
+   ``hpx_stat_viewer.py`` is experimental. It may continue to evolve or be
+   removed in a future release.
 
 .. figure:: ../_static/images/hpx_stat_viewer.png
    :alt: HPX Smart Telemetry Dashboard Screenshot
