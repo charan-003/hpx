@@ -67,6 +67,7 @@ jobs:
               --target tests.unit.modules.execution.rebind_policy \
               -- -j 2
     - name: Test
+      shell: pwsh
       run: |
         $env:PATH = "$env:GITHUB_WORKSPACE\build\bin;C:\Boost\lib;C:\projects\hwloc-win64-build-2.8.0\bin;$env:PATH"
         cd build
