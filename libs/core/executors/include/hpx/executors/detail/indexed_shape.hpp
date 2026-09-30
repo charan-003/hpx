@@ -7,6 +7,7 @@
 #pragma once
 
 #include <hpx/config.hpp>
+#include <hpx/modules/iterator_support.hpp>
 #include <hpx/modules/memory.hpp>
 
 #include <atomic>
@@ -61,6 +62,10 @@ namespace hpx::execution::experimental::detail {
 
     template <typename S>
     class indexed_shape_iterator
+      : public hpx::util::iterator_facade<indexed_shape_iterator<S>,
+            std::ranges::range_value_t<S const>,
+            std::random_access_iterator_tag,
+            std::ranges::range_reference_t<S const>>
     {
     private:
         using storage_type = indexed_shape_storage<S>;
@@ -68,14 +73,6 @@ namespace hpx::execution::experimental::detail {
             std::ranges::iterator_t<S const>>::const_iterator;
 
     public:
-        using iterator_category = std::random_access_iterator_tag;
-        using iterator_concept = std::random_access_iterator_tag;
-        using value_type = std::ranges::range_value_t<S const>;
-        using difference_type =
-            typename std::iterator_traits<position_iterator>::difference_type;
-        using pointer = void;
-        using reference = std::ranges::range_reference_t<S const>;
-
         indexed_shape_iterator() = default;
 
         indexed_shape_iterator(
@@ -90,112 +87,41 @@ namespace hpx::execution::experimental::detail {
         {
         }
 
-        reference operator*() const
+        using use_brackets_proxy = std::false_type;
+
+    private:
+        friend class hpx::util::iterator_core_access;
+
+        std::ranges::range_reference_t<S const> dereference() const
         {
             return **current_;
         }
 
-        reference operator[](difference_type n) const
-        {
-            return **(current_ + n);
-        }
-
-        indexed_shape_iterator& operator++()
+        void increment()
         {
             ++current_;
-            return *this;
         }
 
-        indexed_shape_iterator operator++(int)
-        {
-            auto result = *this;
-            ++*this;
-            return result;
-        }
-
-        indexed_shape_iterator& operator--()
+        void decrement()
         {
             --current_;
-            return *this;
         }
 
-        indexed_shape_iterator operator--(int)
-        {
-            auto result = *this;
-            --*this;
-            return result;
-        }
-
-        indexed_shape_iterator& operator+=(difference_type n)
+        void advance(std::ptrdiff_t n)
         {
             current_ += n;
-            return *this;
         }
 
-        indexed_shape_iterator& operator-=(difference_type n)
+        std::ptrdiff_t distance_to(indexed_shape_iterator const& other) const
         {
-            current_ -= n;
-            return *this;
+            return other.current_ - current_;
         }
 
-        friend indexed_shape_iterator operator+(
-            indexed_shape_iterator it, difference_type n)
+        bool equal(indexed_shape_iterator const& other) const
         {
-            it += n;
-            return it;
+            return current_ == other.current_;
         }
 
-        friend indexed_shape_iterator operator+(
-            difference_type n, indexed_shape_iterator it)
-        {
-            it += n;
-            return it;
-        }
-
-        friend indexed_shape_iterator operator-(
-            indexed_shape_iterator it, difference_type n)
-        {
-            it -= n;
-            return it;
-        }
-
-        friend difference_type operator-(indexed_shape_iterator const& lhs,
-            indexed_shape_iterator const& rhs)
-        {
-            return lhs.current_ - rhs.current_;
-        }
-
-        friend bool operator==(indexed_shape_iterator const& lhs,
-            indexed_shape_iterator const& rhs)
-        {
-            return lhs.current_ == rhs.current_;
-        }
-
-        friend bool operator<(indexed_shape_iterator const& lhs,
-            indexed_shape_iterator const& rhs)
-        {
-            return lhs.current_ < rhs.current_;
-        }
-
-        friend bool operator>(indexed_shape_iterator const& lhs,
-            indexed_shape_iterator const& rhs)
-        {
-            return rhs < lhs;
-        }
-
-        friend bool operator<=(indexed_shape_iterator const& lhs,
-            indexed_shape_iterator const& rhs)
-        {
-            return !(rhs < lhs);
-        }
-
-        friend bool operator>=(indexed_shape_iterator const& lhs,
-            indexed_shape_iterator const& rhs)
-        {
-            return !(lhs < rhs);
-        }
-
-    private:
         hpx::intrusive_ptr<storage_type> state_;
         position_iterator current_;
     };
@@ -204,7 +130,7 @@ namespace hpx::execution::experimental::detail {
     // multipass shapes are indexed once while preserving references to their
     // elements. Only the begin iterator retains the copied shape.
     template <typename S>
-        requires std::ranges::forward_range<S const>
+        requires(std::ranges::forward_range<S const>)
     decltype(auto) make_indexed_shape(S const& shape)
     {
         if constexpr (std::ranges::random_access_range<S const> &&

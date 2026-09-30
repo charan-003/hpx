@@ -183,7 +183,7 @@ namespace hpx::execution::experimental {
 
         // Range shape overload
         template <typename F, typename S, typename... Ts>
-            requires std::ranges::forward_range<S const>
+            requires(std::ranges::forward_range<S const>)
         decltype(auto) bulk_async_execute(
             F&& f, S const& input_shape, Ts&&... ts) const
         {
@@ -254,7 +254,7 @@ namespace hpx::execution::experimental {
 
         // Range shape overload
         template <typename F, typename S, typename... Ts>
-            requires std::ranges::forward_range<S const>
+            requires(std::ranges::forward_range<S const>)
         decltype(auto) bulk_sync_execute(
             F&& f, S const& input_shape, Ts&&... ts) const
         {
@@ -279,7 +279,7 @@ namespace hpx::execution::experimental {
 
         // Range shape overload
         template <typename F, typename S, typename Future, typename... Ts>
-            requires std::ranges::forward_range<S const>
+            requires(std::ranges::forward_range<S const>)
         auto bulk_then_execute(
             F&& f, S const& input_shape, Future&& predecessor, Ts&&... ts) const
         {

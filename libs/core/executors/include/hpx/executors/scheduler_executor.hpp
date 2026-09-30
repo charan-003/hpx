@@ -295,7 +295,7 @@ namespace hpx::execution::experimental {
 
         // BulkTwoWayExecutor interface
         template <typename F, typename S, typename... Ts>
-            requires std::ranges::forward_range<S const>
+            requires(std::ranges::forward_range<S const>)
         auto bulk_async_execute(F&& f, S const& input_shape, Ts&&... ts) const
         {
             decltype(auto) shape = detail::make_indexed_shape(input_shape);
@@ -403,7 +403,7 @@ namespace hpx::execution::experimental {
         }
 
         template <typename F, typename S, typename... Ts>
-            requires std::ranges::forward_range<S const>
+            requires(std::ranges::forward_range<S const>)
         auto bulk_sync_execute(F&& f, S const& input_shape, Ts&&... ts) const
         {
             decltype(auto) shape = detail::make_indexed_shape(input_shape);
@@ -469,7 +469,7 @@ namespace hpx::execution::experimental {
         }
 
         template <typename F, typename S, typename Future, typename... Ts>
-            requires std::ranges::forward_range<S const>
+            requires(std::ranges::forward_range<S const>)
         decltype(auto) bulk_then_execute(
             F&& f, S const& input_shape, Future&& predecessor, Ts&&... ts) const
         {
