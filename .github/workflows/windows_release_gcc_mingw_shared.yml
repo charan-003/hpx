@@ -64,6 +64,7 @@ jobs:
           cmake --build build --config Release -- -j 2
           cmake --build build --config Release \
               --target any_sender_test \
+              --target any_sender_consumer_test \
               --target rebind_policy_test \
               -- -j 2
     - name: Test
