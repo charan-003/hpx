@@ -169,6 +169,11 @@ namespace {
 int hpx_main(int, char*[])
 {
     // Type and Concept Tests
+    static_assert(
+        std::has_virtual_destructor_v<ex::parallel_scheduler_receiver_proxy>);
+    static_assert(std::has_virtual_destructor_v<
+        ex::parallel_scheduler_bulk_item_receiver_proxy>);
+
     // parallel_scheduler models scheduler concept
     {
         auto sched = ex::get_parallel_scheduler();

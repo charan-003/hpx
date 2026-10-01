@@ -28,8 +28,10 @@
 #include <cstddef>
 #include <exception>
 #include <memory>
+#include <optional>
 #include <tuple>
 #include <type_traits>
+#include <typeinfo>
 #include <utility>
 #include <variant>
 
@@ -234,33 +236,17 @@ namespace hpx::execution::experimental {
                 }
 
             protected:
-                std::optional<inplace_stop_token> query_stop_token(
-                    get_stop_token_t) const noexcept override
+                void query_env(std::type_info const& query_type,
+                    std::type_info const& result_type,
+                    void* result) const noexcept override
                 {
-                    auto token = get_stop_token(get_env(op_.receiver_));
-                    if constexpr (std::is_same_v<decltype(token),
-                                      inplace_stop_token>)
+                    using token_type = std::decay_t<decltype(get_stop_token(
+                        get_env(op_.receiver_)))>;
+                    if (query_type == typeid(get_stop_token_t) &&
+                        result_type == typeid(token_type))
                     {
-                        return token;
-                    }
-                    else
-                    {
-                        return std::nullopt;
-                    }
-                }
-
-                std::optional<hpx::experimental::in_place_stop_token>
-                query_hpx_stop_token(get_stop_token_t) const noexcept override
-                {
-                    auto token = get_stop_token(get_env(op_.receiver_));
-                    if constexpr (std::is_same_v<decltype(token),
-                                      hpx::experimental::in_place_stop_token>)
-                    {
-                        return token;
-                    }
-                    else
-                    {
-                        return std::nullopt;
+                        static_cast<std::optional<token_type>*>(result)
+                            ->emplace(get_stop_token(get_env(op_.receiver_)));
                     }
                 }
             };
@@ -773,33 +759,17 @@ namespace hpx::execution::experimental {
                 }
 
             protected:
-                std::optional<inplace_stop_token> query_stop_token(
-                    get_stop_token_t) const noexcept override
+                void query_env(std::type_info const& query_type,
+                    std::type_info const& result_type,
+                    void* result) const noexcept override
                 {
-                    auto token = get_stop_token(get_env(receiver_));
-                    if constexpr (std::is_same_v<decltype(token),
-                                      inplace_stop_token>)
+                    using token_type = std::decay_t<decltype(get_stop_token(
+                        get_env(receiver_)))>;
+                    if (query_type == typeid(get_stop_token_t) &&
+                        result_type == typeid(token_type))
                     {
-                        return token;
-                    }
-                    else
-                    {
-                        return std::nullopt;
-                    }
-                }
-
-                std::optional<hpx::experimental::in_place_stop_token>
-                query_hpx_stop_token(get_stop_token_t) const noexcept override
-                {
-                    auto token = get_stop_token(get_env(receiver_));
-                    if constexpr (std::is_same_v<decltype(token),
-                                      hpx::experimental::in_place_stop_token>)
-                    {
-                        return token;
-                    }
-                    else
-                    {
-                        return std::nullopt;
+                        static_cast<std::optional<token_type>*>(result)
+                            ->emplace(get_stop_token(get_env(receiver_)));
                     }
                 }
             };

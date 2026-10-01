@@ -13,7 +13,6 @@
 #include <hpx/modules/errors.hpp>
 #include <hpx/modules/execution.hpp>
 #include <hpx/modules/execution_base.hpp>
-#include <hpx/modules/synchronization.hpp>
 #include <hpx/modules/threading_base.hpp>
 #include <hpx/modules/timing.hpp>
 #include <hpx/modules/topology.hpp>
@@ -27,6 +26,7 @@
 #include <optional>
 #include <span>
 #include <type_traits>
+#include <typeinfo>
 
 namespace hpx::execution::experimental {
 
@@ -50,37 +50,24 @@ namespace hpx::execution::experimental {
     // inplace_stop_token result to be supported. HPX's in_place_stop_token is
     // supported as well.
     //
-    // P3804R2: No virtual destructor - objects are never destroyed polymorphically.
-    // The frontend knows the concrete type and destroys it directly.
     HPX_CXX_CORE_EXPORT struct parallel_scheduler_receiver_proxy
     {
+        virtual ~parallel_scheduler_receiver_proxy() = default;
+
         virtual void set_value() noexcept = 0;
         virtual void set_error(std::exception_ptr) noexcept = 0;
         virtual void set_stopped() noexcept = 0;
 
         template <typename P, typename Query>
-        [[nodiscard]] std::optional<P> try_query(Query q) const noexcept
+        [[nodiscard]] std::optional<P> try_query(Query) const noexcept
         {
             static_assert(std::is_object_v<P> && !std::is_array_v<P> &&
                     std::is_same_v<P, std::remove_cv_t<P>>,
                 "P must be a cv-unqualified non-array object type");
 
-            if constexpr (std::is_same_v<std::remove_cvref_t<Query>,
-                              get_stop_token_t> &&
-                std::is_same_v<P, inplace_stop_token>)
-            {
-                return query_stop_token(q);
-            }
-            else if constexpr (std::is_same_v<std::remove_cvref_t<Query>,
-                                   get_stop_token_t> &&
-                std::is_same_v<P, hpx::experimental::in_place_stop_token>)
-            {
-                return query_hpx_stop_token(q);
-            }
-            else
-            {
-                return std::nullopt;
-            }
+            std::optional<P> result;
+            query_env(typeid(std::remove_cvref_t<Query>), typeid(P), &result);
+            return result;
         }
 
         // P2079R10 4.2 / P3804R2: backends can poll this to check if work should stop.
@@ -92,21 +79,8 @@ namespace hpx::execution::experimental {
         }
 
     protected:
-        virtual std::optional<inplace_stop_token> query_stop_token(
-            get_stop_token_t) const noexcept
-        {
-            return std::nullopt;
-        }
-
-        virtual std::optional<hpx::experimental::in_place_stop_token>
-        query_hpx_stop_token(get_stop_token_t) const noexcept
-        {
-            return std::nullopt;
-        }
-
-        // P3804R2: Protected non-virtual destructor.
-        // Prevents polymorphic deletion while allowing derived classes to clean up.
-        ~parallel_scheduler_receiver_proxy() = default;
+        virtual void query_env(std::type_info const& query_type,
+            std::type_info const& result_type, void* result) const noexcept = 0;
     };
 
     // P2079R10 bulk_item_receiver_proxy: extends receiver_proxy with
