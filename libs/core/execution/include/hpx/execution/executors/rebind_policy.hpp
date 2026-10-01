@@ -27,16 +27,15 @@
 
 namespace hpx::execution::detail {
 
-    /// \cond NOINTERNAL
-    // Policy's execution category, or unsequenced_execution_tag if it has
-    // none. Same fallback rebind_executor uses.
+    /// \brief Policy's execution category, or unsequenced_execution_tag if it
+    ///        has none. Same fallback rebind_executor uses.
     template <typename Policy>
     using rebind_policy_executor_category_t = hpx::execution::experimental::
         detail::policy_execution_category_or_unsequenced_t<Policy>;
 
-    // Category of Policy's current executor. Falls back to Policy's own
-    // category if it has no executor_type, which a policy that only
-    // specializes rebind_policy_parameters doesn't need to have.
+    /// \brief Category of Policy's current executor. Falls back to Policy's
+    ///        own category if it has no executor_type, which a policy that
+    ///        only specializes rebind_policy_parameters doesn't need to have.
     template <typename Policy>
     struct rebind_policy_current_executor_category
     {
@@ -56,7 +55,6 @@ namespace hpx::execution::detail {
     template <typename Policy>
     using rebind_policy_current_executor_category_t =
         rebind_policy_current_executor_category<Policy>::type;
-    /// \endcond
 
     /// \brief Customization point for rebinding an execution policy to a
     ///        new executor, keeping its executor parameters.
@@ -81,9 +79,8 @@ namespace hpx::execution::detail {
                 std::decay_t<Policy>>>;
     };
 
-    /// \cond NOINTERNAL
-    // The category check lives outside rebind_policy_executor so it also
-    // applies to direct specializations.
+    /// \brief Applies the category check outside rebind_policy_executor, so it
+    ///        also covers direct specializations.
     template <typename Policy, typename Executor>
     struct validated_rebind_policy_executor
     {
@@ -96,7 +93,6 @@ namespace hpx::execution::detail {
 
         using type = rebind_policy_executor<Policy, Executor>::type;
     };
-    /// \endcond
 
     /// \brief Policy rebound to Executor, keeping its executor parameters.
     HPX_CXX_CORE_EXPORT template <typename Policy, typename Executor>
@@ -122,9 +118,8 @@ namespace hpx::execution::detail {
             std::decay_t<Parameters>>;
     };
 
-    /// \cond NOINTERNAL
-    // Same check as validated_rebind_policy_executor, against Policy's
-    // current executor, so direct specializations are validated too.
+    /// \brief Same check as validated_rebind_policy_executor, against Policy's
+    ///        current executor, so direct specializations are validated too.
     template <typename Policy, typename Parameters>
     struct validated_rebind_policy_parameters
     {
@@ -137,7 +132,6 @@ namespace hpx::execution::detail {
 
         using type = rebind_policy_parameters<Policy, Parameters>::type;
     };
-    /// \endcond
 
     /// \brief Policy rebound to Parameters, keeping its executor.
     HPX_CXX_CORE_EXPORT template <typename Policy, typename Parameters>
