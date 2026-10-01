@@ -179,6 +179,23 @@ namespace executor_test {
         result = values(HPX_MOVE(work));
         HPX_TEST(result == std::vector<int>({7, 3, 9}));
 
+        // Random-access shapes are also copied into asynchronous operations.
+        auto random_access_work = exec.bulk_async_execute(
+            [](int value) { return value; }, std::vector<int>{9, 5, 1});
+        result = values(HPX_MOVE(random_access_work));
+        HPX_TEST(result == std::vector<int>({9, 5, 1}));
+
+        // A forward transform view may produce prvalues when dereferenced.
+        std::forward_list<int> forward_values{1, 2, 3};
+        auto prvalue_shape = forward_values |
+            std::views::transform([](int value) { return 2 * value; });
+        static_assert(std::ranges::forward_range<decltype(prvalue_shape)>);
+        static_assert(!std::is_reference_v<
+            std::ranges::range_reference_t<decltype(prvalue_shape)>>);
+        result = values(exec.bulk_async_execute(
+            [](int value) { return value; }, prvalue_shape));
+        HPX_TEST(result == std::vector<int>({2, 4, 6}));
+
         auto empty = hpx::util::iterator_range(shape.begin(), shape.begin());
         wait(exec.bulk_async_execute([](int) { HPX_TEST(false); }, empty));
     }

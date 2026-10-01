@@ -67,19 +67,11 @@ namespace hpx::execution::experimental::detail {
             std::iter_reference_t<std::ranges::iterator_t<S const>>>
     {
     private:
-        using storage_type = indexed_shape_storage<S>;
         using source_iterator = std::ranges::iterator_t<S const>;
         using position_iterator = std::vector<source_iterator>::const_iterator;
 
     public:
         indexed_shape_iterator() = default;
-
-        indexed_shape_iterator(
-            hpx::intrusive_ptr<storage_type> state, position_iterator current)
-          : state_(HPX_MOVE(state))
-          , current_(current)
-        {
-        }
 
         explicit indexed_shape_iterator(position_iterator current)
           : current_(current)
@@ -126,13 +118,47 @@ namespace hpx::execution::experimental::detail {
             return current_ == other.current_;
         }
 
-        hpx::intrusive_ptr<storage_type> state_;
         position_iterator current_;
     };
 
-    // Random access shapes already provide constant-time lookup. Other
-    // multipass shapes are indexed once while preserving references to their
-    // elements. Only the begin iterator retains the copied shape.
+    template <typename S>
+    class indexed_shape
+    {
+    private:
+        using storage_type = indexed_shape_storage<S>;
+
+    public:
+        using iterator = indexed_shape_iterator<S>;
+
+        explicit indexed_shape(S const& shape)
+          : state_(new storage_type(shape), false)
+        {
+        }
+
+        iterator begin() const noexcept
+        {
+            return iterator(state_->positions.cbegin());
+        }
+
+        iterator end() const noexcept
+        {
+            return iterator(state_->positions.cend());
+        }
+
+        std::size_t size() const noexcept
+        {
+            return state_->positions.size();
+        }
+
+    private:
+        hpx::intrusive_ptr<storage_type> state_;
+    };
+
+    // Random access shapes already provide constant-time lookup and are
+    // returned by reference to avoid a preliminary copy. Executor call sites
+    // copy that reference into the operation state before returning. Other
+    // multipass shapes are copied and indexed once. The resulting range owns
+    // that copy while its iterators remain lightweight and non-owning.
     template <typename S>
         requires(std::ranges::forward_range<S const>)
     decltype(auto) make_indexed_shape(S const& shape)
@@ -144,19 +170,12 @@ namespace hpx::execution::experimental::detail {
         }
         else
         {
-            using storage_type = indexed_shape_storage<S>;
-            using iterator = indexed_shape_iterator<S>;
-            using range_type = std::ranges::subrange<iterator>;
+            using range_type = indexed_shape<S>;
 
             static_assert(std::ranges::random_access_range<range_type>);
             static_assert(std::ranges::sized_range<range_type>);
 
-            hpx::intrusive_ptr<storage_type> state(
-                new storage_type(shape), false);
-            auto const first = state->positions.cbegin();
-            auto const last = state->positions.cend();
-
-            return range_type(iterator(state, first), iterator(last));
+            return range_type(shape);
         }
     }
 
