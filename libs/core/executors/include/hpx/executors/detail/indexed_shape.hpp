@@ -68,8 +68,8 @@ namespace hpx::execution::experimental::detail {
     {
     private:
         using storage_type = indexed_shape_storage<S>;
-        using position_iterator =
-            std::vector<std::ranges::iterator_t<S const>>::const_iterator;
+        using source_iterator = std::ranges::iterator_t<S const>;
+        using position_iterator = std::vector<source_iterator>::const_iterator;
 
     public:
         indexed_shape_iterator() = default;
@@ -85,6 +85,10 @@ namespace hpx::execution::experimental::detail {
           : current_(current)
         {
         }
+
+        using use_brackets_proxy =
+            hpx::util::detail::use_operator_brackets_proxy<source_iterator,
+                std::iter_value_t<source_iterator> const>;
 
     private:
         friend class hpx::util::iterator_core_access;
