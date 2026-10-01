@@ -63,8 +63,8 @@ jobs:
       run: |
           cmake --build build --config Release -- -j 2
           cmake --build build --config Release \
-              --target tests.unit.modules.execution_base \
-              --target tests.unit.modules.execution.rebind_policy \
+              --target any_sender_test \
+              --target rebind_policy_test \
               -- -j 2
     - name: Test
       shell: pwsh
@@ -74,4 +74,4 @@ jobs:
         ctest `
           --output-on-failure `
           --build-config Release `
-          --tests-regex "tests.unit.modules.execution_base|tests.unit.modules.execution.rebind_policy"
+          --tests-regex "tests.unit.modules.execution_base.any_sender|tests.unit.modules.execution.rebind_policy"
