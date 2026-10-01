@@ -42,17 +42,13 @@ namespace hpx::util {
         {
         }
 
-        // clang-format off
-        template <typename Range,
-            typename Enable =
-                std::enable_if_t<
-                    std::ranges::borrowed_range<Range> &&
-                    std::constructible_from<Iterator,
-                        decltype(util::begin(std::declval<Range&>()))> &&
-                    std::constructible_from<Sentinel,
-                        decltype(util::end(std::declval<Range&>()))> &&
-                    !std::is_same_v<iterator_range, std::decay_t<Range>>>>
-        // clang-format on
+        template <typename Range>
+            requires(std::ranges::borrowed_range<Range> &&
+                std::constructible_from<Iterator,
+                    decltype(util::begin(std::declval<Range&>()))> &&
+                std::constructible_from<Sentinel,
+                    decltype(util::end(std::declval<Range&>()))> &&
+                !std::same_as<iterator_range, std::decay_t<Range>>)
         HPX_HOST_DEVICE explicit constexpr iterator_range(Range&& r) noexcept(
             noexcept(iterator_range(util::begin(r), util::end(r))))
           : iterator_range(util::begin(r), util::end(r))
