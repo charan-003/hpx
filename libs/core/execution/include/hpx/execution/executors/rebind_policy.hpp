@@ -55,6 +55,9 @@ namespace hpx::execution::detail {
     template <typename Policy>
     using rebind_policy_current_executor_category_t =
         rebind_policy_current_executor_category<Policy>::type;
+}    // namespace hpx::execution::detail
+
+namespace hpx::execution::experimental {
 
     /// \brief Customization point for rebinding an execution policy to a
     ///        new executor, keeping its executor parameters.
@@ -73,11 +76,31 @@ namespace hpx::execution::detail {
         // The unchanged parameters type comes from
         // extract_executor_parameters_t, so its sequential fallback and
         // explicit specializations are honored.
-        using type = hpx::execution::experimental::rebind_executor_t<
-            std::decay_t<Policy>, std::decay_t<Executor>,
-            hpx::execution::experimental::extract_executor_parameters_t<
-                std::decay_t<Policy>>>;
+        using type =
+            rebind_executor_t<std::decay_t<Policy>, std::decay_t<Executor>,
+                extract_executor_parameters_t<std::decay_t<Policy>>>;
     };
+
+    /// \brief Customization point for rebinding an execution policy to new
+    ///        executor parameters, keeping its executor.
+    ///
+    /// The default needs a nested \c executor_type and
+    /// \c rebind<Executor_, Parameters_>::type. Specialize it for policies
+    /// that don't fit that shape. Use it through rebind_policy_parameters_t.
+    ///
+    /// \tparam Policy     The execution policy type being rebound.
+    /// \tparam Parameters The executor parameters type Policy should be
+    ///                    rebound to.
+    HPX_CXX_CORE_EXPORT template <typename Policy, typename Parameters>
+    struct rebind_policy_parameters
+    {
+        using type = rebind_executor_t<std::decay_t<Policy>,
+            typename std::decay_t<Policy>::executor_type,
+            std::decay_t<Parameters>>;
+    };
+}    // namespace hpx::execution::experimental
+
+namespace hpx::execution::detail {
 
     /// \brief Applies the category check outside rebind_policy_executor, so it
     ///        also covers direct specializations.
@@ -91,31 +114,9 @@ namespace hpx::execution::detail {
             "that of Policy; see hpx::execution::experimental::"
             "rebind_executor");
 
-        using type = rebind_policy_executor<Policy, Executor>::type;
-    };
-
-    /// \brief Policy rebound to Executor, keeping its executor parameters.
-    HPX_CXX_CORE_EXPORT template <typename Policy, typename Executor>
-    using rebind_policy_executor_t =
-        validated_rebind_policy_executor<std::decay_t<Policy>,
-            std::decay_t<Executor>>::type;
-
-    /// \brief Customization point for rebinding an execution policy to new
-    ///        executor parameters, keeping its executor.
-    ///
-    /// The default needs a nested \c executor_type and
-    /// \c rebind<Executor_, Parameters_>::type. Specialize it for policies
-    /// that don't fit that shape.
-    ///
-    /// \tparam Policy     The execution policy type being rebound.
-    /// \tparam Parameters The executor parameters type Policy should be
-    ///                    rebound to.
-    HPX_CXX_CORE_EXPORT template <typename Policy, typename Parameters>
-    struct rebind_policy_parameters
-    {
-        using type = hpx::execution::experimental::rebind_executor_t<
-            std::decay_t<Policy>, typename std::decay_t<Policy>::executor_type,
-            std::decay_t<Parameters>>;
+        using type =
+            hpx::execution::experimental::rebind_policy_executor<Policy,
+                Executor>::type;
     };
 
     /// \brief Same check as validated_rebind_policy_executor, against Policy's
@@ -130,14 +131,33 @@ namespace hpx::execution::detail {
             "not be weaker than that of Policy; see hpx::execution::"
             "experimental::rebind_executor");
 
-        using type = rebind_policy_parameters<Policy, Parameters>::type;
+        using type =
+            hpx::execution::experimental::rebind_policy_parameters<Policy,
+                Parameters>::type;
     };
+}    // namespace hpx::execution::detail
+
+namespace hpx::execution::experimental {
+
+    /// \brief Policy rebound to Executor, keeping its executor parameters.
+    ///
+    /// Applies rebind_policy_executor and checks that Executor's execution
+    /// category is not weaker than Policy's, also for direct
+    /// specializations of rebind_policy_executor.
+    HPX_CXX_CORE_EXPORT template <typename Policy, typename Executor>
+    using rebind_policy_executor_t =
+        hpx::execution::detail::validated_rebind_policy_executor<
+            std::decay_t<Policy>, std::decay_t<Executor>>::type;
 
     /// \brief Policy rebound to Parameters, keeping its executor.
+    ///
+    /// Applies rebind_policy_parameters and checks that the execution
+    /// category of Policy's current executor is not weaker than Policy's,
+    /// also for direct specializations of rebind_policy_parameters.
     HPX_CXX_CORE_EXPORT template <typename Policy, typename Parameters>
     using rebind_policy_parameters_t =
-        validated_rebind_policy_parameters<std::decay_t<Policy>,
-            std::decay_t<Parameters>>::type;
+        hpx::execution::detail::validated_rebind_policy_parameters<
+            std::decay_t<Policy>, std::decay_t<Parameters>>::type;
 
     /// \brief Whether rebinding the executor then the parameters gives the
     ///        same type as the other order.
@@ -151,4 +171,4 @@ namespace hpx::execution::detail {
             Parameters>,
         rebind_policy_executor_t<rebind_policy_parameters_t<Policy, Parameters>,
             Executor>>;
-}    // namespace hpx::execution::detail
+}    // namespace hpx::execution::experimental

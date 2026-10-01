@@ -29,13 +29,13 @@ namespace hpx::execution::experimental {
     ///        rebound to a new executor is constructed from the original
     ///        policy.
     ///
-    /// hpx::execution::detail::rebind_policy_executor only computes the
+    /// rebind_policy_executor only computes the
     /// rebound type. A policy that carries additional state, or that cannot
     /// be constructed from just (executor, parameters), specializes this
     /// template to build the rebound policy itself; \c call receives the
     /// original policy, so any such state can be carried over. The result
     /// must be of type
-    /// hpx::execution::detail::rebind_policy_executor_t<Policy, Executor>.
+    /// rebind_policy_executor_t<Policy, Executor>.
     ///
     /// The default constructs the rebound policy from the new executor and
     /// the original policy's parameters().
@@ -46,12 +46,11 @@ namespace hpx::execution::experimental {
     struct construct_rebound_policy_executor
     {
         template <typename Executor_>
-        static constexpr hpx::execution::detail::rebind_policy_executor_t<
-            Policy, Executor>
-        call(Policy const& policy, Executor_&& exec)
+        static constexpr rebind_policy_executor_t<Policy, Executor> call(
+            Policy const& policy, Executor_&& exec)
         {
-            return hpx::execution::detail::rebind_policy_executor_t<Policy,
-                Executor>(HPX_FORWARD(Executor_, exec), policy.parameters());
+            return rebind_policy_executor_t<Policy, Executor>(
+                HPX_FORWARD(Executor_, exec), policy.parameters());
         }
     };
 
@@ -61,7 +60,7 @@ namespace hpx::execution::experimental {
     ///
     /// Mirrors construct_rebound_policy_executor along the parameters
     /// axis. The result must be of type
-    /// hpx::execution::detail::rebind_policy_parameters_t<Policy, Parameters>.
+    /// rebind_policy_parameters_t<Policy, Parameters>.
     ///
     /// The default constructs the rebound policy from the original
     /// policy's executor() and the new parameters.
@@ -73,12 +72,10 @@ namespace hpx::execution::experimental {
     struct construct_rebound_policy_parameters
     {
         template <typename Parameters_>
-        static constexpr hpx::execution::detail::rebind_policy_parameters_t<
-            Policy, Parameters>
-        call(Policy const& policy, Parameters_&& parameters)
+        static constexpr rebind_policy_parameters_t<Policy, Parameters> call(
+            Policy const& policy, Parameters_&& parameters)
         {
-            return hpx::execution::detail::rebind_policy_parameters_t<Policy,
-                Parameters>(
+            return rebind_policy_parameters_t<Policy, Parameters>(
                 policy.executor(), HPX_FORWARD(Parameters_, parameters));
         }
     };
@@ -93,9 +90,7 @@ namespace hpx::execution::experimental {
         constexpr decltype(auto) operator()(
             Policy&& policy, Executor&& exec) const
         {
-            using rebound_type =
-                hpx::execution::detail::rebind_policy_executor_t<Policy,
-                    Executor>;
+            using rebound_type = rebind_policy_executor_t<Policy, Executor>;
             using construct_type =
                 construct_rebound_policy_executor<std::decay_t<Policy>,
                     std::decay_t<Executor>>;
@@ -105,7 +100,7 @@ namespace hpx::execution::experimental {
             static_assert(
                 std::is_same_v<std::decay_t<result_type>, rebound_type>,
                 "construct_rebound_policy_executor must produce "
-                "hpx::execution::detail::rebind_policy_executor_t<Policy, "
+                "rebind_policy_executor_t<Policy, "
                 "Executor>");
 
             return construct_type::call(policy, HPX_FORWARD(Executor, exec));
@@ -123,9 +118,7 @@ namespace hpx::execution::experimental {
         constexpr decltype(auto) operator()(
             Policy&& policy, Parameters&& parameters) const
         {
-            using rebound_type =
-                hpx::execution::detail::rebind_policy_parameters_t<Policy,
-                    Parameters>;
+            using rebound_type = rebind_policy_parameters_t<Policy, Parameters>;
             using construct_type =
                 construct_rebound_policy_parameters<std::decay_t<Policy>,
                     std::decay_t<Parameters>>;
@@ -135,7 +128,7 @@ namespace hpx::execution::experimental {
             static_assert(
                 std::is_same_v<std::decay_t<result_type>, rebound_type>,
                 "construct_rebound_policy_parameters must produce "
-                "hpx::execution::detail::rebind_policy_parameters_t<Policy, "
+                "rebind_policy_parameters_t<Policy, "
                 "Parameters>");
 
             return construct_type::call(

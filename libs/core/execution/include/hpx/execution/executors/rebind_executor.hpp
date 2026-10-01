@@ -112,7 +112,7 @@ namespace hpx::execution::experimental {
     // create_rebound_policy_t (the combined rebind customization point) is
     // defined in hpx/execution/executors/create_rebound_policy.hpp, not
     // here: its single-argument overloads route through
-    // hpx::execution::detail::rebind_policy_executor_t and
+    // rebind_policy_executor_t and
     // rebind_policy_parameters_t (see rebind_policy.hpp), and rebind_policy.hpp
     // itself includes this header, so defining it here would make the two
     // headers include each other. Code that wants create_rebound_policy
