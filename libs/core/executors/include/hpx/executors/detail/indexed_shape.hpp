@@ -9,6 +9,7 @@
 #include <hpx/config.hpp>
 #include <hpx/modules/iterator_support.hpp>
 #include <hpx/modules/memory.hpp>
+#include <hpx/modules/thread_support.hpp>
 
 #include <atomic>
 #include <cstddef>
@@ -25,6 +26,7 @@ namespace hpx::execution::experimental::detail {
     {
         explicit indexed_shape_storage(S const& input_shape)
           : shape(input_shape)
+          , count_(1)
         {
             auto const& owned_shape = std::as_const(shape);
             if constexpr (std::ranges::sized_range<S const>)
@@ -45,18 +47,24 @@ namespace hpx::execution::experimental::detail {
     private:
         friend void intrusive_ptr_add_ref(indexed_shape_storage* p) noexcept
         {
-            p->count.fetch_add(1, std::memory_order_relaxed);
+            p->count_.increment();
         }
 
         friend void intrusive_ptr_release(indexed_shape_storage* p) noexcept
         {
-            if (p->count.fetch_sub(1, std::memory_order_acq_rel) == 1)
+            if (p->count_.decrement() == 0)
             {
+                // The thread that decrements the reference count to zero must
+                // perform an acquire to ensure that it doesn't start
+                // destructing the object until all previous writes have
+                // drained.
+                std::atomic_thread_fence(std::memory_order_acquire);
+
                 delete p;
             }
         }
 
-        std::atomic<std::size_t> count{1};
+        hpx::util::atomic_count count_;
     };
 
     template <typename S>
