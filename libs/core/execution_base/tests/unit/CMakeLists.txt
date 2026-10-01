@@ -44,8 +44,8 @@ foreach(test ${tests})
 
 endforeach()
 
-# Built without HPX_MODULE_STATIC_LINKING so that any_sender.hpp is compiled
-# the way a normal consumer of the shared libraries sees it
+# Built without HPX_MODULE_STATIC_LINKING so that any_sender.hpp is compiled the
+# way a normal consumer of the shared libraries sees it
 add_hpx_executable(
   any_sender_consumer_test INTERNAL_FLAGS
   SOURCES any_sender_consumer.cpp
