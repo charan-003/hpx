@@ -248,6 +248,21 @@ namespace hpx::execution::experimental {
                         return std::nullopt;
                     }
                 }
+
+                std::optional<hpx::experimental::in_place_stop_token>
+                query_hpx_stop_token(get_stop_token_t) const noexcept override
+                {
+                    auto token = get_stop_token(get_env(op_.receiver_));
+                    if constexpr (std::is_same_v<decltype(token),
+                                      hpx::experimental::in_place_stop_token>)
+                    {
+                        return token;
+                    }
+                    else
+                    {
+                        return std::nullopt;
+                    }
+                }
             };
 
             // ---- Proxy type computation ----------------------------------
@@ -764,6 +779,21 @@ namespace hpx::execution::experimental {
                     auto token = get_stop_token(get_env(receiver_));
                     if constexpr (std::is_same_v<decltype(token),
                                       inplace_stop_token>)
+                    {
+                        return token;
+                    }
+                    else
+                    {
+                        return std::nullopt;
+                    }
+                }
+
+                std::optional<hpx::experimental::in_place_stop_token>
+                query_hpx_stop_token(get_stop_token_t) const noexcept override
+                {
+                    auto token = get_stop_token(get_env(receiver_));
+                    if constexpr (std::is_same_v<decltype(token),
+                                      hpx::experimental::in_place_stop_token>)
                     {
                         return token;
                     }

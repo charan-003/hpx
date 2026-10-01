@@ -7,6 +7,8 @@
 #include <hpx/config.hpp>
 #include <hpx/executors/parallel_scheduler.hpp>
 #include <hpx/init.hpp>
+#include <hpx/modules/execution_base.hpp>
+#include <hpx/modules/synchronization.hpp>
 #include <hpx/modules/testing.hpp>
 #include <hpx/thread.hpp>
 
@@ -27,16 +29,14 @@
 
 namespace ex = hpx::execution::experimental;
 
-// Include stdexec async_scope for stop token testing
-#include <exec/async_scope.hpp>
-
 namespace {
 
+    template <typename StopToken>
     struct stop_token_receiver
     {
         using receiver_concept = ex::receiver_t;
 
-        ex::inplace_stop_token token;
+        StopToken token;
         bool& completed;
         bool& stopped;
 
@@ -61,6 +61,7 @@ namespace {
         }
     };
 
+    template <typename StopSource>
     struct stop_query_backend final : ex::parallel_scheduler_backend
     {
         enum class query_target
@@ -69,7 +70,7 @@ namespace {
             bulk
         };
 
-        stop_query_backend(ex::inplace_stop_source& source, query_target target,
+        stop_query_backend(StopSource& source, query_target target,
             bool& found_token, bool& found_unsupported)
           : source_(source)
           , target_(target)
@@ -112,19 +113,56 @@ namespace {
             ex::parallel_scheduler_receiver_proxy& proxy) noexcept
         {
             source_.request_stop();
-            auto token =
-                proxy.try_query<ex::inplace_stop_token>(ex::get_stop_token);
+            using stop_token_type = decltype(source_.get_token());
+            auto token = proxy.try_query<stop_token_type>(ex::get_stop_token);
             found_token_ = token.has_value() && token->stop_requested();
             found_unsupported_ =
                 proxy.try_query<int>(ex::get_stop_token).has_value();
             proxy.set_stopped();
         }
 
-        ex::inplace_stop_source& source_;
+        StopSource& source_;
         query_target target_;
         bool& found_token_;
         bool& found_unsupported_;
     };
+
+    template <typename StopSource>
+    void test_stop_token_query(
+        typename stop_query_backend<StopSource>::query_target target)
+    {
+        StopSource source;
+        bool completed = false;
+        bool stopped = false;
+        bool found_token = false;
+        bool found_unsupported = false;
+        auto original = ex::query_parallel_scheduler_backend();
+        ex::set_parallel_scheduler_backend(
+            std::make_shared<stop_query_backend<StopSource>>(
+                source, target, found_token, found_unsupported));
+
+        if (target == stop_query_backend<StopSource>::query_target::schedule)
+        {
+            auto operation = ex::connect(
+                ex::schedule(ex::get_parallel_scheduler()),
+                stop_token_receiver{source.get_token(), completed, stopped});
+            ex::start(operation);
+        }
+        else
+        {
+            auto sender = ex::schedule(ex::get_parallel_scheduler()) |
+                ex::bulk_unchunked(ex::par, 4, [](std::size_t) {});
+            auto operation = ex::connect(HPX_MOVE(sender),
+                stop_token_receiver{source.get_token(), completed, stopped});
+            ex::start(operation);
+        }
+
+        ex::set_parallel_scheduler_backend(HPX_MOVE(original));
+        HPX_TEST(found_token);
+        HPX_TEST(!found_unsupported);
+        HPX_TEST(!completed);
+        HPX_TEST(stopped);
+    }
 
 }    // namespace
 
@@ -504,7 +542,7 @@ int hpx_main(int, char*[])
     // Stop token support test (P2079R10 requirement)
     {
         ex::parallel_scheduler sched = ex::get_parallel_scheduler();
-        experimental::execution::async_scope scope;
+        ex::async_scope scope;
         scope.request_stop();
         HPX_TEST(scope.get_stop_source().stop_requested());
 
@@ -519,50 +557,20 @@ int hpx_main(int, char*[])
 
     // Replacement backends can query a schedule receiver's stop token.
     {
-        ex::inplace_stop_source source;
-        bool completed = false;
-        bool stopped = false;
-        bool found_token = false;
-        bool found_unsupported = false;
-        auto original = ex::query_parallel_scheduler_backend();
-        ex::set_parallel_scheduler_backend(std::make_shared<stop_query_backend>(
-            source, stop_query_backend::query_target::schedule, found_token,
-            found_unsupported));
-
-        auto operation = ex::connect(ex::schedule(ex::get_parallel_scheduler()),
-            stop_token_receiver{source.get_token(), completed, stopped});
-        ex::start(operation);
-
-        ex::set_parallel_scheduler_backend(HPX_MOVE(original));
-        HPX_TEST(found_token);
-        HPX_TEST(!found_unsupported);
-        HPX_TEST(!completed);
-        HPX_TEST(stopped);
+        test_stop_token_query<ex::inplace_stop_source>(stop_query_backend<
+            ex::inplace_stop_source>::query_target::schedule);
+        test_stop_token_query<hpx::experimental::in_place_stop_source>(
+            stop_query_backend<hpx::experimental::in_place_stop_source>::
+                query_target::schedule);
     }
 
     // Replacement backends can query a bulk receiver's stop token.
     {
-        ex::inplace_stop_source source;
-        bool completed = false;
-        bool stopped = false;
-        bool found_token = false;
-        bool found_unsupported = false;
-        auto original = ex::query_parallel_scheduler_backend();
-        ex::set_parallel_scheduler_backend(std::make_shared<stop_query_backend>(
-            source, stop_query_backend::query_target::bulk, found_token,
-            found_unsupported));
-
-        auto sender = ex::schedule(ex::get_parallel_scheduler()) |
-            ex::bulk_unchunked(ex::par, 4, [](std::size_t) {});
-        auto operation = ex::connect(HPX_MOVE(sender),
-            stop_token_receiver{source.get_token(), completed, stopped});
-        ex::start(operation);
-
-        ex::set_parallel_scheduler_backend(HPX_MOVE(original));
-        HPX_TEST(found_token);
-        HPX_TEST(!found_unsupported);
-        HPX_TEST(!completed);
-        HPX_TEST(stopped);
+        test_stop_token_query<ex::inplace_stop_source>(
+            stop_query_backend<ex::inplace_stop_source>::query_target::bulk);
+        test_stop_token_query<hpx::experimental::in_place_stop_source>(
+            stop_query_backend<
+                hpx::experimental::in_place_stop_source>::query_target::bulk);
     }
 
     // Test set_value_t completion scheduler query

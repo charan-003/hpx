@@ -13,6 +13,7 @@
 #include <hpx/modules/errors.hpp>
 #include <hpx/modules/execution.hpp>
 #include <hpx/modules/execution_base.hpp>
+#include <hpx/modules/synchronization.hpp>
 #include <hpx/modules/threading_base.hpp>
 #include <hpx/modules/timing.hpp>
 #include <hpx/modules/topology.hpp>
@@ -46,7 +47,8 @@ namespace hpx::execution::experimental {
     // The backend calls these to signal completion back to the frontend.
     // try_query() exposes supported receiver environment properties to a
     // replacement backend. P2079R10 requires get_stop_token_t with an
-    // inplace_stop_token result to be supported.
+    // inplace_stop_token result to be supported. HPX's in_place_stop_token is
+    // supported as well.
     //
     // P3804R2: No virtual destructor - objects are never destroyed polymorphically.
     // The frontend knows the concrete type and destroys it directly.
@@ -69,6 +71,12 @@ namespace hpx::execution::experimental {
             {
                 return query_stop_token(q);
             }
+            else if constexpr (std::is_same_v<std::remove_cvref_t<Query>,
+                                   get_stop_token_t> &&
+                std::is_same_v<P, hpx::experimental::in_place_stop_token>)
+            {
+                return query_hpx_stop_token(q);
+            }
             else
             {
                 return std::nullopt;
@@ -86,6 +94,12 @@ namespace hpx::execution::experimental {
     protected:
         virtual std::optional<inplace_stop_token> query_stop_token(
             get_stop_token_t) const noexcept
+        {
+            return std::nullopt;
+        }
+
+        virtual std::optional<hpx::experimental::in_place_stop_token>
+        query_hpx_stop_token(get_stop_token_t) const noexcept
         {
             return std::nullopt;
         }
