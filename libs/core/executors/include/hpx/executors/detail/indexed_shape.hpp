@@ -12,6 +12,7 @@
 #include <hpx/modules/thread_support.hpp>
 
 #include <atomic>
+#include <concepts>
 #include <cstddef>
 #include <iterator>
 #include <ranges>
@@ -23,16 +24,23 @@ namespace hpx::execution::experimental::detail {
     /// \cond NOINTERNAL
 
     template <typename S>
+    concept indexable_shape = std::ranges::forward_range<S const> &&
+        std::copyable<std::ranges::range_value_t<S const>>;
+
+    template <typename S>
     struct indexed_shape_storage
     {
     private:
-        using stored_shape_type =
-            std::conditional_t<std::is_copy_constructible_v<S>, S,
-                std::vector<std::ranges::range_value_t<S const>>>;
+        static constexpr bool can_copy_shape =
+            std::copyable<std::ranges::range_value_t<S const>> &&
+            std::is_copy_constructible_v<S>;
+
+        using stored_shape_type = std::conditional_t<can_copy_shape, S,
+            std::vector<std::ranges::range_value_t<S const>>>;
 
         static stored_shape_type make_shape(S const& input_shape)
         {
-            if constexpr (std::is_copy_constructible_v<S>)
+            if constexpr (can_copy_shape)
             {
                 return input_shape;
             }
@@ -128,7 +136,7 @@ namespace hpx::execution::experimental::detail {
     private:
         friend class hpx::util::iterator_core_access;
 
-        std::ranges::range_reference_t<S const> dereference() const
+        std::iter_reference_t<source_iterator> dereference() const
             noexcept(noexcept(**current_))
         {
             return **current_;
@@ -199,12 +207,16 @@ namespace hpx::execution::experimental::detail {
 
     // Random access shapes already provide constant-time lookup and are
     // returned by reference to avoid a preliminary copy. Executor call sites
-    // copy that reference into the operation state before returning. Other
-    // multipass shapes are copied and indexed once. If a shape is move-only,
-    // its elements are materialized instead. The resulting range owns that
-    // state while its iterators remain lightweight and non-owning.
+    // copy that reference into the operation state before returning. Copying
+    // a view does not extend the lifetime of the storage it references; that
+    // storage must outlive asynchronous work.
+    //
+    // Other multipass shapes allocate and populate an O(n) position vector on
+    // every call. If a shape is move-only, its copyable elements are
+    // materialized as well. The resulting range owns that state while its
+    // iterators remain lightweight and non-owning.
     template <typename S>
-        requires(std::ranges::forward_range<S const>)
+        requires indexable_shape<S>
     decltype(auto) make_indexed_shape(S const& shape)
     {
         if constexpr (std::ranges::random_access_range<S const> &&

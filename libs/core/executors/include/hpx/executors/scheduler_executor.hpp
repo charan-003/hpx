@@ -295,7 +295,7 @@ namespace hpx::execution::experimental {
 
         // BulkTwoWayExecutor interface
         template <typename F, typename S, typename... Ts>
-            requires(std::ranges::forward_range<S const>)
+            requires(detail::indexable_shape<S>)
         auto bulk_async_execute(F&& f, S const& input_shape, Ts&&... ts) const
         {
             decltype(auto) shape = detail::make_indexed_shape(input_shape);
@@ -304,8 +304,9 @@ namespace hpx::execution::experimental {
                 shape_element, Ts...>;
 
             // hpx::execution::experimental::bulk requires integral shape
-            using size_type = decltype(std::ranges::distance(shape));
-            size_type const n = std::ranges::distance(shape);
+            using size_type = std::size_t;
+            size_type const n =
+                static_cast<size_type>(std::ranges::distance(shape));
 
             if constexpr (std::is_void_v<result_type>)
             {
@@ -403,7 +404,7 @@ namespace hpx::execution::experimental {
         }
 
         template <typename F, typename S, typename... Ts>
-            requires(std::ranges::forward_range<S const>)
+            requires(detail::indexable_shape<S>)
         auto bulk_sync_execute(F&& f, S const& input_shape, Ts&&... ts) const
         {
             decltype(auto) shape = detail::make_indexed_shape(input_shape);
@@ -411,8 +412,9 @@ namespace hpx::execution::experimental {
             using result_type = hpx::util::detail::invoke_deferred_result_t<F,
                 shape_element, Ts...>;
 
-            using size_type = decltype(std::ranges::distance(shape));
-            size_type const n = std::ranges::distance(shape);
+            using size_type = std::size_t;
+            size_type const n =
+                static_cast<size_type>(std::ranges::distance(shape));
 
             if constexpr (detail::has_thread_pool_backend<
                               std::decay_t<BaseScheduler>>::value)
@@ -469,14 +471,15 @@ namespace hpx::execution::experimental {
         }
 
         template <typename F, typename S, typename Future, typename... Ts>
-            requires(std::ranges::forward_range<S const>)
+            requires(detail::indexable_shape<S>)
         decltype(auto) bulk_then_execute(
             F&& f, S const& input_shape, Future&& predecessor, Ts&&... ts) const
         {
             decltype(auto) indexed_shape =
                 detail::make_indexed_shape(input_shape);
             auto shape = indexed_shape;
-            auto const n = std::ranges::distance(shape);
+            auto const n =
+                static_cast<std::size_t>(std::ranges::distance(shape));
             using result_type =
                 parallel::execution::detail::then_bulk_function_result_t<F, S,
                     Future, Ts...>;
@@ -487,7 +490,7 @@ namespace hpx::execution::experimental {
                     when_all(keep_future(HPX_FORWARD(Future, predecessor)));
 
                 auto loop = bulk(continues_on(HPX_MOVE(pre_req), sched_), n,
-                    [shape,
+                    [shape = HPX_MOVE(shape),
                         bound_f = hpx::bind_back(
                             HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...)](
                         auto i, auto&... receiver_args) mutable {
@@ -513,7 +516,7 @@ namespace hpx::execution::experimental {
                         just(std::vector<result_type>(n)));
 
                 auto loop = bulk(continues_on(HPX_MOVE(pre_req), sched_), n,
-                    [shape,
+                    [shape = HPX_MOVE(shape),
                         bound_f = hpx::bind_back(
                             HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...)](
                         auto i, auto&& predecessor, auto& values) mutable {

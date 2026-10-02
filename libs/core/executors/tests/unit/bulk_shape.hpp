@@ -160,6 +160,18 @@ namespace executor_test {
             exec.bulk_then_execute(void_work{}, shape, predecessor);
         });
 
+        using move_only_element_shape = std::vector<std::unique_ptr<int>>;
+        static_assert(!requires(move_only_element_shape shape) {
+            exec.bulk_async_execute(void_work{}, shape);
+        });
+        static_assert(!requires(move_only_element_shape shape) {
+            exec.bulk_sync_execute(void_work{}, shape);
+        });
+        static_assert(!requires(move_only_element_shape shape,
+            hpx::shared_future<void> predecessor) {
+            exec.bulk_then_execute(void_work{}, shape, predecessor);
+        });
+
         std::vector<int> input(64);
         std::iota(input.begin(), input.end(), 100);
         auto increments = std::make_shared<std::atomic<std::size_t>>(0);
