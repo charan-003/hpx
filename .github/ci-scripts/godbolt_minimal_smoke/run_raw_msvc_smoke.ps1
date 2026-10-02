@@ -9,10 +9,17 @@
 # options MSBuild already used for the CMake hello_wrap target.
 #
 # MSVC has no -Wl,-wrap=main. hpx/hpx_main.hpp redefines main as
-# hpx_startup::user_main and hpx_wrap.lib provides the real main, so the
-# link needs no extra option. The HPX module libraries are not listed on the
-# link line: the installed headers name them through #pragma comment(lib),
-# so only /LIBPATH to the install is needed, which tests auto-linking.
+# hpx_startup::user_main and hpx_wrap.lib makes it run as the first HPX
+# thread, so the link needs no extra option.
+#
+# A second program does not include hpx/hpx_main.hpp at all and gets it
+# through /FI instead, the same as HPX::auto_wrap_main on MSVC. With
+# HPX_AUTO_WRAP_MAIN_FORCE_INCLUDE defined, the default main() of a static
+# build comes from hpx_wrap.lib instead of from the header.
+#
+# The HPX module libraries are not listed on the link line: the installed
+# headers name them through #pragma comment(lib), so only /LIBPATH to the
+# install is needed, which tests auto-linking.
 #
 # Usage:
 #   run_raw_msvc_smoke.ps1 -Prefix <install-prefix> `
@@ -32,7 +39,6 @@ $Prefix = (Resolve-Path $Prefix).Path
 $CMakeBuildDir = (Resolve-Path $CMakeBuildDir).Path
 New-Item -ItemType Directory -Force $OutDir | Out-Null
 $OutDir = (Resolve-Path $OutDir).Path
-$Source = Join-Path $PSScriptRoot 'raw_wrap.cpp'
 
 # Put cl.exe and link.exe on PATH.
 $env:PATH = (Join-Path ${env:ProgramFiles(x86)} `
@@ -78,22 +84,32 @@ $libs = @(
     'dbghelp.lib'
 ) -join ' '
 
-$rsp = Join-Path $OutDir 'raw_wrap.rsp'
-Set-Content -Encoding ascii $rsp @(
-    $clFlags
-    '/DHPX_APPLICATION_EXPORTS'
-    "/I`"$Prefix\include`""
-    "/Fo`"$(Join-Path $OutDir 'raw_wrap.obj')`""
-    "/Fe`"$(Join-Path $OutDir 'raw_wrap.exe')`""
-    "`"$Source`""
-    # /link and its arguments have to be on one line in a response file
-    "/link $libs"
-)
-
-& cl.exe /nologo "@$rsp"
-if ($LASTEXITCODE -ne 0) { throw "cl.exe failed with $LASTEXITCODE" }
-
 # The install puts the hwloc DLL into bin.
 $env:PATH = "$Prefix\bin;$env:PATH"
-& "$OutDir\raw_wrap.exe" --hpx:threads=2
-if ($LASTEXITCODE -ne 0) { throw "raw_wrap.exe failed with $LASTEXITCODE" }
+
+function Invoke-RawSmoke([string]$Name, [string[]]$ExtraFlags) {
+    $rsp = Join-Path $OutDir "$Name.rsp"
+    Set-Content -Encoding ascii $rsp @(
+        $clFlags
+        '/DHPX_APPLICATION_EXPORTS'
+        "/I`"$Prefix\include`""
+        $ExtraFlags
+        "/Fo`"$(Join-Path $OutDir "$Name.obj")`""
+        "/Fe`"$(Join-Path $OutDir "$Name.exe")`""
+        "`"$(Join-Path $PSScriptRoot "$Name.cpp")`""
+        # /link and its arguments have to be on one line in a response file
+        "/link $libs"
+    )
+
+    & cl.exe /nologo "@$rsp"
+    if ($LASTEXITCODE -ne 0) { throw "cl.exe failed with $LASTEXITCODE" }
+
+    & (Join-Path $OutDir "$Name.exe") --hpx:threads=2
+    if ($LASTEXITCODE -ne 0) { throw "$Name.exe failed with $LASTEXITCODE" }
+}
+
+Invoke-RawSmoke 'raw_wrap' @()
+Invoke-RawSmoke 'raw_auto_wrap' @(
+    '/FIhpx/hpx_main.hpp'
+    '/DHPX_AUTO_WRAP_MAIN_FORCE_INCLUDE'
+)

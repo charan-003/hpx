@@ -141,11 +141,12 @@ Linking without CMake on Windows (MSVC)
 ---------------------------------------
 
 ``-Wl,-wrap=main`` is a GNU ld option and has no MSVC equivalent. On Windows,
-``hpx/hpx_main.hpp`` instead redefines ``main`` as ``hpx_startup::user_main``,
-and ``hpx_wrap.lib`` provides the real ``main`` that starts the |hpx| runtime
-before calling it. A raw ``cl.exe`` build therefore needs no wrap option, only
-``hpx_wrap.lib`` on the link line. From a Developer PowerShell for Visual
-Studio:
+``hpx/hpx_main.hpp`` instead redefines ``main`` as ``hpx_startup::user_main``.
+The real ``main`` that starts the |hpx| runtime comes from the header itself in
+a static build and from ``hpx_init.lib`` otherwise, and ``hpx_wrap.lib`` makes
+the runtime run ``hpx_startup::user_main`` as its first |hpx| thread. A raw
+``cl.exe`` build therefore needs no wrap option, only ``hpx_wrap.lib`` on the
+link line. From a Developer PowerShell for Visual Studio:
 
 .. code-block:: powershell
 
@@ -188,10 +189,19 @@ Boost include path is needed. Configurations with
 ``thread``, and ``chrono`` libraries; add those to the ``/link`` part together
 with a ``/LIBPATH:`` for them.
 
-Prefer ``HPX::hpx`` plus ``HPX::wrap_main`` from CMake where possible, since
-they supply these options and the module libraries automatically. Compiler
-Explorer's execution sandbox runs Linux, so the Windows path matters for MSVC
-compile-only sessions and for local godbolt-minimal builds on Windows.
+To build a program that does not include ``hpx/hpx_main.hpp`` itself, add
+``/FIhpx/hpx_main.hpp`` to the compile options above. This is what
+``HPX::auto_wrap_main`` does on MSVC: ``/FI`` force-includes the header into
+every source file, which is the same as including it at the top of each one.
+When compiling more than one source file this way against a static |hpx|, also
+pass ``/DHPX_AUTO_WRAP_MAIN_FORCE_INCLUDE`` so the default ``main`` comes from
+``hpx_wrap.lib`` once instead of from the header in every source file.
+
+Prefer ``HPX::hpx`` plus ``HPX::wrap_main`` or ``HPX::auto_wrap_main`` from
+CMake where possible, since they supply these options and the module libraries
+automatically. Compiler Explorer's execution sandbox runs Linux, so the
+Windows path matters for MSVC compile-only sessions and for local
+godbolt-minimal builds on Windows.
 
 .. _using_hpx_ce_writing_code:
 
