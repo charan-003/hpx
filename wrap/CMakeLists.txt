@@ -18,7 +18,7 @@ set(hpx_wrap_SOURCES
     ""
     CACHE INTERNAL "Sources for libhpx_wrap." FORCE
 )
-list(APPEND hpx_wrap_SOURCES hpx_wrap.cpp hpx_main.cpp main.cpp)
+list(APPEND hpx_wrap_SOURCES hpx_wrap.cpp hpx_main.cpp hpx_main_impl.cpp)
 
 # make source groups
 set(hpx_wrap_SOURCE_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/src)
