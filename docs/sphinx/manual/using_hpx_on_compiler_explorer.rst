@@ -158,7 +158,8 @@ Studio:
          /I "$hpx\hwloc_installed\include" `
          my_program.cpp `
          /link /LIBPATH:"$hpx\lib" /LIBPATH:"$hpx\hwloc_installed\lib" `
-         hpx_wrap.lib hpx_init.lib libhwloc.dll.a psapi.lib shlwapi.lib
+         hpx_wrap.lib hpx_init.lib libhwloc.dll.a psapi.lib shlwapi.lib `
+         dbghelp.lib
 
 The |hpx| module libraries (``hpx_core.lib`` and ``hpx.lib``, or one ``.lib``
 per module when |hpx| is built with
@@ -167,9 +168,11 @@ MSVC the installed headers name them through ``#pragma comment(lib, ...)``,
 so ``/LIBPATH:`` to the install's ``lib`` directory is enough. Define
 ``HPX_NO_AUTOLINK`` to turn this off and list the libraries yourself.
 ``hpx_wrap.lib`` and ``hpx_init.lib`` are not auto-linked and have to be
-passed explicitly, as do hwloc and the Windows libraries ``psapi.lib`` and
-``shlwapi.lib``. No ``--start-group`` equivalent is needed: ``link.exe``
-searches every library on the command line until all symbols are resolved.
+passed explicitly, as do hwloc and the Windows libraries ``psapi.lib``,
+``shlwapi.lib``, and ``dbghelp.lib`` (needed for the stack traces that
+``HPX_WITH_STACKTRACES`` enables by default). No ``--start-group`` equivalent
+is needed: ``link.exe`` searches every library on the command line until all
+symbols are resolved.
 
 The ``/Zc:`` options, ``/bigobj``, and ``/permissive-`` are the options the
 ``HPX::hpx`` CMake target passes on to its consumers. ``hwloc_installed`` is

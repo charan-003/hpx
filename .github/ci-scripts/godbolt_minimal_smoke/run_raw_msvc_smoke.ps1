@@ -60,18 +60,22 @@ $clFlags = $clFlags `
     -replace '/F[od]"[^"]*"', '' `
     -replace '(?i)("[^"]+\.cpp"|\S+\.cpp)\s*$', ''
 
-# hpx_core.lib and hpx.lib come from auto-linking. hpx_wrap.lib and
-# hpx_init.lib are not named by any header, and neither are hwloc and the
-# Windows libraries HPX::hpx adds, so pass those explicitly.
+# hpx_core.lib comes from auto-linking; hpx.lib is listed explicitly as
+# well. hpx_wrap.lib and hpx_init.lib are not named by any header, and
+# neither are hwloc and the Windows libraries HPX::hpx adds (dbghelp.lib is
+# needed for the stack traces HPX_WITH_STACKTRACES enables by default), so
+# pass those explicitly.
 $hwloc = Join-Path $Prefix 'hwloc_installed'
 $libs = @(
     "/LIBPATH:`"$Prefix\lib`""
     "/LIBPATH:`"$hwloc\lib`""
     'hpx_wrap.lib'
     'hpx_init.lib'
+    'hpx.lib'
     'libhwloc.dll.a'
     'psapi.lib'
     'shlwapi.lib'
+    'dbghelp.lib'
 ) -join ' '
 
 $rsp = Join-Path $OutDir 'raw_wrap.rsp'
