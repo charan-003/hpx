@@ -7,10 +7,10 @@
 #include <hpx/modules/testing.hpp>
 
 #include <hpx/config.hpp>
+#include <hpx/modules/synchronization.hpp>
 #include <atomic>
 #include <chrono>
 #include <exception>
-#include <semaphore>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -18,7 +18,6 @@
 #include <vector>
 
 #include <hpx/execution_base/stdexec_forward.hpp>
-#include <exec/single_thread_context.hpp>
 
 namespace ex = hpx::execution::experimental;
 
@@ -160,14 +159,14 @@ void test_associate_pipe_syntax()
 // is started and must not complete until the operation is released.
 void test_counting_scope_concurrent_join()
 {
-    exec::single_thread_context ctx;
+    ex::single_thread_context ctx;
     ex::simple_counting_scope scope;
     std::atomic<int> completed{0};
     constexpr int n = 8;
 
     // Synchronization: held op signals arrival, main thread releases it
-    std::binary_semaphore arrived{0};
-    std::binary_semaphore release{0};
+    hpx::binary_semaphore arrived{0};
+    hpx::binary_semaphore release{0};
 
     for (int i = 0; i < n; ++i)
     {
@@ -191,7 +190,7 @@ void test_counting_scope_concurrent_join()
 
     // Start join() on a separate thread; signal entry before blocking
     std::atomic<bool> join_done{false};
-    std::binary_semaphore join_entered{0};
+    hpx::binary_semaphore join_entered{0};
     std::thread joiner([&]() {
         join_entered.release();
         ex::sync_wait(scope.join());
@@ -217,7 +216,7 @@ void test_counting_scope_concurrent_join()
 // join() must block until all are released.
 void test_counting_scope_multithreaded_spawn()
 {
-    exec::single_thread_context ctx;
+    ex::single_thread_context ctx;
     ex::simple_counting_scope scope;
     std::atomic<int> completed{0};
     constexpr int num_threads = 4;
@@ -225,8 +224,8 @@ void test_counting_scope_multithreaded_spawn()
     constexpr int n = num_threads * spawns_per_thread;
 
     // One held operation: signals arrival, waits for release
-    std::binary_semaphore arrived{0};
-    std::binary_semaphore release{0};
+    hpx::binary_semaphore arrived{0};
+    hpx::binary_semaphore release{0};
     std::atomic<bool> first_claimed{false};
 
     std::vector<std::thread> threads;
@@ -262,7 +261,7 @@ void test_counting_scope_multithreaded_spawn()
 
     // Start join() on a separate thread; signal entry before blocking
     std::atomic<bool> join_done{false};
-    std::binary_semaphore join_entered{0};
+    hpx::binary_semaphore join_entered{0};
     std::thread joiner([&]() {
         join_entered.release();
         ex::sync_wait(scope.join());

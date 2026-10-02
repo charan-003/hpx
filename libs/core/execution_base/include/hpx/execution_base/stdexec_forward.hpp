@@ -43,6 +43,7 @@
 #include <exec/env.hpp>
 #include <exec/execute.hpp>
 #include <exec/sender_for.hpp>
+#include <exec/single_thread_context.hpp>
 #include <exec/split.hpp>
 #include <exec/start_detached.hpp>
 #include <stdexec/execution.hpp>
@@ -342,6 +343,9 @@ namespace hpx::execution::experimental {
 
     HPX_CXX_CORE_EXPORT using stdexec::simple_counting_scope;
     HPX_CXX_CORE_EXPORT using stdexec::counting_scope;
+
+    // Single-thread context (exec:: utility)
+    HPX_CXX_CORE_EXPORT using exec::single_thread_context;
 
     // sender invokes
     HPX_CXX_CORE_EXPORT template <typename Sender, typename AlgorithmTag>
