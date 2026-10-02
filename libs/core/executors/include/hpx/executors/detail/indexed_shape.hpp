@@ -15,6 +15,7 @@
 #include <cstddef>
 #include <iterator>
 #include <ranges>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -24,8 +25,39 @@ namespace hpx::execution::experimental::detail {
     template <typename S>
     struct indexed_shape_storage
     {
+    private:
+        using stored_shape_type =
+            std::conditional_t<std::is_copy_constructible_v<S>, S,
+                std::vector<std::ranges::range_value_t<S const>>>;
+
+        static stored_shape_type make_shape(S const& input_shape)
+        {
+            if constexpr (std::is_copy_constructible_v<S>)
+            {
+                return input_shape;
+            }
+            else
+            {
+                stored_shape_type shape;
+                if constexpr (std::ranges::sized_range<S const>)
+                {
+                    shape.reserve(std::ranges::size(input_shape));
+                }
+
+                for (auto&& value : input_shape)
+                {
+                    shape.emplace_back(value);
+                }
+                return shape;
+            }
+        }
+
+    public:
+        using source_iterator =
+            std::ranges::iterator_t<stored_shape_type const>;
+
         explicit indexed_shape_storage(S const& input_shape)
-          : shape(input_shape)
+          : shape(make_shape(input_shape))
           , count_(1)
         {
             auto const& owned_shape = std::as_const(shape);
@@ -41,8 +73,8 @@ namespace hpx::execution::experimental::detail {
             }
         }
 
-        S shape;
-        std::vector<std::ranges::iterator_t<S const>> positions;
+        stored_shape_type shape;
+        std::vector<source_iterator> positions;
 
     private:
         friend void intrusive_ptr_add_ref(indexed_shape_storage* p) noexcept
@@ -70,12 +102,15 @@ namespace hpx::execution::experimental::detail {
     template <typename S>
     class indexed_shape_iterator
       : public hpx::util::iterator_facade<indexed_shape_iterator<S>,
-            std::iter_value_t<std::ranges::iterator_t<S const>> const,
+            std::iter_value_t<
+                typename indexed_shape_storage<S>::source_iterator> const,
             std::random_access_iterator_tag,
-            std::iter_reference_t<std::ranges::iterator_t<S const>>>
+            std::iter_reference_t<
+                typename indexed_shape_storage<S>::source_iterator>>
     {
     private:
-        using source_iterator = std::ranges::iterator_t<S const>;
+        using source_iterator =
+            typename indexed_shape_storage<S>::source_iterator;
         using position_iterator = std::vector<source_iterator>::const_iterator;
 
     public:
@@ -165,14 +200,16 @@ namespace hpx::execution::experimental::detail {
     // Random access shapes already provide constant-time lookup and are
     // returned by reference to avoid a preliminary copy. Executor call sites
     // copy that reference into the operation state before returning. Other
-    // multipass shapes are copied and indexed once. The resulting range owns
-    // that copy while its iterators remain lightweight and non-owning.
+    // multipass shapes are copied and indexed once. If a shape is move-only,
+    // its elements are materialized instead. The resulting range owns that
+    // state while its iterators remain lightweight and non-owning.
     template <typename S>
         requires(std::ranges::forward_range<S const>)
     decltype(auto) make_indexed_shape(S const& shape)
     {
         if constexpr (std::ranges::random_access_range<S const> &&
-            std::ranges::sized_range<S const>)
+            std::ranges::sized_range<S const> &&
+            std::is_copy_constructible_v<S>)
         {
             return shape;
         }
