@@ -151,24 +151,33 @@ Studio:
 
    PS> $hpx = 'C:\path\to\hpx'
    PS> $boost = 'C:\path\to\boost'
-   PS> $libs = (Get-ChildItem "$hpx\lib\hpx*.lib").FullName
    PS> cl /std:c++20 /O2 /EHsc /MD /GR /bigobj /permissive- `
          /Zc:__cplusplus /Zc:preprocessor /Zc:inline /Zc:throwingNew `
          /Zc:rvalueCast /Zc:strictStrings `
          /DHPX_APPLICATION_EXPORTS /I "$hpx\include" /I "$boost\include" `
+         /I "$hpx\hwloc_installed\include" `
          my_program.cpp `
-         /link $libs libhwloc.dll.a psapi.lib shlwapi.lib
+         /link /LIBPATH:"$hpx\lib" /LIBPATH:"$hpx\hwloc_installed\lib" `
+         hpx_wrap.lib hpx_init.lib libhwloc.dll.a psapi.lib shlwapi.lib
 
-As on Linux, a static install ships one ``.lib`` per module in addition to
-``hpx_wrap.lib``, ``hpx_init.lib``, ``hpx.lib``, and ``hpx_core.lib``, so pass
-all of them. No ``--start-group`` equivalent is needed: ``link.exe`` searches
-every library on the command line until all symbols are resolved. The
-``/Zc:`` options, ``/bigobj``, and ``/permissive-`` are the options the
-``HPX::hpx`` CMake target passes on to its consumers. ``libhwloc.dll.a`` is
-the import library of the prebuilt hwloc that ``HPX_WITH_FETCH_HWLOC=ON``
-downloads; use your own hwloc import library otherwise, and add
-``/LIBPATH:`` for it if it is not on the ``LIB`` path. Put the hwloc DLL next
-to the executable or on ``PATH`` before running it.
+The |hpx| module libraries (``hpx_core.lib`` and ``hpx.lib``, or one ``.lib``
+per module when |hpx| is built with
+``HPX_WITH_MODULES_AS_STATIC_LIBRARIES=ON``) do not have to be listed: with
+MSVC the installed headers name them through ``#pragma comment(lib, ...)``,
+so ``/LIBPATH:`` to the install's ``lib`` directory is enough. Define
+``HPX_NO_AUTOLINK`` to turn this off and list the libraries yourself.
+``hpx_wrap.lib`` and ``hpx_init.lib`` are not auto-linked and have to be
+passed explicitly, as do hwloc and the Windows libraries ``psapi.lib`` and
+``shlwapi.lib``. No ``--start-group`` equivalent is needed: ``link.exe``
+searches every library on the command line until all symbols are resolved.
+
+The ``/Zc:`` options, ``/bigobj``, and ``/permissive-`` are the options the
+``HPX::hpx`` CMake target passes on to its consumers. ``hwloc_installed`` is
+where the install puts the prebuilt hwloc that ``HPX_WITH_FETCH_HWLOC=ON``
+downloads, and ``libhwloc.dll.a`` is its import library; point the ``/I`` and
+``/LIBPATH:`` options at your own hwloc otherwise. Put the hwloc DLL (also
+installed into ``$hpx\bin``) next to the executable or on ``PATH`` before
+running it.
 
 A godbolt-minimal build uses Boost as a header-only dependency, so only the
 Boost include path is needed. Configurations with
