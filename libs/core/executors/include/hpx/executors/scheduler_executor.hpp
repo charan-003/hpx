@@ -473,7 +473,9 @@ namespace hpx::execution::experimental {
         decltype(auto) bulk_then_execute(
             F&& f, S const& input_shape, Future&& predecessor, Ts&&... ts) const
         {
-            decltype(auto) shape = detail::make_indexed_shape(input_shape);
+            decltype(auto) indexed_shape =
+                detail::make_indexed_shape(input_shape);
+            auto shape = indexed_shape;
             auto const n = std::ranges::distance(shape);
             using result_type =
                 parallel::execution::detail::then_bulk_function_result_t<F, S,
@@ -485,7 +487,7 @@ namespace hpx::execution::experimental {
                     when_all(keep_future(HPX_FORWARD(Future, predecessor)));
 
                 auto loop = bulk(continues_on(HPX_MOVE(pre_req), sched_), n,
-                    [shape = shape,
+                    [shape,
                         bound_f = hpx::bind_back(
                             HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...)](
                         auto i, auto&... receiver_args) mutable {
@@ -511,7 +513,7 @@ namespace hpx::execution::experimental {
                         just(std::vector<result_type>(n)));
 
                 auto loop = bulk(continues_on(HPX_MOVE(pre_req), sched_), n,
-                    [shape = shape,
+                    [shape,
                         bound_f = hpx::bind_back(
                             HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...)](
                         auto i, auto&& predecessor, auto& values) mutable {
