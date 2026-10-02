@@ -30,8 +30,9 @@ namespace hpx::execution::detail {
     /// \brief Policy's execution category, or unsequenced_execution_tag if it
     ///        has none. Same fallback rebind_executor uses.
     template <typename Policy>
-    using rebind_policy_executor_category_t = hpx::execution::experimental::
-        detail::policy_execution_category_or_unsequenced_t<Policy>;
+    using rebind_policy_executor_category_t =
+        experimental::detail::policy_execution_category_or_unsequenced_t<
+            Policy>;
 
     /// \brief Category of Policy's current executor. Falls back to Policy's
     ///        own category if it has no executor_type, which a policy that
@@ -73,9 +74,9 @@ namespace hpx::execution::experimental {
     HPX_CXX_CORE_EXPORT template <typename Policy, typename Executor>
     struct rebind_policy_executor
     {
-        // The unchanged parameters type comes from
-        // extract_executor_parameters_t, so its sequential fallback and
-        // explicit specializations are honored.
+        /// The unchanged parameters type comes from
+        /// extract_executor_parameters_t, so its sequential fallback and
+        /// explicit specializations are honored.
         using type =
             rebind_executor_t<std::decay_t<Policy>, std::decay_t<Executor>,
                 extract_executor_parameters_t<std::decay_t<Policy>>>;
@@ -104,19 +105,23 @@ namespace hpx::execution::detail {
 
     /// \brief Applies the category check outside rebind_policy_executor, so it
     ///        also covers direct specializations.
+    ///
+    /// Has no nested \c type if the execution category of Executor is weaker
+    /// than that of Policy, so the check can be detected with a requires
+    /// expression instead of failing hard.
     template <typename Policy, typename Executor>
     struct validated_rebind_policy_executor
     {
-        static_assert(hpx::execution::experimental::detail::is_not_weaker_v<
-                          hpx::traits::executor_execution_category_t<Executor>,
-                          rebind_policy_executor_category_t<Policy>>,
-            "the execution category of Executor must not be weaker than "
-            "that of Policy; see hpx::execution::experimental::"
-            "rebind_executor");
+    };
 
+    template <typename Policy, typename Executor>
+        requires(experimental::detail::is_not_weaker_v<
+            hpx::traits::executor_execution_category_t<Executor>,
+            rebind_policy_executor_category_t<Policy>>)
+    struct validated_rebind_policy_executor<Policy, Executor>
+    {
         using type =
-            hpx::execution::experimental::rebind_policy_executor<Policy,
-                Executor>::type;
+            experimental::rebind_policy_executor<Policy, Executor>::type;
     };
 
     /// \brief Same check as validated_rebind_policy_executor, against Policy's
@@ -124,13 +129,14 @@ namespace hpx::execution::detail {
     template <typename Policy, typename Parameters>
     struct validated_rebind_policy_parameters
     {
-        static_assert(hpx::execution::experimental::detail::is_not_weaker_v<
-                          rebind_policy_current_executor_category_t<Policy>,
-                          rebind_policy_executor_category_t<Policy>>,
-            "the execution category of Policy's current executor must "
-            "not be weaker than that of Policy; see hpx::execution::"
-            "experimental::rebind_executor");
+    };
 
+    template <typename Policy, typename Parameters>
+        requires(experimental::detail::is_not_weaker_v<
+            rebind_policy_current_executor_category_t<Policy>,
+            rebind_policy_executor_category_t<Policy>>)
+    struct validated_rebind_policy_parameters<Policy, Parameters>
+    {
         using type =
             hpx::execution::experimental::rebind_policy_parameters<Policy,
                 Parameters>::type;
@@ -143,7 +149,8 @@ namespace hpx::execution::experimental {
     ///
     /// Applies rebind_policy_executor and checks that Executor's execution
     /// category is not weaker than Policy's, also for direct
-    /// specializations of rebind_policy_executor.
+    /// specializations of rebind_policy_executor. If the check fails, the
+    /// alias does not name a type.
     HPX_CXX_CORE_EXPORT template <typename Policy, typename Executor>
     using rebind_policy_executor_t =
         hpx::execution::detail::validated_rebind_policy_executor<
@@ -153,7 +160,8 @@ namespace hpx::execution::experimental {
     ///
     /// Applies rebind_policy_parameters and checks that the execution
     /// category of Policy's current executor is not weaker than Policy's,
-    /// also for direct specializations of rebind_policy_parameters.
+    /// also for direct specializations of rebind_policy_parameters. If the
+    /// check fails, the alias does not name a type.
     HPX_CXX_CORE_EXPORT template <typename Policy, typename Parameters>
     using rebind_policy_parameters_t =
         hpx::execution::detail::validated_rebind_policy_parameters<

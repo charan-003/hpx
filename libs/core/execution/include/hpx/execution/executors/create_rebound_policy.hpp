@@ -20,6 +20,7 @@
 #include <hpx/execution/executors/rebind_policy.hpp>
 #include <hpx/modules/execution_base.hpp>
 
+#include <concepts>
 #include <type_traits>
 #include <utility>
 
@@ -82,57 +83,70 @@ namespace hpx::execution::experimental {
 
     /// \brief Rebind the executor of \a policy to \a exec and construct the
     ///        result through construct_rebound_policy_executor.
+    ///
+    /// Only participates in overload resolution if the execution category of
+    /// \a exec is not weaker than that of \a policy and
+    /// construct_rebound_policy_executor produces
+    /// rebind_policy_executor_t<Policy, Executor>.
     HPX_CXX_CORE_EXPORT inline constexpr struct
         create_rebound_policy_executor_t final
     {
         template <typename Policy, typename Executor>
-            requires(hpx::executor_any<Executor>)
-        constexpr decltype(auto) operator()(
+            requires(
+                hpx::executor_any<Executor> &&
+                requires {
+                    typename rebind_policy_executor_t<Policy, Executor>;
+                } &&
+                requires(std::decay_t<Policy> const& policy, Executor&& exec) {
+                    {
+                        construct_rebound_policy_executor<std::decay_t<Policy>,
+                            std::decay_t<Executor>>::call(policy,
+                            HPX_FORWARD(Executor, exec))
+                    }
+                    -> std::same_as<rebind_policy_executor_t<Policy, Executor>>;
+                })
+        constexpr rebind_policy_executor_t<Policy, Executor> operator()(
             Policy&& policy, Executor&& exec) const
         {
-            using rebound_type = rebind_policy_executor_t<Policy, Executor>;
-            using construct_type =
-                construct_rebound_policy_executor<std::decay_t<Policy>,
-                    std::decay_t<Executor>>;
-            using result_type = decltype(construct_type::call(
-                policy, HPX_FORWARD(Executor, exec)));
-
-            static_assert(
-                std::is_same_v<std::decay_t<result_type>, rebound_type>,
-                "construct_rebound_policy_executor must produce "
-                "rebind_policy_executor_t<Policy, "
-                "Executor>");
-
-            return construct_type::call(policy, HPX_FORWARD(Executor, exec));
+            return construct_rebound_policy_executor<std::decay_t<Policy>,
+                std::decay_t<Executor>>::call(policy,
+                HPX_FORWARD(Executor, exec));
         }
     } create_rebound_policy_executor{};
 
     /// \brief Rebind the executor parameters of \a policy to \a parameters
     ///        and construct the result through
     ///        construct_rebound_policy_parameters.
+    ///
+    /// Only participates in overload resolution if the execution category of
+    /// the current executor of \a policy is not weaker than that of
+    /// \a policy and construct_rebound_policy_parameters produces
+    /// rebind_policy_parameters_t<Policy, Parameters>.
     HPX_CXX_CORE_EXPORT inline constexpr struct
         create_rebound_policy_parameters_t final
     {
         template <typename Policy, typename Parameters>
-            requires(hpx::executor_parameters<Parameters>)
-        constexpr decltype(auto) operator()(
+            requires(
+                hpx::executor_parameters<Parameters> &&
+                requires {
+                    typename rebind_policy_parameters_t<Policy, Parameters>;
+                } &&
+                requires(
+                    std::decay_t<Policy> const& policy, Parameters&& params) {
+                    {
+                        construct_rebound_policy_parameters<
+                            std::decay_t<Policy>,
+                            std::decay_t<Parameters>>::call(policy,
+                            HPX_FORWARD(Parameters, params))
+                    } -> std::same_as<
+                        rebind_policy_parameters_t<Policy, Parameters>>;
+                })
+        constexpr rebind_policy_parameters_t<Policy, Parameters> operator()(
             Policy&& policy, Parameters&& parameters) const
         {
-            using rebound_type = rebind_policy_parameters_t<Policy, Parameters>;
-            using construct_type =
-                construct_rebound_policy_parameters<std::decay_t<Policy>,
-                    std::decay_t<Parameters>>;
-            using result_type = decltype(construct_type::call(
-                policy, HPX_FORWARD(Parameters, parameters)));
-
-            static_assert(
-                std::is_same_v<std::decay_t<result_type>, rebound_type>,
-                "construct_rebound_policy_parameters must produce "
-                "rebind_policy_parameters_t<Policy, "
-                "Parameters>");
-
-            return construct_type::call(
-                policy, HPX_FORWARD(Parameters, parameters));
+            return construct_rebound_policy_parameters<std::decay_t<Policy>,
+                std::decay_t<Parameters>>::call(policy,
+                HPX_FORWARD(Parameters, parameters));
         }
     } create_rebound_policy_parameters{};
 

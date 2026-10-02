@@ -23,6 +23,8 @@
 // already brought in through the module import.
 #include <hpx/modules/executors.hpp>
 
+#include <concepts>
+#include <cstddef>
 #include <type_traits>
 #include <utility>
 
@@ -34,26 +36,9 @@ namespace hpxexp = hpx::execution::experimental;
 // policy that derives from hpx::execution::detail::execution_policy.
 namespace default_customization_point_tests {
 
-    // hpx::execution::parallel_policy is a public alias that gets
-    // redirected away from HPX's own implementation when standard
-    // execution policies are enabled (see
-    // hpx/execution_base/stdexec_forward.hpp), and the type it gets
-    // redirected to does not provide HPX's rebind<Executor, Parameters>
-    // contract. The underlying HPX implementation that
-    // hpx::execution::parallel_policy itself aliases to on non-stdexec
-    // builds is exd::parallel_policy_shim<Executor, Parameters>, defined
-    // unconditionally (no HPX_HAVE_STDEXEC guard) in
-    // hpx/executors/execution_policy.hpp; using it directly, together
-    // with HPX's real hpx::execution::parallel_executor /
-    // hpx::execution::sequenced_executor classes (as opposed to the
-    // policy aliases), keeps this test meaningful regardless of whether
-    // standard execution policies are enabled.
-    using policy_type =
-        exd::parallel_policy_shim<hpx::execution::parallel_executor,
-            hpx::traits::executor_parameters_type_t<
-                hpx::execution::parallel_executor>>;
+    using policy_type = hpx::execution::parallel_policy;
     using new_executor_type = hpx::execution::sequenced_executor;
-    using new_parameters_type = hpx::execution::experimental::static_chunk_size;
+    using new_parameters_type = hpxexp::static_chunk_size;
 
     // sequenced_executor's category (sequenced_execution_tag) is not
     // weaker than parallel_executor's (parallel_execution_tag), so this
@@ -711,40 +696,93 @@ namespace custom_construction_tests {
 }    // namespace custom_construction_tests
 
 ///////////////////////////////////////////////////////////////////////////
-/// The member functions of the hpx::execution::detail::execution_policy CRTP
-/// base (on(), with() and the scheduling property queries) rebind through
+/// The member functions of the exd::execution_policy CRTP base (on(), with()
+/// and the scheduling property queries) rebind through
 /// create_rebound_policy_executor and create_rebound_policy_parameters. A
 /// policy derived from that base that carries a label its construction-side
 /// specializations have to carry over must keep the label along each of
 /// these paths.
 
-/// An executor that supports the with_priority/get_priority scheduling
-/// properties through query() members, so the property path can be
+using construction_state_tests::labeled_executor;
+using construction_state_tests::labeled_parameters;
+using parameter_extraction_tests::tagged_executor;
+
+/// An executor that supports the scheduling properties the execution_policy
+/// CRTP base forwards through query() members, so each property path can be
 /// exercised without a running thread pool.
-struct prioritized_executor
+struct scheduling_executor
 {
     using execution_category = hpx::execution::parallel_execution_tag;
 
-    prioritized_executor query(hpx::execution::experimental::with_priority_t,
-        hpx::threads::thread_priority new_priority) const
+    scheduling_executor query(
+        hpxexp::with_priority_t, hpx::threads::thread_priority value) const
     {
-        return prioritized_executor{id, new_priority};
+        scheduling_executor exec = *this;
+        exec.priority = value;
+        return exec;
     }
 
-    hpx::threads::thread_priority query(
-        hpx::execution::experimental::get_priority_t) const
+    hpx::threads::thread_priority query(hpxexp::get_priority_t) const
     {
         return priority;
     }
 
+    scheduling_executor query(
+        hpxexp::with_stacksize_t, hpx::threads::thread_stacksize value) const
+    {
+        scheduling_executor exec = *this;
+        exec.stacksize = value;
+        return exec;
+    }
+
+    hpx::threads::thread_stacksize query(hpxexp::get_stacksize_t) const
+    {
+        return stacksize;
+    }
+
+    scheduling_executor query(
+        hpxexp::with_processing_units_count_t, std::size_t value) const
+    {
+        scheduling_executor exec = *this;
+        exec.cores = value;
+        return exec;
+    }
+
+    /// Used by the execution_policy query that derives the number of cores
+    /// from an executor parameters object.
+    std::size_t query(hpxexp::processing_units_count_t,
+        labeled_parameters const& params, hpx::chrono::steady_duration const&,
+        std::size_t) const
+    {
+        return static_cast<std::size_t>(params.id);
+    }
+
+#if defined(HPX_HAVE_THREAD_DESCRIPTION)
+    scheduling_executor query(
+        hpxexp::with_annotation_t, char const* value) const
+    {
+        scheduling_executor exec = *this;
+        exec.annotation = value;
+        return exec;
+    }
+
+    char const* query(hpxexp::get_annotation_t) const
+    {
+        return annotation;
+    }
+#endif
+
     int id = 0;
     hpx::threads::thread_priority priority =
         hpx::threads::thread_priority::default_;
+    hpx::threads::thread_stacksize stacksize =
+        hpx::threads::thread_stacksize::default_;
+    std::size_t cores = 0;
+    char const* annotation = nullptr;
 };
 
 template <>
-struct hpx::execution::experimental::is_one_way_executor<prioritized_executor>
-  : std::true_type
+struct hpxexp::is_one_way_executor<scheduling_executor> : std::true_type
 {
 };
 
@@ -752,12 +790,10 @@ struct hpx::execution::experimental::is_one_way_executor<prioritized_executor>
 /// constructed from just (executor, parameters).
 template <typename Executor, typename Parameters>
 struct labeled_crtp_policy
-  : hpx::execution::detail::execution_policy<labeled_crtp_policy, Executor,
-        Parameters>
+  : exd::execution_policy<labeled_crtp_policy, Executor, Parameters>
 {
     using base_type =
-        hpx::execution::detail::execution_policy<labeled_crtp_policy, Executor,
-            Parameters>;
+        exd::execution_policy<labeled_crtp_policy, Executor, Parameters>;
 
     template <typename Executor_, typename Parameters_>
     labeled_crtp_policy(int label, Executor_&& exec, Parameters_&& params)
@@ -776,7 +812,7 @@ struct labeled_crtp_policy
 };
 
 template <typename Executor, typename Parameters, typename NewExecutor>
-struct hpx::execution::experimental::construct_rebound_policy_executor<
+struct hpxexp::construct_rebound_policy_executor<
     labeled_crtp_policy<Executor, Parameters>, NewExecutor>
 {
     using result_type = labeled_crtp_policy<NewExecutor, Parameters>;
@@ -792,7 +828,7 @@ struct hpx::execution::experimental::construct_rebound_policy_executor<
 };
 
 template <typename Executor, typename Parameters, typename NewParameters>
-struct hpx::execution::experimental::construct_rebound_policy_parameters<
+struct hpxexp::construct_rebound_policy_parameters<
     labeled_crtp_policy<Executor, Parameters>, NewParameters>
 {
     using result_type = labeled_crtp_policy<Executor, NewParameters>;
@@ -807,52 +843,344 @@ struct hpx::execution::experimental::construct_rebound_policy_parameters<
     }
 };
 
+using labeled_crtp_policy_type =
+    labeled_crtp_policy<scheduling_executor, labeled_parameters>;
+
 void crtp_member_rebind_tests()
 {
-    using construction_state_tests::labeled_parameters;
-    using policy_type =
-        labeled_crtp_policy<prioritized_executor, labeled_parameters>;
+    labeled_crtp_policy_type const policy(
+        42, scheduling_executor{1}, labeled_parameters{1});
 
-    policy_type const policy(
-        42, prioritized_executor{1}, labeled_parameters{1});
+    /// on() with an rvalue executor.
+    auto rebound_by_on = policy.on(scheduling_executor{2});
 
-    /// on() rebinds the executor through create_rebound_policy_executor.
-    auto rebound_by_on = policy.on(prioritized_executor{2});
-
-    static_assert(std::is_same_v<decltype(rebound_by_on), policy_type>,
-        "on() rebinds to labeled_crtp_policy<prioritized_executor, "
-        "labeled_parameters>");
+    static_assert(
+        std::is_same_v<decltype(rebound_by_on), labeled_crtp_policy_type>);
 
     HPX_TEST_EQ(rebound_by_on.label(), 42);
     HPX_TEST_EQ(rebound_by_on.executor().id, 2);
     HPX_TEST_EQ(rebound_by_on.parameters().id, 1);
 
-    /// with() rebinds the parameters through
-    /// create_rebound_policy_parameters.
+    /// on() with an lvalue executor.
+    scheduling_executor const exec{3};
+    auto rebound_by_on_lvalue = policy.on(exec);
+
+    static_assert(std::is_same_v<decltype(rebound_by_on_lvalue),
+        labeled_crtp_policy_type>);
+
+    HPX_TEST_EQ(rebound_by_on_lvalue.label(), 42);
+    HPX_TEST_EQ(rebound_by_on_lvalue.executor().id, 3);
+    HPX_TEST_EQ(rebound_by_on_lvalue.parameters().id, 1);
+
+    /// on() called on an rvalue policy.
+    auto rebound_from_rvalue = labeled_crtp_policy_type(
+        7, scheduling_executor{1}, labeled_parameters{1})
+                                   .on(scheduling_executor{4});
+
+    static_assert(std::is_same_v<decltype(rebound_from_rvalue),
+        labeled_crtp_policy_type>);
+
+    HPX_TEST_EQ(rebound_from_rvalue.label(), 7);
+    HPX_TEST_EQ(rebound_from_rvalue.executor().id, 4);
+
+    /// on() to a different executor type.
+    auto rebound_to_other_executor = policy.on(tagged_executor{5});
+
+    static_assert(std::is_same_v<decltype(rebound_to_other_executor),
+        labeled_crtp_policy<tagged_executor, labeled_parameters>>);
+
+    HPX_TEST_EQ(rebound_to_other_executor.label(), 42);
+    HPX_TEST_EQ(rebound_to_other_executor.executor().id, 5);
+    HPX_TEST_EQ(rebound_to_other_executor.parameters().id, 1);
+
+    /// with() rebinds the parameters.
     auto rebound_by_with = policy.with(labeled_parameters{2});
 
-    static_assert(std::is_same_v<decltype(rebound_by_with), policy_type>,
-        "with() rebinds to labeled_crtp_policy<prioritized_executor, "
-        "labeled_parameters>");
+    static_assert(
+        std::is_same_v<decltype(rebound_by_with), labeled_crtp_policy_type>);
 
     HPX_TEST_EQ(rebound_by_with.label(), 42);
     HPX_TEST_EQ(rebound_by_with.executor().id, 1);
     HPX_TEST_EQ(rebound_by_with.parameters().id, 2);
 
-    /// A scheduling property query rebinds the executor returned by the
-    /// property through create_rebound_policy_executor.
-    auto rebound_by_property = hpx::execution::experimental::with_priority(
-        policy, hpx::threads::thread_priority::high);
+    /// with() to a different parameters type.
+    auto rebound_to_other_parameters =
+        policy.with(hpxexp::static_chunk_size(4));
 
-    static_assert(std::is_same_v<decltype(rebound_by_property), policy_type>,
-        "with_priority rebinds to labeled_crtp_policy<prioritized_executor, "
-        "labeled_parameters>");
+    static_assert(std::is_same_v<decltype(rebound_to_other_parameters),
+        labeled_crtp_policy<scheduling_executor, hpxexp::static_chunk_size>>);
 
-    HPX_TEST_EQ(rebound_by_property.label(), 42);
-    HPX_TEST_EQ(rebound_by_property.executor().id, 1);
-    HPX_TEST_EQ(rebound_by_property.parameters().id, 1);
-    HPX_TEST(hpx::execution::experimental::get_priority(rebound_by_property) ==
+    HPX_TEST_EQ(rebound_to_other_parameters.label(), 42);
+    HPX_TEST_EQ(rebound_to_other_parameters.executor().id, 1);
+
+    /// The generic scheduling property query.
+    auto rebound_by_priority =
+        hpxexp::with_priority(policy, hpx::threads::thread_priority::high);
+
+    static_assert(std::is_same_v<decltype(rebound_by_priority),
+        labeled_crtp_policy_type>);
+
+    HPX_TEST_EQ(rebound_by_priority.label(), 42);
+    HPX_TEST_EQ(rebound_by_priority.executor().id, 1);
+    HPX_TEST_EQ(rebound_by_priority.parameters().id, 1);
+    HPX_TEST(hpxexp::get_priority(rebound_by_priority) ==
         hpx::threads::thread_priority::high);
+
+    auto rebound_by_stacksize =
+        hpxexp::with_stacksize(policy, hpx::threads::thread_stacksize::medium);
+
+    HPX_TEST_EQ(rebound_by_stacksize.label(), 42);
+    HPX_TEST(hpxexp::get_stacksize(rebound_by_stacksize) ==
+        hpx::threads::thread_stacksize::medium);
+
+    /// The processing units count query taking a number of cores.
+    auto rebound_by_cores =
+        policy.query(hpxexp::with_processing_units_count, std::size_t(4));
+
+    static_assert(
+        std::is_same_v<decltype(rebound_by_cores), labeled_crtp_policy_type>);
+
+    HPX_TEST_EQ(rebound_by_cores.label(), 42);
+    HPX_TEST_EQ(rebound_by_cores.executor().cores, std::size_t(4));
+    HPX_TEST_EQ(rebound_by_cores.parameters().id, 1);
+
+    /// The processing units count query taking executor parameters.
+    auto rebound_by_parameters_cores = policy.query(
+        hpxexp::with_processing_units_count, labeled_parameters{6});
+
+    static_assert(std::is_same_v<decltype(rebound_by_parameters_cores),
+        labeled_crtp_policy_type>);
+
+    HPX_TEST_EQ(rebound_by_parameters_cores.label(), 42);
+    HPX_TEST_EQ(rebound_by_parameters_cores.executor().cores, std::size_t(6));
+    HPX_TEST_EQ(rebound_by_parameters_cores.parameters().id, 1);
+
+#if defined(HPX_HAVE_THREAD_DESCRIPTION)
+    /// The annotation query.
+    char const* annotation = "rebind";
+    auto rebound_by_annotation = hpxexp::with_annotation(policy, annotation);
+
+    static_assert(std::is_same_v<decltype(rebound_by_annotation),
+        labeled_crtp_policy_type>);
+
+    HPX_TEST_EQ(rebound_by_annotation.label(), 42);
+    HPX_TEST(hpxexp::get_annotation(rebound_by_annotation) == annotation);
+#endif
+}
+
+///////////////////////////////////////////////////////////////////////////
+/// The rebind traits decay Policy, so cv- and reference-qualified policy
+/// types rebind to the same type, and the function objects accept policies
+/// of any value category.
+
+static_assert(
+    std::is_same_v<hpxexp::rebind_policy_executor_t<
+                       labeled_crtp_policy_type const&, tagged_executor>,
+        hpxexp::rebind_policy_executor_t<labeled_crtp_policy_type,
+            tagged_executor>>);
+static_assert(
+    std::is_same_v<hpxexp::rebind_policy_executor_t<labeled_crtp_policy_type&&,
+                       tagged_executor const&>,
+        hpxexp::rebind_policy_executor_t<labeled_crtp_policy_type,
+            tagged_executor>>);
+static_assert(std::is_same_v<
+    hpxexp::rebind_policy_parameters_t<labeled_crtp_policy_type const,
+        hpxexp::static_chunk_size&>,
+    hpxexp::rebind_policy_parameters_t<labeled_crtp_policy_type,
+        hpxexp::static_chunk_size>>);
+static_assert(
+    std::is_same_v<hpxexp::rebind_policy_parameters_t<labeled_crtp_policy_type&,
+                       hpxexp::static_chunk_size&&>,
+        hpxexp::rebind_policy_parameters_t<labeled_crtp_policy_type,
+            hpxexp::static_chunk_size>>);
+
+void qualified_policy_rebind_tests()
+{
+    labeled_crtp_policy_type policy(
+        42, scheduling_executor{1}, labeled_parameters{1});
+
+    auto from_lvalue =
+        hpxexp::create_rebound_policy_executor(policy, tagged_executor{2});
+    HPX_TEST_EQ(from_lvalue.label(), 42);
+    HPX_TEST_EQ(from_lvalue.executor().id, 2);
+
+    auto from_const_lvalue = hpxexp::create_rebound_policy_executor(
+        std::as_const(policy), tagged_executor{3});
+    HPX_TEST_EQ(from_const_lvalue.label(), 42);
+    HPX_TEST_EQ(from_const_lvalue.executor().id, 3);
+
+    auto from_rvalue = hpxexp::create_rebound_policy_parameters(
+        labeled_crtp_policy_type(policy), labeled_parameters{4});
+    HPX_TEST_EQ(from_rvalue.label(), 42);
+    HPX_TEST_EQ(from_rvalue.parameters().id, 4);
+
+    auto from_const_rvalue = hpxexp::create_rebound_policy_parameters(
+        std::move(std::as_const(policy)), labeled_parameters{5});
+    HPX_TEST_EQ(from_const_rvalue.label(), 42);
+    HPX_TEST_EQ(from_const_rvalue.parameters().id, 5);
+}
+
+///////////////////////////////////////////////////////////////////////////
+/// The category check and the check that a construction-side specialization
+/// produces rebind_policy_*_t are constraints, so a rejected rebind can be
+/// detected instead of failing to compile.
+
+template <typename Policy, typename Executor>
+concept executor_rebindable =
+    requires { typename hpxexp::rebind_policy_executor_t<Policy, Executor>; };
+
+template <typename Policy, typename Parameters>
+concept parameters_rebindable = requires {
+    typename hpxexp::rebind_policy_parameters_t<Policy, Parameters>;
+};
+
+template <typename Policy, typename Executor>
+concept executor_constructible =
+    std::invocable<hpxexp::create_rebound_policy_executor_t const&, Policy,
+        Executor>;
+
+template <typename Policy, typename Parameters>
+concept parameters_constructible =
+    std::invocable<hpxexp::create_rebound_policy_parameters_t const&, Policy,
+        Parameters>;
+
+/// A sequenced policy can't be rebound to a parallel executor.
+static_assert(executor_rebindable<hpx::execution::sequenced_policy,
+    hpx::execution::sequenced_executor>);
+static_assert(!executor_rebindable<hpx::execution::sequenced_policy,
+    hpx::execution::parallel_executor>);
+static_assert(!executor_constructible<hpx::execution::sequenced_policy const&,
+    hpx::execution::parallel_executor>);
+static_assert(executor_rebindable<hpx::execution::parallel_policy,
+    hpx::execution::sequenced_executor>);
+static_assert(executor_constructible<hpx::execution::parallel_policy const&,
+    hpx::execution::sequenced_executor>);
+
+/// A policy whose current executor is weaker than the policy itself can't
+/// be rebound to new parameters.
+template <typename Executor, typename Parameters>
+struct overstated_category_policy
+{
+    using execution_category = hpx::execution::sequenced_execution_tag;
+    using executor_type = Executor;
+    using executor_parameters_type = Parameters;
+
+    template <typename Executor_, typename Parameters_>
+    struct rebind
+    {
+        using type = overstated_category_policy<Executor_, Parameters_>;
+    };
+};
+
+static_assert(!parameters_rebindable<
+    overstated_category_policy<hpx::execution::parallel_executor,
+        labeled_parameters>,
+    hpxexp::static_chunk_size>);
+static_assert(!parameters_constructible<
+    overstated_category_policy<hpx::execution::parallel_executor,
+        labeled_parameters> const&,
+    hpxexp::static_chunk_size>);
+static_assert(parameters_rebindable<
+    overstated_category_policy<hpx::execution::sequenced_executor,
+        labeled_parameters>,
+    hpxexp::static_chunk_size>);
+
+/// A policy whose construction-side specializations return the original
+/// policy type instead of the rebound one.
+template <typename Executor, typename Parameters>
+struct misconstructed_policy
+{
+    using executor_type = Executor;
+    using executor_parameters_type = Parameters;
+
+    template <typename Executor_, typename Parameters_>
+    struct rebind
+    {
+        using type = misconstructed_policy<Executor_, Parameters_>;
+    };
+};
+
+template <typename Executor, typename Parameters, typename NewExecutor>
+struct hpxexp::construct_rebound_policy_executor<
+    misconstructed_policy<Executor, Parameters>, NewExecutor>
+{
+    template <typename Executor_>
+    static misconstructed_policy<Executor, Parameters> call(
+        misconstructed_policy<Executor, Parameters> const& policy, Executor_&&)
+    {
+        return policy;
+    }
+};
+
+template <typename Executor, typename Parameters, typename NewParameters>
+struct hpxexp::construct_rebound_policy_parameters<
+    misconstructed_policy<Executor, Parameters>, NewParameters>
+{
+    template <typename Parameters_>
+    static misconstructed_policy<Executor, Parameters> call(
+        misconstructed_policy<Executor, Parameters> const& policy,
+        Parameters_&&)
+    {
+        return policy;
+    }
+};
+
+using misconstructed_policy_type =
+    misconstructed_policy<labeled_executor, labeled_parameters>;
+
+static_assert(
+    executor_rebindable<misconstructed_policy_type, scheduling_executor>);
+static_assert(!executor_constructible<misconstructed_policy_type const&,
+    scheduling_executor>);
+static_assert(parameters_rebindable<misconstructed_policy_type,
+    hpxexp::static_chunk_size>);
+static_assert(!parameters_constructible<misconstructed_policy_type const&,
+    hpxexp::static_chunk_size>);
+
+///////////////////////////////////////////////////////////////////////////
+/// The predefined policies rebind through the same path.
+
+template <typename Policy>
+void standard_policy_rebind_test(Policy const& policy)
+{
+    using executor_type = typename Policy::executor_type;
+    using parameters_type = typename Policy::executor_parameters_type;
+
+    auto rebound_by_on = policy.on(hpx::execution::sequenced_executor{});
+
+    static_assert(std::is_same_v<decltype(rebound_by_on),
+        hpxexp::rebind_policy_executor_t<Policy,
+            hpx::execution::sequenced_executor>>);
+    static_assert(
+        std::is_same_v<typename decltype(rebound_by_on)::executor_type,
+            hpx::execution::sequenced_executor>);
+    static_assert(std::is_same_v<
+        typename decltype(rebound_by_on)::executor_parameters_type,
+        parameters_type>);
+
+    auto rebound_by_with = policy.with(hpxexp::static_chunk_size(4));
+
+    static_assert(std::is_same_v<decltype(rebound_by_with),
+        hpxexp::rebind_policy_parameters_t<Policy, hpxexp::static_chunk_size>>);
+    static_assert(
+        std::is_same_v<typename decltype(rebound_by_with)::executor_type,
+            executor_type>);
+    static_assert(std::is_same_v<
+        typename decltype(rebound_by_with)::executor_parameters_type,
+        hpxexp::static_chunk_size>);
+
+    auto rebound_directly = hpxexp::create_rebound_policy(
+        policy, hpx::execution::sequenced_executor{});
+
+    static_assert(
+        std::is_same_v<decltype(rebound_directly), decltype(rebound_by_on)>);
+}
+
+void standard_policy_rebind_tests()
+{
+    standard_policy_rebind_test(hpx::execution::seq);
+    standard_policy_rebind_test(hpx::execution::par);
+    standard_policy_rebind_test(hpx::execution::par_unseq);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -862,5 +1190,7 @@ int main()
     parameter_extraction_tests::run();
     custom_construction_tests::run();
     crtp_member_rebind_tests();
+    qualified_policy_rebind_tests();
+    standard_policy_rebind_tests();
     return hpx::util::report_errors();
 }

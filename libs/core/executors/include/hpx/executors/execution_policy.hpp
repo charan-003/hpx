@@ -377,7 +377,6 @@ namespace hpx::execution {
             }
 
         private:
-            friend struct hpx::execution::experimental::create_rebound_policy_t;
             friend class hpx::serialization::access;
 
             template <typename Archive>
