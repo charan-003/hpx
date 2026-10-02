@@ -206,6 +206,10 @@ if(MSVC)
     INTERFACE
       "$<$<AND:${_is_executable},$<COMPILE_LANGUAGE:CXX>>:/FIhpx/hpx_main.hpp>"
   )
+  target_compile_definitions(
+    hpx_interface_auto_wrap_main
+    INTERFACE "$<${_is_executable}:HPX_AUTO_WRAP_MAIN_FORCE_INCLUDE>"
+  )
 else()
   target_link_libraries(
     hpx_interface_auto_wrap_main
