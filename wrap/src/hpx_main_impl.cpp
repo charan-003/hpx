@@ -10,7 +10,6 @@
 // translation unit, so for static builds the default main() can't come from
 // that header. It lives in its own translation unit here instead, so the
 // linker picks it only if the executable doesn't define main() itself.
-#if defined(HPX_MSVC) && defined(HPX_HAVE_STATIC_LINKING) &&                   \
-    defined(HPX_HAVE_DISTRIBUTED_RUNTIME)
+#if defined(HPX_MSVC) && defined(HPX_HAVE_STATIC_LINKING)
 #include <hpx/hpx_main_impl.hpp>
 #endif
