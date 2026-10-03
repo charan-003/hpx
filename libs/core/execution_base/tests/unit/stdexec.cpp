@@ -72,7 +72,7 @@ void test_counting_scope_request_stop()
     // scope's stop token via __stop_when; use let_value to observe
     // the stop token from the receiver's environment
     auto snd = ex::spawn_future(ex::just() | ex::let_value([]() {
-        return stdexec::read_env(stdexec::get_stop_token) |
+        return ex::read_env(ex::get_stop_token) |
             ex::then([](auto stoken) { return stoken.stop_requested(); });
     }),
         scope.get_token());
@@ -188,26 +188,20 @@ void test_counting_scope_concurrent_join()
 
     scope.close();
 
-    // Start join() on a separate thread; signal entry before blocking
-    std::atomic<bool> join_done{false};
-    hpx::binary_semaphore join_entered{0};
+    // Start join() on a separate thread; record completed count inside
+    // the join continuation to prove join() waited for all work.
+    int completed_at_join = 0;
     std::thread joiner([&]() {
-        join_entered.release();
         ex::sync_wait(scope.join());
-        join_done.store(true, std::memory_order_release);
+        completed_at_join = completed.load(std::memory_order_acquire);
     });
-
-    // Wait for the join thread to have started; task 0 is still held,
-    // so join() cannot have completed yet
-    join_entered.acquire();
-    HPX_TEST(!join_done.load(std::memory_order_acquire));
 
     // Release the held operation
     release.release();
     joiner.join();
 
     // join() completed only after all work finished
-    HPX_TEST(join_done.load(std::memory_order_acquire));
+    HPX_TEST_EQ(completed_at_join, n);
     HPX_TEST_EQ(completed.load(std::memory_order_acquire), n);
 }
 
@@ -259,25 +253,19 @@ void test_counting_scope_multithreaded_spawn()
 
     scope.close();
 
-    // Start join() on a separate thread; signal entry before blocking
-    std::atomic<bool> join_done{false};
-    hpx::binary_semaphore join_entered{0};
+    // Start join() on a separate thread; record completed count inside
+    // the join continuation to prove join() waited for all work.
+    int completed_at_join = 0;
     std::thread joiner([&]() {
-        join_entered.release();
         ex::sync_wait(scope.join());
-        join_done.store(true, std::memory_order_release);
+        completed_at_join = completed.load(std::memory_order_acquire);
     });
-
-    // Wait for the join thread to have started; task 0 is still held,
-    // so join() cannot have completed yet
-    join_entered.acquire();
-    HPX_TEST(!join_done.load(std::memory_order_acquire));
 
     // Release the held operation
     release.release();
     joiner.join();
 
-    HPX_TEST(join_done.load(std::memory_order_acquire));
+    HPX_TEST_EQ(completed_at_join, n);
     HPX_TEST_EQ(completed.load(std::memory_order_acquire), n);
 }
 

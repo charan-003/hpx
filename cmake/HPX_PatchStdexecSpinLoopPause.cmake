@@ -28,8 +28,10 @@ string(
 )
 
 if(_stdexec_spin_loop_pause_contents STREQUAL _stdexec_spin_loop_pause_original)
-  # Pattern already absent — upstream has the fix, nothing to do.
-  return()
+  message(
+    WARNING
+      "Failed to patch ${HPX_STDEXEC_SPIN_LOOP_PAUSE_FILE}: expected pattern not found"
+  )
 endif()
 
 file(WRITE "${HPX_STDEXEC_SPIN_LOOP_PAUSE_FILE}"

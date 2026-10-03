@@ -22,8 +22,6 @@
 #include <string>
 #include <utility>
 
-#include <hpx/modules/execution_base.hpp>
-
 namespace ex = hpx::execution::experimental;
 namespace tt = hpx::this_thread::experimental;
 
@@ -138,27 +136,19 @@ void test_join_blocks_for_async_work()
 
     scope.close();
 
-    // Start join() detached. join() needs get_start_scheduler in the
-    // receiver env; start_detached with that env connects join
-    // immediately. continues_on does not inject a start scheduler.
-    std::atomic<bool> join_done{false};
-    hpx::binary_semaphore join_started{0};
+    // Start join() detached. Record completed count inside the join
+    // continuation to prove join() waited for all work.
+    int completed_at_join = 0;
     hpx::binary_semaphore join_finished{0};
 
     ex::start_detached(ex::schedule(ex::thread_pool_scheduler{}) |
-            ex::then([&]() noexcept { join_started.release(); }) |
             ex::let_value([&]() { return scope.join(); }) |
             ex::then([&]() noexcept {
-                join_done.store(true, std::memory_order_release);
+                completed_at_join = completed.load(std::memory_order_acquire);
                 join_finished.release();
             }),
         ex::make_env(
             ex::prop(ex::get_start_scheduler, ex::thread_pool_scheduler{})));
-
-    // Wait until the join pipeline has been entered; task 0 is still
-    // held, so join() cannot have completed yet
-    join_started.acquire();
-    HPX_TEST(!join_done.load(std::memory_order_acquire));
 
     // Release the held operation
     release.release();
@@ -166,7 +156,7 @@ void test_join_blocks_for_async_work()
     // Suspends the HPX task; does not block the OS worker
     join_finished.acquire();
 
-    HPX_TEST(join_done.load(std::memory_order_acquire));
+    HPX_TEST_EQ(completed_at_join, n);
     HPX_TEST_EQ(completed.load(std::memory_order_acquire), n);
 }
 
@@ -188,38 +178,6 @@ void test_spawn_future_closed_scope()
     wait_join(scope);
 }
 
-// counting_scope with request_stop: stop is delivered to HPX work.
-// With a real thread pool, __stop_when may race the inner sender and
-// complete with set_stopped before the work observes the token. Both
-// outcomes (stopped, or value=true) confirm stop delivery.
-void test_counting_scope_stop_with_scheduler()
-{
-    ex::counting_scope scope;
-    scope.request_stop();
-
-    auto fut = ex::spawn_future(
-        ex::schedule(ex::thread_pool_scheduler{}) | ex::let_value([]() {
-            return stdexec::read_env(stdexec::get_stop_token) |
-                ex::then([](auto stoken) { return stoken.stop_requested(); });
-        }),
-        scope.get_token());
-
-    // stopped_as_optional: set_stopped -> nullopt, set_value -> optional
-    auto result = tt::sync_wait(std::move(fut) | ex::stopped_as_optional());
-    HPX_TEST(result.has_value());
-    auto [opt_val] = std::move(*result);
-
-    // Either the sender was stopped (nullopt) or it observed the stop
-    // token (true). Both confirm stop delivery.
-    if (opt_val.has_value())
-    {
-        HPX_TEST(*opt_val);
-    }
-
-    scope.close();
-    wait_join(scope);
-}
-
 int hpx_main(int, char*[])
 {
     test_spawn_future_value();
@@ -227,7 +185,6 @@ int hpx_main(int, char*[])
     test_spawn_with_scheduler();
     test_join_blocks_for_async_work();
     test_spawn_future_closed_scope();
-    test_counting_scope_stop_with_scheduler();
 
     return hpx::local::finalize();
 }

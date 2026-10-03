@@ -55,11 +55,8 @@ execute_process(
   ERROR_VARIABLE _hpx_stdexec_nvcc_patch_error
 )
 if(NOT _hpx_stdexec_nvcc_patch_result EQUAL 0)
-  string(REPLACE "error" "note" _hpx_stdexec_nvcc_patch_diag
-                 "${_hpx_stdexec_nvcc_patch_error}"
-  )
   message(
     ${_hpx_stdexec_nvcc_patch_severity}
-    "Failed to apply the stdexec nvcc workarounds: ${_hpx_stdexec_nvcc_patch_diag}"
+    "Failed to apply the stdexec nvcc workarounds: ${_hpx_stdexec_nvcc_patch_error}"
   )
 endif()
