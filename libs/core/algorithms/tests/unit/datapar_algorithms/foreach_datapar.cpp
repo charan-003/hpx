@@ -24,6 +24,12 @@ void test_for_each()
 
     test_for_each_async(simd(task), IteratorTag());
     test_for_each_async(par_simd(task), IteratorTag());
+
+    test_for_each(fixed_size_simd<2>, IteratorTag());
+    test_for_each(par_fixed_size_simd<2>, IteratorTag());
+
+    test_for_each_async(fixed_size_simd<2>(task), IteratorTag());
+    test_for_each_async(par_fixed_size_simd<2>(task), IteratorTag());
 }
 
 void for_each_test()

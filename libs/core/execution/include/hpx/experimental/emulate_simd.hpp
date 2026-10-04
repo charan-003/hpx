@@ -38,24 +38,29 @@ namespace hpx::datapar::experimental {
 
     namespace simd_abi {
 
-        struct scalar
+        HPX_CXX_CORE_EXPORT struct scalar
         {
         };
-        struct simd_emulation_abi
+        HPX_CXX_CORE_EXPORT struct simd_emulation_abi
         {
         };
 
-        template <typename T>
+        HPX_CXX_CORE_EXPORT template <std::size_t N>
+        struct fixed_size_simd_emulation_abi
+        {
+        };
+
+        HPX_CXX_CORE_EXPORT template <typename T>
         inline constexpr int max_fixed_size = detail::max_vector_pack_size;
 
-        template <typename T>
+        HPX_CXX_CORE_EXPORT template <typename T>
         using compatible = simd_emulation_abi;
 
-        template <typename T>
+        HPX_CXX_CORE_EXPORT template <typename T>
         using native = simd_emulation_abi;
 
-        template <typename T, size_t N>
-        using fixed_size = simd_emulation_abi;
+        HPX_CXX_CORE_EXPORT template <typename T, size_t N>
+        using fixed_size = fixed_size_simd_emulation_abi<N>;
     }    // namespace simd_abi
 
     HPX_CXX_CORE_EXPORT struct element_aligned_tag
@@ -116,6 +121,11 @@ namespace hpx::datapar::experimental {
     {
         static constexpr size_t value = detail::simd_impl<T>::size;
     };
+    template <typename T, std::size_t N>
+    struct simd_size<T, simd_abi::fixed_size<T, N>>
+    {
+        static constexpr size_t value = N;
+    };
     HPX_CXX_CORE_EXPORT template <typename T,
         typename Abi = simd_abi::compatible<T>>
     inline constexpr size_t simd_size_v = simd_size<T, Abi>::value;
@@ -173,7 +183,7 @@ namespace hpx::datapar::experimental {
     class simd
     {
     private:
-        using Vector = std::array<T, detail::simd_impl<T>::size>;
+        using Vector = std::array<T, simd_size<T, Abi>::value>;
         Vector vec;
 
     public:
@@ -183,7 +193,7 @@ namespace hpx::datapar::experimental {
 
         static constexpr std::size_t size()
         {
-            return detail::simd_impl<T>::size;
+            return simd_size<T, Abi>::value;
         }
 
         // ----------------------------------------------------------------------

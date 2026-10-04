@@ -17,7 +17,8 @@ namespace hpx::execution::detail {
     template <typename Derived>
     constexpr auto simd_sync_policy_mappings<Derived>::to_task() const
     {
-        return map_execution_policy<simd_task_policy>(
+        return map_execution_policy<
+            fixed_size_simd_task_policy<Derived::num_lanes>>(
             static_cast<Derived const&>(*this),
             hpx::execution::experimental::to_task);
     }
@@ -25,7 +26,8 @@ namespace hpx::execution::detail {
     template <typename Derived>
     constexpr auto simd_sync_policy_mappings<Derived>::to_par() const
     {
-        return map_execution_policy<par_simd_policy>(
+        return map_execution_policy<
+            par_fixed_size_simd_policy<Derived::num_lanes>>(
             static_cast<Derived const&>(*this),
             hpx::execution::experimental::to_par);
     }
@@ -41,7 +43,7 @@ namespace hpx::execution::detail {
     template <typename Derived>
     constexpr auto simd_async_policy_mappings<Derived>::to_non_task() const
     {
-        return map_execution_policy<simd_policy>(
+        return map_execution_policy<fixed_size_simd_policy<Derived::num_lanes>>(
             static_cast<Derived const&>(*this),
             hpx::execution::experimental::to_non_task);
     }
@@ -49,7 +51,8 @@ namespace hpx::execution::detail {
     template <typename Derived>
     constexpr auto simd_async_policy_mappings<Derived>::to_par() const
     {
-        return map_execution_policy<par_simd_task_policy>(
+        return map_execution_policy<
+            par_fixed_size_simd_task_policy<Derived::num_lanes>>(
             static_cast<Derived const&>(*this),
             hpx::execution::experimental::to_par);
     }
@@ -65,7 +68,8 @@ namespace hpx::execution::detail {
     template <typename Derived>
     constexpr auto par_simd_sync_policy_mappings<Derived>::to_task() const
     {
-        return map_execution_policy<par_simd_task_policy>(
+        return map_execution_policy<
+            par_fixed_size_simd_task_policy<Derived::num_lanes>>(
             static_cast<Derived const&>(*this),
             hpx::execution::experimental::to_task);
     }
@@ -73,7 +77,7 @@ namespace hpx::execution::detail {
     template <typename Derived>
     constexpr auto par_simd_sync_policy_mappings<Derived>::to_non_par() const
     {
-        return map_execution_policy<simd_policy>(
+        return map_execution_policy<fixed_size_simd_policy<Derived::num_lanes>>(
             static_cast<Derived const&>(*this),
             hpx::execution::experimental::to_non_par);
     }
@@ -89,7 +93,8 @@ namespace hpx::execution::detail {
     template <typename Derived>
     constexpr auto par_simd_async_policy_mappings<Derived>::to_non_task() const
     {
-        return map_execution_policy<par_simd_policy>(
+        return map_execution_policy<
+            par_fixed_size_simd_policy<Derived::num_lanes>>(
             static_cast<Derived const&>(*this),
             hpx::execution::experimental::to_non_task);
     }
@@ -97,7 +102,8 @@ namespace hpx::execution::detail {
     template <typename Derived>
     constexpr auto par_simd_async_policy_mappings<Derived>::to_non_par() const
     {
-        return map_execution_policy<simd_task_policy>(
+        return map_execution_policy<
+            fixed_size_simd_task_policy<Derived::num_lanes>>(
             static_cast<Derived const&>(*this),
             hpx::execution::experimental::to_non_par);
     }
