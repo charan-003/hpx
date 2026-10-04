@@ -9,6 +9,8 @@
 #include <hpx/config.hpp>
 
 #if defined(HPX_HAVE_DATAPAR)
+#include <hpx/execution/traits/vector_pack_type.hpp>
+
 #include <hpx/modules/datastructures.hpp>
 #include <hpx/modules/type_support.hpp>
 

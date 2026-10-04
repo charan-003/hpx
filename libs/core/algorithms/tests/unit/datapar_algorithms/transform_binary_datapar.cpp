@@ -24,6 +24,12 @@ void test_transform_binary()
 
     test_transform_binary_async(simd(task), IteratorTag());
     test_transform_binary_async(par_simd(task), IteratorTag());
+
+    test_transform_binary(fixed_size_simd<2>, IteratorTag());
+    test_transform_binary(par_fixed_size_simd<2>, IteratorTag());
+
+    test_transform_binary_async(fixed_size_simd<2>(task), IteratorTag());
+    test_transform_binary_async(par_fixed_size_simd<2>(task), IteratorTag());
 }
 
 void transform_binary_test()

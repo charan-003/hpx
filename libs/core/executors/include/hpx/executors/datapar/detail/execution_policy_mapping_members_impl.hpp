@@ -11,6 +11,7 @@
 #if defined(HPX_HAVE_DATAPAR)
 
 #include <hpx/executors/datapar/detail/execution_policy_mapping_members.hpp>
+#include <hpx/modules/execution.hpp>
 
 namespace hpx::execution::detail {
 
@@ -115,7 +116,6 @@ namespace hpx::execution::detail {
             static_cast<Derived const&>(*this),
             hpx::execution::experimental::to_non_simd);
     }
-
 }    // namespace hpx::execution::detail
 
 #endif

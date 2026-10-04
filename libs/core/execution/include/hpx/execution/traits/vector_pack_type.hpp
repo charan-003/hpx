@@ -51,7 +51,7 @@ namespace hpx::parallel::traits {
     };
 
     HPX_CXX_CORE_EXPORT template <typename T>
-    using vector_pack_mask_type_t = typename vector_pack_mask_type<T>::type;
+    using vector_pack_mask_type_t = vector_pack_mask_type<T>::type;
 }    // namespace hpx::parallel::traits
 
 #if !defined(__CUDACC__)

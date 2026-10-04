@@ -26,7 +26,10 @@ void test_for_each()
     test_for_each_async(par_simd(task), IteratorTag());
 
     test_for_each(fixed_size_simd<2>, IteratorTag());
+    test_for_each(fixed_size_simd<3>, IteratorTag());
+
     test_for_each(par_fixed_size_simd<2>, IteratorTag());
+    test_for_each(par_fixed_size_simd<6>, IteratorTag());
 
     test_for_each_async(fixed_size_simd<2>(task), IteratorTag());
     test_for_each_async(par_fixed_size_simd<2>(task), IteratorTag());
@@ -34,6 +37,14 @@ void test_for_each()
 
 void for_each_test()
 {
+    using namespace hpx::datapar::experimental;
+    static_assert(
+        memory_alignment_v<fixed_size_simd<int, 3>> == 4 * sizeof(int));
+    static_assert(
+        memory_alignment_v<fixed_size_simd<int, 4>> == 4 * sizeof(int));
+    static_assert(
+        memory_alignment_v<fixed_size_simd<int, 6>> == 8 * sizeof(int));
+
     test_for_each<std::random_access_iterator_tag>();
     test_for_each<std::forward_iterator_tag>();
 }

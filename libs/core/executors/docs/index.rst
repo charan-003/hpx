@@ -43,8 +43,8 @@ generated API reference.
 
 The ``simd`` and ``par_simd`` policies vectorize using the native number of
 vector lanes. The ``fixed_size_simd<N>`` and ``par_fixed_size_simd<N>``
-policies vectorize using exactly ``N`` lanes. Rebinding with ``(task)``,
-executors or parameters preserves ``N``:
+policies vectorize using ``N`` lanes. Rebinding with ``(task)``, executors
+or parameters preserves ``N``:
 
 .. code-block:: c++
 
