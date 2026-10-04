@@ -26,5 +26,40 @@ it exposes the following classes and constants:
 * :hpx:var:`hpx::execution::par_unseq`
 * :hpx:var:`hpx::execution::task`
 
+When HPX is configured with data-parallel support (``HPX_WITH_DATAPAR``), the
+module additionally provides vectorizing policies. These are not part of the
+generated API reference.
+
+* ``hpx::execution::simd_policy``, ``hpx::execution::simd_task_policy`` and
+  the object ``hpx::execution::simd``
+* ``hpx::execution::par_simd_policy``, ``hpx::execution::par_simd_task_policy``
+  and the object ``hpx::execution::par_simd``
+* ``hpx::execution::fixed_size_simd_policy<N>``,
+  ``hpx::execution::fixed_size_simd_task_policy<N>`` and the variable template
+  ``hpx::execution::fixed_size_simd<N>``
+* ``hpx::execution::par_fixed_size_simd_policy<N>``,
+  ``hpx::execution::par_fixed_size_simd_task_policy<N>`` and the variable
+  template ``hpx::execution::par_fixed_size_simd<N>``
+
+The ``simd`` and ``par_simd`` policies vectorize using the native number of
+vector lanes. The ``fixed_size_simd<N>`` and ``par_fixed_size_simd<N>``
+policies vectorize using exactly ``N`` lanes. Rebinding with ``(task)``,
+executors or parameters preserves ``N``:
+
+.. code-block:: c++
+
+   std::vector<float> v(1000, 1.0f);
+
+   hpx::for_each(hpx::execution::fixed_size_simd<4>, v.begin(), v.end(),
+       [](auto& x) { x *= 2; });
+
+   auto f = hpx::for_each(hpx::execution::par_fixed_size_simd<8>(hpx::execution::task),
+       v.begin(), v.end(), [](auto& x) { x += 1; });
+   f.get();
+
+With a fixed lane count the vector loop processes only complete packs of ``N``
+elements. Alignment checks use the selected pack type.
+
+
 See the :ref:`API reference <modules_executors_api>` of this module for more
 details.
