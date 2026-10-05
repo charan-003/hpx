@@ -27,10 +27,6 @@ namespace hpx::parallel::traits {
         {
 #if !defined(HPX_HAVE_DATAPAR_SVE)
             static_assert(N <= datapar::experimental::max_fixed_size<T>);
-#else
-            // With the SVE backend fixed_size_simd<T, N> is simd<T, sve_abi>,
-            // so N must be equal the native vector length.
-            static_assert(N == datapar::experimental::max_fixed_size<T>);
 #endif
 
             using type = datapar::experimental::fixed_size_simd<T, N>;

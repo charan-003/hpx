@@ -5,6 +5,7 @@
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 #include <hpx/datapar.hpp>
+#include <hpx/execution.hpp>
 #include <hpx/init.hpp>
 
 #include <iostream>
@@ -25,25 +26,36 @@ void test_for_each()
     test_for_each_async(simd(task), IteratorTag());
     test_for_each_async(par_simd(task), IteratorTag());
 
+#if !defined(HPX_HAVE_DATAPAR_SVE)
     test_for_each(fixed_size_simd<2>, IteratorTag());
-    test_for_each(fixed_size_simd<3>, IteratorTag());
-
     test_for_each(par_fixed_size_simd<2>, IteratorTag());
+#endif
+#if defined(HPX_HAVE_DATAPAR_EMULATION)
+    test_for_each(fixed_size_simd<3>, IteratorTag());
     test_for_each(par_fixed_size_simd<6>, IteratorTag());
+#endif
 
+#if !defined(HPX_HAVE_DATAPAR_SVE)
     test_for_each_async(fixed_size_simd<2>(task), IteratorTag());
     test_for_each_async(par_fixed_size_simd<2>(task), IteratorTag());
+#endif
 }
 
 void for_each_test()
 {
-    using namespace hpx::datapar::experimental;
+    using hpx::datapar::experimental::fixed_size_simd;
+    using hpx::parallel::traits::vector_pack_alignment_v;
+
+#if !defined(HPX_HAVE_DATAPAR_SVE)
     static_assert(
-        memory_alignment_v<fixed_size_simd<int, 3>> == 4 * sizeof(int));
+        vector_pack_alignment_v<fixed_size_simd<int, 4>> == 4 * sizeof(int));
+#endif
+#if defined(HPX_HAVE_DATAPAR_EMULATION)
     static_assert(
-        memory_alignment_v<fixed_size_simd<int, 4>> == 4 * sizeof(int));
+        vector_pack_alignment_v<fixed_size_simd<int, 3>> == 4 * sizeof(int));
     static_assert(
-        memory_alignment_v<fixed_size_simd<int, 6>> == 8 * sizeof(int));
+        vector_pack_alignment_v<fixed_size_simd<int, 6>> == 8 * sizeof(int));
+#endif
 
     test_for_each<std::random_access_iterator_tag>();
     test_for_each<std::forward_iterator_tag>();
