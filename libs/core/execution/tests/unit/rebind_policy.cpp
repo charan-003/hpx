@@ -1137,6 +1137,182 @@ static_assert(parameters_rebindable<misconstructed_policy_type,
 static_assert(!parameters_constructible<misconstructed_policy_type const&,
     hpxexp::static_chunk_size>);
 
+/// A policy without any of the members the defaults rely on. The defaults
+/// have no nested type for it, so it can't be rebound along either axis,
+/// and rebind_policy_order_independent_v is false instead of failing to
+/// compile.
+struct unrebindable_policy
+{
+};
+
+static_assert(!executor_rebindable<unrebindable_policy, scheduling_executor>);
+static_assert(
+    !parameters_rebindable<unrebindable_policy, hpxexp::static_chunk_size>);
+static_assert(
+    !executor_constructible<unrebindable_policy const&, scheduling_executor>);
+static_assert(!parameters_constructible<unrebindable_policy const&,
+    hpxexp::static_chunk_size>);
+static_assert(!hpxexp::rebind_policy_order_independent_v<unrebindable_policy,
+    scheduling_executor, hpxexp::static_chunk_size>);
+
+/// A policy without an executor_type, so it can only be rebound along the
+/// executor axis. rebind_policy_order_independent_v is false, since one of
+/// the two orders can't be rebound.
+template <typename Parameters>
+struct executor_axis_only_policy
+{
+    template <typename Executor_, typename Parameters_>
+    struct rebind
+    {
+        using type = executor_axis_only_policy<Parameters_>;
+    };
+};
+
+static_assert(executor_rebindable<executor_axis_only_policy<labeled_parameters>,
+    scheduling_executor>);
+static_assert(
+    !parameters_rebindable<executor_axis_only_policy<labeled_parameters>,
+        hpxexp::static_chunk_size>);
+static_assert(!hpxexp::rebind_policy_order_independent_v<
+    executor_axis_only_policy<labeled_parameters>, scheduling_executor,
+    hpxexp::static_chunk_size>);
+
+///////////////////////////////////////////////////////////////////////////
+/// The function objects forward the policy to the construction-side
+/// customization points, so the default construction works for a policy
+/// whose executor() and parameters() can only be called on a non-const
+/// object, and a specialization can tell lvalue and rvalue policies apart.
+
+/// A policy whose executor() and parameters() are not const.
+template <typename Executor, typename Parameters>
+struct mutable_access_policy
+{
+    using executor_type = Executor;
+    using executor_parameters_type = Parameters;
+
+    template <typename Executor_, typename Parameters_>
+    struct rebind
+    {
+        using type = mutable_access_policy<Executor_, Parameters_>;
+    };
+
+    mutable_access_policy(Executor exec, Parameters params)
+      : exec_(exec)
+      , params_(params)
+    {
+    }
+
+    Executor& executor()
+    {
+        return exec_;
+    }
+
+    Parameters& parameters()
+    {
+        return params_;
+    }
+
+    Executor exec_;
+    Parameters params_;
+};
+
+/// A policy whose construction-side specializations record whether they
+/// were given an rvalue policy.
+template <typename Executor, typename Parameters>
+struct value_category_policy
+{
+    using executor_type = Executor;
+    using executor_parameters_type = Parameters;
+
+    template <typename Executor_, typename Parameters_>
+    struct rebind
+    {
+        using type = value_category_policy<Executor_, Parameters_>;
+    };
+
+    explicit value_category_policy(bool rvalue = false)
+      : from_rvalue(rvalue)
+    {
+    }
+
+    bool from_rvalue;
+};
+
+template <typename Executor, typename Parameters, typename NewExecutor>
+struct hpxexp::construct_rebound_policy_executor<
+    value_category_policy<Executor, Parameters>, NewExecutor>
+{
+    using result_type = value_category_policy<NewExecutor, Parameters>;
+
+    template <typename Executor_>
+    static result_type call(
+        value_category_policy<Executor, Parameters> const&, Executor_&&)
+    {
+        return result_type(false);
+    }
+
+    template <typename Executor_>
+    static result_type call(
+        value_category_policy<Executor, Parameters>&&, Executor_&&)
+    {
+        return result_type(true);
+    }
+};
+
+template <typename Executor, typename Parameters, typename NewParameters>
+struct hpxexp::construct_rebound_policy_parameters<
+    value_category_policy<Executor, Parameters>, NewParameters>
+{
+    using result_type = value_category_policy<Executor, NewParameters>;
+
+    template <typename Parameters_>
+    static result_type call(
+        value_category_policy<Executor, Parameters> const&, Parameters_&&)
+    {
+        return result_type(false);
+    }
+
+    template <typename Parameters_>
+    static result_type call(
+        value_category_policy<Executor, Parameters>&&, Parameters_&&)
+    {
+        return result_type(true);
+    }
+};
+
+void forwarded_policy_tests()
+{
+    mutable_access_policy<labeled_executor, labeled_parameters> mutable_policy(
+        labeled_executor{1}, labeled_parameters{1});
+
+    auto rebound_mutable_executor = hpxexp::create_rebound_policy_executor(
+        mutable_policy, labeled_executor{2});
+    HPX_TEST_EQ(rebound_mutable_executor.executor().id, 2);
+    HPX_TEST_EQ(rebound_mutable_executor.parameters().id, 1);
+
+    auto rebound_mutable_parameters = hpxexp::create_rebound_policy(
+        mutable_access_policy<labeled_executor, labeled_parameters>(
+            labeled_executor{3}, labeled_parameters{1}),
+        labeled_parameters{4});
+    HPX_TEST_EQ(rebound_mutable_parameters.executor().id, 3);
+    HPX_TEST_EQ(rebound_mutable_parameters.parameters().id, 4);
+
+    value_category_policy<labeled_executor, labeled_parameters> policy;
+
+    HPX_TEST(!hpxexp::create_rebound_policy_executor(policy, labeled_executor{})
+            .from_rvalue);
+    HPX_TEST(hpxexp::create_rebound_policy_executor(
+        value_category_policy<labeled_executor, labeled_parameters>(),
+        labeled_executor{})
+            .from_rvalue);
+    HPX_TEST(
+        !hpxexp::create_rebound_policy_parameters(policy, labeled_parameters{})
+            .from_rvalue);
+    HPX_TEST(
+        hpxexp::create_rebound_policy(std::move(policy), labeled_parameters{})
+            .from_rvalue);
+}
+
 ///////////////////////////////////////////////////////////////////////////
 /// The predefined policies rebind through the same path.
 
@@ -1192,5 +1368,6 @@ int main()
     crtp_member_rebind_tests();
     qualified_policy_rebind_tests();
     standard_policy_rebind_tests();
+    forwarded_policy_tests();
     return hpx::util::report_errors();
 }
