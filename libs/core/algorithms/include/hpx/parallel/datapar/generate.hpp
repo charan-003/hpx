@@ -33,41 +33,36 @@ namespace hpx::parallel::detail {
         using V = hpx::parallel::traits::vector_pack_type_t<value_type, N>;
 
         template <typename Iter, typename F>
-            requires(util::detail::iterator_datapar_compatible_v<Iter>)
         HPX_HOST_DEVICE HPX_FORCEINLINE static Iter call(
             Iter first, std::size_t count, F&& f)
         {
-            std::size_t len = count;
-            for (/* */; len != 0 && !util::detail::is_pack_aligned<V>(first);
-                --len)
-            {
-                *first++ = f.template operator()<value_type>();
-            }
+            constexpr bool datapar_compatible =
+                util::detail::iterator_datapar_compatible_v<Iter>;
 
-            constexpr std::size_t size = traits::vector_pack_size_v<V>;
-            for (/* */; len >= size; len -= size)
+            std::size_t len = count;
+            if constexpr (datapar_compatible && N != 1)
             {
-                auto tmp = f.template operator()<V>();
-                traits::vector_pack_store<V, value_type>::aligned(tmp, first);
-                std::advance(first, size);
+                for (/* */;
+                    len != 0 && !util::detail::is_pack_aligned<V>(first); --len)
+                {
+                    *first++ = f.template operator()<value_type>();
+                }
+
+                constexpr std::size_t size = traits::vector_pack_size_v<V>;
+                for (/* */; len >= size; len -= size)
+                {
+                    auto tmp = f.template operator()<V>();
+                    traits::vector_pack_store<V, value_type>::aligned(
+                        tmp, first);
+                    std::advance(first, size);
+                }
             }
 
             for (/* */; len != 0; --len)
             {
                 *first++ = f.template operator()<value_type>();
             }
-            return first;
-        }
 
-        template <typename Iter, typename F>
-            requires(!util::detail::iterator_datapar_compatible_v<Iter>)
-        HPX_HOST_DEVICE HPX_FORCEINLINE static Iter call(
-            Iter first, std::size_t count, F&& f)
-        {
-            while (count--)
-            {
-                *first++ = f.template operator()<value_type>();
-            }
             return first;
         }
     };

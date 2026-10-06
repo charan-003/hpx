@@ -47,9 +47,9 @@ namespace hpx::parallel::util {
                     iterator_datapar_compatible_v<InIter> &&
                     iterator_datapar_compatible_v<OutIter>;
 
-                if constexpr (datapar_compatible)
+                std::size_t len = count;
+                if constexpr (datapar_compatible && N != 1)
                 {
-                    std::size_t len = count;
                     for (/* */; len != 0 &&
                         !(is_pack_aligned<V>(first) &&
                             is_pack_aligned<V>(dest));
@@ -63,20 +63,14 @@ namespace hpx::parallel::util {
                     {
                         datapar_transform_loop_step<N>::callv(f, first, dest);
                     }
-
-                    for (/* */; len != 0; --len)
-                    {
-                        datapar_transform_loop_step<N>::call1(f, first, dest);
-                    }
-
-                    return std::make_pair(HPX_MOVE(first), HPX_MOVE(dest));
                 }
-                else
+
+                for (/* */; len != 0; --len)
                 {
-                    return util::transform_loop_n<
-                        hpx::execution::sequenced_policy>(
-                        first, count, dest, HPX_FORWARD(F, f));
+                    datapar_transform_loop_step<N>::call1(f, first, dest);
                 }
+
+                return std::make_pair(HPX_MOVE(first), HPX_MOVE(dest));
             }
         };
     }    // namespace detail
@@ -115,10 +109,9 @@ namespace hpx::parallel::util {
                     iterator_datapar_compatible_v<InIter> &&
                     iterator_datapar_compatible_v<OutIter>;
 
-                if constexpr (datapar_compatible)
+                std::size_t len = count;
+                if constexpr (datapar_compatible && N != 1)
                 {
-                    std::size_t len = count;
-
                     for (/* */; len != 0 &&
                         !(is_pack_aligned<V>(first) &&
                             is_pack_aligned<V>(dest));
@@ -134,21 +127,14 @@ namespace hpx::parallel::util {
                         datapar_transform_loop_step_ind<N>::callv(
                             f, first, dest);
                     }
-
-                    for (/* */; len != 0; --len)
-                    {
-                        datapar_transform_loop_step_ind<N>::call1(
-                            f, first, dest);
-                    }
-
-                    return std::make_pair(HPX_MOVE(first), HPX_MOVE(dest));
                 }
-                else
+
+                for (/* */; len != 0; --len)
                 {
-                    return util::transform_loop_n_ind<
-                        hpx::execution::sequenced_policy>(
-                        first, count, dest, HPX_FORWARD(F, f));
+                    datapar_transform_loop_step_ind<N>::call1(f, first, dest);
                 }
+
+                return std::make_pair(HPX_MOVE(first), HPX_MOVE(dest));
             }
         };
     }    // namespace detail
@@ -182,23 +168,10 @@ namespace hpx::parallel::util {
                 HPX_FORCEINLINE static constexpr std::pair<InIter, OutIter>
                 call(InIter first, InIter last, OutIter dest, F&& f)
             {
-                constexpr bool datapar_compatible =
-                    iterators_datapar_compatible_v<InIter, OutIter> &&
-                    iterator_datapar_compatible_v<InIter> &&
-                    iterator_datapar_compatible_v<OutIter>;
-
-                if constexpr (datapar_compatible)
-                {
-                    return util::transform_loop_n<
-                        hpx::execution::fixed_size_simd_policy<N>>(first,
-                        hpx::parallel::detail::distance(first, last), dest,
-                        HPX_FORWARD(F, f));
-                }
-                else
-                {
-                    return util::transform_loop(hpx::execution::seq, first,
-                        last, dest, HPX_FORWARD(F, f));
-                }
+                return util::transform_loop_n<
+                    hpx::execution::fixed_size_simd_policy<N>>(first,
+                    hpx::parallel::detail::distance(first, last), dest,
+                    HPX_FORWARD(F, f));
             }
         };
     }    // namespace detail
@@ -237,25 +210,10 @@ namespace hpx::parallel::util {
                 HPX_FORCEINLINE static constexpr std::pair<InIter, OutIter>
                 call(InIter first, InIter last, OutIter dest, F&& f)
             {
-                constexpr bool datapar_compatible =
-                    iterators_datapar_compatible_v<InIter, OutIter> &&
-                    iterator_datapar_compatible_v<InIter> &&
-                    iterator_datapar_compatible_v<OutIter>;
-
-                if constexpr (datapar_compatible)
-                {
-                    return util::transform_loop_n_ind<
-                        hpx::execution::fixed_size_simd_policy<N>>(first,
-                        hpx::parallel::detail::distance(first, last), dest,
-                        HPX_FORWARD(F, f));
-                }
-                else
-                {
-                    auto ret = util::transform_loop_ind(hpx::execution::seq,
-                        first, last, dest, HPX_FORWARD(F, f));
-                    return std::pair<InIter, OutIter>{
-                        HPX_MOVE(ret.in), HPX_MOVE(ret.out)};
-                }
+                return util::transform_loop_n_ind<
+                    hpx::execution::fixed_size_simd_policy<N>>(first,
+                    hpx::parallel::detail::distance(first, last), dest,
+                    HPX_FORWARD(F, f));
             }
         };
     }    // namespace detail
@@ -310,10 +268,9 @@ namespace hpx::parallel::util {
                     iterator_datapar_compatible_v<InIter2> &&
                     iterator_datapar_compatible_v<OutIter>;
 
-                if constexpr (datapar_compatible)
+                std::size_t len = count;
+                if constexpr (datapar_compatible && N != 1)
                 {
-                    std::size_t len = count;
-
                     for (/* */; len != 0 &&
                         !(is_pack_aligned<V1>(first1) &&
                             is_pack_aligned<V2>(first2) &&
@@ -330,22 +287,16 @@ namespace hpx::parallel::util {
                         datapar_transform_loop_step<N>::callv(
                             f, first1, first2, dest);
                     }
-
-                    for (/* */; len != 0; --len)
-                    {
-                        datapar_transform_loop_step<N>::call1(
-                            f, first1, first2, dest);
-                    }
-
-                    return hpx::make_tuple(
-                        HPX_MOVE(first1), HPX_MOVE(first2), HPX_MOVE(dest));
                 }
-                else
+
+                for (/* */; len != 0; --len)
                 {
-                    return util::transform_binary_loop_n<
-                        hpx::execution::sequenced_policy>(
-                        first1, count, first2, dest, HPX_FORWARD(F, f));
+                    datapar_transform_loop_step<N>::call1(
+                        f, first1, first2, dest);
                 }
+
+                return hpx::make_tuple(
+                    HPX_MOVE(first1), HPX_MOVE(first2), HPX_MOVE(dest));
             }
         };
     }    // namespace detail
@@ -395,29 +346,13 @@ namespace hpx::parallel::util {
                 call(InIter1 first1, InIter1 last1, InIter2 first2,
                     OutIter dest, F&& f)
             {
-                constexpr bool datapar_compatible =
-                    iterators_datapar_compatible_v<InIter1, OutIter> &&
-                    iterators_datapar_compatible_v<InIter2, OutIter> &&
-                    iterator_datapar_compatible_v<InIter1> &&
-                    iterator_datapar_compatible_v<InIter2> &&
-                    iterator_datapar_compatible_v<OutIter>;
+                auto ret = util::transform_binary_loop_n<
+                    hpx::execution::par_fixed_size_simd_policy<N>>(first1,
+                    hpx::parallel::detail::distance(first1, last1), first2,
+                    dest, HPX_FORWARD(F, f));
 
-                if constexpr (datapar_compatible)
-                {
-                    auto ret = util::transform_binary_loop_n<
-                        hpx::execution::par_fixed_size_simd_policy<N>>(first1,
-                        hpx::parallel::detail::distance(first1, last1), first2,
-                        dest, HPX_FORWARD(F, f));
-
-                    return util::in_in_out_result<InIter1, InIter2, OutIter>{
-                        hpx::get<0>(ret), hpx::get<1>(ret), hpx::get<2>(ret)};
-                }
-                else
-                {
-                    return util::transform_binary_loop<
-                        hpx::execution::sequenced_policy>(
-                        first1, last1, first2, dest, HPX_FORWARD(F, f));
-                }
+                return util::in_in_out_result<InIter1, InIter2, OutIter>{
+                    hpx::get<0>(ret), hpx::get<1>(ret), hpx::get<2>(ret)};
             }
 
             template <typename InIter1, typename InIter2, typename OutIter,
@@ -428,35 +363,19 @@ namespace hpx::parallel::util {
                 call(InIter1 first1, InIter1 last1, InIter2 first2,
                     InIter2 last2, OutIter dest, F&& f)
             {
-                constexpr bool datapar_compatible =
-                    iterators_datapar_compatible_v<InIter1, OutIter> &&
-                    iterators_datapar_compatible_v<InIter2, OutIter> &&
-                    iterator_datapar_compatible_v<InIter1> &&
-                    iterator_datapar_compatible_v<InIter2> &&
-                    iterator_datapar_compatible_v<OutIter>;
-
-                if constexpr (datapar_compatible)
-                {
-                    // different versions of clang-format do different things
-                    // clang-format off
+                // different versions of clang-format do different things
+                // clang-format off
                     std::size_t count = (std::min)(
                         hpx::parallel::detail::distance(first1, last1),
                         hpx::parallel::detail::distance(first2, last2));
-                    // clang-format on
+                // clang-format on
 
-                    auto ret = util::transform_binary_loop_n<
-                        hpx::execution::par_fixed_size_simd_policy<N>>(
-                        first1, count, first2, dest, HPX_FORWARD(F, f));
+                auto ret = util::transform_binary_loop_n<
+                    hpx::execution::par_fixed_size_simd_policy<N>>(
+                    first1, count, first2, dest, HPX_FORWARD(F, f));
 
-                    return util::in_in_out_result<InIter1, InIter2, OutIter>{
-                        hpx::get<0>(ret), hpx::get<1>(ret), hpx::get<2>(ret)};
-                }
-                else
-                {
-                    return util::transform_binary_loop<
-                        hpx::execution::sequenced_policy>(
-                        first1, last1, first2, last2, dest, HPX_FORWARD(F, f));
-                }
+                return util::in_in_out_result<InIter1, InIter2, OutIter>{
+                    hpx::get<0>(ret), hpx::get<1>(ret), hpx::get<2>(ret)};
             }
         };
     }    // namespace detail
@@ -527,10 +446,9 @@ namespace hpx::parallel::util {
                     iterator_datapar_compatible_v<InIter2> &&
                     iterator_datapar_compatible_v<OutIter>;
 
-                if constexpr (datapar_compatible)
+                std::size_t len = count;
+                if constexpr (datapar_compatible && N != 1)
                 {
-                    std::size_t len = count;
-
                     for (/* */; len != 0 &&
                         !(is_pack_aligned<V1>(first1) &&
                             is_pack_aligned<V2>(first2) &&
@@ -547,22 +465,16 @@ namespace hpx::parallel::util {
                         datapar_transform_loop_step_ind<N>::callv(
                             f, first1, first2, dest);
                     }
-
-                    for (/* */; len != 0; --len)
-                    {
-                        datapar_transform_loop_step_ind<N>::call1(
-                            f, first1, first2, dest);
-                    }
-
-                    return hpx::make_tuple(
-                        HPX_MOVE(first1), HPX_MOVE(first2), HPX_MOVE(dest));
                 }
-                else
+
+                for (/* */; len != 0; --len)
                 {
-                    return util::transform_binary_loop_ind_n<
-                        hpx::execution::sequenced_policy>(
-                        first1, count, first2, dest, HPX_FORWARD(F, f));
+                    datapar_transform_loop_step_ind<N>::call1(
+                        f, first1, first2, dest);
                 }
+
+                return hpx::make_tuple(
+                    HPX_MOVE(first1), HPX_MOVE(first2), HPX_MOVE(dest));
             }
         };
     }    // namespace detail

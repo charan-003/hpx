@@ -26,16 +26,17 @@ void test_for_each()
     test_for_each_async(simd(task), IteratorTag());
     test_for_each_async(par_simd(task), IteratorTag());
 
-#if !defined(HPX_HAVE_DATAPAR_SVE)
+#if defined(HPX_HAVE_DATAPAR_EMULATION)
+    test_for_each(fixed_size_simd<1>, IteratorTag());
+    test_for_each(par_fixed_size_simd<1>, IteratorTag());
     test_for_each(fixed_size_simd<2>, IteratorTag());
     test_for_each(par_fixed_size_simd<2>, IteratorTag());
-#endif
-#if defined(HPX_HAVE_DATAPAR_EMULATION)
+
     test_for_each(fixed_size_simd<3>, IteratorTag());
     test_for_each(par_fixed_size_simd<6>, IteratorTag());
-#endif
 
-#if !defined(HPX_HAVE_DATAPAR_SVE)
+    test_for_each_async(fixed_size_simd<1>(task), IteratorTag());
+    test_for_each_async(par_fixed_size_simd<1>(task), IteratorTag());
     test_for_each_async(fixed_size_simd<2>(task), IteratorTag());
     test_for_each_async(par_fixed_size_simd<2>(task), IteratorTag());
 #endif
@@ -64,8 +65,8 @@ void for_each_test()
 ///////////////////////////////////////////////////////////////////////////////
 int hpx_main(hpx::program_options::variables_map& vm)
 {
-    unsigned int seed = (unsigned int) std::time(nullptr);
-    if (vm.count("seed"))
+    unsigned int seed = static_cast<unsigned int>(std::time(nullptr));
+    if (vm.contains("seed"))
         seed = vm["seed"].as<unsigned int>();
 
     std::cout << "using seed: " << seed << std::endl;
@@ -85,7 +86,7 @@ int main(int argc, char* argv[])
     desc_commandline.add_options()("seed,s", value<unsigned int>(),
         "the random number generator seed to use for this run");
 
-    // By default this test should run on all available cores
+    // By default, this test should run on all available cores
     std::vector<std::string> const cfg = {"hpx.os_threads=all"};
 
     // Initialize and run HPX

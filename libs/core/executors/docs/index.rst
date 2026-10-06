@@ -60,6 +60,14 @@ or parameters preserves ``N``:
 With a fixed lane count the vector loop processes only complete packs of ``N``
 elements. Alignment checks use the selected pack type.
 
+A lane count of ``0`` selects the native number of lanes for the element
+type, which is equivalent to ``simd`` and ``par_simd``.
+
+A lane count of ``1`` is semantically scalar. The algorithms execute such a
+policy with scalar semantics, without alignment peeling or a remainder loop,
+and the user-provided function is only invoked with scalar arguments. Use a
+lane count greater than ``1`` if the function must be invoked with vector
+packs.
 
 See the :ref:`API reference <modules_executors_api>` of this module for more
 details.

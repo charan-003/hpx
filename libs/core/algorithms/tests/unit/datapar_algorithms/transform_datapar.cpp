@@ -25,6 +25,12 @@ void test_transform()
     test_transform_async(simd(task), IteratorTag());
     test_transform_async(par_simd(task), IteratorTag());
 
+    test_transform(fixed_size_simd<1>, IteratorTag());
+    test_transform(par_fixed_size_simd<1>, IteratorTag());
+
+    test_transform_async(fixed_size_simd<1>(task), IteratorTag());
+    test_transform_async(par_fixed_size_simd<1>(task), IteratorTag());
+
     test_transform(fixed_size_simd<2>, IteratorTag());
     test_transform(par_fixed_size_simd<2>, IteratorTag());
 
