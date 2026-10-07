@@ -265,6 +265,10 @@ namespace hpx {
             auto const mtx = mtx_;    // keep alive
             std::unique_lock<mutex_type> l(mtx->mtx_);
             arrival_token const old_phase = arrive_locked(l, 1);
+            if (!l.owns_lock())
+            {
+                return;
+            }
             while (phase_ == old_phase)
             {
                 cond_.wait(l, "barrier::wait");
