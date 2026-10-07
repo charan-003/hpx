@@ -50,18 +50,28 @@ namespace hpx::parallel::util {
                 std::size_t len = count;
                 if constexpr (datapar_compatible && N != 1)
                 {
-                    for (/* */; len != 0 &&
-                        !(is_pack_aligned<V>(first) &&
-                            is_pack_aligned<V>(dest));
-                        --len)
+                    using out_value_t = std::remove_cv_t<
+                        std::remove_reference_t<decltype(*dest)>>;
+                    using VOut = traits::vector_pack_type_t<out_value_t, N>;
+
+                    constexpr std::size_t size = traits::vector_pack_size_v<V>;
+                    static_assert(size == traits::vector_pack_size_v<VOut>,
+                        "input and output packs must have the same lane count");
+
+                    for (/* */; len != 0 && !is_pack_aligned<V>(first); --len)
                     {
                         datapar_transform_loop_step<N>::call1(f, first, dest);
                     }
 
-                    constexpr std::size_t size = traits::vector_pack_size_v<V>;
-                    for (/* */; len >= size; len -= size)
+                    // one-time check: vectorize only if dest is also aligned
+                    // now
+                    if (is_pack_aligned<VOut>(dest))
                     {
-                        datapar_transform_loop_step<N>::callv(f, first, dest);
+                        for (/* */; len >= size; len -= size)
+                        {
+                            datapar_transform_loop_step<N>::callv(
+                                f, first, dest);
+                        }
                     }
                 }
 
@@ -112,20 +122,29 @@ namespace hpx::parallel::util {
                 std::size_t len = count;
                 if constexpr (datapar_compatible && N != 1)
                 {
-                    for (/* */; len != 0 &&
-                        !(is_pack_aligned<V>(first) &&
-                            is_pack_aligned<V>(dest));
-                        --len)
+                    using out_value_t = std::remove_cv_t<
+                        std::remove_reference_t<decltype(*dest)>>;
+                    using VOut = traits::vector_pack_type_t<out_value_t, N>;
+
+                    constexpr std::size_t size = traits::vector_pack_size_v<V>;
+                    static_assert(size == traits::vector_pack_size_v<VOut>,
+                        "input and output packs must have the same lane count");
+
+                    for (/* */; len != 0 && !is_pack_aligned<V>(first); --len)
                     {
                         datapar_transform_loop_step_ind<N>::call1(
                             f, first, dest);
                     }
 
-                    constexpr std::size_t size = traits::vector_pack_size_v<V>;
-                    for (/* */; len >= size; len -= size)
+                    // one-time check: vectorize only if dest is also aligned
+                    // now
+                    if (is_pack_aligned<VOut>(dest))
                     {
-                        datapar_transform_loop_step_ind<N>::callv(
-                            f, first, dest);
+                        for (/* */; len >= size; len -= size)
+                        {
+                            datapar_transform_loop_step_ind<N>::callv(
+                                f, first, dest);
+                        }
                     }
                 }
 
@@ -271,21 +290,32 @@ namespace hpx::parallel::util {
                 std::size_t len = count;
                 if constexpr (datapar_compatible && N != 1)
                 {
-                    for (/* */; len != 0 &&
-                        !(is_pack_aligned<V1>(first1) &&
-                            is_pack_aligned<V2>(first2) &&
-                            is_pack_aligned<V1>(dest));
-                        --len)
+                    using out_value_t = std::remove_cv_t<
+                        std::remove_reference_t<decltype(*dest)>>;
+                    using VOut = traits::vector_pack_type_t<out_value_t, N>;
+
+                    constexpr std::size_t size = traits::vector_pack_size_v<V1>;
+                    static_assert(size == traits::vector_pack_size_v<V2>,
+                        "input and output packs must have the same lane count");
+                    static_assert(size == traits::vector_pack_size_v<VOut>,
+                        "input and output packs must have the same lane count");
+
+                    for (/* */; len != 0 && !is_pack_aligned<V1>(first1); --len)
                     {
                         datapar_transform_loop_step<N>::call1(
                             f, first1, first2, dest);
                     }
 
-                    constexpr std::size_t size = traits::vector_pack_size_v<V1>;
-                    for (/* */; len >= size; len -= size)
+                    // one-time check: vectorize only if first2 and dest are
+                    // also aligned now
+                    if (len >= size && is_pack_aligned<V2>(first2) &&
+                        is_pack_aligned<VOut>(dest))
                     {
-                        datapar_transform_loop_step<N>::callv(
-                            f, first1, first2, dest);
+                        for (/* */; len >= size; len -= size)
+                        {
+                            datapar_transform_loop_step<N>::callv(
+                                f, first1, first2, dest);
+                        }
                     }
                 }
 
@@ -363,12 +393,9 @@ namespace hpx::parallel::util {
                 call(InIter1 first1, InIter1 last1, InIter2 first2,
                     InIter2 last2, OutIter dest, F&& f)
             {
-                // different versions of clang-format do different things
-                // clang-format off
-                    std::size_t count = (std::min)(
-                        hpx::parallel::detail::distance(first1, last1),
+                std::size_t count =
+                    (std::min) (hpx::parallel::detail::distance(first1, last1),
                         hpx::parallel::detail::distance(first2, last2));
-                // clang-format on
 
                 auto ret = util::transform_binary_loop_n<
                     hpx::execution::par_fixed_size_simd_policy<N>>(
@@ -449,21 +476,32 @@ namespace hpx::parallel::util {
                 std::size_t len = count;
                 if constexpr (datapar_compatible && N != 1)
                 {
-                    for (/* */; len != 0 &&
-                        !(is_pack_aligned<V1>(first1) &&
-                            is_pack_aligned<V2>(first2) &&
-                            is_pack_aligned<V1>(dest));
-                        --len)
+                    using out_value_t = std::remove_cv_t<
+                        std::remove_reference_t<decltype(*dest)>>;
+                    using VOut = traits::vector_pack_type_t<out_value_t, N>;
+
+                    constexpr std::size_t size = traits::vector_pack_size_v<V1>;
+                    static_assert(size == traits::vector_pack_size_v<V2>,
+                        "input and output packs must have the same lane count");
+                    static_assert(size == traits::vector_pack_size_v<VOut>,
+                        "input and output packs must have the same lane count");
+
+                    for (/* */; len != 0 && !is_pack_aligned<V1>(first1); --len)
                     {
                         datapar_transform_loop_step_ind<N>::call1(
                             f, first1, first2, dest);
                     }
 
-                    constexpr std::size_t size = traits::vector_pack_size_v<V1>;
-                    for (/* */; len >= size; len -= size)
+                    // one-time check: vectorize only if first2 and dest are
+                    // also aligned now
+                    if (len >= size && is_pack_aligned<V2>(first2) &&
+                        is_pack_aligned<VOut>(dest))
                     {
-                        datapar_transform_loop_step_ind<N>::callv(
-                            f, first1, first2, dest);
+                        for (/* */; len >= size; len -= size)
+                        {
+                            datapar_transform_loop_step_ind<N>::callv(
+                                f, first1, first2, dest);
+                        }
                     }
                 }
 

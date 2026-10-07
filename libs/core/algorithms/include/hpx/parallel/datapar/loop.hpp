@@ -264,22 +264,29 @@ namespace hpx::parallel::util {
                         std::iterator_traits<std::decay_t<InIter2>>::value_type;
                     using V2 = traits::vector_pack_type_t<value_type2, N>;
 
-                    while (it1 != last1 &&
-                        (!is_pack_aligned<V>(it1) || !is_pack_aligned<V2>(it2)))
+                    constexpr std::size_t size = traits::vector_pack_size_v<V>;
+                    static_assert(size == traits::vector_pack_size_v<V2>,
+                        "both input packs must have the same lane count");
+
+                    while (it1 != last1 && !is_pack_aligned<V>(it1))
                     {
                         datapar_loop_step2_ind<InIter1, InIter2, N>::call1(
                             f, it1, it2);
                     }
 
-                    constexpr std::size_t size = traits::vector_pack_size_v<V>;
-                    InIter1 last1V = it1;    // empty vector range by default
-                    if (static_cast<std::size_t>(last1 - it1) >= size)
-                        last1V = last1 - (size - 1);
-
-                    while (it1 < last1V)
+                    // one-time check: vectorize only if it2 is also aligned now
+                    if (is_pack_aligned<V2>(it2))
                     {
-                        datapar_loop_step2_ind<InIter1, InIter2, N>::callv(
-                            f, it1, it2);
+                        // empty vector range by default
+                        InIter1 last1V = it1;
+                        if (static_cast<std::size_t>(last1 - it1) >= size)
+                            last1V = last1 - (size - 1);
+
+                        while (it1 < last1V)
+                        {
+                            datapar_loop_step2_ind<InIter1, InIter2, N>::callv(
+                                f, it1, it2);
+                        }
                     }
                 }
 

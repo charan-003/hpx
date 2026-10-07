@@ -42,27 +42,6 @@ namespace hpx::parallel::util::detail {
         is_lvalue_ref<decltype(*std::declval<It&>())>::value;
 
     ///////////////////////////////////////////////////////////////////////////
-    HPX_CXX_CORE_EXPORT template <typename Iter>
-    struct is_data_aligned_impl
-    {
-        static HPX_FORCEINLINE bool call(Iter& it) noexcept
-        {
-            using value_type =
-                std::iterator_traits<std::remove_const_t<Iter>>::value_type;
-            using pack_type = traits::vector_pack_type_t<value_type>;
-
-            constexpr std::size_t alignment =
-                parallel::traits::vector_pack_alignment_v<pack_type>;
-            static_assert(
-                alignment != 0, "vector_pack_alignment<V> must be non-zero");
-
-            // modulo instead of a bit mask: correct for any alignment, and
-            // compiled to a mask when alignment is a power of two
-            return (reinterpret_cast<std::uintptr_t>(std::addressof(*it)) %
-                       alignment) == 0;
-        }
-    };
-
     HPX_CXX_CORE_EXPORT template <typename V, typename Iter>
     struct is_pack_aligned_impl
     {
@@ -82,12 +61,6 @@ namespace hpx::parallel::util::detail {
     };
 
     // Alignment check for the default pack type.
-    HPX_CXX_CORE_EXPORT template <typename Iter>
-    HPX_FORCEINLINE bool is_data_aligned(Iter& it) noexcept
-    {
-        return is_data_aligned_impl<Iter>::call(it);
-    }
-
     // Alignment check against an explicitly selected pack type V.
     HPX_CXX_CORE_EXPORT template <typename V, typename Iter>
     HPX_FORCEINLINE bool is_pack_aligned(Iter& it) noexcept
