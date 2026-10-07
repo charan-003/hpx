@@ -594,12 +594,14 @@ namespace hpx::parallel::detail {
 
     // Resolve all requested diagonal intersections sequentially.
     //
-    // Each diagonal search is completed before moving to the next. During one
-    // binary-search iteration, required projected values are grouped by source
-    // locality and fetched through projected-value actions.
+    // Each diagonal search is completed before moving to the next. During each
+    // binary-search step, required projected values are grouped by source locality.
+    // Fetching those values may require blocking round trips. This preserves
+    // sequenced execution and avoids parallel scheduling overhead, but may be more
+    // expensive for many output chunks.
     //
-    // This path minimizes parallel scheduling overhead for sequenced policies
-    // while still supporting remote partitions.
+    // For seq(task), planning runs asynchronously from the caller, but its planning
+    // task still waits for the remote probe operations.
 
     template <typename ExPolicy, typename Key1, typename Key2, typename Table1,
         typename Table2, typename Comp, typename Proj1, typename Proj2>
@@ -675,16 +677,12 @@ namespace hpx::parallel::detail {
         }
     }
 
-    // Resolve all requested diagonal intersections sequentially.
+    // Resolve all requested diagonal intersections in lock-step rounds.
     //
-    // Each diagonal search is completed before moving to the next. Every search
-    // step may require a blocking round trip to each involved source locality.
-    // This preserves sequenced execution and avoids parallel scheduling overhead,
-    // but may be more expensive for many output chunks. A batched sequenced
-    // implementation can be considered if benchmarks justify the added complexity.
-    //
-    // For seq(task), planning runs asynchronously from the caller, but the planning
-    // task still waits for these remote probe operations.
+    // Each round advances every unresolved search by one binary-search step.
+    // Probes from all searches are deduplicated and grouped by source locality.
+    // All locality batches for both inputs are launched concurrently and joined
+    // before the search states are updated.
 
     template <typename ExPolicy, typename Key1, typename Key2, typename Table1,
         typename Table2, typename Comp, typename Proj1, typename Proj2>
