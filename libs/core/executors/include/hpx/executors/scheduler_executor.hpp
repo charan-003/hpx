@@ -298,7 +298,7 @@ namespace hpx::execution::experimental {
             requires(detail::indexable_shape<S>)
         auto bulk_async_execute(F&& f, S const& input_shape, Ts&&... ts) const
         {
-            decltype(auto) shape = detail::make_indexed_shape(input_shape);
+            auto shape = detail::make_indexed_shape(input_shape);
             using shape_element = hpx::traits::range_traits<S>::value_type;
             using result_type = hpx::util::detail::invoke_deferred_result_t<F,
                 shape_element, Ts...>;
@@ -334,7 +334,7 @@ namespace hpx::execution::experimental {
                     else
                     {
                         return make_future(bulk(schedule(sched_), n,
-                            [shape,
+                            [shape = HPX_MOVE(shape),
                                 bound_f = hpx::bind_back(
                                     HPX_FORWARD(F, f), HPX_FORWARD(Ts, ts)...)](
                                 size_type i) mutable {
@@ -347,7 +347,7 @@ namespace hpx::execution::experimental {
                 else
                 {
                     return make_future(bulk(schedule(sched_), n,
-                        [shape,
+                        [shape = HPX_MOVE(shape),
                             bound_f = hpx::bind_back(HPX_FORWARD(F, f),
                                 HPX_FORWARD(Ts, ts)...)](size_type i) mutable {
                             auto it = std::ranges::begin(shape);
@@ -395,7 +395,7 @@ namespace hpx::execution::experimental {
 
                 start_detached(bulk(
                     continues_on(just(HPX_MOVE(promises), HPX_FORWARD(F, f),
-                                     shape, HPX_FORWARD(Ts, ts)...),
+                                     HPX_MOVE(shape), HPX_FORWARD(Ts, ts)...),
                         sched_),
                     n, HPX_MOVE(f_helper)));
 
@@ -407,7 +407,7 @@ namespace hpx::execution::experimental {
             requires(detail::indexable_shape<S>)
         auto bulk_sync_execute(F&& f, S const& input_shape, Ts&&... ts) const
         {
-            decltype(auto) shape = detail::make_indexed_shape(input_shape);
+            auto shape = detail::make_indexed_shape(input_shape);
             using shape_element = hpx::traits::range_traits<S>::value_type;
             using result_type = hpx::util::detail::invoke_deferred_result_t<F,
                 shape_element, Ts...>;
@@ -475,9 +475,7 @@ namespace hpx::execution::experimental {
         decltype(auto) bulk_then_execute(
             F&& f, S const& input_shape, Future&& predecessor, Ts&&... ts) const
         {
-            decltype(auto) indexed_shape =
-                detail::make_indexed_shape(input_shape);
-            auto shape = indexed_shape;
+            auto shape = detail::make_indexed_shape(input_shape);
             auto const n =
                 static_cast<std::size_t>(std::ranges::distance(shape));
             using result_type =

@@ -187,7 +187,7 @@ namespace hpx::execution::experimental {
         decltype(auto) bulk_async_execute(
             F&& f, S const& input_shape, Ts&&... ts) const
         {
-            decltype(auto) shape = detail::make_indexed_shape(input_shape);
+            auto shape = detail::make_indexed_shape(input_shape);
             using shape_element = hpx::traits::range_traits<S>::value_type;
             using result_type = hpx::util::detail::invoke_deferred_result_t<F,
                 shape_element, Ts...>;
@@ -260,9 +260,8 @@ namespace hpx::execution::experimental {
         decltype(auto) bulk_sync_execute(
             F&& f, S const& input_shape, Ts&&... ts) const
         {
-            decltype(auto) shape = detail::make_indexed_shape(input_shape);
             hpx::this_thread::experimental::sync_wait(bulk_async_execute(
-                HPX_FORWARD(F, f), shape, HPX_FORWARD(Ts, ts)...));
+                HPX_FORWARD(F, f), input_shape, HPX_FORWARD(Ts, ts)...));
         }
 
         // Integral shape overload - passes integral directly to bulk
@@ -285,7 +284,7 @@ namespace hpx::execution::experimental {
         auto bulk_then_execute(
             F&& f, S const& input_shape, Future&& predecessor, Ts&&... ts) const
         {
-            decltype(auto) shape = detail::make_indexed_shape(input_shape);
+            auto shape = detail::make_indexed_shape(input_shape);
             using result_type =
                 parallel::execution::detail::then_bulk_function_result_t<F, S,
                     Future, Ts...>;

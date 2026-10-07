@@ -206,10 +206,8 @@ namespace hpx::execution::experimental::detail {
     };
 
     // Random access shapes already provide constant-time lookup and are
-    // returned by reference to avoid a preliminary copy. Executor call sites
-    // copy that reference into the operation state before returning. Copying
-    // a view does not extend the lifetime of the storage it references; that
-    // storage must outlive asynchronous work.
+    // copied directly. Copying a view does not extend the lifetime of the
+    // storage it references; that storage must outlive asynchronous work.
     //
     // Other multipass shapes allocate and populate an O(n) position vector on
     // every call. If a shape is move-only, its copyable elements are
@@ -217,7 +215,7 @@ namespace hpx::execution::experimental::detail {
     // iterators remain lightweight and non-owning.
     template <typename S>
         requires indexable_shape<S>
-    decltype(auto) make_indexed_shape(S const& shape)
+    auto make_indexed_shape(S const& shape)
     {
         if constexpr (std::ranges::random_access_range<S const> &&
             std::ranges::sized_range<S const> &&
