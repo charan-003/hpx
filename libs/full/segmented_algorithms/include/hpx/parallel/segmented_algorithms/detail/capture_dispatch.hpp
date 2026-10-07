@@ -714,11 +714,22 @@ namespace hpx::parallel::detail {
 
                 batch_futures.reserve(batches.size());
 
-                for (auto& batch : batches)
+                try
                 {
-                    batch_futures.emplace_back(get_partition_values<Value>(
-                        destination_locality, batch.locality_id,
-                        batch.routing_partition_id, HPX_MOVE(batch.ranges)));
+                    for (auto& batch : batches)
+                    {
+                        batch_futures.emplace_back(
+                            get_partition_values<Value>(destination_locality,
+                                batch.locality_id, batch.routing_partition_id,
+                                HPX_MOVE(batch.ranges)));
+                    }
+                }
+                catch (...)
+                {
+                    // Ensure all successfully launched input collections finish
+                    // before their buffers and associated state are destroyed.
+                    (void) hpx::wait_all_nothrow(batch_futures);
+                    throw;
                 }
 
                 batch_results =
@@ -1115,30 +1126,41 @@ namespace hpx::parallel::detail {
 
             operations.reserve(chunks.size());
 
-            for_each_chunk(chunks, values1, values2,
-                [&](auto first1, auto last1, auto first2, auto last2,
-                    output_iterator dest) {
-                    if constexpr (is_task_policy)
-                    {
-                        operations.push_back(
-                            batch_receiver::invoke_chunk(algo, policy, first1,
-                                last1, first2, last2, HPX_MOVE(dest), args...));
-                    }
-                    else
-                    {
-                        operations.push_back(hpx::async(
-                            [algorithm = algo, operation_policy = policy,
-                                first1, last1, first2, last2,
-                                dest = HPX_MOVE(dest), values1, values2,
-                                ... operation_args =
-                                    args]() mutable -> output_iterator {
-                                return batch_receiver::invoke_chunk(algorithm,
-                                    HPX_MOVE(operation_policy), first1, last1,
-                                    first2, last2, HPX_MOVE(dest),
-                                    HPX_MOVE(operation_args)...);
-                            }));
-                    }
-                });
+            try
+            {
+                for_each_chunk(chunks, values1, values2,
+                    [&](auto first1, auto last1, auto first2, auto last2,
+                        output_iterator dest) {
+                        if constexpr (is_task_policy)
+                        {
+                            operations.push_back(batch_receiver::invoke_chunk(
+                                algo, policy, first1, last1, first2, last2,
+                                HPX_MOVE(dest), args...));
+                        }
+                        else
+                        {
+                            operations.push_back(hpx::async(
+                                [algorithm = algo, operation_policy = policy,
+                                    first1, last1, first2, last2,
+                                    dest = HPX_MOVE(dest), values1, values2,
+                                    ... operation_args =
+                                        args]() mutable -> output_iterator {
+                                    return batch_receiver::invoke_chunk(
+                                        algorithm, HPX_MOVE(operation_policy),
+                                        first1, last1, first2, last2,
+                                        HPX_MOVE(dest),
+                                        HPX_MOVE(operation_args)...);
+                                }));
+                        }
+                    });
+            }
+            catch (...)
+            {
+                // Earlier chunk operations write to disjoint destination ranges,
+                // but they must all finish before this function reports failure.
+                (void) hpx::wait_all_nothrow(operations);
+                throw;
+            }
 
             HPX_ASSERT(!operations.empty());
 

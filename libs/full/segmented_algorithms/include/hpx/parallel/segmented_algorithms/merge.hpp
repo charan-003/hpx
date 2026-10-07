@@ -11,6 +11,7 @@
 #include <hpx/assert.hpp>
 #include <hpx/functional/invoke.hpp>
 #include <hpx/modules/algorithms.hpp>
+#include <hpx/modules/errors.hpp>
 #include <hpx/modules/executors.hpp>
 #include <hpx/modules/futures.hpp>
 #include <hpx/modules/tracing.hpp>
@@ -135,7 +136,13 @@ namespace hpx::parallel::detail {
     partition_position<LocalIterator> find_partition_position(
         segmented_range_table<LocalIterator> const& table, std::size_t index)
     {
-        HPX_ASSERT(index < table.size());
+        if (index >= table.size())
+        {
+            HPX_THROW_EXCEPTION(hpx::error::bad_parameter,
+                "find_partition_position",
+                "segmented merge attempted to access an input position "
+                "outside the collected range");
+        }
 
         auto position = std::upper_bound(
             table.partition_ends.begin(), table.partition_ends.end(), index);
@@ -245,6 +252,31 @@ namespace hpx::parallel::detail {
         bool complete = false;
     };
 
+    [[noreturn]] inline void throw_invalid_diagonal_state(char const* function)
+    {
+        HPX_THROW_EXCEPTION(hpx::error::bad_parameter, function,
+            "segmented merge could not determine a valid merge-path "
+            "intersection; the inputs must be sorted and the comparator "
+            "must impose a strict weak ordering");
+    }
+
+    HPX_FORCEINLINE void validate_diagonal_bounds(
+        diagonal_search_state const& state, std::size_t len1, std::size_t len2,
+        char const* function)
+    {
+        if (state.a_low > state.a_high || state.a_high > len1 ||
+            state.a_low > state.k || state.a_high > state.k)
+        {
+            throw_invalid_diagonal_state(function);
+        }
+
+        // Safe because a_low <= k was checked above.
+        if (state.k - state.a_low > len2)
+        {
+            throw_invalid_diagonal_state(function);
+        }
+    }
+
     // Initialize the binary-search state for merge diagonal k.
     //
     // The desired intersection satisfies a + b == k, where a and b are the
@@ -273,10 +305,12 @@ namespace hpx::parallel::detail {
     HPX_FORCEINLINE void constrain_diagonal_state(diagonal_search_state& state,
         diagonal_search_state const& left, diagonal_search_state const& right)
     {
-        HPX_ASSERT(left.complete);
-        HPX_ASSERT(right.complete);
-        HPX_ASSERT(left.k <= state.k);
-        HPX_ASSERT(state.k <= right.k);
+        if (state.a_low > state.a_high || !left.complete || !right.complete ||
+            left.k > state.k || state.k > right.k || left.a > right.a ||
+            left.b > right.b || state.k < left.b)
+        {
+            throw_invalid_diagonal_state("constrain_diagonal_state");
+        }
 
         // The co-ranks are monotonic:
         // left.a <= state.a <= right.a
@@ -284,7 +318,6 @@ namespace hpx::parallel::detail {
         std::size_t const low_from_right_b =
             state.k > right.b ? state.k - right.b : 0;
 
-        HPX_ASSERT(state.k >= left.b);
         std::size_t const high_from_left_b = state.k - left.b;
 
         state.a_low =
@@ -293,7 +326,10 @@ namespace hpx::parallel::detail {
         state.a_high =
             (std::min) (state.a_high, (std::min) (right.a, high_from_left_b));
 
-        HPX_ASSERT(state.a_low <= state.a_high);
+        if (state.a_low > state.a_high)
+        {
+            throw_invalid_diagonal_state("constrain_diagonal_state");
+        }
 
         if (state.a_low == state.a_high)
         {
@@ -366,12 +402,13 @@ namespace hpx::parallel::detail {
     {
         values.reset();
 
+        validate_diagonal_bounds(state, len1, len2, "prepare_diagonal_probes");
+
         if (state.complete)
         {
             return;
         }
 
-        HPX_ASSERT(state.a_low <= state.a_high);
         if (state.a_low == state.a_high)
         {
             state.a = state.a_low;
@@ -380,8 +417,19 @@ namespace hpx::parallel::detail {
             return;
         }
 
-        state.a = (state.a_low + state.a_high) / 2;
+        state.a = state.a_low + (state.a_high - state.a_low) / 2;
+
+        if (state.a > state.k || state.a > len1)
+        {
+            throw_invalid_diagonal_state("prepare_diagonal_probes");
+        }
+
         state.b = state.k - state.a;
+
+        if (state.b > len2)
+        {
+            throw_invalid_diagonal_state("prepare_diagonal_probes");
+        }
 
         if (state.a != 0 && state.b != len2)
         {
@@ -530,6 +578,8 @@ namespace hpx::parallel::detail {
         {
             state.a_low = state.a + 1;
         }
+
+        validate_diagonal_bounds(state, len1, len2, "update_diagonal_state");
     }
 
     // Resolve all requested diagonal intersections sequentially.
@@ -615,15 +665,16 @@ namespace hpx::parallel::detail {
         }
     }
 
-    // Resolve multiple diagonal intersections in parallel search rounds.
+    // Resolve all requested diagonal intersections sequentially.
     //
-    // Each round prepares probes for every incomplete diagonal. Requests are
-    // coalesced by source locality across all searches, and the resulting
-    // remote actions are launched before waiting.
+    // Each diagonal search is completed before moving to the next. Every search
+    // step may require a blocking round trip to each involved source locality.
+    // This preserves sequenced execution and avoids parallel scheduling overhead,
+    // but may be more expensive for many output chunks. A batched sequenced
+    // implementation can be considered if benchmarks justify the added complexity.
     //
-    // After all projected keys for the round arrive, every search state
-    // advances one binary-search step. Rounds continue until all intersections
-    // are complete.
+    // For seq(task), planning runs asynchronously from the caller, but the planning
+    // task still waits for these remote probe operations.
 
     template <typename ExPolicy, typename Key1, typename Key2, typename Table1,
         typename Table2, typename Comp, typename Proj1, typename Proj2>
@@ -1183,6 +1234,9 @@ namespace hpx::parallel::detail {
         {
             hpx::parallel::util::detail::handle_local_exceptions<
                 policy_type>::call(exception);
+
+            // The HPX exception handler must throw or terminate for
+            // supported policies.
             std::terminate();
         }
     }
@@ -1250,6 +1304,9 @@ namespace hpx::parallel::detail {
                     {
                         hpx::parallel::util::detail::handle_local_exceptions<
                             policy_type>::call(std::current_exception());
+
+                        // The HPX exception handler must throw or
+                        // terminate for supported policies.
                         std::terminate();
                     }
                 });
@@ -1406,13 +1463,25 @@ namespace hpx::parallel::detail {
             std::vector<hpx::future<batch_result_type>> operations;
             operations.reserve(chunk_batches.batches.size());
 
-            for (auto& batch : chunk_batches.batches)
+            try
             {
-                operations.push_back(
-                    capture_dispatch_batch_async<value_type1, value_type2>(
-                        batch.routing_partition_id, algorithm, execution_policy,
-                        std::false_type{}, HPX_MOVE(batch.chunks), comparator,
-                        projection1, projection2));
+                for (auto& batch : chunk_batches.batches)
+                {
+                    operations.push_back(
+                        capture_dispatch_batch_async<value_type1, value_type2>(
+                            batch.routing_partition_id, algorithm,
+                            execution_policy, std::false_type{},
+                            HPX_MOVE(batch.chunks), comparator, projection1,
+                            projection2));
+                }
+            }
+            catch (...)
+            {
+                // Previously launched batches may still be writing to the
+                // destination. Drain them before propagating the
+                // launch failure.
+                (void) hpx::wait_all_nothrow(operations);
+                throw;
             }
 
             auto end_dest =
@@ -1473,6 +1542,9 @@ namespace hpx::parallel::detail {
                     {
                         hpx::parallel::util::detail::handle_local_exceptions<
                             policy_type>::call(std::current_exception());
+
+                        // The HPX exception handler must throw or
+                        // terminate for supported policies.
                         std::terminate();
                     }
                 });
