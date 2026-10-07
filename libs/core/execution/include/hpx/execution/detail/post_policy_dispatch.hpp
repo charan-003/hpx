@@ -21,6 +21,42 @@
 namespace hpx::detail {
 
     ////////////////////////////////////////////////////////////////////////////
+    // Run tid, a thread created as pending_do_not_schedule by a fork, next.
+    // The work has been handed off at this point, so a failure to yield is
+    // not reported to the caller; tid gets scheduled instead.
+    inline void run_forked_thread(threads::thread_id_ref_type const& tid,
+        threads::thread_description const& desc)
+    {
+        if (threads::thread_id_type const tid_self = threads::get_self_id())
+        {
+            try
+            {
+                // yield_to(tid), suspend dispatches tid to its own scheduler
+                // if that differs from ours
+                hpx::this_thread::suspend(
+                    threads::thread_schedule_state::pending, tid.noref(), desc);
+                return;
+            }
+            catch (hpx::thread_interrupted const&)
+            {
+                // re-arm, the interruption fires at the next interruption
+                // point instead
+                get_thread_id_data(tid_self)->interrupt();
+            }
+            catch (hpx::exception const&)
+            {
+                // yield_aborted
+            }
+        }
+
+        // Not on an HPX thread, or suspend failed (possibly after yielding).
+        // A duplicate queue entry is harmless: the scheduling loop only runs
+        // a thread that is still pending.
+        get_thread_id_data(tid)->get_scheduler_base()->schedule_thread(
+            tid, threads::thread_schedule_hint());
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
     // forward declaration
     HPX_CXX_CORE_EXPORT template <typename Policy>
     struct post_policy_dispatch;
@@ -80,17 +116,11 @@ namespace hpx::detail {
 
             threads::thread_id_ref_type const tid =
                 threads::register_thread(data, pool);
-            threads::thread_id_type const tid_self = threads::get_self_id();
 
             // make sure this thread is executed last
-            if (tid && tid_self &&
-                get_thread_id_data(tid)->get_scheduler_base() ==
-                    get_thread_id_data(tid_self)->get_scheduler_base())
+            if (tid)
             {
-                // yield_to(tid)
-                hpx::this_thread::suspend(
-                    threads::thread_schedule_state::pending, tid.noref(),
-                    "post_policy_dispatch(suspend)");
+                run_forked_thread(tid, "post_policy_dispatch(suspend)");
             }
         }
 
