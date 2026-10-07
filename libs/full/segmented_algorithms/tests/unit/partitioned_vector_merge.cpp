@@ -31,6 +31,7 @@
 #include <numeric>
 #include <random>
 #include <stdexcept>
+#include <string>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -1084,12 +1085,11 @@ namespace {
         catch (hpx::exception_list const& errors)
         {
             caught_exception = true;
-            HPX_TEST(errors.size() != 0);
+            HPX_TEST_EQ(errors.size(), std::size_t{1});
         }
         catch (...)
         {
-            // Policy-based HPX algorithms should normalize ordinary user
-            // exceptions into hpx::exception_list.
+            caught_exception = true;
             HPX_TEST(false);
         }
 

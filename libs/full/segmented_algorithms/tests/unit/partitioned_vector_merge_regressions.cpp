@@ -30,6 +30,7 @@
 #include <initializer_list>
 #include <iterator>
 #include <limits>
+#include <memory>
 #include <new>
 #include <numeric>
 #include <stdexcept>
@@ -347,6 +348,33 @@ struct regression_non_default_less
     {
     }
 };
+
+struct regression_heap_value
+{
+    std::string key;
+    int source = 0;
+    int ordinal = 0;
+
+    bool operator==(regression_heap_value const& other) const
+    {
+        return key == other.key && source == other.source &&
+            ordinal == other.ordinal;
+    }
+
+    template <typename Archive>
+    void serialize(Archive& ar, unsigned)
+    {
+        ar & key & source & ordinal;
+    }
+};
+
+bool operator<(
+    regression_heap_value const& lhs, regression_heap_value const& rhs)
+{
+    return lhs.key < rhs.key;
+}
+
+HPX_REGISTER_PARTITIONED_VECTOR(regression_heap_value);
 
 namespace hpx::serialization {
 
@@ -815,6 +843,10 @@ namespace {
     void expect_failure(Policy const&, Start&& start, bool allocation_failure,
         bool check_exception_contents)
     {
+        using policy_type = std::decay_t<Policy>;
+
+        static constexpr bool is_sequenced =
+            hpx::is_sequenced_execution_policy<policy_type>::value;
         bool returned_from_call = false;
         bool caught = false;
         try
@@ -841,7 +873,15 @@ namespace {
         {
             caught = true;
             HPX_TEST(!allocation_failure);
-            HPX_TEST(errors.size() != 0);
+
+            if constexpr (is_sequenced)
+            {
+                HPX_TEST_EQ(errors.size(), std::size_t{1});
+            }
+            else
+            {
+                HPX_TEST(errors.size() != 0);
+            }
 
             if (check_exception_contents)
             {
@@ -852,8 +892,8 @@ namespace {
         catch (std::exception const& error)
         {
             caught = true;
-            std::fprintf(stderr, "[regression] unexpected exception: %s\n",
-                error.what());
+            std::fprintf(stderr,
+                "[regression] unexpected direct exception: %s\n", error.what());
             HPX_TEST(false);
         }
         catch (...)
@@ -1123,6 +1163,188 @@ namespace {
         check_values(source1, input1);
         check_values(source2, input2);
     }
+
+    void test_invalid_diagonal_state_rejected()
+    {
+        using namespace hpx::parallel::detail;
+
+        // This state is initially valid. The deliberately invalid comparator
+        // makes the update move a_high below a_low.
+        diagonal_search_state state{2,    // k
+            1,                            // a_low
+            2,                            // a_high
+            1,                            // a
+            1,                            // b
+            false};
+
+        diagonal_probe_values<int, int> values;
+
+        values.a_previous = std::make_shared<int>(1);
+        values.a_current = std::make_shared<int>(1);
+        values.b_previous = std::make_shared<int>(1);
+        values.b_current = std::make_shared<int>(1);
+
+        auto invalid_compare = [](int, int) { return true; };
+
+        bool caught = false;
+
+        try
+        {
+            update_diagonal_state(state, 3, 3, values, invalid_compare);
+        }
+        catch (hpx::exception const& error)
+        {
+            caught = true;
+            HPX_TEST(error.get_error() == hpx::error::bad_parameter);
+        }
+        catch (...)
+        {
+            caught = true;
+            HPX_TEST(false);
+        }
+
+        HPX_TEST(caught);
+    }
+
+    void test_heap_owned_values()
+    {
+        auto const localities = hpx::find_all_localities();
+
+        std::vector<regression_heap_value> input1;
+        std::vector<regression_heap_value> input2;
+
+        constexpr int key_count = 16;
+        constexpr int values_per_key = 2;
+        constexpr std::size_t characters_per_key = 8192;
+
+        for (int key = 0; key != key_count; ++key)
+        {
+            std::string payload(
+                characters_per_key, static_cast<char>('a' + key));
+
+            for (int ordinal = 0; ordinal != values_per_key; ++ordinal)
+            {
+                input1.push_back({payload, 1, ordinal});
+                input2.push_back({payload, 2, ordinal});
+            }
+        }
+
+        std::vector<regression_heap_value> expected(
+            input1.size() + input2.size());
+
+        std::merge(input1.begin(), input1.end(), input2.begin(), input2.end(),
+            expected.begin());
+
+        auto source1 = make_vector(
+            input1, {7, 9, 16}, {localities[0], localities[1], localities[2]});
+
+        auto source2 = make_vector(
+            input2, {8, 11, 13}, {localities[2], localities[0], localities[1]});
+
+        std::vector<regression_heap_value> const initial(
+            expected.size(), regression_heap_value{"guard", -1, -1});
+
+        auto destination = make_vector(initial, {9, 13, 17, 25},
+            {localities[2], localities[0], localities[1], localities[2]});
+
+        for_each_policy([&](auto policy) {
+            assign_values(destination, initial);
+
+            auto result = finish_result(policy,
+                hpx::merge(policy, source1.cbegin(), source1.cend(),
+                    source2.cbegin(), source2.cend(), destination.begin()));
+
+            HPX_TEST(result == destination.end());
+            check_values(destination, expected);
+        });
+
+        check_values(source1, input1);
+        check_values(source2, input2);
+    }
+
+    void test_output_partition_boundary_result()
+    {
+        auto const localities = hpx::find_all_localities();
+
+        std::vector<int> const input1{1, 3, 5, 7};
+        std::vector<int> const input2{2, 4, 6, 8};
+
+        constexpr std::size_t merged_size = 8;
+
+        std::vector<int> expected(12, -1);
+
+        std::merge(input1.begin(), input1.end(), input2.begin(), input2.end(),
+            expected.begin());
+
+        auto source1 =
+            make_vector(input1, {2, 2}, {localities[0], localities[1]});
+
+        auto source2 =
+            make_vector(input2, {2, 2}, {localities[1], localities[0]});
+
+        // The merge fills exactly the first destination partition. The second
+        // partition remains as a guard range.
+        std::vector<int> const initial(12, -1);
+
+        auto destination = make_vector(
+            initial, {merged_size, 4}, {localities[2], localities[0]});
+
+        for_each_policy([&](auto policy) {
+            assign_values(destination, initial);
+
+            using iterator = decltype(destination.begin());
+            using difference_type =
+                typename std::iterator_traits<iterator>::difference_type;
+
+            auto const expected_end = std::next(
+                destination.begin(), static_cast<difference_type>(merged_size));
+
+            auto result = finish_result(policy,
+                hpx::merge(policy, source1.cbegin(), source1.cend(),
+                    source2.cbegin(), source2.cend(), destination.begin()));
+
+            HPX_TEST(result == expected_end);
+            check_values(destination, expected);
+        });
+
+        check_values(source1, input1);
+        check_values(source2, input2);
+    }
+
+    void test_invalid_projected_value_count_rejected()
+    {
+        using namespace hpx::parallel::detail;
+
+        for (std::size_t count : {std::size_t{0}, std::size_t{2}})
+        {
+            projected_value_result<int> result;
+            result.values.assign(count, 42);
+
+            std::vector<projected_value_result<int>> results;
+            results.push_back(HPX_MOVE(result));
+
+            std::vector<diagonal_probe_values<int, int>> values(1);
+
+            bool caught = false;
+
+            try
+            {
+                store_input1_probe_results(HPX_MOVE(results), values);
+            }
+            catch (hpx::exception const& error)
+            {
+                caught = true;
+                HPX_TEST(error.get_error() == hpx::error::invalid_status);
+            }
+            catch (...)
+            {
+                caught = true;
+                HPX_TEST(false);
+            }
+
+            HPX_TEST(caught);
+        }
+    }
 }    // namespace
 
 int main()
@@ -1158,6 +1380,13 @@ int main()
         test_two_task_merges_before_waiting);
     run_test("test_non_default_constructible_projected_key",
         test_non_default_constructible_projected_key);
+    run_test("test_invalid_diagonal_state_rejected",
+        test_invalid_diagonal_state_rejected);
+    run_test("test_heap_owned_values", test_heap_owned_values);
+    run_test("test_output_partition_boundary_result",
+        test_output_partition_boundary_result);
+    run_test("test_invalid_projected_value_count_rejected",
+        test_invalid_projected_value_count_rejected);
 
     return hpx::util::report_errors();
 }

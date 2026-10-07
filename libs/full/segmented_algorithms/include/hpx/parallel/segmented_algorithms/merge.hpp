@@ -469,7 +469,12 @@ namespace hpx::parallel::detail {
     {
         for (auto& result : results)
         {
-            HPX_ASSERT(result.values.size() == 1);
+            if (result.values.size() != 1)
+            {
+                HPX_THROW_EXCEPTION(hpx::error::invalid_status,
+                    "store_input1_probe_results",
+                    "a projected-value action must return exactly one value");
+            }
 
             auto shared_value =
                 std::make_shared<Key1>(HPX_MOVE(result.values.front()));
@@ -506,7 +511,12 @@ namespace hpx::parallel::detail {
     {
         for (auto& result : results)
         {
-            HPX_ASSERT(result.values.size() == 1);
+            if (result.values.size() != 1)
+            {
+                HPX_THROW_EXCEPTION(hpx::error::invalid_status,
+                    "store_input2_probe_results",
+                    "a projected-value action must return exactly one value");
+            }
 
             auto shared_value =
                 std::make_shared<Key2>(HPX_MOVE(result.values.front()));

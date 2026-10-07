@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <iterator>
 #include <numeric>
@@ -1032,16 +1033,58 @@ namespace {
         chunks.push_back(byte_batch_test_chunk{half_int_count, 0, {}, {}, 20});
 
         // This additional value exceeds the first
-        //batch's remaining capacity
+        // batch's remaining capacity
         // and must therefore begin a second batch.
         chunks.push_back(byte_batch_test_chunk{0, 1, {}, {}, 30});
 
         auto batches = receiver_type::make_byte_batches(HPX_MOVE(chunks));
 
+        // Every generated batch must be nonempty, and every test chunk must
+        // carry at least one input element without exceeding the byte limit.
+        for (auto const& batch : batches)
+        {
+            HPX_TEST(!batch.empty());
+
+            std::size_t batch_bytes = 0;
+
+            for (auto const& chunk : batch)
+            {
+                std::size_t const chunk_bytes =
+                    receiver_type::estimate_chunk_bytes(chunk);
+
+                HPX_TEST(chunk_bytes != 0);
+                HPX_TEST(chunk_bytes <= max_bytes);
+
+                if (chunk_bytes > max_bytes)
+                {
+                    continue;
+                }
+
+                HPX_TEST(batch_bytes <= max_bytes - chunk_bytes);
+
+                if (batch_bytes <= max_bytes - chunk_bytes)
+                {
+                    batch_bytes += chunk_bytes;
+                }
+            }
+
+            HPX_TEST(batch_bytes <= max_bytes);
+        }
+
         HPX_TEST_EQ(batches.size(), std::size_t{2});
+
+        if (batches.size() != 2)
+        {
+            return;
+        }
 
         HPX_TEST_EQ(batches[0].size(), std::size_t{2});
         HPX_TEST_EQ(batches[1].size(), std::size_t{1});
+
+        if (batches[0].size() != 2 || batches[1].size() != 1)
+        {
+            return;
+        }
 
         // Verify that batching preserves the original chunk order.
         HPX_TEST_EQ(batches[0][0].dest, std::size_t{10});
@@ -1052,6 +1095,76 @@ namespace {
             hpx::parallel::detail::max_capture_batch_elements<int, double>();
         // Verify the planner uses the larger input element size.
         HPX_TEST_EQ(max_elements, max_bytes / sizeof(double));
+    }
+
+    void test_multi_target_probe_deduplication()
+    {
+        using namespace hpx::parallel::detail;
+
+        using iterator = std::vector<int>::iterator;
+        using batch_type = locality_probe_batch<iterator>;
+
+        std::vector<int> values{42};
+
+        std::vector<batch_type> batches;
+        probe_request_lookup lookup;
+
+        std::vector<std::size_t> locality_to_batch(
+            1, invalid_probe_batch_index);
+
+        hpx::id_type const locality = hpx::find_here();
+
+        constexpr std::size_t target_count = 4096;
+
+        for (std::size_t search_index = 0; search_index != target_count;
+            ++search_index)
+        {
+            std::uint8_t const operand =
+                search_index % 2 == 0 ? input_previous : input_current;
+
+            append_probe(batches, lookup, locality_to_batch,
+                partition_position<iterator>{
+                    locality, locality, 0, 0, values.begin()},
+                search_index, operand);
+        }
+
+        HPX_TEST_EQ(batches.size(), std::size_t{1});
+        HPX_TEST_EQ(lookup.size(), std::size_t{1});
+        HPX_TEST_EQ(locality_to_batch[0], std::size_t{0});
+
+        if (batches.size() != 1 || lookup.size() != 1 ||
+            locality_to_batch[0] != 0)
+        {
+            return;
+        }
+
+        HPX_TEST_EQ(batches[0].requests.size(), std::size_t{1});
+
+        if (batches[0].requests.size() != 1)
+        {
+            return;
+        }
+
+        auto const& request = batches[0].requests[0];
+
+        HPX_TEST_EQ(request.targets.size(), target_count);
+
+        if (request.targets.size() != target_count)
+        {
+            return;
+        }
+
+        for (std::size_t i = 0; i != target_count; ++i)
+        {
+            HPX_TEST_EQ(request.targets[i].search_index, i);
+
+            std::uint8_t const expected_operand =
+                i % 2 == 0 ? input_previous : input_current;
+
+            HPX_TEST_EQ(
+                static_cast<unsigned int>(request.targets[i].operand_index),
+                static_cast<unsigned int>(expected_operand));
+        }
     }
 }    // namespace
 
@@ -1088,6 +1201,8 @@ int main()
         test_many_small_partitions_and_skew);
     run_test(
         "test_capture_byte_batch_grouping", test_capture_byte_batch_grouping);
+    run_test("test_multi_target_probe_deduplication",
+        test_multi_target_probe_deduplication);
 
     return hpx::util::report_errors();
 }
