@@ -14,6 +14,7 @@
 #include <hpx/modules/functional.hpp>
 #include <hpx/modules/threading_base.hpp>
 
+#include <cstddef>
 #include <cstdint>
 #include <type_traits>
 #include <utility>
@@ -40,8 +41,15 @@ namespace hpx::detail {
             catch (hpx::thread_interrupted const&)
             {
                 // re-arm, the interruption fires at the next interruption
-                // point instead
-                get_thread_id_data(tid_self)->interrupt();
+                // point instead; ignore if interrupts were disabled
+                // meanwhile (interrupt() throws thread_not_interruptable)
+                try
+                {
+                    get_thread_id_data(tid_self)->interrupt();
+                }
+                catch (hpx::exception const&)
+                {
+                }
             }
             catch (hpx::exception const&)
             {
@@ -51,9 +59,18 @@ namespace hpx::detail {
 
         // Not on an HPX thread, or suspend failed (possibly after yielding).
         // A duplicate queue entry is harmless: the scheduling loop only runs
-        // a thread that is still pending.
-        get_thread_id_data(tid)->get_scheduler_base()->schedule_thread(
-            tid, threads::thread_schedule_hint());
+        // a thread that is still pending. Preserve the registered priority
+        // and worker placement, and wake an idling worker: set_thread_state
+        // would do both, going through schedule_thread directly does not.
+        auto* const thrd_data = get_thread_id_data(tid);
+        auto* const scheduler = thrd_data->get_scheduler_base();
+
+        threads::thread_schedule_hint const schedulehint(
+            threads::thread_schedule_hint_mode::thread,
+            static_cast<std::int16_t>(thrd_data->get_last_worker_thread_num()));
+        scheduler->schedule_thread(
+            tid, schedulehint, false, thrd_data->get_priority());
+        scheduler->do_some_work(static_cast<std::size_t>(-1));
     }
 
     ////////////////////////////////////////////////////////////////////////////

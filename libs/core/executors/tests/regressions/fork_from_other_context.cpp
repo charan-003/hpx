@@ -98,7 +98,11 @@ void init_resource_partitioner_handler(
 
 int main(int argc, char* argv[])
 {
-    HPX_ASSERT(max_threads >= 2);
+    // the test needs at least two PUs: one for "default", one for "custom"
+    if (max_threads < 2)
+    {
+        return hpx::util::report_errors();
+    }
 
     hpx::local::init_params init_args;
     init_args.cfg = {"hpx.os_threads=" + std::to_string(max_threads)};
