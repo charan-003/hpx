@@ -47,10 +47,12 @@ namespace hpx::detail {
                 {
                     get_thread_id_data(tid_self)->interrupt();
                 }
+                // NOLINTNEXTLINE(bugprone-empty-catch)
                 catch (hpx::exception const&)
                 {
                 }
             }
+            // NOLINTNEXTLINE(bugprone-empty-catch)
             catch (hpx::exception const&)
             {
                 // yield_aborted
