@@ -188,7 +188,7 @@ namespace hpx::execution::experimental {
         /// \brief Rebind only the executor of \a policy, through
         ///        create_rebound_policy_executor.
         template <typename ExPolicy, typename Executor>
-            requires(hpx::executor_any<Executor>)
+            requires rebound_policy_executor_constructible<ExPolicy, Executor>
         constexpr decltype(auto) operator()(
             ExPolicy&& policy, Executor&& exec) const
         {
@@ -199,7 +199,8 @@ namespace hpx::execution::experimental {
         /// \brief Rebind only the executor parameters of \a policy,
         ///        through create_rebound_policy_parameters.
         template <typename ExPolicy, typename Parameters>
-            requires(hpx::executor_parameters<Parameters>)
+            requires rebound_policy_parameters_constructible<ExPolicy,
+                Parameters>
         constexpr decltype(auto) operator()(
             ExPolicy&& policy, Parameters&& parameters) const
         {
