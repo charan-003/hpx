@@ -47,15 +47,17 @@ namespace hpx::detail {
                 {
                     get_thread_id_data(tid_self)->interrupt();
                 }
-                // NOLINTNEXTLINE(bugprone-empty-catch)
-                catch (hpx::exception const&)
+                catch (hpx::exception const& e)
                 {
+                    // thread_not_interruptable: interruption was disabled
+                    // on this thread in the meantime
+                    (void) e;
                 }
             }
-            // NOLINTNEXTLINE(bugprone-empty-catch)
-            catch (hpx::exception const&)
+            catch (hpx::exception const& e)
             {
                 // yield_aborted
+                (void) e;
             }
         }
 
