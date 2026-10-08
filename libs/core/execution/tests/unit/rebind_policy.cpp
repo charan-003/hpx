@@ -913,6 +913,17 @@ void crtp_member_rebind_tests()
     HPX_TEST_EQ(rebound_to_other_parameters.label(), 42);
     HPX_TEST_EQ(rebound_to_other_parameters.executor().id, 1);
 
+    /// The three-argument create_rebound_policy rebinds one axis at a time,
+    /// so the label survives rebinding both at once as well.
+    auto rebound_both = hpxexp::create_rebound_policy(
+        policy, tagged_executor{8}, hpxexp::static_chunk_size(2));
+
+    static_assert(std::is_same_v<decltype(rebound_both),
+        labeled_crtp_policy<tagged_executor, hpxexp::static_chunk_size>>);
+
+    HPX_TEST_EQ(rebound_both.label(), 42);
+    HPX_TEST_EQ(rebound_both.executor().id, 8);
+
     /// The generic scheduling property query.
     auto rebound_by_priority =
         hpxexp::with_priority(policy, hpx::threads::thread_priority::high);
@@ -1162,6 +1173,9 @@ static_assert(!std::invocable<hpxexp::create_rebound_policy_t const&,
     hpx::execution::parallel_executor>);
 static_assert(!std::invocable<hpxexp::create_rebound_policy_t const&,
     misconstructed_policy_type const&, hpxexp::static_chunk_size>);
+static_assert(!std::invocable<hpxexp::create_rebound_policy_t const&,
+    hpx::execution::sequenced_policy const&, hpx::execution::parallel_executor,
+    hpxexp::static_chunk_size>);
 
 /// A policy without any of the members the defaults rely on. The defaults
 /// have no nested type for it, so it can't be rebound along either axis,
@@ -1378,6 +1392,14 @@ void standard_policy_rebind_test(Policy const& policy)
 
     static_assert(
         std::is_same_v<decltype(rebound_directly), decltype(rebound_by_on)>);
+
+    /// Rebinding both axes at once gives the same type as rebind_executor_t.
+    auto rebound_both = hpxexp::create_rebound_policy(policy,
+        hpx::execution::sequenced_executor{}, hpxexp::static_chunk_size(4));
+
+    static_assert(std::is_same_v<decltype(rebound_both),
+        hpxexp::rebind_executor_t<Policy, hpx::execution::sequenced_executor,
+            hpxexp::static_chunk_size>>);
 }
 
 void standard_policy_rebind_tests()

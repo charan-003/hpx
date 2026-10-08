@@ -135,7 +135,7 @@ namespace hpx::execution::experimental {
         create_rebound_policy_executor_t final
     {
         template <typename Policy, typename Executor>
-            requires rebound_policy_executor_constructible<Policy, Executor>
+            requires(rebound_policy_executor_constructible<Policy, Executor>)
         constexpr rebind_policy_executor_t<Policy, Executor> operator()(
             Policy&& policy, Executor&& exec) const
         {
@@ -156,7 +156,8 @@ namespace hpx::execution::experimental {
         create_rebound_policy_parameters_t final
     {
         template <typename Policy, typename Parameters>
-            requires rebound_policy_parameters_constructible<Policy, Parameters>
+            requires(
+                rebound_policy_parameters_constructible<Policy, Parameters>)
         constexpr rebind_policy_parameters_t<Policy, Parameters> operator()(
             Policy&& policy, Parameters&& parameters) const
         {
@@ -170,25 +171,31 @@ namespace hpx::execution::experimental {
     HPX_CXX_CORE_EXPORT inline constexpr struct create_rebound_policy_t final
     {
         /// \brief Rebind both the executor and the executor parameters of
-        ///        \a policy. Uses rebind_executor_t directly, since the
-        ///        original policy contributes nothing to the result.
+        ///        \a policy, one axis at a time through
+        ///        create_rebound_policy_executor and
+        ///        create_rebound_policy_parameters.
+        ///
+        /// The executor is rebound first, so the specializations of both
+        /// axes are honored and state that \a policy carries is kept, the
+        /// same as when rebinding a single axis.
         template <typename ExPolicy, typename Executor, typename Parameters>
-            requires(hpx::executor_any<Executor> &&
-                hpx::executor_parameters<Parameters>)
+            requires(
+                rebound_policy_executor_constructible<ExPolicy, Executor> &&
+                rebound_policy_parameters_constructible<
+                    rebind_policy_executor_t<ExPolicy, Executor>, Parameters>)
         constexpr decltype(auto) operator()(
-            ExPolicy&&, Executor&& exec, Parameters&& parameters) const
+            ExPolicy&& policy, Executor&& exec, Parameters&& parameters) const
         {
-            using rebound_type =
-                rebind_executor_t<ExPolicy, Executor, Parameters>;
-
-            return rebound_type(HPX_FORWARD(Executor, exec),
+            return create_rebound_policy_parameters(
+                create_rebound_policy_executor(
+                    HPX_FORWARD(ExPolicy, policy), HPX_FORWARD(Executor, exec)),
                 HPX_FORWARD(Parameters, parameters));
         }
 
         /// \brief Rebind only the executor of \a policy, through
         ///        create_rebound_policy_executor.
         template <typename ExPolicy, typename Executor>
-            requires rebound_policy_executor_constructible<ExPolicy, Executor>
+            requires(rebound_policy_executor_constructible<ExPolicy, Executor>)
         constexpr decltype(auto) operator()(
             ExPolicy&& policy, Executor&& exec) const
         {
@@ -199,8 +206,8 @@ namespace hpx::execution::experimental {
         /// \brief Rebind only the executor parameters of \a policy,
         ///        through create_rebound_policy_parameters.
         template <typename ExPolicy, typename Parameters>
-            requires rebound_policy_parameters_constructible<ExPolicy,
-                Parameters>
+            requires(
+                rebound_policy_parameters_constructible<ExPolicy, Parameters>)
         constexpr decltype(auto) operator()(
             ExPolicy&& policy, Parameters&& parameters) const
         {

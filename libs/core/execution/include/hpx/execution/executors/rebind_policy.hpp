@@ -180,8 +180,8 @@ namespace hpx::execution::detail {
     };
 
     template <typename Policy, typename Executor>
-        requires policy_has_rebind<Policy, Executor,
-            experimental::extract_executor_parameters_t<Policy>>
+        requires(policy_has_rebind<Policy, Executor,
+            experimental::extract_executor_parameters_t<Policy>>)
     struct default_rebind_policy_executor<Policy, Executor>
     {
         using type = experimental::rebind_executor_t<Policy, Executor,
