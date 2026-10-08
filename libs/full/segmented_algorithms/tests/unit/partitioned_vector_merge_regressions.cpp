@@ -21,6 +21,8 @@
 #include <hpx/modules/segmented_algorithms.hpp>
 #include <hpx/modules/serialization.hpp>
 #include <hpx/modules/testing.hpp>
+#include <hpx/parallel/segmented_algorithms/detail/capture_dispatch.hpp>
+#include <hpx/parallel/segmented_algorithms/merge.hpp>
 
 #include <algorithm>
 #include <chrono>
