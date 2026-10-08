@@ -271,12 +271,12 @@ namespace hpx {
         {
             auto const mtx = mtx_;    // keep alive
             std::unique_lock<mutex_type> l(mtx->mtx_);
-            auto const res = arrive_locked(l, 1);
-            if (res.done)
+            auto const [old_phase, done] = arrive_locked(l, 1);
+            if (done)
             {
                 return;
             }
-            while (phase_ == res.old_phase)
+            while (phase_ == old_phase)
             {
                 cond_.wait(l, "barrier::wait");
             }
