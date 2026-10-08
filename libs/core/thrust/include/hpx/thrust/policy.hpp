@@ -498,7 +498,7 @@ namespace hpx::thrust {
     }    // namespace detail
 }    // namespace hpx::thrust
 
-namespace hpx::detail {
+namespace hpx::execution {
 
     // Register each thrust execution policy defined above with
     // policy_traits, replacing what used to be a separate specialization of
@@ -506,7 +506,8 @@ namespace hpx::detail {
     // is_async_execution_policy, and is_rebound_execution_policy for each of
     // the policies below.
     template <>
-    struct policy_traits<hpx::thrust::thrust_policy> : policy_traits_default
+    struct policy_traits<hpx::thrust::thrust_policy>
+      : detail::policy_traits_default
     {
         static constexpr bool is_policy = true;
         static constexpr bool is_parallel = true;
@@ -514,7 +515,7 @@ namespace hpx::detail {
 
     template <typename Executor, typename Parameters>
     struct policy_traits<hpx::thrust::thrust_policy_shim<Executor, Parameters>>
-      : policy_traits_default
+      : detail::policy_traits_default
     {
         static constexpr bool is_policy = true;
         static constexpr bool is_rebound = true;
@@ -523,7 +524,7 @@ namespace hpx::detail {
 
     template <>
     struct policy_traits<hpx::thrust::thrust_host_policy>
-      : policy_traits_default
+      : detail::policy_traits_default
     {
         static constexpr bool is_policy = true;
         static constexpr bool is_parallel = true;
@@ -531,7 +532,7 @@ namespace hpx::detail {
 
     template <>
     struct policy_traits<hpx::thrust::thrust_device_policy>
-      : policy_traits_default
+      : detail::policy_traits_default
     {
         static constexpr bool is_policy = true;
         static constexpr bool is_parallel = true;
@@ -539,7 +540,7 @@ namespace hpx::detail {
 
     template <>
     struct policy_traits<hpx::thrust::thrust_task_policy>
-      : policy_traits_default
+      : detail::policy_traits_default
     {
         static constexpr bool is_policy = true;
         static constexpr bool is_parallel = true;
@@ -549,11 +550,11 @@ namespace hpx::detail {
     template <typename Executor, typename Parameters>
     struct policy_traits<
         hpx::thrust::thrust_task_policy_shim<Executor, Parameters>>
-      : policy_traits_default
+      : detail::policy_traits_default
     {
         static constexpr bool is_policy = true;
         static constexpr bool is_rebound = true;
         static constexpr bool is_parallel = true;
         static constexpr bool is_async = true;
     };
-}    // namespace hpx::detail
+}    // namespace hpx::execution
