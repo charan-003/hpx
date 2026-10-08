@@ -156,6 +156,17 @@ namespace hpx::execution::detail {
     using rebind_policy_current_executor_category_t =
         rebind_policy_current_executor_category<Policy>::type;
 
+    /// \brief Whether Policy has a nested rebind<Executor, Parameters>::type.
+    template <typename Policy, typename Executor, typename Parameters>
+    concept policy_has_rebind = requires {
+        typename Policy::template rebind<Executor, Parameters>::type;
+    };
+
+    /// \brief Whether Policy has a nested executor_type.
+    template <typename Policy>
+    concept policy_has_executor_type =
+        requires { typename Policy::executor_type; };
+
     /// \brief Default implementation of rebind_policy_executor.
     ///
     /// Has no nested \c type if Policy has no nested
@@ -169,10 +180,8 @@ namespace hpx::execution::detail {
     };
 
     template <typename Policy, typename Executor>
-        requires requires {
-            typename Policy::template rebind<Executor,
-                experimental::extract_executor_parameters_t<Policy>>::type;
-        }
+        requires policy_has_rebind<Policy, Executor,
+            experimental::extract_executor_parameters_t<Policy>>
     struct default_rebind_policy_executor<Policy, Executor>
     {
         using type = experimental::rebind_executor_t<Policy, Executor,
@@ -190,10 +199,9 @@ namespace hpx::execution::detail {
     };
 
     template <typename Policy, typename Parameters>
-        requires requires {
-            typename Policy::template rebind<typename Policy::executor_type,
-                Parameters>::type;
-        }
+        requires(policy_has_executor_type<Policy> &&
+            policy_has_rebind<Policy, typename Policy::executor_type,
+                Parameters>)
     struct default_rebind_policy_parameters<Policy, Parameters>
     {
         using type = experimental::rebind_executor_t<Policy,
@@ -252,6 +260,37 @@ namespace hpx::execution::experimental {
 
 namespace hpx::execution::detail {
 
+    /// \brief Whether the execution category of Executor is not weaker than
+    ///        that of Policy.
+    template <typename Policy, typename Executor>
+    concept executor_category_not_weaker =
+        experimental::detail::is_not_weaker_v<
+            hpx::traits::executor_execution_category_t<Executor>,
+            rebind_policy_executor_category_t<Policy>>;
+
+    /// \brief Whether the execution category of Policy's current executor is
+    ///        not weaker than that of Policy.
+    template <typename Policy>
+    concept current_executor_category_not_weaker =
+        experimental::detail::is_not_weaker_v<
+            rebind_policy_current_executor_category_t<Policy>,
+            rebind_policy_executor_category_t<Policy>>;
+
+    /// \brief Whether rebind_policy_executor has a nested type for Policy and
+    ///        Executor.
+    template <typename Policy, typename Executor>
+    concept executor_can_be_rebound = requires {
+        typename experimental::rebind_policy_executor<Policy, Executor>::type;
+    };
+
+    /// \brief Whether rebind_policy_parameters has a nested type for Policy
+    ///        and Parameters.
+    template <typename Policy, typename Parameters>
+    concept parameters_can_be_rebound = requires {
+        typename experimental::rebind_policy_parameters<Policy,
+            Parameters>::type;
+    };
+
     /// \brief Applies the category check outside rebind_policy_executor, so it
     ///        also covers direct specializations.
     ///
@@ -265,13 +304,8 @@ namespace hpx::execution::detail {
     };
 
     template <typename Policy, typename Executor>
-        requires(experimental::detail::is_not_weaker_v<
-                     hpx::traits::executor_execution_category_t<Executor>,
-                     rebind_policy_executor_category_t<Policy>> &&
-            requires {
-                typename experimental::rebind_policy_executor<Policy,
-                    Executor>::type;
-            })
+        requires(executor_category_not_weaker<Policy, Executor> &&
+            executor_can_be_rebound<Policy, Executor>)
     struct validated_rebind_policy_executor<Policy, Executor>
     {
         using type =
@@ -286,13 +320,8 @@ namespace hpx::execution::detail {
     };
 
     template <typename Policy, typename Parameters>
-        requires(experimental::detail::is_not_weaker_v<
-                     rebind_policy_current_executor_category_t<Policy>,
-                     rebind_policy_executor_category_t<Policy>> &&
-            requires {
-                typename experimental::rebind_policy_parameters<Policy,
-                    Parameters>::type;
-            })
+        requires(current_executor_category_not_weaker<Policy> &&
+            parameters_can_be_rebound<Policy, Parameters>)
     struct validated_rebind_policy_parameters<Policy, Parameters>
     {
         using type =
@@ -329,17 +358,21 @@ namespace hpx::execution::experimental {
     /// \brief Whether rebinding the executor then the parameters gives the
     ///        same type as the other order.
     ///
-    /// False if either order can't be rebound, so it can be used in a
-    /// constraint without failing to compile. True for the defaults whenever
-    /// both orders can be rebound. A policy that specializes either
+    /// Not satisfied if either order can't be rebound, so it can be used in a
+    /// constraint without failing to compile. Satisfied for the defaults
+    /// whenever both orders can be rebound. A policy that specializes either
     /// customization point should static_assert it.
     HPX_CXX_CORE_EXPORT template <typename Policy, typename Executor,
         typename Parameters>
-    inline constexpr bool rebind_policy_order_independent_v = requires {
-        requires std::is_same_v<
-            rebind_policy_parameters_t<
-                rebind_policy_executor_t<Policy, Executor>, Parameters>,
-            rebind_policy_executor_t<
-                rebind_policy_parameters_t<Policy, Parameters>, Executor>>;
-    };
+    concept rebind_policy_order_independent = std::is_same_v<
+        rebind_policy_parameters_t<rebind_policy_executor_t<Policy, Executor>,
+            Parameters>,
+        rebind_policy_executor_t<rebind_policy_parameters_t<Policy, Parameters>,
+            Executor>>;
+
+    /// \brief Value of rebind_policy_order_independent.
+    HPX_CXX_CORE_EXPORT template <typename Policy, typename Executor,
+        typename Parameters>
+    inline constexpr bool rebind_policy_order_independent_v =
+        rebind_policy_order_independent<Policy, Executor, Parameters>;
 }    // namespace hpx::execution::experimental

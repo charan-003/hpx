@@ -1137,6 +1137,21 @@ static_assert(parameters_rebindable<misconstructed_policy_type,
 static_assert(!parameters_constructible<misconstructed_policy_type const&,
     hpxexp::static_chunk_size>);
 
+/// The named concepts the function objects are constrained on agree with
+/// the function objects themselves.
+static_assert(hpxexp::rebound_policy_executor_constructible<
+    hpx::execution::parallel_policy const&,
+    hpx::execution::sequenced_executor>);
+static_assert(!hpxexp::rebound_policy_executor_constructible<
+    hpx::execution::sequenced_policy const&,
+    hpx::execution::parallel_executor>);
+static_assert(!hpxexp::rebound_policy_executor_constructible<
+    misconstructed_policy_type const&, scheduling_executor>);
+static_assert(hpxexp::rebound_policy_parameters_constructible<
+    hpx::execution::parallel_policy const&, hpxexp::static_chunk_size>);
+static_assert(!hpxexp::rebound_policy_parameters_constructible<
+    misconstructed_policy_type const&, hpxexp::static_chunk_size>);
+
 /// A policy without any of the members the defaults rely on. The defaults
 /// have no nested type for it, so it can't be rebound along either axis,
 /// and rebind_policy_order_independent_v is false instead of failing to
@@ -1153,6 +1168,8 @@ static_assert(
 static_assert(!parameters_constructible<unrebindable_policy const&,
     hpxexp::static_chunk_size>);
 static_assert(!hpxexp::rebind_policy_order_independent_v<unrebindable_policy,
+    scheduling_executor, hpxexp::static_chunk_size>);
+static_assert(!hpxexp::rebind_policy_order_independent<unrebindable_policy,
     scheduling_executor, hpxexp::static_chunk_size>);
 
 /// A policy without an executor_type, so it can only be rebound along the
